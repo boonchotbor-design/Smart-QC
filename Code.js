@@ -19,7 +19,7 @@ const ENABLE_LINE_NOTIFY = true;
 
 // 3. Telegram Config
 const TELEGRAM_BOT_TOKEN = "8625222790:AAHjU70oWGm88NyUaXaWIDJveo3b2KpnG90"; 
-const TELEGRAM_TARGET_ID = "-1002476563604"; 
+const TELEGRAM_TARGET_ID = "7378939928"; 
 
 // 4. Groq API Keys (Llama 4)
 const GROQ_API_KEYS = [
@@ -38,6 +38,15 @@ const PAT_CATEGORIES = ["2.3(M16)","2.3(M17)","2.3(M19-A1)","2.3(M19-A2)","2.3(M
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
+    
+    // 1. ป้องกันการประมวลผลซ้ำจาก Telegram Webhook Retry
+    if (data.update_id) {
+      const cache = CacheService.getScriptCache();
+      const lockKey = "tg_upd_" + data.update_id;
+      if (cache.get(lockKey)) return ContentService.createTextOutput("OK"); // ถ้าเคยประมวลผลแล้วให้ข้ามเลย
+      cache.put(lockKey, "1", 60); // บันทึกไว้ 60 วินาที
+    }
+
     if (data.events && data.events.length > 0) return handleLineWebhook(data.events[0]);
     if (data.update_id) return handleTelegramWebhook(data);
     return ContentService.createTextOutput("OK");
@@ -72,8 +81,9 @@ function handleTelegramWebhook(data) {
   } else if (data.message) {
     const msg = data.message; const chatId = msg.chat.id; const userId = msg.from.id;
     if (msg.text) {
-      if (msg.text.trim() === "ขอไอดี") sendMsg("TG", chatId, `ไอดีกลุ่ม Telegram นี้คือ:\n${chatId}`, []);
-      else processUserTextCommand("TG", userId, chatId, msg.text.trim());
+      const text = msg.text.trim();
+      if (text === "ขอไอดี" || text === "ไอดีกลุ่ม" || text === "ไอดี") sendMsg("TG", chatId, `ไอดีกลุ่ม Telegram นี้คือ:\n${chatId}`, []);
+      else processUserTextCommand("TG", userId, chatId, text);
     }
     if (msg.photo) processUserImage("TG", userId, chatId, msg.photo[msg.photo.length - 1].file_id, chatId < 0);
   }
@@ -81,25 +91,42 @@ function handleTelegramWebhook(data) {
 }
 
 function processUserTextCommand(platform, userId, destId, text) {
-  const cache = CacheService.getScriptCache(); const uid = platform + "_" + userId;
+  const cache = CacheService.getScriptCache(); 
+  const uid = platform + "_" + userId;
   let userState = cache.get(uid + "_state") || "IDLE";
 
   if (text === "ยกเลิก" || text === "จบงาน" || text === "เสร็จแล้ว") {
-    cache.remove(uid + "_state"); 
-    ScriptApp.newTrigger('runPatInspectorNow').timeBased().after(1000).create();
-    sendMsg(platform, destId, "✅ รับทราบครับ! สั่ง AI เริ่มตรวจงานทันที\n(เมื่อตรวจครบทุกรูป บอทจะแจ้งสรุปให้ทราบครับ)", []); return;
+    cache.remove(uid + "_state");
+    cache.remove(uid + "_project");
+    cache.remove(uid + "_type");
+    cache.remove(uid + "_site");
+    if (text === "ยกเลิก") {
+      sendMsg(platform, destId, "❌ ยกเลิกรายการเรียบร้อยครับ", []);
+    } else {
+      ScriptApp.newTrigger('runPatInspectorNow').timeBased().after(1000).create();
+      sendMsg(platform, destId, "✅ รับทราบครับ! สั่ง AI เริ่มตรวจงานทันที\n(เมื่อตรวจครบทุกรูป บอทจะแจ้งสรุปให้ทราบครับ)", []);
+    }
+    return;
   }
+
   if (text === "ส่งงาน" || text === "อัพโหลด") {
     cache.put(uid + "_state", "WAITING_PROJECT", 900);
-    sendMsg(platform, destId, "กรุณาเลือก Project ครับ 🏗️", ["HAE", "TME", "HAB", "TMT", "ยกเลิก"]); return;
+    sendMsg(platform, destId, "กรุณาเลือก Project ครับ 🏗️", ["HAE", "TME", "HAB", "TMT", "ยกเลิก"]);
+    return;
   }
+
   if (userState === "WAITING_PROJECT") {
-    cache.put(uid + "_project", text, 900); cache.put(uid + "_state", "WAITING_TYPE", 900);
-    sendMsg(platform, destId, "เลือกประเภทงานครับ ⚡", ["MBB", "POWER", "ยกเลิก"]); return;
+    cache.put(uid + "_project", text, 900);
+    cache.put(uid + "_state", "WAITING_TYPE", 900);
+    sendMsg(platform, destId, `📁 โปรเจกต์: ${text}\nเลือกประเภทงานต่อไปครับ ⚡`, ["MBB", "POWER", "ยกเลิก"]);
+    return;
   }
+
   if (userState === "WAITING_TYPE") {
-    cache.put(uid + "_type", text, 900); cache.put(uid + "_state", "WAITING_SITE", 900);
-    sendMsg(platform, destId, "กรุณาพิมพ์รหัส Site ครับ 🏢", []); return;
+    cache.put(uid + "_type", text, 900);
+    cache.put(uid + "_state", "WAITING_SITE", 900);
+    sendMsg(platform, destId, `⚡ ประเภท: ${text}\nกรุณาพิมพ์รหัส Site ครับ 🏢`, ["ยกเลิก"]);
+    return;
   }
   if (userState === "WAITING_SITE") {
     cache.put(uid + "_site", text, 900); cache.put(uid + "_state", "WAITING_PHOTO", 1800);
@@ -341,4 +368,50 @@ function updateSheetToManual(fName, actionType) {
       break; 
     }
   }
+}
+
+// =========================================================================
+// === Telegram Connection Helpers (ส่วนที่เพิ่มใหม่) ===
+// =========================================================================
+
+/**
+ * 1. ฟังก์ชันสำหรับตั้งค่า Webhook (เพื่อให้ Telegram ส่งข้อมูลมาที่สคริปต์นี้)
+ * วิธีใช้: Deploy เป็น Web App ก่อน -> ก๊อป URL มาใส่ -> แล้วกดรันฟังก์ชันนี้
+ */
+function setTelegramWebhook() {
+  const webAppUrl = "https://script.google.com/macros/s/AKfycby8508Svp_9NnjClKZT7j0drOZL80l6FAEzcoEW-5Tab_IYKU4ydSwO-ZX1iD3vPpR7Tg/exec"; 
+  const url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/setWebhook?url=" + webAppUrl;
+  
+  const response = UrlFetchApp.fetch(url);
+  Logger.log("Webhook Set Result: " + response.getContentText());
+  
+  if (webAppUrl === "ใส่_URL_Web_App_ที่ได้จากการ_Deploy_ที่นี่") {
+    Browser.msgBox("⚠️ อย่าลืมใส่ URL Web App ของคุณในฟังก์ชัน setTelegramWebhook ก่อนรันนะครับ!");
+  } else {
+    Browser.msgBox("ผลการตั้งค่า: " + response.getContentText());
+  }
+}
+
+/**
+ * 2. ฟังก์ชันทดสอบการเชื่อมต่อ Telegram
+ */
+function testTelegram() {
+  try {
+    const text = "🔔 ทดสอบการเชื่อมต่อ Telegram Bot API Success! ✅";
+    const payload = { "chat_id": TELEGRAM_TARGET_ID, "text": text };
+    UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage", { "method": "post", "contentType": "application/json", "payload": JSON.stringify(payload), "muteHttpExceptions": true });
+    Browser.msgBox("ส่งข้อความทดสอบแล้ว! กรุณาตรวจสอบในกลุ่ม Telegram (ID: " + TELEGRAM_TARGET_ID + ")");
+  } catch (e) {
+    Browser.msgBox("Error: " + e.toString());
+  }
+}
+
+/**
+ * 3. ฟังก์ชันสำหรับเรียกดูข้อมูลบอท (เช่น Chat ID ล่าสุดที่มีคนทักมา)
+ */
+function getTelegramUpdates() {
+  const url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/getUpdates";
+  const response = UrlFetchApp.fetch(url);
+  Logger.log(response.getContentText());
+  Browser.msgBox("ตรวจสอบผลลัพธ์ที่ Logger (กด Ctrl + Enter หรือ View -> Logs)");
 }
