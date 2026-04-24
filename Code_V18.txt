@@ -1,0 +1,146 @@
+// =========================================================================
+// === การตั้งค่าระบบ (CONFIGURATIONS) - V.18 (Safe Inline Version) ===
+// =========================================================================
+var FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA"; 
+var ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7"; 
+var SHEET_NAME = "Dashboard"; 
+var LINE_TOKEN = "CnFH9VFWVp7HttiDfE56k2lCZ6aUlnETSKL9yA6Oj5f3Gb1lP6iR6CPGiEdz/8BNJUHtDcDU51y+K+o83fNoEkeKROSQ74PMlCuTErmr4clyWjzAWD27z/SQfFtYz3ALQ2+TqU06ZVoD7ASnbwD3NwdB04t89/1O/w1cDnyilFU=";
+var TELEGRAM_BOT_TOKEN = "8625222790:AAHjU70oWGm88NyUaXaWIDJveo3b2KpnG90"; 
+var TELEGRAM_TARGET_ID = "7378939928"; 
+var GROQ_KEYS = ["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", "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", "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", "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"];
+
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    if (data.update_id) {
+      var cache = CacheService.getScriptCache();
+      if (cache.get("tg_upd_" + data.update_id)) return ContentService.createTextOutput("OK");
+      cache.put("tg_upd_" + data.update_id, "1", 60);
+    }
+    if (data.events && data.events.length > 0) handleLineWebhook(data.events[0]);
+    else if (data.update_id) handleTelegramWebhook(data);
+    return ContentService.createTextOutput("OK");
+  } catch (err) { return ContentService.createTextOutput("OK"); }
+}
+
+function handleLineWebhook(ev) {
+  var rt = ev.replyToken; var uid = ev.source.userId;
+  if (ev.type === 'message' && ev.message.type === 'text') processLineText(uid, rt, ev.message.text.trim());
+  if (ev.type === 'message' && ev.message.type === 'image') processImage("LINE", uid, rt, ev.message.id);
+}
+
+function handleTelegramWebhook(d) {
+  var cache = CacheService.getScriptCache();
+  if (d.callback_query) {
+    var cb = d.callback_query; var cid = cb.message.chat.id; var uid = "TG_" + cb.from.id; var dat = cb.data;
+    UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/answerCallbackQuery", { method: 'post', payload: { callback_query_id: cb.id } });
+    if (dat.startsWith("set_p|")) {
+      cache.put(uid + "_p", dat.split("|")[1], 1200); cache.put(uid + "_s", "WAIT_TY", 1200);
+      editTG(cid, cb.message.message_id, "📁 โปรเจกต์: " + dat.split("|")[1] + "\n⚡ เลือกประเภทงานครับ", [{text:"MBB",data:"set_t|MBB"},{text:"POWER",data:"set_t|POWER"},{text:"❌ ยกเลิก",data:"can"}]);
+    } else if (dat.startsWith("set_t|")) {
+      cache.put(uid + "_t", dat.split("|")[1], 1200); cache.put(uid + "_s", "WAIT_SI", 1200);
+      editTG(cid, cb.message.message_id, "⚡ ประเภท: " + dat.split("|")[1] + "\n🏢 พิมพ์รหัส Site ในแชทครับ", [{text:"❌ ยกเลิก",data:"can"}]);
+    } else if (dat === "can") {
+      cache.remove(uid + "_s"); editTG(cid, cb.message.message_id, "❌ ยกเลิกเรียบร้อย", []);
+    } else if (dat.startsWith("app|")) processApprove(dat.split("|")[1], cid);
+  } else if (d.message) {
+    var msg = d.message; var cid = msg.chat.id; var uid = "TG_" + msg.from.id;
+    if (msg.text) {
+      var t = msg.text.trim();
+      if (t === "ส่งงาน" || t === "/start") {
+        cache.put(uid + "_s", "WAIT_PJ", 1200);
+        sendTG(cid, "🏗️ เลือก Project ครับ", [{text:"HAE",data:"set_p|HAE"},{text:"TME",data:"set_p|TME"},{text:"HAB",data:"set_p|HAB"},{text:"TMT",data:"set_p|TMT"}]);
+      } else if (cache.get(uid + "_s") === "WAIT_SI") {
+        cache.put(uid + "_site", t, 1200); cache.put(uid + "_s", "WAIT_PH", 3600);
+        getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), cache.get(uid+"_p") + "_" + cache.get(uid+"_t") + "_" + t);
+        sendTG(cid, "✅ ตั้งค่าสำเร็จ! Site: " + t + "\n📸 ส่งรูปได้เลยครับ (เสร็จแล้วพิมพ์ 'จบงาน')", [{text:"✅ จบงาน",data:"done"}]);
+      } else if (t === "จบงาน") {
+        cache.remove(uid + "_s"); ScriptApp.newTrigger('runPatInspectorNow').timeBased().after(1000).create();
+        sendTG(cid, "✅ รับทราบ! เริ่มตรวจงานทันที", []);
+      } else if (t === "ขอไอดี") sendTG(cid, "ID: " + cid, []);
+    }
+    if (msg.photo) processImage("TG", msg.from.id, cid, msg.photo[msg.photo.length - 1].file_id);
+  }
+}
+
+function processLineText(uid, rt, t) {
+  var cache = CacheService.getScriptCache();
+  if (t === "ส่งงาน") { cache.put("LINE_"+uid+"_s", "WAIT_PJ", 1200); sendLN(uid, "🏗️ เลือก Project", ["HAE","TME","HAB","TMT"]); }
+}
+
+function processImage(p, uid, did, mid) {
+  var cache = CacheService.getScriptCache(); var key = (p === "LINE" ? "LINE_" : "TG_") + uid;
+  if (cache.get(key + "_s") === "WAIT_PH") {
+    try {
+      var folder = getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), cache.get(key+"_p") + "_" + cache.get(key+"_t") + "_" + cache.get(key+"_site"));
+      var blob = (p === "LINE") ? UrlFetchApp.fetch("https://api-data.line.me/v2/bot/message/"+mid+"/content", {headers:{Authorization:"Bearer "+LINE_TOKEN}}).getBlob() : getTGImg(mid);
+      folder.createFile(blob).setName(cache.get(key+"_site") + "_" + Date.now() + ".jpg");
+      if (p === "LINE") sendLN(uid, "📥 รับรูปแล้ว", []);
+    } catch (e) {}
+  }
+}
+
+function sendLN(to, t, q) {
+  var p = { to: to, messages: [{ type: "text", text: t }] };
+  if (q) p.messages[0].quickReply = { items: q.map(function(o){ return {type:"action",action:{type:"message",label:o,text:o}}; }) };
+  UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", { method:"post", headers:{"Content-Type":"application/json",Authorization:"Bearer "+LINE_TOKEN}, payload:JSON.stringify(p) });
+}
+
+function sendTG(cid, t, b) {
+  var kb = []; if(b) for (var i=0; i<b.length; i+=2) kb.push(b.slice(i, i+2).map(function(x){ return {text:x.text,callback_data:x.data}; }));
+  UrlFetchApp.fetch("https://api.telegram.org/bot"+TELEGRAM_BOT_TOKEN+"/sendMessage", { method:"post", contentType:"application/json", payload:JSON.stringify({chat_id:cid, text:t, parse_mode:"HTML", reply_markup:{inline_keyboard:kb}}) });
+}
+
+function editTG(cid, mid, t, b) {
+  var kb = []; if(b) for (var i=0; i<b.length; i+=2) kb.push(b.slice(i, i+2).map(function(x){ return {text:x.text,callback_data:x.data}; }));
+  UrlFetchApp.fetch("https://api.telegram.org/bot"+TELEGRAM_BOT_TOKEN+"/editMessageText", { method:"post", contentType:"application/json", payload:JSON.stringify({chat_id:cid, message_id:mid, text:t, parse_mode:"HTML", reply_markup:{inline_keyboard:kb}}) });
+}
+
+function runPatInspectorNow() {
+  var ts = ScriptApp.getProjectTriggers();
+  for (var i=0; i<ts.length; i++) { if (ts[i].getHandlerFunction() === 'runPatInspectorNow' || ts[i].getHandlerFunction() === 'runPatInspector') ScriptApp.deleteTrigger(ts[i]); }
+  runPatInspector(); 
+}
+
+function runPatInspector() {
+  var start = Date.now(); var ss = SpreadsheetApp.getActiveSpreadsheet(); var sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+  var files = getAllFiles(DriveApp.getFolderById(FOLDER_ID)); var mainArc = DriveApp.getFolderById(ARCHIVE_FOLDER_ID);
+  var cP = 0, cF = 0, site = ""; var cache = CacheService.getScriptCache();
+  for (var i=0; i<files.length; i++) {
+    var f = files[i]; if (Date.now() - start > 240000) break; var fid = f.getId();
+    if (cache.get("proc_" + fid) || (f.getDescription() && f.getDescription().indexOf("PAT_CHECKED")>-1)) continue;
+    try {
+      cache.put("proc_" + fid, "1", 600); var pName = f.getParents().next().getName(); site = pName;
+      var ai = analyzeAI(f); var status = ai.status.toUpperCase();
+      sheet.appendRow([new Date(), f.getName(), ai.sheetReference, status, ai.reason, f.getUrl()]);
+      var target = getOrCreateSubFolder(getOrCreateSubFolder(mainArc, pName), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference);
+      f.moveTo(target); if (status === "PASS") cP++; else { cF++; sendFail(f.getName(), ai.sheetReference, ai.reason, f.getUrl(), fid); }
+      f.setDescription("PAT_CHECKED: " + status); cache.put("proc_" + fid, "DONE", 3600);
+    } catch (e) { cache.remove("proc_" + fid); }
+  }
+  if (cP + cF > 0) sendTG(TELEGRAM_TARGET_ID, "✅ ตรวจเสร็จแล้ว! Site: " + site + "\n🟢 ผ่าน: " + cP + " | 🔴 ไม่ผ่าน: " + cF);
+}
+
+function analyzeAI(file) {
+  var b64 = Utilities.base64Encode(file.getBlob().getBytes());
+  var payload = { "model": "meta-llama/llama-4-scout-17b-16e-instruct", "messages": [{ "role": "user", "content": [{ "type": "text", "text": "ตอบ JSON: {\"sheetReference\": \"หมวด\", \"status\": \"PASS/FAIL\", \"reason\": \"เหตุผลไทย\"}" }, { "type": "image_url", "image_url": { "url": "data:image/jpeg;base64," + b64 } }] }] };
+  var res = UrlFetchApp.fetch("https://api.groq.com/openai/v1/chat/completions", { method: "post", headers: { Authorization: "Bearer " + GROQ_KEYS[0], "Content-Type": "application/json" }, payload: JSON.stringify(payload) });
+  return JSON.parse(JSON.parse(res.getContentText()).choices[0].message.content.replace(/```json|```/g, ""));
+}
+
+function sendFail(fn, cat, r, url, fid) {
+  var t = "🚨 งานไม่ผ่าน\n📁 ไฟล์: " + fn + "\n📌 หมวด: " + cat + "\n❌ สาเหตุ: " + r + "\n🔍 <a href=\"" + url + "\">ดูรูป</a>";
+  UrlFetchApp.fetch("https://api.telegram.org/bot"+TELEGRAM_BOT_TOKEN+"/sendMessage", { method:"post", contentType:"application/json", payload:JSON.stringify({chat_id:TELEGRAM_TARGET_ID, text:t, parse_mode:"HTML", reply_markup:{inline_keyboard:[[{text:"✅ อนุมัติ",callback_data:"app|"+fid}]]}}) });
+}
+
+function processApprove(fid, cid) { try { DriveApp.getFileById(fid).setDescription("PASS (Manual Approved)"); sendTG(cid, "✅ อนุมัติแล้ว"); } catch (e) {} }
+function getOrCreateSubFolder(p, n) { var f = p.getFoldersByName(n); return f.hasNext() ? f.next() : p.createFolder(n); }
+function getAllFiles(f) {
+  var res = []; var r = f.getFiles(); while (r.hasNext()) res.push(r.next());
+  var s = f.getFolders(); while (s.hasNext()) { var sf = s.next().getFiles(); while (sf.hasNext()) res.push(sf.next()); }
+  return res;
+}
+function getTGImg(id) {
+  var p = JSON.parse(UrlFetchApp.fetch("https://api.telegram.org/bot"+TELEGRAM_BOT_TOKEN+"/getFile?file_id="+id)).result.file_path;
+  return UrlFetchApp.fetch("https://api.telegram.org/file/bot"+TELEGRAM_BOT_TOKEN+"/"+p).getBlob();
+}
