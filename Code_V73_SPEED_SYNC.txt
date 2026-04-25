@@ -1,0 +1,285 @@
+// =========================================================================
+// === AI SMART QC BOT - V.73 (SPEED SYNC & DRIVE LINK) ===
+// =========================================================================
+
+// --- [1] CONFIGURATIONS ---
+const VERSION = "V.73 (SPEED SYNC)"; 
+const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA"; 
+const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7"; 
+const SHEET_NAME = "Dashboard"; 
+
+const PROJECT_LIST = ["HAE", "TME", "HAB", "TMT"];
+const TYPE_LIST = ["MBB", "POWER"];
+
+const TELEGRAM_BOT_TOKEN = "8625222790:AAHjU70oWGm88NyUaXaWIDJveo3b2KpnG90"; 
+const TELEGRAM_TARGET_ID = "7378939928"; 
+
+// *** [V.73 Master URL] ใส่ Web App URL ที่ได้จาก New Deployment ล่าสุดของคุณ ***
+const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby30zZxmKMgdS4ip4X0vCH059d_w0maXaMwOLMeD8fu7XyWTAHqrwRfjtCuoxj-Fbg/exec"; 
+
+const LINE_BOTS = [{
+  TOKEN: "CnFH9VFWVp7HttiDfE56k2lCZ6aUlnETSKL9yA6Oj5f3Gb1lP6iR6CPGiEdz/8BNJUHtDcDU51y+K+o83fNoEkeKROSQ74PMlCuTErmr4clyWjzAWD27z/SQfFtYz3ALQ2+TqU06ZVoD7ASnbwD3NwdB04t89/1O/w1cDnyilFU=",
+  TARGET_GROUP: "C5a1893cfbad69376b46bb90b0829019e" 
+}];
+
+const GROQ_API_KEYS = ["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"];
+
+// =========================================================================
+// === [2] WEBHOOK RECEIVER ===
+// =========================================================================
+function doPost(e) {
+  const cache = CacheService.getScriptCache();
+  try {
+    const data = JSON.parse(e.postData.contents);
+    if (data.update_id) {
+      if (cache.get("v73_" + data.update_id)) return ContentService.createTextOutput("OK");
+      cache.put("v73_" + data.update_id, "1", 300);
+    }
+    if (data.events) handleLineWebhook(data.events[0]);
+    else handleTelegramWebhook(data);
+  } catch (err) { console.error("doPost Error: " + err.toString()); }
+  return ContentService.createTextOutput("OK");
+}
+
+// =========================================================================
+// === [3] TELEGRAM HANDLER (REAL-TIME SYNC) ===
+// =========================================================================
+function handleTelegramWebhook(data) {
+  const cache = CacheService.getScriptCache();
+  
+  if (data.callback_query) {
+    const cb = data.callback_query;
+    const cid = cb.message.chat.id;
+    const mid = cb.message.message_id;
+    const uid = "TG_" + cb.from.id;
+    const val = cb.data;
+    
+    // ตอบรับ Callback ทันที
+    UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, { 
+      method: 'post', payload: { callback_query_id: cb.id }, muteHttpExceptions: true 
+    });
+    
+    if (val === "cancel") {
+      clearUser(uid);
+      editTG(cid, mid, "❌ ยกเลิกเรียบร้อย");
+      sendTG(cid, "กดปุ่ม 'ส่งงาน' เพื่อเริ่มใหม่", ["ส่งงาน"]);
+    } else if (val.startsWith("pj|")) {
+      const pj = val.split("|")[1];
+      cache.putAll({ [uid+"_p"]: pj, [uid+"_s"]: "W_TY" }, 900);
+      editTGInline(cid, mid, `📁 โปรเจกต์: <b>${pj}</b>\n⚡ ขั้นตอนที่ 2: เลือกประเภทงานครับ`, TYPE_LIST.map(t => ({ text: t, data: "ty|"+t })));
+    } else if (val.startsWith("ty|")) {
+      const ty = val.split("|")[1];
+      cache.putAll({ [uid+"_t"]: ty, [uid+"_s"]: "W_SI" }, 900);
+      editTG(cid, mid, `📁 โปรเจกต์: <b>${cache.get(uid+"_p")}</b>\n⚡ ประเภท: <b>${ty}</b>`);
+      sendTG(cid, `🏢 <b>ขั้นตอนที่ 3:</b> กรุณาพิมพ์รหัส Site ครับ`, ["ยกเลิก"]);
+    } else if (val.startsWith("app|")) processManualApprove(val.split("|")[1], cid);
+    else if (val.startsWith("rej|")) processManualReject(val.split("|")[1], cid);
+    return;
+  }
+
+  const msg = data.message || data.edited_message;
+  if (!msg) return;
+  const cid = msg.chat.id;
+  const uid = "TG_" + (msg.from ? msg.from.id : cid);
+  let text = (msg.text || "").trim();
+  if (text.includes("@")) text = text.split("@")[0].trim();
+  const s = cache.get(uid + "_s") || "IDLE";
+
+  if (text === "/check" || text === "สถานะ" || text === "เช็ค") {
+    sendTG(cid, `🤖 <b>Bot Status:</b> READY\n📦 <b>Version:</b> ${VERSION}\n📂 <b>State:</b> ${s}`, ["ส่งงาน"]);
+    return;
+  }
+
+  if (text === "ส่งงาน" || text === "สั่งงาน" || text === "/start") {
+    clearUser(uid);
+    cache.put(uid + "_s", "W_PJ", 900);
+    sendTGInline(cid, "🏗️ ขั้นตอนที่ 1: เลือก Project ครับ", PROJECT_LIST.map(p => ({ text: p, data: "pj|"+p })));
+    return;
+  }
+
+  // ขั้นตอนพิมพ์ Site (สร้างโฟลเดอร์และส่งลิงก์เหมือน Line)
+  if (s === "W_SI" && text !== "ยกเลิก" && !text.startsWith("/")) {
+    const pj = cache.get(uid+"_p");
+    const ty = cache.get(uid+"_t");
+    try {
+      const folder = getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), `${pj}_${ty}_${text}`);
+      cache.putAll({ [uid+"_site"]: text, [uid+"_s"]: "W_PH" }, 3600);
+      const msgTxt = `✅ <b>โฟลเดอร์พร้อม!</b>\n🏢 Site: <b>${text}</b>\n\n🔗 <b>ส่งใน Drive:</b> <a href="${folder.getUrl()}">เปิดโฟลเดอร์</a>\n📸 หรือทยอยส่งรูปเข้าแชทนี้ได้เลยครับ\n\n(เสร็จแล้วกดปุ่ม <b>'จบงาน'</b> ด้านล่าง)`;
+      sendTG(cid, msgTxt, ["จบงาน", "ยกเลิก"]);
+    } catch (e) {
+      sendTG(cid, "❌ เกิดข้อผิดพลาดในการสร้างโฟลเดอร์ กรุณาลองใหม่อีกครั้ง");
+    }
+    return;
+  }
+
+  if (text === "ยกเลิก" || text === "จบงาน") {
+    if (text === "จบงาน" && s === "W_PH") {
+      ScriptApp.newTrigger('runPatInspector').timeBased().after(1000).create();
+      sendTG(cid, "✅ ปิดรับงานและสั่ง AI ตรวจทันทีครับ! (รอประมวลผลสักครู่นะครับ)", ["ส่งงาน"]);
+    } else {
+      sendTG(cid, "❌ ยกเลิกเรียบร้อย", ["ส่งงาน"]);
+    }
+    clearUser(uid);
+    return;
+  }
+
+  if (msg.photo && s === "W_PH") processImage("TG", uid, cid, msg.photo[msg.photo.length - 1].file_id);
+}
+
+// =========================================================================
+// === [4] LINE HANDLER (SYNC FLOW) ===
+// =========================================================================
+function handleLineWebhook(ev) {
+  const uid = ev.source.userId;
+  if (ev.type === 'message' && ev.message.type === 'text') {
+    const text = ev.message.text.trim();
+    const cache = CacheService.getScriptCache();
+    const key = "LINE_" + uid;
+    const s = cache.get(key + "_s") || "IDLE";
+    if (text === "ส่งงาน" || text === "สั่งงาน") {
+      clearUser(key); cache.put(key + "_s", "W_PJ", 900);
+      sendLine(uid, "🏗️ ขั้นตอนที่ 1: เลือก Project ครับ", [...PROJECT_LIST, "ยกเลิก"]);
+    } else if (s === "W_PJ" && PROJECT_LIST.includes(text)) {
+      cache.putAll({ [key+"_p"]: text, [key+"_s"]: "W_TY" }, 900);
+      sendLine(uid, `📁 โปรเจกต์: ${text}\n⚡ ขั้นตอนที่ 2: เลือกประเภทงานครับ`, [...TYPE_LIST, "ยกเลิก"]);
+    } else if (s === "W_TY" && TYPE_LIST.includes(text)) {
+      cache.putAll({ [key+"_t"]: text, [key+"_s"]: "W_SI" }, 900);
+      sendLine(uid, `⚡ ประเภท: ${text}\n🏢 ขั้นตอนที่ 3: กรุณาพิมพ์รหัส Site ครับ`, ["ยกเลิก"]);
+    } else if (s === "W_SI" && text !== "ยกเลิก") {
+      const folder = getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), `${cache.get(key+"_p")}_${cache.get(key+"_t")}_${text}`);
+      cache.putAll({ [key+"_site"]: text, [key+"_s"]: "W_PH" }, 3600);
+      sendLine(uid, `✅ โฟลเดอร์พร้อม!\n🔗 ส่งใน Drive: ${folder.getUrl()}\n📸 หรือส่งรูปในแชท (เสร็จแล้วพิมพ์ 'จบงาน')`, ["จบงาน", "ยกเลิก"]);
+    } else if (text === "ยกเลิก" || text === "จบงาน") {
+      if (text === "จบงาน") ScriptApp.newTrigger('runPatInspector').timeBased().after(1000).create();
+      clearUser(key); sendLine(uid, text === "ยกเลิก" ? "❌ ยกเลิกแล้ว" : "✅ ปิดรับงานและสั่ง AI ตรวจทันทีครับ!");
+    }
+  } else if (ev.type === 'message' && ev.message.type === 'image') {
+    processImage("LINE", "LINE_"+uid, uid, ev.message.id);
+  }
+}
+
+// =========================================================================
+// === [5] CORE FUNCTIONS ===
+// =========================================================================
+function sendTG(cid, txt, buttons) {
+  let kb = { keyboard: [], resize_keyboard: true, one_time_keyboard: true };
+  if (buttons && buttons.length > 0) {
+    let row = [];
+    for (let i = 0; i < buttons.length; i++) { row.push({ text: String(buttons[i]) }); if (row.length === 2) { kb.keyboard.push(row); row = []; } }
+    if (row.length > 0) kb.keyboard.push(row);
+  } else { kb = { remove_keyboard: true }; }
+  return callTG("sendMessage", { chat_id: cid, text: txt, parse_mode: "HTML", reply_markup: kb, disable_web_page_preview: false });
+}
+
+function sendTGInline(cid, txt, btns) {
+  const kb = { inline_keyboard: [] };
+  let row = [];
+  btns.forEach(b => {
+    row.push({ text: b.text, callback_data: b.data });
+    if (row.length === 2) { kb.inline_keyboard.push(row); row = []; }
+  });
+  if (row.length > 0) kb.inline_keyboard.push(row);
+  kb.inline_keyboard.push([{ text: "❌ ยกเลิก", callback_data: "cancel" }]);
+  return callTG("sendMessage", { chat_id: cid, text: txt, parse_mode: "HTML", reply_markup: kb });
+}
+
+function editTG(cid, mid, txt) {
+  return callTG("editMessageText", { chat_id: cid, message_id: mid, text: txt, parse_mode: "HTML" });
+}
+
+function editTGInline(cid, mid, txt, btns) {
+  const kb = { inline_keyboard: [] };
+  let row = [];
+  btns.forEach(b => {
+    row.push({ text: b.text, callback_data: b.data });
+    if (row.length === 2) { kb.inline_keyboard.push(row); row = []; }
+  });
+  if (row.length > 0) kb.inline_keyboard.push(row);
+  kb.inline_keyboard.push([{ text: "❌ ยกเลิก", callback_data: "cancel" }]);
+  return callTG("editMessageText", { chat_id: cid, message_id: mid, text: txt, parse_mode: "HTML", reply_markup: kb });
+}
+
+function callTG(m, p) {
+  return UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${m}`, { method: "post", contentType: "application/json", payload: JSON.stringify(p), muteHttpExceptions: true });
+}
+
+function sendLine(t, txt, q) {
+  let pl = { to: t, messages: [{ type: "text", text: txt }] };
+  if (q) pl.messages[0].quickReply = { items: q.map(o => ({ type: "action", action: { type: "message", label: o, text: o } })) };
+  UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", { method: "post", headers: { "Content-Type": "application/json", Authorization: "Bearer " + LINE_BOTS[0].TOKEN }, payload: JSON.stringify(pl), muteHttpExceptions: true });
+}
+
+function processImage(p, uid, cid, mid) {
+  const cache = CacheService.getScriptCache();
+  try {
+    const folder = getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), `${cache.get(uid+"_p")}_${cache.get(uid+"_t")}_${cache.get(uid+"_site")}`);
+    const blob = p === "LINE" ? UrlFetchApp.fetch(`https://api-data.line.me/v2/bot/message/${mid}/content`, { headers: { Authorization: "Bearer " + LINE_BOTS[0].TOKEN } }).getBlob() : getTGImg(mid);
+    folder.createFile(blob).setName(`${cache.get(uid+"_site")}_${Date.now()}.jpg`);
+  } catch (e) {}
+}
+
+function getTGImg(id) {
+  const res = JSON.parse(UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${id}`));
+  return UrlFetchApp.fetch(`https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${res.result.file_path}`).getBlob();
+}
+
+function runPatInspector() {
+  const ts = ScriptApp.getProjectTriggers();
+  for (let t of ts) { if (t.getHandlerFunction() === 'runPatInspector') ScriptApp.deleteTrigger(t); }
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+  const files = getAllFiles(DriveApp.getFolderById(FOLDER_ID));
+  const mainArc = DriveApp.getFolderById(ARCHIVE_FOLDER_ID);
+  const props = PropertiesService.getScriptProperties();
+  for (let f of files) {
+    const fid = f.getId();
+    if (props.getProperty("d_"+fid) || (f.getDescription() && f.getDescription().includes("PAT_CHECKED"))) continue;
+    try {
+      props.setProperty("d_"+fid, "1");
+      const parentName = f.getParents().hasNext() ? f.getParents().next().getName() : "Unknown";
+      const ai = analyzeAI(f);
+      const status = ai.status.toUpperCase();
+      sheet.appendRow([new Date(), f.getName(), ai.sheetReference, status, ai.reason, f.getUrl()]);
+      f.moveTo(getOrCreateSubFolder(getOrCreateSubFolder(mainArc, parentName), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference));
+      if (status !== "PASS") sendFailAlert(f.getName(), ai.sheetReference, ai.reason, f.getUrl(), fid);
+      f.setDescription("PAT_CHECKED: " + status);
+    } catch (e) { props.deleteProperty("d_"+fid); }
+  }
+}
+
+function analyzeAI(file) {
+  const b64 = Utilities.base64Encode(file.getBlob().getBytes());
+  const res = UrlFetchApp.fetch("https://api.groq.com/openai/v1/chat/completions", { method: "post", headers: { Authorization: "Bearer " + GRO_API_KEYS[0], "Content-Type": "application/json" }, payload: JSON.stringify({ "model": "llama-3.2-11b-vision-preview", "messages": [{ "role": "user", "content": [{ "type": "text", "text": "ตอบ JSON: {\"sheetReference\": \"หมวด\", \"status\": \"PASS/FAIL\", \"reason\": \"เหตุผลไทย\"}" }, { "type": "image_url", "image_url": { "url": `data:image/jpeg;base64,${b64}` } }] }], "response_format": { "type": "json_object" } }) });
+  return JSON.parse(JSON.parse(res.getContentText()).choices[0].message.content);
+}
+
+function sendFailAlert(fn, cat, reason, url, fid) {
+  const tgKb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ปฏิเสธ", callback_data: "rej|" + fid }], [{ text: "🔍 ดูรูป", url: url }]] };
+  UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, { method: "post", contentType: "application/json", payload: JSON.stringify({ chat_id: TELEGRAM_TARGET_ID, text: `🚨 <b>ตรวจพบงานไม่ผ่าน</b>\nไฟล์: ${fn}\nหมวด: ${cat}\nสาเหตุ: ${reason}`, parse_mode: "HTML", reply_markup: tgKb }) });
+}
+
+function processManualApprove(fid, cid) {
+  try { const f = DriveApp.getFileById(fid); f.setDescription("PASS (Approved)"); sendTG(cid, `✅ อนุมัติรูป ${f.getName()} แล้ว`, []); } catch (e) {}
+}
+function processManualReject(fid, cid) {
+  try { const f = DriveApp.getFileById(fid); f.setDescription("FAIL (Rejected)"); sendTG(cid, `❌ ปฏิเสธรูป ${f.getName()} แล้ว`, []); } catch (e) {}
+}
+
+function clearUser(uid) {
+  const cache = CacheService.getScriptCache();
+  ["_s", "_p", "_t", "_site"].forEach(k => cache.remove(uid + k));
+}
+function getOrCreateSubFolder(p, n) { const f = p.getFoldersByName(n); return f.hasNext() ? f.next() : p.createFolder(n); }
+function getAllFiles(f) {
+  let res = []; const rf = f.getFiles(); while (rf.hasNext()) res.push(rf.next());
+  const sf = f.getFolders(); while (sf.hasNext()) { const sff = sf.next().getFiles(); while (sff.hasNext()) res.push(sff.next()); }
+  return res;
+}
+
+function FIX_ล้างระบบและยึดอำนาจ() {
+  const url = WEBHOOK_URL;
+  UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook?url=${url}&drop_pending_updates=true`);
+  const ts = ScriptApp.getProjectTriggers(); ts.forEach(t => ScriptApp.deleteTrigger(t));
+  PropertiesService.getScriptProperties().deleteAllProperties();
+  console.log("ล้างระบบและยึดอำนาจสำเร็จ! เชื่อมต่อกับ " + url);
+}
