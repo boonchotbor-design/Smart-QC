@@ -1,327 +1,239 @@
 // =========================================================================
-// === การตั้งค่าระบบ (CONFIGURATIONS) - V.19 (Clean Inline Version) ===
+// === AI SMART QC BOT - V.72 (Logic Separation & Force UI Fix) ===
 // =========================================================================
 
+// --- [1] CONFIGURATIONS ---
+const VERSION = "V.72 (FINAL MASTER)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA"; 
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7"; 
 const SHEET_NAME = "Dashboard"; 
 
-const LINE_BOTS = [
-  {
-    NAME: "บอทตัวที่ 2 (Inspector2)",
-    TOKEN: "CnFH9VFWVp7HttiDfE56k2lCZ6aUlnETSKL9yA6Oj5f3Gb1lP6iR6CPGiEdz/8BNJUHtDcDU51y+K+o83fNoEkeKROSQ74PMlCuTErmr4clyWjzAWD27z/SQfFtYz3ALQ2+TqU06ZVoD7ASnbwD3NwdB04t89/1O/w1cDnyilFU=",
-    TARGET_GROUP: "C5a1893cfbad69376b46bb90b0829019e" 
-  }
-];
-const ENABLE_LINE_NOTIFY = true; 
+const PROJECT_LIST = ["HAE", "TME", "HAB", "TMT"];
+const TYPE_LIST = ["MBB", "POWER"];
 
 const TELEGRAM_BOT_TOKEN = "8625222790:AAHjU70oWGm88NyUaXaWIDJveo3b2KpnG90"; 
 const TELEGRAM_TARGET_ID = "7378939928"; 
 
+// *** [V.72 Master URL] ลิงก์ที่ลงท้ายด้วย 161Ngtg หรือตัวล่าสุดของคุณ ***
+const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwxrie8IQw80-SrNn2qs_1LV3_aWi5ks0BUlaMG1YEQAYkul3SHpFGrbterLFhl61Ngtg/exec"; 
+
+const LINE_BOTS = [{
+  TOKEN: "CnFH9VFWVp7HttiDfE56k2lCZ6aUlnETSKL9yA6Oj5f3Gb1lP6iR6CPGiEdz/8BNJUHtDcDU51y+K+o83fNoEkeKROSQ74PMlCuTErmr4clyWjzAWD27z/SQfFtYz3ALQ2+TqU06ZVoD7ASnbwD3NwdB04t89/1O/w1cDnyilFU=",
+  TARGET_GROUP: "C5a1893cfbad69376b46bb90b0829019e" 
+}];
+
 const GROQ_API_KEYS = [
   "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",
-  "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",
-  "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",
-  "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"
+  "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"
 ];
 
 // =========================================================================
-// === Webhook Receiver ===
+// === [2] WEBHOOK RECEIVER ===
 // =========================================================================
 function doPost(e) {
+  const cache = CacheService.getScriptCache();
   try {
     const data = JSON.parse(e.postData.contents);
-    
-    // ป้องกัน Retry จาก Telegram
     if (data.update_id) {
-      const cache = CacheService.getScriptCache();
-      const lockKey = "tg_upd_" + data.update_id;
-      if (cache.get(lockKey)) return ContentService.createTextOutput("OK");
-      cache.put(lockKey, "1", 60);
+      if (cache.get("v72_" + data.update_id)) return ContentService.createTextOutput("OK");
+      cache.put("v72_" + data.update_id, "1", 300);
     }
-
-    if (data.events && data.events.length > 0) handleLineWebhook(data.events[0]);
-    else if (data.update_id) handleTelegramWebhook(data);
-    
-    return ContentService.createTextOutput("OK");
-  } catch (error) { 
-    return ContentService.createTextOutput("OK"); 
-  }
+    if (data.events) handleLineWebhook(data.events[0]);
+    else handleTelegramWebhook(data);
+  } catch (err) {}
+  return ContentService.createTextOutput("OK");
 }
 
-// === LINE Handler ===
-function handleLineWebhook(event) {
-  const replyToken = event.replyToken;
-  const userId = event.source.userId;
-  const groupId = event.source.groupId || event.source.roomId || userId;
-
-  if (event.type === 'postback') {
-    if (event.postback.data.startsWith("apprv|LINE|")) processManualApprove(event.postback.data.split("|")[2], "LINE", replyToken);
-    else if (event.postback.data.startsWith("reject|LINE|")) processManualReject(event.postback.data.split("|")[2], "LINE", replyToken);
-  } else if (event.type === 'message') {
-    if (event.message.type === 'text') {
-      const text = event.message.text.trim();
-      if (text === "ขอไอดี") sendMsg("LINE", replyToken, `ไอดีของกลุ่ม LINE นี้คือ:\n${groupId}`, []);
-      else processUserTextCommand("LINE", userId, replyToken, text);
-    }
-    if (event.message.type === 'image') processUserImage("LINE", userId, replyToken, event.message.id, event.source.groupId != null);
-  }
-}
-
-// === Telegram Handler (Workflow ใหม่แบบ Inline) ===
+// =========================================================================
+// === [3] TELEGRAM HANDLER (SYNC FIX) ===
+// =========================================================================
 function handleTelegramWebhook(data) {
-  const cache = CacheService.getScriptCache();
+  const props = PropertiesService.getScriptProperties();
   
   if (data.callback_query) {
     const cb = data.callback_query;
-    const chatId = cb.message.chat.id;
-    const userId = cb.from.id;
-    const uid = "TG_" + userId;
-    const callbackData = cb.data;
-
     UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, { method: 'post', payload: { callback_query_id: cb.id } });
+    if (cb.data.startsWith("app|")) processManualApprove(cb.data.split("|")[1], cb.message.chat.id);
+    else if (cb.data.startsWith("rej|")) processManualReject(cb.data.split("|")[1], cb.message.chat.id);
+    return;
+  }
 
-    if (callbackData.startsWith("apprv|TG|")) processManualApprove(callbackData.split("|")[2], "TG", chatId);
-    else if (callbackData.startsWith("reject|TG|")) processManualReject(callbackData.split("|")[2], "TG", chatId);
-    else if (callbackData.startsWith("set_proj|")) {
-      const proj = callbackData.split("|")[1];
-      cache.put(uid + "_project", proj, 1200);
-      cache.put(uid + "_state", "WAITING_TYPE", 1200);
-      editTelegramMessage(chatId, cb.message.message_id, `📁 <b>โปรเจกต์: ${proj}</b>\n\n⚡ <b>ขั้นตอนที่ 2/3</b>\nกรุณาเลือกประเภทงานครับ`, [
-        {text: "MBB", data: "set_type|MBB"}, 
-        {text: "POWER", data: "set_type|POWER"},
-        {text: "❌ ยกเลิก", data: "cancel"}
-      ]);
-    }
-    else if (callbackData.startsWith("set_type|")) {
-      const type = callbackData.split("|")[1];
-      cache.put(uid + "_type", type, 1200);
-      cache.put(uid + "_state", "WAITING_SITE", 1200);
-      editTelegramMessage(chatId, cb.message.message_id, `⚡ <b>ประเภท: ${type}</b>\n\n🏢 <b>ขั้นตอนที่ 3/3</b>\nกรุณาพิมพ์รหัส Site ลงในช่องแชทครับ`, [
-        {text: "❌ ยกเลิก", data: "cancel"}
-      ]);
-    }
-    else if (callbackData === "cancel") {
-      cache.remove(uid + "_state"); cache.remove(uid + "_project"); cache.remove(uid + "_type"); cache.remove(uid + "_site");
-      editTelegramMessage(chatId, cb.message.message_id, "❌ ยกเลิกรายการเรียบร้อยครับ", []);
-    }
+  if (!data.message) return;
+  const msg = data.message;
+  const cid = msg.chat.id;
+  const uid = "TG_" + (msg.from ? msg.from.id : cid);
+  const text = (msg.text || "").trim();
+  const s = props.getProperty(uid + "_s") || "IDLE";
+
+  // --- 1. คำสั่งตรวจสอบระบบ (แยกเด็ดขาด) ---
+  if (text === "/check") {
+    sendTG(cid, `🤖 <b>Bot Status:</b> READY\n📦 <b>Version:</b> ${VERSION}\n📂 <b>State:</b> ${s}`, ["ส่งงาน"]);
+    return;
+  }
+
+  // --- 2. คำสั่งเริ่มต้น (ล้างความจำก่อนเริ่มทุกครั้ง) ---
+  if (text === "ส่งงาน" || text === "/ส่งงาน") {
+    clearUser(uid);
+    props.setProperty(uid + "_s", "W_PJ");
+    sendTG(cid, "🏗️ <b>ขั้นตอนที่ 1:</b> เลือก Project", [...PROJECT_LIST, "ยกเลิก"]);
   } 
-  else if (data.message) {
-    const msg = data.message;
-    const chatId = msg.chat.id;
-    const userId = msg.from.id;
-    const uid = "TG_" + userId;
-
-    if (msg.text) {
-      const text = msg.text.trim();
-      const userState = cache.get(uid + "_state") || "IDLE";
-
-      if (text === "ขอไอดี" || text === "ไอดีกลุ่ม" || text === "ไอดี") {
-        sendTelegramInline(chatId, `🆔 <b>ไอดีกลุ่มนี้คือ:</b>\n<code>${chatId}</code>`, []);
-      } 
-      else if (text === "ส่งงาน" || text === "อัพโหลด" || text === "/start") {
-        cache.put(uid + "_state", "WAITING_PROJECT", 1200);
-        sendTelegramInline(chatId, "🏗️ <b>เริ่มขั้นตอนส่งงาน (1/3)</b>\nกรุณาเลือก Project ครับ", [
-          {text: "HAE", data: "set_proj|HAE"}, {text: "TME", data: "set_proj|TME"},
-          {text: "HAB", data: "set_proj|HAB"}, {text: "TMT", data: "set_proj|TMT"},
-          {text: "MBB", data: "set_proj|MBB"},
-          {text: "❌ ยกเลิก", data: "cancel"}
-        ]);
-      }
-      else if (text === "ยกเลิก") {
-        cache.remove(uid + "_state");
-        sendTelegramInline(chatId, "❌ ยกเลิกรายการเรียบร้อยครับ", []);
-      }
-      else if (userState === "WAITING_SITE") {
-        cache.put(uid + "_site", text, 1200);
-        cache.put(uid + "_state", "WAITING_PHOTO", 3600);
-        const proj = cache.get(uid+"_project");
-        const type = cache.get(uid+"_type");
-        let folder = getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), `${proj}_${type}_${text}`);
-        sendTelegramInline(chatId, `✅ <b>ตั้งค่าเรียบร้อย!</b>\n🏢 Site: ${text}\n📂 โฟลเดอร์: ${proj}_${type}\n\n📸 ส่งรูปเข้าแชทได้เลยครับ\n(เสร็จแล้วพิมพ์ 'จบงาน')`, [{text: "✅ จบงาน", data: "done"}]);
-      }
-      else if (text === "จบงาน" || text === "เสร็จแล้ว") {
-        cache.remove(uid + "_state");
-        ScriptApp.newTrigger('runPatInspectorNow').timeBased().after(1000).create();
-        sendTelegramInline(chatId, "✅ รับทราบครับ! สั่ง AI เริ่มตรวจงานทันที\n(บอทจะแจ้งสรุปให้ทราบเมื่อตรวจครบครับ)", []);
-      }
+  // --- 3. เลือก Project ---
+  else if (s === "W_PJ" && PROJECT_LIST.indexOf(text) > -1) {
+    props.setProperties({ [uid+"_p"]: text, [uid+"_s"]: "W_TY" });
+    sendTG(cid, `📁 โปรเจกต์: ${text}\n⚡ <b>ขั้นตอนที่ 2:</b> เลือกประเภทงานครับ`, [...TYPE_LIST, "ยกเลิก"]);
+  } 
+  // --- 4. เลือกประเภทงาน ---
+  else if (s === "W_TY" && TYPE_LIST.indexOf(text) > -1) {
+    props.setProperties({ [uid+"_t"]: text, [uid+"_s"]: "W_SI" });
+    sendTG(cid, `⚡ ประเภท: ${text}\n🏢 <b>ขั้นตอนที่ 3:</b> พิมพ์รหัส Site ครับ`, ["ยกเลิก"]);
+  } 
+  // --- 5. พิมพ์รหัส Site ---
+  else if (s === "W_SI" && text !== "ยกเลิก") {
+    props.setProperties({ [uid+"_site"]: text, [uid+"_s"]: "W_PH" });
+    getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), `${props.getProperty(uid+"_p")}_${props.getProperty(uid+"_t")}_${text}`);
+    sendTG(cid, `✅ <b>Site: ${text}</b>\n📸 ส่งรูปเข้าแชทได้เลยครับ (เสร็จแล้วพิมพ์ 'จบงาน')`, ["จบงาน", "ยกเลิก"]);
+  } 
+  // --- 6. คำสั่งพิเศษ ---
+  else if (text === "ยกเลิก" || text === "จบงาน" || text === "/ยกเลิก" || text === "/จบงาน") {
+    if (text === "จบงาน" && s === "W_PH") {
+      ScriptApp.newTrigger('runPatInspector').timeBased().after(1000).create();
+      sendTG(cid, "✅ รับทราบ! สั่ง AI เริ่มตรวจงานทันที...", ["ส่งงาน"]);
+    } else {
+      sendTG(cid, "❌ ยกเลิกเรียบร้อย", ["ส่งงาน"]);
     }
-    if (msg.photo) processUserImage("TG", userId, chatId, msg.photo[msg.photo.length - 1].file_id, chatId < 0);
+    clearUser(uid);
+  }
+
+  if (msg.photo && s === "W_PH") processImage("TG", uid, cid, msg.photo[msg.photo.length - 1].file_id);
+}
+
+// =========================================================================
+// === [4] LINE HANDLER ===
+// =========================================================================
+function handleLineWebhook(ev) {
+  const uid = ev.source.userId;
+  if (ev.type === 'message' && ev.message.type === 'text') processLineText(uid, ev.message.text.trim());
+  else if (ev.type === 'message' && ev.message.type === 'image') processImage("LINE", "LINE_"+uid, uid, ev.message.id);
+}
+
+function processLineText(uid, text) {
+  const props = PropertiesService.getScriptProperties();
+  const key = "LINE_" + uid;
+  const s = props.getProperty(key + "_s") || "IDLE";
+  if (text === "ส่งงาน") {
+    props.setProperty(key + "_s", "W_PJ");
+    sendMsg(uid, "🏗️ ขั้นตอนที่ 1: เลือก Project", [...PROJECT_LIST, "ยกเลิก"]);
+  } else if (s === "W_PJ" && PROJECT_LIST.includes(text)) {
+    props.setProperties({ [key+"_p"]: text, [key+"_s"]: "W_TY" });
+    sendMsg(uid, `📁 โปรเจกต์: ${text}\nเลือกประเภทงาน`, [...TYPE_LIST, "ยกเลิก"]);
+  } else if (s === "W_TY" && TYPE_LIST.includes(text)) {
+    props.setProperties({ [key+"_t"]: text, [key+"_s"]: "W_SI" });
+    sendMsg(uid, `⚡ ประเภท: ${text}\nพิมพ์รหัส Site`, ["ยกเลิก"]);
+  } else if (s === "W_SI") {
+    props.setProperties({ [key+"_site"]: text, [key+"_s"]: "W_PH" });
+    sendMsg(uid, `✅ พร้อม! ส่งรูปได้เลยครับ`, ["จบงาน", "ยกเลิก"]);
+  } else if (text === "ยกเลิก" || text === "จบงาน") {
+    if (text === "จบงาน") ScriptApp.newTrigger('runPatInspector').timeBased().after(1000).create();
+    clearUser(key); sendMsg(uid, text === "ยกเลิก" ? "❌ ยกเลิกแล้ว" : "✅ เริ่มตรวจงาน...");
   }
 }
 
-// === Core Logic ===
-function processUserTextCommand(platform, userId, destId, text) {
-  const cache = CacheService.getScriptCache(); 
-  const uid = platform + "_" + userId;
-  let userState = cache.get(uid + "_state") || "IDLE";
-
-  if (platform === "LINE") {
-    if (text === "ยกเลิก" || text === "จบงาน" || text === "เสร็จแล้ว") {
-      cache.remove(uid + "_state");
-      if (text === "จบงาน" || text === "เสร็จแล้ว") ScriptApp.newTrigger('runPatInspectorNow').timeBased().after(1000).create();
-      sendMsg(platform, destId, text === "ยกเลิก" ? "❌ ยกเลิกแล้ว" : "✅ เริ่มตรวจงาน...", []);
-      return;
-    }
-    if (text === "ส่งงาน" || text === "อัพโหลด") {
-      cache.put(uid + "_state", "WAITING_PROJECT", 1200);
-      sendMsg(platform, destId, "🏗️ ขั้นตอนที่ 1/3\nกรุณาเลือก Project", ["HAE", "TME", "HAB", "TMT", "MBB", "ยกเลิก"]);
-      return;
-    }
-    if (userState === "WAITING_PROJECT") {
-      cache.put(uid + "_project", text, 1200); cache.put(uid + "_state", "WAITING_TYPE", 1200);
-      sendMsg(platform, destId, `📁 โปรเจกต์: ${text}\n⚡ ขั้นตอนที่ 2/3\nเลือกประเภทงาน`, ["MBB", "POWER", "ยกเลิก"]);
-      return;
-    }
-    if (userState === "WAITING_TYPE") {
-      cache.put(uid + "_type", text, 1200); cache.put(uid + "_state", "WAITING_SITE", 1200);
-      sendMsg(platform, destId, `⚡ ประเภท: ${text}\n🏢 ขั้นตอนที่ 3/3\nพิมพ์รหัส Site`, ["ยกเลิก"]);
-      return;
-    }
-    if (userState === "WAITING_SITE") {
-      cache.put(uid + "_site", text, 1200); cache.put(uid + "_state", "WAITING_PHOTO", 3600);
-      sendMsg(platform, destId, `✅ พร้อม! ส่งรูปได้เลยครับ`, ["จบงาน", "ยกเลิก"]);
-      return;
-    }
-  }
-}
-
-function processUserImage(platform, userId, destId, mediaId, isGroup) {
-  const cache = CacheService.getScriptCache(); const uid = platform + "_" + userId;
-  if (cache.get(uid + "_state") === "WAITING_PHOTO") {
-    const lock = LockService.getScriptLock();
-    if (lock.tryLock(5000)) {
-      try {
-        let folder = getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), `${cache.get(uid+"_project")}_${cache.get(uid+"_type")}_${cache.get(uid+"_site")}`);
-        let blob = platform === "LINE" ? getLineImage(mediaId) : getTelegramImage(mediaId);
-        folder.createFile(blob).setName(`${cache.get(uid+"_site")}_${Date.now()}.jpg`).setDescription(`UPLOADER:${platform}_${userId}`);
-        if(platform === "LINE") sendMsg(platform, destId, `📥 รับรูปแล้ว`, []);
-      } finally { lock.releaseLock(); }
-    }
-  }
-}
-
-// === Helpers ===
-function sendMsg(platform, target, text, quick) {
-  if (platform === "LINE") {
-    const isReplyToken = !target.startsWith("U") && !target.startsWith("C") && !target.startsWith("R");
-    let payload = isReplyToken ? { "replyToken": target, "messages": [{ "type": "text", "text": text }] } : { "to": target, "messages": [{ "type": "text", "text": text }] };
-    if (quick && quick.length > 0) payload.messages[0].quickReply = { "items": quick.map(o => ({ "type": "action", "action": { "type": "message", "label": o, "text": o } })) };
-    UrlFetchApp.fetch("https://api.line.me/v2/bot/message/" + (isReplyToken ? "reply" : "push"), { "method": "post", "headers": { "Content-Type": "application/json", "Authorization": "Bearer " + LINE_BOTS[0].TOKEN }, "payload": JSON.stringify(payload), "muteHttpExceptions": true });
-  } else {
-    sendTelegramInline(target, text, (quick || []).map(o => ({text: o, data: o === "ยกเลิก" ? "cancel" : o})));
-  }
-}
-
-function sendTelegramInline(chatId, text, buttons) {
-  let inlineKeyboard = [];
-  for (let i = 0; i < buttons.length; i += 2) {
-    inlineKeyboard.push(buttons.slice(i, i + 2).map(b => ({ text: b.text, callback_data: b.data || b.text })));
-  }
-  UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-    "method": "post", "contentType": "application/json", "payload": JSON.stringify({ "chat_id": chatId, "text": text, "parse_mode": "HTML", "reply_markup": { "inline_keyboard": inlineKeyboard } }), "muteHttpExceptions": true
-  });
-}
-
-function editTelegramMessage(chatId, messageId, text, buttons) {
-  let inlineKeyboard = [];
-  for (let i = 0; i < buttons.length; i += 2) {
-    inlineKeyboard.push(buttons.slice(i, i + 2).map(b => ({ text: b.text, callback_data: b.data || b.text })));
-  }
-  UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
-    "method": "post", "contentType": "application/json", "payload": JSON.stringify({ "chat_id": chatId, "message_id": messageId, "text": text, "parse_mode": "HTML", "reply_markup": { "inline_keyboard": inlineKeyboard } }), "muteHttpExceptions": true
-  });
-}
-
-function runPatInspectorNow() {
-  const triggers = ScriptApp.getProjectTriggers();
-  for (let t of triggers) { if (t.getHandlerFunction() === 'runPatInspectorNow' || t.getHandlerFunction() === 'runPatInspector') ScriptApp.deleteTrigger(t); }
-  runPatInspector(); 
-}
-
+// =========================================================================
+// === [5] AI & CORE PROCESSING ===
+// =========================================================================
 function runPatInspector() {
-  const startTime = Date.now();
+  const ts = ScriptApp.getProjectTriggers();
+  for (let t of ts) { if (t.getHandlerFunction() === 'runPatInspector') ScriptApp.deleteTrigger(t); }
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
-  const sourceFolder = DriveApp.getFolderById(FOLDER_ID);
-  const mainArchive = DriveApp.getFolderById(ARCHIVE_FOLDER_ID);
-  const files = getAllFiles(sourceFolder);
-  let countPass = 0, countFail = 0, currentSite = "";
-  const cache = CacheService.getScriptCache();
+  const files = getAllFiles(DriveApp.getFolderById(FOLDER_ID));
+  const mainArc = DriveApp.getFolderById(ARCHIVE_FOLDER_ID);
+  const props = PropertiesService.getScriptProperties();
 
-  for (let file of files) {
-    if (Date.now() - startTime > 240000) break; 
-    const fileId = file.getId();
-    if (cache.get("processed_" + fileId) || (file.getDescription() && file.getDescription().includes("PAT_CHECKED"))) continue;
-
+  for (let f of files) {
+    const fid = f.getId();
+    if (props.getProperty("d_"+fid) || (f.getDescription() && f.getDescription().includes("PAT_CHECKED"))) continue;
     try {
-      cache.put("processed_" + fileId, "RUNNING", 600);
-      const parentName = file.getParents().hasNext() ? file.getParents().next().getName() : "Unknown";
-      currentSite = parentName;
-      const aiResult = analyzeImageWithGroq(file);
-      const status = aiResult.status.toUpperCase();
-      sheet.appendRow([new Date(), file.getName(), aiResult.sheetReference, status, aiResult.reason, file.getUrl()]);
-
-      let siteArchiveFolder = getOrCreateSubFolder(mainArchive, parentName);
-      let targetFolder = getOrCreateSubFolder(siteArchiveFolder, status === "PASS" ? aiResult.sheetReference : "FAIL_" + aiResult.sheetReference);
-      file.moveTo(targetFolder);
-      if (status === "PASS") countPass++; else { countFail++; sendFailNotify(file.getName(), aiResult.sheetReference, aiResult.reason, file.getUrl(), fileId); }
-      file.setDescription("PAT_CHECKED: " + status);
-      cache.put("processed_" + fileId, "DONE", 3600);
-    } catch (e) { cache.remove("processed_" + fileId); }
-  }
-
-  if (countPass + countFail > 0) {
-    const summary = `━━━━━━━━━━━━━━\n✅ <b>AI ตรวจสอบเสร็จสิ้น!</b>\n━━━━━━━━━━━━━━\n🏢 <b>Site:</b> ${currentSite}\n🟢 ผ่าน: ${countPass} | 🔴 ไม่ผ่าน: ${countFail}\n━━━━━━━━━━━━━━`;
-    UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, { "method": "post", "contentType": "application/json", "payload": JSON.stringify({"chat_id": TELEGRAM_TARGET_ID, "text": summary, "parse_mode": "HTML"}), "muteHttpExceptions": true });
+      props.setProperty("d_"+fid, "1");
+      const site = f.getParents().next().getName();
+      const ai = analyzeAI(f);
+      const status = ai.status.toUpperCase();
+      sheet.appendRow([new Date(), f.getName(), ai.sheetReference, status, ai.reason, f.getUrl()]);
+      f.moveTo(getOrCreateSubFolder(getOrCreateSubFolder(mainArc, site), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference));
+      if (status !== "PASS") sendFailAlert(f.getName(), ai.sheetReference, ai.reason, f.getUrl(), fid);
+      f.setDescription("PAT_CHECKED: " + status);
+    } catch (e) { props.deleteProperty("d_"+fid); }
   }
 }
 
-function analyzeImageWithGroq(file) {
-  const blob = file.getBlob();
-  const base64Data = Utilities.base64Encode(blob.getBytes());
-  const randomKey = GROQ_API_KEYS[Math.floor(Math.random() * GROQ_API_KEYS.length)];
-  const payload = {
-    "model": "meta-llama/llama-4-scout-17b-16e-instruct",
-    "messages": [{ "role": "user", "content": [{ "type": "text", "text": "คุณคือ PAT Inspector ตอบเป็น JSON: {\"sheetReference\": \"หมวด\", \"status\": \"PASS/FAIL\", \"reason\": \"เหตุผลไทย\"}" }, { "type": "image_url", "image_url": { "url": `data:image/jpeg;base64,${base64Data}` } }] }],
-    "temperature": 0.1
-  };
-  const res = UrlFetchApp.fetch("https://api.groq.com/openai/v1/chat/completions", { "method": "post", "headers": { "Authorization": "Bearer " + randomKey, "Content-Type": "application/json" }, "payload": JSON.stringify(payload) });
-  return JSON.parse(JSON.parse(res.getContentText()).choices[0].message.content.replace(/```json|```/g, ""));
+function processManualApprove(fid, cid) {
+  try { const f = DriveApp.getFileById(fid); f.setDescription("PASS (Manual Approved)"); sendTG(cid, `✅ อนุมัติรูป ${f.getName()} แล้ว`, []); } catch (e) {}
+}
+function processManualReject(fid, cid) {
+  try { const f = DriveApp.getFileById(fid); f.setDescription("FAIL (Manual Rejected)"); sendTG(cid, `❌ ไม่อนุมัติรูป ${f.getName()} แล้ว`, []); } catch (e) {}
 }
 
-function sendFailNotify(fileName, cat, reason, url, fileId) {
-  const tgText = `━━━━━━━━━━━━━━\n🚨 <b>งานไม่ผ่านเกณฑ์</b>\n━━━━━━━━━━━━━━\n<b>📁 ไฟล์:</b> ${fileName}\n<b>📌 หมวด:</b> ${cat}\n<b>❌ สาเหตุ:</b> ${reason}\n\n🔍 <a href="${url}"><b>ดูรูปภาพ</b></a>`;
-  UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, { "method": "post", "contentType": "application/json", "payload": JSON.stringify({ "chat_id": TELEGRAM_TARGET_ID, "text": tgText, "parse_mode": "HTML", "reply_markup": { "inline_keyboard": [[{"text": "✅ อนุมัติ", "callback_data": "apprv|TG|" + fileId}, {"text": "❌ ไม่อนุมัติ", "callback_data": "reject|TG|" + fileId}]] } }) });
+function clearUser(uid) {
+  const props = PropertiesService.getScriptProperties();
+  ["_s", "_p", "_t", "_site"].forEach(k => props.deleteProperty(uid + k));
 }
 
-function processManualApprove(fileId, platform, chatId) {
-  try {
-    const file = DriveApp.getFileById(fileId);
-    file.setDescription("PASS (Manual Approved)");
-    sendTelegramInline(chatId, `✅ อนุมัติรูป ${file.getName()} แล้ว`, []);
-  } catch (e) {}
-}
-
-function getOrCreateSubFolder(parent, name) {
-  const folders = parent.getFoldersByName(name);
-  return folders.hasNext() ? folders.next() : parent.createFolder(name);
-}
-
-function getAllFiles(folder) {
-  let files = [];
-  const rootFiles = folder.getFiles();
-  while (rootFiles.hasNext()) files.push(rootFiles.next());
-  const subFolders = folder.getFolders();
-  while (subFolders.hasNext()) {
-    const subFiles = subFolders.next().getFiles();
-    while (subFiles.hasNext()) files.push(subFiles.next());
+function processImage(p, uid, cid, mid) {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty(uid + "_s") === "W_PH") {
+    try {
+      const folder = getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), `${props.getProperty(uid+"_p")}_${props.getProperty(uid+"_t")}_${props.getProperty(uid+"_site")}`);
+      const blob = p === "LINE" ? UrlFetchApp.fetch(`https://api-data.line.me/v2/bot/message/${mid}/content`, { headers: { Authorization: "Bearer " + LINE_BOTS[0].TOKEN } }).getBlob() : getTGImg(mid);
+      folder.createFile(blob).setName(`${props.getProperty(uid+"_site")}_${Date.now()}.jpg`);
+    } catch (e) {}
   }
-  return files;
 }
 
-function getLineImage(id) { return UrlFetchApp.fetch(`https://api-data.line.me/v2/bot/message/${id}/content`, { headers: { Authorization: "Bearer " + LINE_BOTS[0].TOKEN } }).getBlob(); }
-function getTelegramImage(id) {
-  const path = JSON.parse(UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${id}`)).result.file_path;
-  return UrlFetchApp.fetch(`https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${path}`).getBlob();
+function sendTG(cid, txt, buttons) {
+  let kb = { keyboard: [], resize_keyboard: true, one_time_keyboard: true };
+  if (buttons && buttons.length > 0) {
+    let row = [];
+    for (let i = 0; i < buttons.length; i++) { row.push({ text: String(buttons[i]) }); if (row.length === 2) { kb.keyboard.push(row); row = []; } }
+    if (row.length > 0) kb.keyboard.push(row);
+  } else { kb = { remove_keyboard: true }; }
+  const payload = { chat_id: cid, text: txt, parse_mode: "HTML", reply_markup: kb };
+  UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, { method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true });
+}
+
+function sendMsg(t, txt, q) {
+  let pl = { to: t, messages: [{ type: "text", text: txt }] };
+  if (q) pl.messages[0].quickReply = { items: q.map(o => ({ type: "action", action: { type: "message", label: o, text: o } })) };
+  UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", { method: "post", headers: { "Content-Type": "application/json", Authorization: "Bearer " + LINE_BOTS[0].TOKEN }, payload: JSON.stringify(pl), muteHttpExceptions: true });
+}
+
+function getTGImg(id) {
+  const res = JSON.parse(UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${id}`));
+  return UrlFetchApp.fetch(`https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${res.result.file_path}`).getBlob();
+}
+
+function analyzeAI(file) {
+  const b64 = Utilities.base64Encode(file.getBlob().getBytes());
+  const key = GROQ_API_KEYS[Math.floor(Math.random() * GROQ_API_KEYS.length)];
+  const res = UrlFetchApp.fetch("https://api.groq.com/openai/v1/chat/completions", { method: "post", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, payload: JSON.stringify({ "model": "llama-3.2-11b-vision-preview", "messages": [{ "role": "user", "content": [{ "type": "text", "text": "ตอบ JSON: {\"sheetReference\": \"หมวด\", \"status\": \"PASS/FAIL\", \"reason\": \"เหตุผลไทย\"}" }, { "type": "image_url", "image_url": { "url": `data:image/jpeg;base64,${b64}` } }] }], "response_format": { "type": "json_object" } }) });
+  return JSON.parse(JSON.parse(res.getContentText()).choices[0].message.content);
+}
+
+function sendFailAlert(fn, cat, reason, url, fid) {
+  const tgKb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไม่อนุมัติ", callback_data: "rej|" + fid }], [{ text: "🔍 ดูรูป", url: url }]] };
+  UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, { method: "post", contentType: "application/json", payload: JSON.stringify({ chat_id: TELEGRAM_TARGET_ID, text: `🚨 <b>ตรวจพบงานไม่ผ่าน</b>\nไฟล์: ${fn}\nหมวด: ${cat}\nสาเหตุ: ${reason}`, parse_mode: "HTML", reply_markup: tgKb }) });
+}
+
+function getOrCreateSubFolder(p, n) { const f = p.getFoldersByName(n); return f.hasNext() ? f.next() : p.createFolder(n); }
+function getAllFiles(f) {
+  let res = []; const rf = f.getFiles(); while (rf.hasNext()) res.push(rf.next());
+  const sf = f.getFolders(); while (sf.hasNext()) { const sff = sf.next().getFiles(); while (sff.hasNext()) res.push(sff.next()); }
+  return res;
+}
+
+function FIX_ล้างระบบและยึดอำนาจ() {
+  const url = WEBHOOK_URL;
+  UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook?url=${url}&drop_pending_updates=true`);
+  const ts = ScriptApp.getProjectTriggers(); ts.forEach(t => ScriptApp.deleteTrigger(t));
+  PropertiesService.getScriptProperties().deleteAllProperties();
+  console.log("ล้างระบบและยึดอำนาจสำเร็จ! เชื่อมต่อกับ " + url);
 }
