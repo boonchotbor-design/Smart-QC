@@ -30,7 +30,7 @@ function doPost(e) {
     if (!e.postData || !e.postData.contents) return ContentService.createTextOutput("OK");
     const data = JSON.parse(e.postData.contents);
     if (data.update_id && cache.get("v80_" + data.update_id)) return ContentService.createTextOutput("OK");
-    if (data.update_id) cache.put("v80_" + data.update_id, "1", 300);
+    if (data.update_id) cache.put("v80_" + data.update_id, "1", 600);
     if (data.events) handleLineWebhook(data.events[0]);
     else handleTelegramWebhook(data);
   } catch (err) {}
@@ -70,32 +70,44 @@ function handleTelegramWebhook(data) {
 
   const msg = data.message || data.edited_message;
   if (!msg) return;
+
+  // ป้องกันการประมวลผลซ้ำจาก Telegram Retry (ข้ามข้อความที่เก่าเกิน 2 นาที)
+  const now = Date.now() / 1000;
+  if (msg.date && (now - msg.date) > 120) return;
+
   const cid = msg.chat.id;
   const uid = "TG_" + msg.from.id;
   let text = (msg.text || "").trim();
   if (text.includes("@")) text = text.split("@")[0].trim();
   const s = props.getProperty(uid + "_s") || "IDLE";
 
+  // --- Strict Mode: ถ้าไม่มีคำสั่งที่กำหนด และไม่ได้อยู่ในระหว่างขั้นตอนการทำงาน ให้หยุดทันที ---
+  const isStartCommand = (text === "ส่งงาน" || text === "/start" || text === "สั่งงาน");
+  const isCancelCommand = (text === "ยกเลิก" || text === "/ยกเลิก" || text === "จบงาน" || text === "เสร็จแล้ว");
+  
+  if (s === "IDLE" && !isStartCommand) return; // ไม่ได้รับคำสั่งเริ่มงาน ไม่ต้องทำอะไรทั้งสิ้น
+
   // --- Priority Commands ---
-  if (text === "ส่งงาน" || text === "/start") {
-    clearUser(uid); props.setProperty(uid + "_s", "W_PJ");
+  if (isStartCommand) {
+    clearUser(uid); 
+    props.setProperty(uid + "_s", "W_PJ");
     sendTGInline(cid, "🏗️ <b>ขั้นตอนที่ 1:</b> เลือก Project ครับ", PROJECT_LIST.map(p => ({ text: p, data: "pj|"+p })));
     return;
   }
 
-  if (text === "จบงาน" || text === "เสร็จแล้ว" || text === "/จบงาน") {
-    if (s === "W_PH") {
-      sendTG(cid, "✅ <b>รับทราบ!</b> ปิดรับรูปและสั่ง AI ตรวจทันทีครับ\n(ใช้เวลาประมวลผลประมาณ 1-3 นาที)", ["ส่งงาน"]);
-      ScriptApp.newTrigger('runPatInspector').timeBased().after(1000).create();
+  if (isCancelCommand) {
+    if (text === "จบงาน" || text === "เสร็จแล้ว") {
+      if (s === "W_PH") {
+        sendTG(cid, "✅ <b>รับทราบ!</b> ปิดรับรูปและสั่ง AI ตรวจทันทีครับ\n(ใช้เวลาประมวลผลประมาณ 1-3 นาที)", ["ส่งงาน"]);
+        ScriptApp.newTrigger('runPatInspector').timeBased().after(1000).create();
+      } else {
+        sendTG(cid, "⚠️ ยังไม่ได้พิมพ์รหัส Site เลยครับ กรุณาพิมพ์ Site ก่อน หรือพิมพ์ 'ส่งงาน' เพื่อเริ่มใหม่", ["ส่งงาน"]);
+      }
     } else {
-      sendTG(cid, "⚠️ ยังไม่ได้พิมพ์รหัส Site เลยครับ กรุณาพิมพ์ Site ก่อน หรือพิมพ์ 'ส่งงาน' เพื่อเริ่มใหม่", ["ส่งงาน"]);
+      sendTG(cid, "❌ ยกเลิกเรียบร้อย", ["ส่งงาน"]);
     }
-    clearUser(uid); return;
-  }
-
-  if (text === "ยกเลิก" || text === "/ยกเลิก") {
-    sendTG(cid, "❌ ยกเลิกเรียบร้อย", ["ส่งงาน"]);
-    clearUser(uid); return;
+    clearUser(uid); 
+    return;
   }
 
   // --- Step 3: Site ID ---
