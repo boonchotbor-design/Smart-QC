@@ -1,0 +1,280 @@
+// ==========================================
+// PUNGPUNG HOMEMADE - SCRIPT VERSION 12.0
+// ==========================================
+const CHANNEL_ACCESS_TOKEN = '54a/5Ien10WbFs5V5ec9lOzXA4dzh4eoUhgMRwtQS74+uhdJDruSMeKf/31QJecHiNrI1boDA9VRgl/Bnivd1PRDp+OakmDu3Zu7FsegrTcgcX4wT39g0lXC27Norxn26ny/2sSmFl3ul/YjisLa5gdB04t89/1O/w1cDnyilFU=';
+const LINE_REPLY_URL = 'https://api.line.me/v2/bot/message/reply';
+const SPREADSHEET_ID = '1-D-YNXQwAoIAgpTxUGvgY-6caRtuMgarZ68wwA6jmnA'; 
+const SHEET_NAME = 'Dashboad'; 
+const ADMIN_IDS = ['U96f88e090a0c1638abc60111c353a04b']; 
+
+function doPost(e) {
+  var replyToken, userId;
+  try {
+    if (!e || !e.postData) return;
+    var contents = e.postData.contents;
+    var jsonData = JSON.parse(contents);
+    var event = jsonData.events[0];
+    if (!event) return;
+
+    replyToken = event.replyToken;
+    userId = event.source.userId;
+    var isAdmin = ADMIN_IDS.indexOf(userId) !== -1;
+    var shopStatus = PropertiesService.getScriptProperties().getProperty('SHOP_STATUS') || 'OPEN';
+
+    if (event.type === 'message' && event.message.type === 'text') {
+      var text = event.message.text.trim();
+      if (text === 'เมนู' || text === 'สั่งขนม') {
+        reply(replyToken, [getMainMenu(shopStatus, isAdmin)]);
+      } else {
+        if (checkPending(userId)) {
+          updateNote(userId, text);
+          reply(replyToken, [{ "type": "text", "text": "📝 บันทึกที่อยู่เรียบร้อย:\n\"" + text + "\"" }]);
+        } else {
+          reply(replyToken, [getMainMenu(shopStatus, isAdmin)]);
+        }
+      }
+    } 
+    else if (event.type === 'postback') {
+      var params = parseParams(event.postback.data);
+      
+      if (params.action === 'show_menu') {
+        if (shopStatus === 'CLOSED') {
+          reply(replyToken, [{ "type": "text", "text": "ขออภัยครับ ร้านปิดรับออเดอร์แล้ว 🙏" }]);
+        } else {
+          var snackMenu = getSnackMenu();
+          reply(replyToken, [snackMenu]);
+        }
+      }
+      else if (params.action === 'order') {
+        if (shopStatus === 'CLOSED') return;
+        var profile = getUserProfile(userId);
+        var name = (profile && profile.displayName) ? profile.displayName : 'ลูกค้า';
+        if (recordOrder(name, userId, params.item, params.price)) {
+          reply(replyToken, [{
+            "type": "text",
+            "text": "✅ เพิ่ม \"" + params.item + "\" เรียบร้อย!\n\n" + getUserOrderSummary(userId),
+            "quickReply": {
+              "items": [
+                { "type": "action", "action": { "type": "postback", "label": "✅ ยืนยันการสั่งซื้อ", "data": "action=finish" } },
+                { "type": "action", "action": { "type": "postback", "label": "📝 ระบุที่อยู่", "data": "action=ask_address" } },
+                { "type": "action", "action": { "type": "postback", "label": "🛒 ดูตะกร้า/ลบ", "data": "action=view_cart" } }
+              ]
+            }
+          }]);
+        }
+      }
+      else if (params.action === 'ask_address') {
+        reply(replyToken, [{ "type": "text", "text": "🏠 กรุณาพิมพ์ 'ที่อยู่/เบอร์โทร' แล้วกดส่งมาได้เลยครับ" }]);
+      }
+      else if (params.action === 'view_cart') {
+        var cart = getCartMenu(userId);
+        if (!cart) reply(replyToken, [{ "type": "text", "text": "ตะกร้าของคุณว่างเปล่าครับ" }]);
+        else reply(replyToken, [cart]);
+      }
+      else if (params.action === 'del_item') {
+        var msg = deleteSpecificOrder(params.row);
+        reply(replyToken, [{ "type": "text", "text": msg, "quickReply": { "items": [{ "type": "action", "action": { "type": "postback", "label": "🛒 กลับไปที่ตะกร้า", "data": "action=view_cart" } }] } }]);
+      }
+      else if (params.action === 'finish') {
+        var sum = getUserOrderSummary(userId);
+        if (sum.indexOf("ยังไม่มีรายการ") !== -1) reply(replyToken, [{ "type": "text", "text": "ตะกร้าว่างเปล่าครับ" }]);
+        else {
+          confirmOrder(userId);
+          reply(replyToken, [{ "type": "text", "text": "🏁 ยืนยันการสั่งซื้อเรียบร้อย!\n\n" + sum + "\n\nขอบคุณครับ 🙏✨" }]);
+        }
+      }
+      else if (params.action === 'set_shop') {
+        if (!isAdmin) return;
+        PropertiesService.getScriptProperties().setProperty('SHOP_STATUS', params.status);
+        var msg = (params.status === 'OPEN') ? "✅ เปิดร้านแล้ว!" : "🚫 ปิดร้านและสรุปยอด:\n\n" + getAllOrderSummary();
+        reply(replyToken, [{ "type": "text", "text": msg }]);
+      }
+    }
+  } catch (err) {
+    if (replyToken) reply(replyToken, [{ "type": "text", "text": "⚠️ ระบบพบปัญหา: " + err.message }]);
+  }
+}
+
+// ==========================================
+// UI MENUS
+// ==========================================
+
+function getMainMenu(status, isAdmin) {
+  var contents = [
+    { "type": "button", "style": "primary", "color": "#4CAF50", "action": { "type": "postback", "label": "🍰 เริ่มสั่งขนม", "data": "action=show_menu" } },
+    { "type": "button", "style": "secondary", "action": { "type": "postback", "label": "🛒 ดูตะกร้า/แก้ไข", "data": "action=view_cart" } },
+    { "type": "button", "style": "secondary", "action": { "type": "postback", "label": "📝 ระบุที่อยู่/หมายเหตุ", "data": "action=ask_address" } },
+    { "type": "button", "style": "primary", "color": "#FF9800", "action": { "type": "postback", "label": "✅ ยืนยันสั่งซื้อ (จบรายการ)", "data": "action=finish" } }
+  ];
+  if (isAdmin) {
+    contents.push({ "type": "separator", "margin": "md" });
+    contents.push({ "type": "box", "layout": "horizontal", "spacing": "sm", "contents": [
+      { "type": "button", "height": "sm", "style": "secondary", "action": { "type": "postback", "label": "🔒 ปิดร้าน", "data": "action=set_shop&status=CLOSED" } },
+      { "type": "button", "height": "sm", "style": "secondary", "action": { "type": "postback", "label": "🔓 เปิดร้าน", "data": "action=set_shop&status=OPEN" } }
+    ]});
+  }
+  return { "type": "flex", "altText": "เมนูหลัก PUNG PUNG", "contents": { "type": "bubble", "header": { "type": "box", "layout": "vertical", "contents": [{ "type": "text", "text": "🏠 PUNG PUNG HOMEMADE", "weight": "bold", "color": "#ffffff" }], "backgroundColor": "#FF6B6B" }, "body": { "type": "box", "layout": "vertical", "spacing": "md", "contents": contents }, "footer": { "type": "box", "layout": "vertical", "contents": [{ "type": "text", "text": "สถานะ: " + (status === 'OPEN' ? '🟢 เปิดรับออเดอร์' : '🔴 ปิดรับออเดอร์'), "size": "xs", "align": "center" }] } } };
+}
+
+function getSnackMenu() {
+  var b1 = createBubble("🥥 กะทิ & 🌶️ พริกเผา", "#D4A373", [
+    { n: "ทองก้อนกะทิ-อัลมอนด์", p: 60, l: "กะทิ+อัลมอนด์" },
+    { n: "ทองก้อนกะทิ-เม็ดมะม่วง", p: 60, l: "กะทิ+เม็ดมะม่วง" },
+    { n: "ทองก้อนกะทิ-ไก่หยอง", p: 60, l: "กะทิ+ไก่หยอง" },
+    { n: "ทองก้อนพริกเผา-อัลมอนด์", p: 60, l: "พริกเผา+อัลมอนด์" },
+    { n: "ทองก้อนพริกเผา-เม็ดมะม่วง", p: 60, l: "พริกเผา+เม็ดมะม่วง" }
+  ]);
+  var b2 = createBubble("🍫 รสโกโก้", "#4E342E", [
+    { n: "ทองก้อนโกโก้-อัลมอนด์", p: 70, l: "โกโก้+อัลมอนด์" },
+    { n: "ทองก้อนโกโก้-เม็ดมะม่วง", p: 70, l: "โกโก้+เม็ดมะม่วง" },
+    { n: "ทองก้อนโกโก้-ไก่หยอง", p: 70, l: "โกโก้+ไก่หยอง" },
+    { n: "ทองก้อนโกโก้-ดาร์กช็อค", p: 75, l: "🌟 ไส้ดาร์กช็อคฯ", h: true }
+  ]);
+  var b3 = createBubble("🍵 ชาเขียว & 🌟 พิเศษ", "#2E7D32", [
+    { n: "ทองก้อนชาเขียว-อัลมอนด์", p: 70, l: "ชาเขียว+อัลมอนด์" },
+    { n: "ทองก้อนชาเขียว-ไก่หยอง", p: 70, l: "ชาเขียว+ไก่หยอง" },
+    { n: "ทองก้อนชาเขียว-ไวท์ช็อค", p: 75, l: "🌟 ชาเขียวไวท์ช็อคฯ", h: true },
+    { n: "ทองก้อนพริกเผา-ไก่หยองพิเศษ", p: 75, l: "🌟 พริกเผาไก่หยอง", h: true }
+  ]);
+  return { "type": "flex", "altText": "เมนูสั่งขนม", "contents": { "type": "carousel", "contents": [b1, b2, b3] } };
+}
+
+function createBubble(title, color, items) {
+  var btns = items.map(function(it) {
+    var b = { "type": "button", "height": "sm", "style": it.h ? "primary" : "secondary", "action": { "type": "postback", "label": it.l + " (" + it.p + ".-)", "data": "action=order&item=" + encodeURIComponent(it.n) + "&price=" + it.p } };
+    if (it.h) b.color = "#FFD700";
+    return b;
+  });
+  return { "type": "bubble", "header": { "type": "box", "layout": "vertical", "contents": [{ "type": "text", "text": title, "weight": "bold", "color": "#ffffff" }], "backgroundColor": color }, "body": { "type": "box", "layout": "vertical", "spacing": "sm", "contents": btns } };
+}
+
+function getCartMenu(userId) {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+  var data = sheet.getDataRange().getValues();
+  var rows = [], total = 0, currentNote = "";
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][2] === userId && data[i][5] === "Pending") {
+      rows.push({ "type": "box", "layout": "horizontal", "contents": [ { "type": "text", "text": data[i][3], "size": "sm", "flex": 3, "gravity": "center" }, { "type": "button", "style": "link", "color": "#FF0000", "height": "sm", "flex": 1, "action": { "type": "postback", "label": "🗑️", "data": "action=del_item&row=" + (i + 1) } } ] });
+      total += parseFloat(data[i][4]);
+      if (data[i][6]) currentNote = data[i][6];
+    }
+  }
+  if (rows.length === 0) return null;
+  return { "type": "flex", "altText": "ตะกร้าสินค้า", "contents": { "type": "bubble", "header": { "type": "box", "layout": "vertical", "contents": [{ "type": "text", "text": "🛒 รายการที่เลือกไว้", "weight": "bold" }], "backgroundColor": "#eeeeee" }, "body": { "type": "box", "layout": "vertical", "spacing": "md", "contents": rows }, "footer": { "type": "box", "layout": "vertical", "contents": [ { "type": "text", "text": "ที่อยู่: " + (currentNote || "(ยังไม่ได้ระบุ)"), "size": "xs", "color": "#888888", "wrap": true }, { "type": "button", "style": "link", "height": "sm", "action": { "type": "postback", "label": "📝 แก้ไขที่อยู่", "data": "action=ask_address" } }, { "type": "text", "text": "รวม: " + total + " บาท", "weight": "bold", "align": "center", "margin": "sm" }, { "type": "button", "style": "primary", "color": "#4CAF50", "margin": "sm", "action": { "type": "postback", "label": "✅ ยืนยันการสั่งซื้อ", "data": "action=finish" } } ] } } };
+}
+
+function recordOrder(name, userId, item, price) {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+    sheet.appendRow([new Date(), name, userId, item, price, "Pending", ""]);
+    return true;
+  } catch(e) { return false; }
+}
+
+function updateNote(userId, noteText) {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][2] === userId && data[i][5] === "Pending") {
+      sheet.getRange(i + 1, 7).setValue(noteText);
+    }
+  }
+}
+
+function checkPending(userId) {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][2] === userId && data[i][5] === "Pending") return true;
+  }
+  return false;
+}
+
+function confirmOrder(userId) {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][2] === userId && data[i][5] === "Pending") {
+      sheet.getRange(i + 1, 6).setValue("Confirmed");
+    }
+  }
+}
+
+function deleteSpecificOrder(row) {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+    sheet.deleteRow(parseInt(row));
+    return "🗑️ ลบรายการเรียบร้อยครับ";
+  } catch(e) { return "ลบไม่สำเร็จ"; }
+}
+
+function deleteLastOrder(userId) {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+  var data = sheet.getDataRange().getValues();
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (data[i][2] === userId && data[i][5] === "Pending") {
+      sheet.deleteRow(i + 1);
+      return "❌ ยกเลิกรายการล่าสุดเรียบร้อยครับ";
+    }
+  }
+  return "ไม่พบรายการที่ยกเลิกได้";
+}
+
+function getUserOrderSummary(userId) {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+  var data = sheet.getDataRange().getValues();
+  var total = 0, text = "", note = "";
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][2] === userId && data[i][5] === "Pending") {
+      text += "- " + data[i][3] + "\n";
+      total += parseFloat(data[i][4]);
+      if (data[i][6]) note = data[i][6];
+    }
+  }
+  if (text === "") return "ยังไม่มีรายการ";
+  var res = "📋 รายการของคุณ:\n" + text + "💰 ยอดรวม: " + total + " บาท";
+  if (note) res += "\n🏠 ที่อยู่: " + note;
+  return res;
+}
+
+function getAllOrderSummary() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+  var data = sheet.getDataRange().getValues();
+  var total = 0, summary = {};
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][5] === "Confirmed") {
+      summary[data[i][3]] = (summary[data[i][3]] || 0) + 1;
+      total += parseFloat(data[i][4]);
+    }
+  }
+  var res = "📊 สรุปออเดอร์ที่ยืนยันแล้ว:\n";
+  for (var k in summary) res += "▪️ " + k + ": " + summary[k] + " ชุด\n";
+  return res + "\n💵 ยอดเงินรวมทั้งหมด: " + total + " บาท";
+}
+
+function reply(replyToken, messages) {
+  UrlFetchApp.fetch(LINE_REPLY_URL, { 'headers': { 'Content-Type': 'application/json; charset=UTF-8', 'Authorization': 'Bearer ' + CHANNEL_ACCESS_TOKEN }, 'method': 'post', 'payload': JSON.stringify({ 'replyToken': replyToken, 'messages': messages }) });
+}
+
+function getUserProfile(userId) {
+  try {
+    var res = UrlFetchApp.fetch("https://api.line.me/v2/bot/profile/" + userId, { 'headers': { 'Authorization': 'Bearer ' + CHANNEL_ACCESS_TOKEN } });
+    return JSON.parse(res.getContentText());
+  } catch (e) { return null; }
+}
+
+function parseParams(str) {
+  var params = {};
+  if (!str) return params;
+  str.split('&').forEach(function(p) { var pair = p.split('='); if (pair.length === 2) params[pair[0]] = decodeURIComponent(pair[1]); });
+  return params;
+}
