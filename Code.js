@@ -31,10 +31,10 @@ function doPost(e) {
     // บันทึก Log ทุกการเคลื่อนไหวลงใน Google Sheet เพื่อตรวจสอบ (แผ่นงาน BotLogs)
     logToSheet(data);
 
-    // ป้องกันการทำงานซ้ำ (Deduplicate)
+    // ป้องกันการทำงานซ้ำ (Deduplication) - เพิ่มเวลาเป็น 1 ชม. ตาม Safety Workflow
     if (data.update_id) {
       if (cache.get("u_" + data.update_id)) return ContentService.createTextOutput("OK");
-      cache.put("u_" + data.update_id, "1", 300);
+      cache.put("u_" + data.update_id, "1", 3600);
     }
 
     if (data.events) {
@@ -173,23 +173,62 @@ function processLineText(uid, text) {
 function runPatInspector() {
   const ts = ScriptApp.getProjectTriggers();
   for (let t of ts) { if (t.getHandlerFunction() === 'runPatInspector') ScriptApp.deleteTrigger(t); }
+  
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
-  const files = getAllRecursiveFiles(DriveApp.getFolderById(FOLDER_ID));
+  const mainFolder = DriveApp.getFolderById(FOLDER_ID);
   const mainArc = DriveApp.getFolderById(ARCHIVE_FOLDER_ID);
   
+  // ดึงไฟล์ทั้งหมด โดยข้ามโฟลเดอร์ Archive เพื่อป้องกัน Loop
+  const files = getAllRecursiveFiles(mainFolder, ARCHIVE_FOLDER_ID);
+  
   let countPass = 0, countFail = 0, currentSite = "Unknown";
+  
   for (let f of files) {
     if (f.getDescription() && f.getDescription().includes("PAT_CHECKED")) continue;
+    
     try {
-      const siteName = f.getParents().next().getName(); currentSite = siteName;
-      const ai = analyzeAI(f); const status = ai.status.toUpperCase();
+      const parent = f.getParents().next();
+      const siteName = parent.getName(); 
+      currentSite = siteName;
+      
+      // วิเคราะห์ด้วย AI
+      let ai;
+      try {
+        ai = analyzeAI(f);
+      } catch (aiErr) {
+        console.error("AI Analysis Error for " + f.getName() + ": " + aiErr.toString());
+        f.setDescription(`PAT_CHECKED: ERROR (AI_FAILED) | ${f.getDescription() || ""}`);
+        continue;
+      }
+      
+      const status = ai.status.toUpperCase();
       sheet.appendRow([new Date(), f.getName(), ai.sheetReference, status, ai.reason, f.getUrl(), f.getId()]);
-      f.moveTo(getOrCreateSubFolder(getOrCreateSubFolder(mainArc, siteName), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference));
+      
+      // ย้ายไฟล์ไปยัง Archive
+      try {
+        const destFolder = getOrCreateSubFolder(getOrCreateSubFolder(mainArc, siteName), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference);
+        f.moveTo(destFolder);
+      } catch (moveErr) {
+        console.error("Move Error for " + f.getName() + ": " + moveErr.toString());
+      }
+      
+      // ทำเครื่องหมายว่าตรวจแล้ว
       f.setDescription(`PAT_CHECKED: ${status} | ${f.getDescription() || ""}`);
-      if (status === "PASS") countPass++; else sendFailNotify(f.getName(), ai.sheetReference, ai.reason, f.getUrl(), f.getId());
-    } catch (e) {}
+      
+      if (status === "PASS") {
+        countPass++;
+      } else {
+        countFail++; // เพิ่มตัวนับ Fail
+        sendFailNotify(f.getName(), ai.sheetReference, ai.reason, f.getUrl(), f.getId());
+      }
+      
+    } catch (e) {
+      console.error("General Error for file " + f.getId() + ": " + e.toString());
+      try { f.setDescription(`PAT_CHECKED: ERROR | ${f.getDescription() || ""}`); } catch(de){}
+    }
   }
+  
   if (countPass + countFail > 0) {
     const summary = `📊 <b>สรุปผล AI (${currentSite})</b>\n✅ ผ่าน: ${countPass}\n❌ ไม่ผ่าน: ${countFail}`;
     sendTG(TELEGRAM_TARGET_ID, summary, ["ส่งงาน"]);
@@ -290,11 +329,32 @@ function getTGImg(id) { const res = JSON.parse(UrlFetchApp.fetch(`https://api.te
 function getLineImg(id) { return UrlFetchApp.fetch(`https://api-data.line.me/v2/bot/message/${id}/content`, { headers: { Authorization: "Bearer " + LINE_CHANNEL_ACCESS_TOKEN } }).getBlob(); }
 function clearUser(uid) { const c = CacheService.getScriptCache(); ["_s", "_p", "_t", "_site"].forEach(k => c.remove(uid+k)); }
 function getOrCreateSubFolder(p, n) { const f = p.getFoldersByName(n); return f.hasNext() ? f.next() : p.createFolder(n); }
-function getAllRecursiveFiles(folder) { let files = []; const rf = folder.getFiles(); while (rf.hasNext()) files.push(rf.next()); const sub = folder.getFolders(); while (sub.hasNext()) files = files.concat(getAllRecursiveFiles(sub.next())); return files; }
+function getAllRecursiveFiles(folder, excludeFolderId) {
+  if (folder.getId() === excludeFolderId) return [];
+  let files = [];
+  const rf = folder.getFiles();
+  while (rf.hasNext()) files.push(rf.next());
+  const sub = folder.getFolders();
+  while (sub.hasNext()) {
+    files = files.concat(getAllRecursiveFiles(sub.next(), excludeFolderId));
+  }
+  return files;
+}
 
 // =========================================================================
 // === [FIX UTILS - รันเมื่อระบบไม่ตอบสนอง] ===
 // =========================================================================
+
+/**
+ * ฟังก์ชันสำหรับล้าง Trigger ทั้งหมดในโปรเจกต์
+ */
+function CLEAR_ALL_TRIGGERS() {
+  const ts = ScriptApp.getProjectTriggers();
+  for (let t of ts) {
+    ScriptApp.deleteTrigger(t);
+  }
+  return "✅ ลบ Trigger ทั้งหมดเรียบร้อยแล้ว";
+}
 
 /**
  * ฟังก์ชันสำหรับตั้งค่า Webhook ของ Telegram
@@ -306,6 +366,9 @@ function getAllRecursiveFiles(folder) { let files = []; const rf = folder.getFil
 function FIX_TELEGRAM() {
   const webAppUrl = "ใส่_URL_ของ_WEB_APP_ที่นี่"; 
   
+  // ล้าง Trigger เก่าทิ้งก่อนเพื่อความสะอาด
+  CLEAR_ALL_TRIGGERS();
+
   if (webAppUrl.indexOf("macros") === -1) {
     throw new Error("❌ กรุณาใส่ URL ของ Web App ที่ได้จากการ Deploy (ไม่ใช่ URL ของ Script)");
   }
@@ -318,7 +381,7 @@ function FIX_TELEGRAM() {
   const response = UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook?url=${webAppUrl}&drop_pending_updates=true`);
   Logger.log("Webhook Status: " + response.getContentText());
   
-  return "✅ ดำเนินการเสร็จสิ้น! กรุณาตรวจสอบผลใน Logger";
+  return "✅ ดำเนินการเสร็จสิ้น! ล้าง Trigger และตั้ง Webhook ใหม่แล้ว กรุณาตรวจสอบผลใน Logger";
 }
 
 function DEBUG_setWebhook() { const url = ScriptApp.getService().getUrl(); UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook?url=${url}&drop_pending_updates=true`); }
