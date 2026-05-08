@@ -1,12 +1,12 @@
 // ==========================================
-// PUNGPUNG HOMEMADE - SCRIPT VERSION 14.0 (STABLE & COMPLETE)
+// PUNGPUNG HOMEMADE - SCRIPT VERSION 14.4 (FINAL STABLE)
 // ==========================================
+
 const CHANNEL_ACCESS_TOKEN = '54a/5Ien10WbFs5V5ec9lOzXA4dzh4eoUhgMRwtQS74+uhdJDruSMeKf/31QJecHiNrI1boDA9VRgl/Bnivd1PRDp+OakmDu3Zu7FsegrTcgcX4wT39g0lXC27Norxn26ny/2sSmFl3ul/YjisLa5gdB04t89/1O/w1cDnyilFU=';
 const LINE_REPLY_URL = 'https://api.line.me/v2/bot/message/reply';
 const SPREADSHEET_ID = '1-D-YNXQwAoIAgpTxUGvgY-6caRtuMgarZ68wwA6jmnA'; 
 const SHEET_NAME = 'Dashboad'; 
 
-// รายชื่อ Admin ID
 const ADMIN_IDS = [
   'U96f88e090a0c1638abc60111c353a04b',
   'Ub573aa4294c3783c0a1dd1900487f463'
@@ -26,41 +26,33 @@ function doPost(e) {
     var isAdmin = ADMIN_IDS.indexOf(userId) !== -1;
     var shopStatus = PropertiesService.getScriptProperties().getProperty('SHOP_STATUS') || 'OPEN';
 
-    // 1. จัดการข้อความ (Text Message)
     if (event.type === 'message' && event.message.type === 'text') {
       var text = event.message.text.trim();
-      if (text === 'เมนู' || text === 'สั่งขนม') {
+      
+      if (text === 'เมนู' || text === 'สั่งของ') {
         reply(replyToken, [getMainMenu(shopStatus, isAdmin)]);
+      } else if (text === 'เมนูขนม' || text === 'สั่งขนม') {
+        reply(replyToken, [getSnackMenu()]);
+      } else if (text === 'เมนูน้ำ' || text === 'สั่งน้ำ') {
+        reply(replyToken, [getDrinkMenu()]);
+      } else if (checkPending(userId)) {
+        updateNote(userId, text);
+        reply(replyToken, [{ "type": "text", "text": "📝 บันทึกที่อยู่เรียบร้อยครับ:\n\"" + text + "\"\n\nเช็ครายการได้ที่ปุ่ม '🛒 ดูตะกร้า' หรือกด 'ยืนยันสั่งซื้อ' ครับ" }]);
       } else {
-        // หากลูกค้าพิมพ์ข้อความมา และมีรายการ Pending อยู่ ให้บันทึกเป็นที่อยู่
-        if (checkPending(userId)) {
-          updateNote(userId, text);
-          reply(replyToken, [{ 
-            "type": "text", 
-            "text": "📝 บันทึกที่อยู่เรียบร้อยครับ:\n\"" + text + "\"\n\nเช็ครายการได้ที่ปุ่ม '🛒 ดูตะกร้า' หรือกด 'ยืนยันสั่งซื้อ' ได้เลยครับ" 
-          }]);
-        } else {
-          reply(replyToken, [getMainMenu(shopStatus, isAdmin)]);
-        }
+        reply(replyToken, [getMainMenu(shopStatus, isAdmin)]);
       }
     } 
     
-    // 2. จัดการการกดปุ่ม (Postback)
     else if (event.type === 'postback') {
       var params = parseParams(event.postback.data);
       
-      // ปุ่ม: แสดงเมนูขนม
-      if (params.action === 'show_menu') {
+      if (params.action === 'show_snack_menu') {
+        reply(replyToken, [getSnackMenu()]);
+      } else if (params.action === 'show_drink_menu') {
+        reply(replyToken, [getDrinkMenu()]);
+      } else if (params.action === 'order') {
         if (shopStatus === 'CLOSED' && !isAdmin) {
-          reply(replyToken, [{ "type": "text", "text": "ขออภัยครับ ขณะนี้ปิดรับออเดอร์แล้ว 🙏" }]);
-        } else {
-          reply(replyToken, [getSnackMenu()]);
-        }
-      }
-      // ปุ่ม: เลือกรายการขนม
-      else if (params.action === 'order') {
-        if (shopStatus === 'CLOSED' && !isAdmin) {
-          reply(replyToken, [{ "type": "text", "text": "ขออภัยครับ ร้านปิดรับออเดอร์แล้ว" }]);
+          reply(replyToken, [{ "type": "text", "text": "ขออภัยครับ ร้านปิดรับออเดอร์แล้ว 🙏" }]);
           return;
         }
         var profile = getUserProfile(userId);
@@ -69,46 +61,53 @@ function doPost(e) {
           reply(replyToken, [{
             "type": "text",
             "text": "✅ เพิ่ม \"" + params.item + "\" เรียบร้อย!\n\n" + getUserOrderSummary(userId),
-            "quickReply": {
-              "items": [
-                { "type": "action", "action": { "type": "postback", "label": "✅ ยืนยันการสั่งซื้อ", "data": "action=finish" } },
-                { "type": "action", "action": { "type": "postback", "label": "📝 ระบุที่อยู่", "data": "action=ask_address" } },
-                { "type": "action", "action": { "type": "postback", "label": "🛒 ดูตะกร้า/ลบ", "data": "action=view_cart" } }
-              ]
-            }
+            "quickReply": { "items": [
+              { "type": "action", "action": { "type": "postback", "label": "✅ ยืนยันการสั่งซื้อ", "data": "action=finish" } },
+              { "type": "action", "action": { "type": "postback", "label": "📝 ระบุที่อยู่", "data": "action=ask_address" } },
+              { "type": "action", "action": { "type": "postback", "label": "🛒 ดูตะกร้า/ลบ", "data": "action=view_cart" } }
+            ]}
           }]);
         }
-      }
-      // ปุ่ม: ถามหาที่อยู่
-      else if (params.action === 'ask_address') {
-        reply(replyToken, [{ "type": "text", "text": "🏠 กรุณาพิมพ์ 'บ้านเลขที่ / ชื่อหมู่บ้าน / เบอร์โทร' แล้วกดส่งมาในแชทนี้ได้เลยครับ" }]);
-      }
-      // ปุ่ม: ดูตะกร้า
-      else if (params.action === 'view_cart') {
+      } else if (params.action === 'ask_address') {
+        reply(replyToken, [{ "type": "text", "text": "🏠 กรุณาพิมพ์ 'บ้านเลขที่ / ชื่อหมู่บ้าน / เบอร์โทร' ส่งมาได้เลยครับ" }]);
+      } else if (params.action === 'view_cart') {
         var cart = getCartMenu(userId);
         if (!cart) reply(replyToken, [{ "type": "text", "text": "ตะกร้าของคุณว่างเปล่าครับ" }]);
         else reply(replyToken, [cart]);
-      }
-      // ปุ่ม: ลบรายการ
-      else if (params.action === 'del_item') {
+      } else if (params.action === 'del_item') {
         var msg = deleteSpecificOrder(params.row);
         reply(replyToken, [{ "type": "text", "text": msg, "quickReply": { "items": [{ "type": "action", "action": { "type": "postback", "label": "🛒 กลับไปที่ตะกร้า", "data": "action=view_cart" } }] } }]);
-      }
-      // ปุ่ม: จบรายการ
-      else if (params.action === 'finish') {
+      } else if (params.action === 'finish') {
         var sum = getUserOrderSummary(userId);
         if (sum.indexOf("ยังไม่มีรายการ") !== -1) reply(replyToken, [{ "type": "text", "text": "ตะกร้าว่างเปล่าครับ" }]);
         else {
           confirmOrder(userId);
-          reply(replyToken, [{ "type": "text", "text": "🏁 ยืนยันการสั่งซื้อเรียบร้อย!\n\n" + sum + "\n\nขอบคุณที่อุดหนุน PUNGPUNG ครับ 🙏✨" }]);
+          reply(replyToken, [{ "type": "text", "text": "🏁 ยืนยันการสั่งซื้อเรียบร้อย!\n\n" + sum + "\n\nขอบคุณที่อุดหนุนครับ 🙏✨" }]);
         }
-      }
-      // ปุ่ม: เปิด/ปิดร้าน
-      else if (params.action === 'set_shop') {
+      } else if (params.action === 'set_shop') {
         if (!isAdmin) return;
         PropertiesService.getScriptProperties().setProperty('SHOP_STATUS', params.status);
         var msg = (params.status === 'OPEN') ? "✅ เปิดรับออเดอร์แล้วครับ!" : "🚫 ปิดร้านและสรุปยอดแอดมิน:\n\n" + getAllOrderSummary();
         reply(replyToken, [{ "type": "text", "text": msg }]);
+      }
+      
+      // --- ADMIN DAILY MENU ACTIONS ---
+      else if (params.action === 'manage_daily_menu') {
+        if (!isAdmin) return;
+        reply(replyToken, [getAdminMenuPicker()]);
+      } else if (params.action === 'toggle_menu') {
+        if (!isAdmin) return;
+        var dailyMenuStr = PropertiesService.getScriptProperties().getProperty('DAILY_MENU');
+        var dailyMenu = dailyMenuStr ? JSON.parse(dailyMenuStr) : [];
+        var idx = dailyMenu.indexOf(params.item);
+        if (idx === -1) dailyMenu.push(params.item);
+        else dailyMenu.splice(idx, 1);
+        PropertiesService.getScriptProperties().setProperty('DAILY_MENU', JSON.stringify(dailyMenu));
+        reply(replyToken, [getAdminMenuPicker()]);
+      } else if (params.action === 'reset_daily_menu') {
+        if (!isAdmin) return;
+        PropertiesService.getScriptProperties().deleteProperty('DAILY_MENU');
+        reply(replyToken, [{ "type": "text", "text": "🔄 รีเซ็ตเมนู (เปิดขายทุกอย่าง) เรียบร้อยครับ" }]);
       }
     }
   } catch (err) {
@@ -123,7 +122,8 @@ function doPost(e) {
 function getMainMenu(status, isAdmin) {
   var contents = [];
   if (status === 'OPEN' || isAdmin) {
-    contents.push({ "type": "button", "style": "primary", "color": "#4CAF50", "action": { "type": "postback", "label": "🍰 เริ่มสั่งขนม", "data": "action=show_menu" } });
+    contents.push({ "type": "button", "style": "primary", "color": "#4CAF50", "action": { "type": "postback", "label": "🍰 เมนูขนม", "data": "action=show_snack_menu" } });
+    contents.push({ "type": "button", "style": "primary", "color": "#2E7D32", "margin": "sm", "action": { "type": "postback", "label": "🥤 เมนูน้ำ", "data": "action=show_drink_menu" } });
   } else {
     contents.push({ "type": "text", "text": "🚫 ขณะนี้ปิดรับออเดอร์แล้ว", "weight": "bold", "color": "#FF0000", "align": "center", "margin": "md" });
   }
@@ -134,6 +134,7 @@ function getMainMenu(status, isAdmin) {
   if (isAdmin) {
     contents.push({ "type": "separator", "margin": "lg" });
     contents.push({ "type": "text", "text": "แผงควบคุมแอดมิน", "size": "xs", "color": "#aaaaaa", "align": "center", "margin": "sm" });
+    contents.push({ "type": "button", "height": "sm", "style": "secondary", "color": "#eeeeee", "margin": "sm", "action": { "type": "postback", "label": "⚙️ ตั้งค่าเมนูประจำวัน", "data": "action=manage_daily_menu" } });
     contents.push({ "type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": [
       { "type": "button", "height": "sm", "style": "secondary", "action": { "type": "postback", "label": "🔒 ปิดร้าน", "data": "action=set_shop&status=CLOSED" } },
       { "type": "button", "height": "sm", "style": "secondary", "action": { "type": "postback", "label": "🔓 เปิดร้าน", "data": "action=set_shop&status=OPEN" } }
@@ -143,6 +144,17 @@ function getMainMenu(status, isAdmin) {
 }
 
 function getSnackMenu() {
+  var b0 = createBubble("🍰 เค้ก & บราวนี่", "#FFB74D", [
+    { n: "เค็กช็อคโกแลตหน้านิ่ม", p: 30, l: "เค็กช็อคหน้านิ่ม" },
+    { n: "เค็กหน้านิ่มชาไทย", p: 30, l: "เค็กหน้านิ่มชาไทย" },
+    { n: "บราวนี่ช็อคโกแล็ตนูเทล่า", p: 30, l: "บราวนี่ช็อคนูเทล่า" },
+    { n: "บราวนี่ชาเขียวนูเทล่า", p: 30, l: "บราวนี่ชาเขียวนูเทล่า" }
+  ]);
+  var b_new = createBubble("🍪 ขนมทานเล่น", "#A1887F", [
+    { n: "ปังกรอบ", p: 40, l: "ปังกรอบ" },
+    { n: "ทองม้วน", p: 30, l: "ทองม้วน" },
+    { n: "วุ้นเป็ดมะพร้าว", p: 30, l: "วุ้นเป็ดมะพร้าว" }
+  ]);
   var b1 = createBubble("🥥 กะทิ & 🌶️ พริกเผา", "#D4A373", [
     { n: "ทองก้อนกะทิ-อัลมอนด์", p: 60, l: "กะทิ+อัลมอนด์" },
     { n: "ทองก้อนกะทิ-เม็ดมะม่วง", p: 60, l: "กะทิ+เม็ดมะม่วง" },
@@ -162,16 +174,57 @@ function getSnackMenu() {
     { n: "ทองก้อนชาเขียว-ไวท์ช็อค", p: 75, l: "🌟 ชาเขียวไวท์ช็อคฯ", h: true },
     { n: "ทองก้อนพริกเผา-ไก่หยองพิเศษ", p: 75, l: "🌟 พริกเผาไก่หยอง", h: true }
   ]);
-  return { "type": "flex", "altText": "เมนูสั่งขนม", "contents": { "type": "carousel", "contents": [b1, b2, b3] } };
+  return { "type": "flex", "altText": "เมนูสั่งขนม", "contents": { "type": "carousel", "contents": [b0, b_new, b1, b2, b3] } };
+}
+
+function getDrinkMenu() {
+  var b1 = createBubble("🥤 เมนูน้ำปั่น", "#4FC3F7", [
+    { n: "แตงโมปั่น", p: 40, l: "🍉 แตงโมปั่น" },
+    { n: "น้ำมะพร้าวปั่น", p: 40, l: "🥥 มะพร้าวปั่น" }
+  ]);
+  return { "type": "flex", "altText": "เมนูสั่งน้ำ", "contents": { "type": "carousel", "contents": [b1] } };
 }
 
 function createBubble(title, color, items) {
+  var dailyMenuStr = PropertiesService.getScriptProperties().getProperty('DAILY_MENU');
+  var dailyMenu = dailyMenuStr ? JSON.parse(dailyMenuStr) : null;
+
   var btns = items.map(function(it) {
-    var b = { "type": "button", "height": "sm", "style": it.h ? "primary" : "secondary", "action": { "type": "postback", "label": it.l + " (" + it.p + ".-)", "data": "action=order&item=" + encodeURIComponent(it.n) + "&price=" + it.p } };
-    if (it.h) b.color = "#FFD700";
-    return b;
+    var isAvailable = !dailyMenu || dailyMenu.indexOf(it.n) !== -1 || dailyMenu.indexOf(it.l) !== -1;
+    if (isAvailable) {
+      var b = { "type": "button", "height": "sm", "style": it.h ? "primary" : "secondary", "action": { "type": "postback", "label": it.l + " (" + it.p + ".-)", "data": "action=order&item=" + encodeURIComponent(it.n) + "&price=" + it.p } };
+      if (it.h) b.color = "#FFD700";
+      return b;
+    } else {
+      return { "type": "button", "height": "sm", "style": "secondary", "color": "#dddddd", "action": { "type": "postback", "label": it.l + " (❌ หมด)", "data": "action=none" } };
+    }
   });
   return { "type": "bubble", "header": { "type": "box", "layout": "vertical", "contents": [{ "type": "text", "text": title, "weight": "bold", "color": "#ffffff" }], "backgroundColor": color }, "body": { "type": "box", "layout": "vertical", "spacing": "sm", "contents": btns } };
+}
+
+function getAdminMenuPicker() {
+  var dailyMenuStr = PropertiesService.getScriptProperties().getProperty('DAILY_MENU');
+  var dailyMenu = dailyMenuStr ? JSON.parse(dailyMenuStr) : [];
+  var allItems = [
+    "เค็กช็อคโกแลตหน้านิ่ม", "เค็กหน้านิ่มชาไทย", "บราวนี่ช็อคโกแล็ตนูเทล่า", "บราวนี่ชาเขียวนูเทล่า",
+    "ปังกรอบ", "ทองม้วน", "วุ้นเป็ดมะพร้าว", "แตงโมปั่น", "น้ำมะพร้าวปั่น",
+    "ทองก้อนกะทิ-อัลมอนด์", "ทองก้อนกะทิ-เม็ดมะม่วง", "ทองก้อนกะทิ-ไก่หยอง", "ทองก้อนพริกเผา-อัลมอนด์", "ทองก้อนพริกเผา-เม็ดมะม่วง",
+    "ทองก้อนโกโก้-อัลมอนด์", "ทองก้อนโกโก้-เม็ดมะม่วง", "ทองก้อนโกโก้-ไก่หยอง", "ทองก้อนโกโก้-ดาร์กช็อค",
+    "ทองก้อนชาเขียว-อัลมอนด์", "ทองก้อนชาเขียว-ไก่หยอง", "ทองก้อนชาเขียว-ไวท์ช็อค", "ทองก้อนพริกเผา-ไก่หยองพิเศษ"
+  ];
+  var rows = allItems.map(function(name) {
+    var isOn = dailyMenu.length === 0 || dailyMenu.indexOf(name) !== -1;
+    return { "type": "box", "layout": "horizontal", "contents": [
+      { "type": "text", "text": name, "size": "xs", "flex": 3, "gravity": "center" },
+      { "type": "button", "height": "sm", "flex": 1, "style": isOn ? "primary" : "secondary", "color": isOn ? "#4CAF50" : "#aaaaaa", "action": { "type": "postback", "label": isOn ? "ขาย" : "หมด", "data": "action=toggle_menu&item=" + encodeURIComponent(name) } }
+    ]};
+  });
+  var chunks = [];
+  for (var i = 0; i < rows.length; i += 10) chunks.push(rows.slice(i, i + 10));
+  var bubbles = chunks.map(function(chunk) {
+    return { "type": "bubble", "header": { "type": "box", "layout": "vertical", "contents": [{ "type": "text", "text": "⚙️ จัดการรายการขาย", "weight": "bold", "color": "#ffffff" }], "backgroundColor": "#555555" }, "body": { "type": "box", "layout": "vertical", "spacing": "sm", "contents": chunk }, "footer": { "type": "box", "layout": "vertical", "contents": [{ "type": "button", "style": "link", "action": { "type": "postback", "label": "🔄 รีเซ็ต (ขายทุกอย่าง)", "data": "action=reset_daily_menu" } }] } };
+  });
+  return { "type": "flex", "altText": "จัดการเมนู", "contents": { "carousel", "contents": bubbles } };
 }
 
 function getCartMenu(userId) {
@@ -189,10 +242,6 @@ function getCartMenu(userId) {
   if (rows.length === 0) return null;
   return { "type": "flex", "altText": "ตะกร้าสินค้า", "contents": { "type": "bubble", "header": { "type": "box", "layout": "vertical", "contents": [{ "type": "text", "text": "🛒 รายการที่คุณเลือกไว้", "weight": "bold" }], "backgroundColor": "#eeeeee" }, "body": { "type": "box", "layout": "vertical", "spacing": "md", "contents": rows }, "footer": { "type": "box", "layout": "vertical", "contents": [ { "type": "text", "text": "ที่อยู่: " + (currentNote || "(ยังไม่ได้ระบุ)"), "size": "xs", "color": "#888888", "wrap": true }, { "type": "button", "style": "link", "height": "sm", "action": { "type": "postback", "label": "📝 แก้ไขที่อยู่", "data": "action=ask_address" } }, { "type": "text", "text": "รวม: " + total + " บาท", "weight": "bold", "align": "center", "margin": "sm" }, { "type": "button", "style": "primary", "color": "#4CAF50", "margin": "sm", "action": { "type": "postback", "label": "✅ ยืนยันการสั่งซื้อ", "data": "action=finish" } } ] } } };
 }
-
-// ==========================================
-// BACKEND FUNCTIONS
-// ==========================================
 
 function recordOrder(name, userId, item, price) {
   try {
