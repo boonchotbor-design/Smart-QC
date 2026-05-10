@@ -1,13 +1,10 @@
 /*
- * 🚀 Inventory Smart System - MASTER VERSION 5.9 (FINAL)
+ * 🚀 Inventory Smart System - MASTER VERSION 5.9.2
  * ALL-IN-ONE: Web App + Telegram Bot + OCR AI + Utilities
- * 15 COLUMNS (A-O): No, Project, Phase, Site, WON, DUID, IN/OUT, Group, Date, Bill, Model, ItemCode, Desc, Qty, Serial
  */
 
 var SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
 var TELEGRAM_BOT_TOKEN = '8585490322:AAHdjJHtn0tT84T-QEg5NLUUWymEkhBrtHk';
-
-/* [1] WEB APP ENGINE */
 
 function doGet(e) {
   try {
@@ -40,8 +37,69 @@ function saveMultiData(header, items) {
   } catch (e) { return "Error: " + e.toString(); }
 }
 
-/* [2] TELEGRAM BOT & OCR ENGINE */
+function processImageOcr(base64Data) {
+  try {
+    var parts = base64Data.split(',');
+    var blob = Utilities.newBlob(Utilities.base64Decode(parts[1]), parts[0].split(':')[1].split(';')[0]);
+    
+    // ตรวจสอบว่าเปิด Drive API หรือยัง
+    var resource = { 
+      name: 'OCR_TEMP_' + new Date().getTime(), 
+      title: 'OCR_TEMP', 
+      mimeType: blob.getContentType() 
+    };
+    
+    var file;
+    try {
+      // ใช้งาน Advanced Drive Service (V2)
+      file = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: 'th,en' });
+    } catch (e) {
+      throw "กรุณาเปิด 'Drive API' ในส่วนของ Services (เมนูซ้ายมือ รูปเครื่องหมายบวก)";
+    }
+    
+    var doc = DocumentApp.openById(file.id);
+    var text = doc.getBody().getText();
+    
+    try { Drive.Files.remove(file.id); } catch(e) {}
+    
+    if (!text || text.trim().length === 0) throw "ไม่พบตัวหนังสือในรูปภาพ กรุณาถ่ายใบงานให้ชัดเจน";
+    
+    return parsePickingList(text);
+  } catch (e) { 
+    throw "OCR Error: " + e.toString(); 
+  }
+}
 
+function parsePickingList(text) {
+  var result = {
+    header: {
+      billNo: (text.match(/DTH[0-9]{10,15}/) || [""])[0],
+      site: (text.match(/Site:\s*([^\n]+)/i) || ["", ""])[1].trim(),
+      project: (text.match(/Project:\s*([^\n]+)/i) || ["", ""])[1].trim(),
+      duid: ""
+    },
+    items: []
+  };
+  
+  var lines = text.split('\n');
+  lines.forEach(function(line) {
+    // ปรับ regex ให้ยืดหยุ่นขึ้นสำหรับ Code สินค้า
+    var itemMatch = line.match(/\b([A-Z0-9-]{8,15})\b/);
+    if (itemMatch && !itemMatch[0].includes("DTH") && !itemMatch[0].includes("SITE") && !itemMatch[0].includes("PROJECT")) {
+      var qtyMatch = line.match(/([0-9]+)\s*(PCS|M|SET)?/i);
+      result.items.push({ 
+        model: "", 
+        code: itemMatch[0], 
+        desc: "", 
+        qty: qtyMatch ? qtyMatch[1] : "1", 
+        sn: "" 
+      });
+    }
+  });
+  return result;
+}
+
+/* --- TELEGRAM BOT LOGIC --- */
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
@@ -56,7 +114,7 @@ function doPost(e) {
       handleTelegramOCR(chatId, userId, msg);
     } else if (msg.text) {
       var text = msg.text.trim();
-      if (text === "/start") sendMessage(chatId, "Welcome! Send a photo or text for Inventory recording.");
+      if (text === "/start") sendMessage(chatId, "ยินดีต้อนรับ! ส่งรูปภาพใบงานเพื่อบันทึก Inventory");
       else handleTextMessage(chatId, userId, text);
     }
   } catch (err) {}
@@ -64,24 +122,26 @@ function doPost(e) {
 }
 
 function handleTelegramOCR(chatId, userId, msg) {
-  sendMessage(chatId, "🔍 Processing Image OCR...");
+  sendMessage(chatId, "🔍 กำลังประมวลผล OCR...");
   try {
     var fileId = msg.photo ? msg.photo[msg.photo.length - 1].file_id : msg.document.file_id;
     var fileRes = UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/getFile?file_id=" + fileId);
     var blob = UrlFetchApp.fetch("https://api.telegram.org/file/bot" + TELEGRAM_BOT_TOKEN + "/" + JSON.parse(fileRes.getContentText()).result.file_path).getBlob();
+    
     var resource = { name: "temp", title: "temp", mimeType: "image/jpeg" };
-    var file;
-    try { file = Drive.Files.insert(resource, blob, { ocr: true }); } catch (e) { file = Drive.Files.create(resource, blob, { ocr: true }); }
+    var file = Drive.Files.insert(resource, blob, { ocr: true });
     var text = DocumentApp.openById(file.id).getBody().getText();
     Drive.Files.remove(file.id);
     
+    var ocrData = parsePickingList(text);
     var data = {
       customer: text.includes("AIS") ? "AIS" : "TRUE",
       type: "IN",
-      duid: (text.match(/DTH[0-9]{10,15}/) || [""])[0],
-      project: (text.match(/[0-9]{1,3}[A-Z][0-9]{2,5}/) || [""])[0],
-      site: (text.match(/Site:\s*([A-Z0-9_]+)/i) || ["",""])[1],
-      itemCode: "", serial: "", qty: "1"
+      duid: ocrData.header.billNo,
+      project: ocrData.header.project,
+      site: ocrData.header.site,
+      itemCode: ocrData.items.length > 0 ? ocrData.items[0].code : "",
+      serial: "", qty: "1"
     };
     askConfirmation(chatId, userId, data);
   } catch (e) { sendMessage(chatId, "OCR Error: " + e.toString()); }
@@ -89,7 +149,7 @@ function handleTelegramOCR(chatId, userId, msg) {
 
 function handleTextMessage(chatId, userId, text) {
   var p = text.split(/\s+/).filter(function(x) { return x.length > 0; });
-  if (p.length < 8) return sendMessage(chatId, "❌ Incomplete data (Needs 8 parts)");
+  if (p.length < 8) return sendMessage(chatId, "❌ ข้อมูลไม่ครบ (ต้องมี 8 ส่วน)");
   askConfirmation(chatId, userId, { 
     customer: p[0].toUpperCase(), type: p[1].toUpperCase(), duid: p[2], 
     project: p[3], site: p[4], itemCode: p[5], serial: p[6], qty: p[7] 
@@ -99,9 +159,9 @@ function handleTextMessage(chatId, userId, text) {
 function askConfirmation(chatId, userId, data) {
   CacheService.getScriptCache().put("pending_" + userId, JSON.stringify(data), 600);
   var summary = "🏢: " + data.customer + "\n🔄: " + data.type + "\n🆔: " + data.duid + "\n📁: " + data.project + "\n📍: " + data.site + "\n📦: " + data.itemCode + "\n🔢: " + data.serial + "\n🔢: " + data.qty;
-  UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage", { 
+  UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "\/sendMessage", { 
     method: "post", contentType: "application/json", 
-    payload: JSON.stringify({ chat_id: chatId, text: "Review Data:\n" + summary, reply_markup: { inline_keyboard: [[{ text: "✅ Confirm", callback_data: "CONFIRM" }, { text: "❌ Cancel", callback_data: "CANCEL" }]] } }) 
+    payload: JSON.stringify({ chat_id: chatId, text: "ยืนยันข้อมูล:\n" + summary, reply_markup: { inline_keyboard: [[{ text: "✅ ยืนยัน", callback_data: "CONFIRM" }, { text: "❌ ยกเลิก", callback_data: "CANCEL" }]] } }) 
   });
 }
 
@@ -113,14 +173,14 @@ function handleCallback(query) {
       var data = JSON.parse(cached);
       saveToSheet({ 
         customer: data.customer, project: data.project, site: data.site, 
-        duid: data.duid, type: data.type, itemType: "TELEGRAM", 
-        billNo: "BOT", itemCode: data.itemCode, qty: data.qty, serial: data.serial,
+        duid: data.duid, type: data.type, itemType: "BOT", 
+        billNo: "TELEGRAM", itemCode: data.itemCode, qty: data.qty, serial: data.serial,
         model: "", desc: ""
       });
-      sendMessage(query.message.chat.id, "✅ Saved Successfully!");
+      sendMessage(query.message.chat.id, "✅ บันทึกข้อมูลเรียบร้อย!");
     }
   } else {
-    sendMessage(query.message.chat.id, "❌ Cancelled");
+    sendMessage(query.message.chat.id, "❌ ยกเลิกรายการ");
   }
 }
 
@@ -139,81 +199,6 @@ function saveToSheet(d) {
     ]);
     return "Success";
   } catch (e) { return "Error: " + e.toString(); }
-}
-
-/* [3] UTILITIES & SETUP */
-
-function processImageOcr(base64Data) {
-  try {
-    var parts = base64Data.split(',');
-    var blob = Utilities.newBlob(Utilities.base64Decode(parts[1]), parts[0].split(':')[1].split(';')[0]);
-    
-    // Drive API is REQUIRED. Make sure "Drive API" is enabled in Services.
-    var resource = { 
-      name: 'OCR_TEMP_' + new Date().getTime(), 
-      title: 'OCR_TEMP', 
-      mimeType: blob.getContentType() 
-    };
-    
-    var file;
-    try {
-      // Attempt Drive API v2
-      file = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: 'th,en' });
-    } catch (e) {
-      // Fallback for different environments
-      file = Drive.Files.create({ name: resource.name, mimeType: resource.mimeType }, blob);
-      // Note: Full OCR fallback requires Advanced Drive Service enabled
-    }
-    
-    if (!file || !file.id) throw "Could not create temporary OCR file. Please enable 'Drive API' in Services.";
-    
-    var doc = DocumentApp.openById(file.id);
-    var text = doc.getBody().getText();
-    
-    // Cleanup
-    try { Drive.Files.remove(file.id); } catch(e) {}
-    
-    if (!text || text.trim().length === 0) throw "OCR ประมวลผลสำเร็จแต่ไม่พบตัวหนังสือในรูปภาพ";
-    
-    return parsePickingList(text);
-  } catch (e) { 
-    throw "OCR Error: " + e.toString() + ". แนะนำ: ตรวจสอบว่าได้เปิด 'Drive API' ในส่วนของ Services หรือยัง?"; 
-  }
-}
-
-function parsePickingList(text) {
-  var result = {
-    header: {
-      billNo: (text.match(/DTH[0-9]{10,15}/) || [""])[0],
-      site: (text.match(/Site:\s*([^\n]+)/i) || ["", ""])[1].trim(),
-      project: (text.match(/Project:\s*([^\n]+)/i) || ["", ""])[1].trim(),
-      duid: ""
-    },
-    items: []
-  };
-  var lines = text.split('\n');
-  lines.forEach(function(line) {
-    var itemMatch = line.match(/\b([A-Z0-9-]{8,15})\b/);
-    if (itemMatch && !itemMatch[0].includes("DTH") && !itemMatch[0].includes("SITE")) {
-      var qtyMatch = line.match(/([0-9]+)\s*(PCS|M|SET)?/i);
-      result.items.push({ model: "", code: itemMatch[0], desc: "", qty: qtyMatch ? qtyMatch[1] : "1", sn: "" });
-    }
-  });
-  return result;
-}
-
-function forceCleanupSheets() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheets = ss.getSheets();
-  var count = 0;
-  sheets.forEach(function(s) { if (s.getName().indexOf("Form Responses") > -1) { try { ss.deleteSheet(s); count++; } catch (e) {} } });
-  Browser.msgBox("Deleted " + count + " sheets.");
-}
-
-function setWebhook() {
-  var url = ScriptApp.getService().getUrl();
-  UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/setWebhook?url=" + url);
-  Logger.log("✅ Webhook Connected");
 }
 
 function sendMessage(id, txt) { UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "post", contentType: "application/json", payload: JSON.stringify({ chat_id: id, text: txt }) }); }
