@@ -147,14 +147,38 @@ function processImageOcr(base64Data) {
   try {
     var parts = base64Data.split(',');
     var blob = Utilities.newBlob(Utilities.base64Decode(parts[1]), parts[0].split(':')[1].split(';')[0]);
-    var resource = { name: 'OCR_TEMP', title: 'OCR_TEMP', mimeType: 'image/jpeg' };
+    
+    // Drive API is REQUIRED. Make sure "Drive API" is enabled in Services.
+    var resource = { 
+      name: 'OCR_TEMP_' + new Date().getTime(), 
+      title: 'OCR_TEMP', 
+      mimeType: blob.getContentType() 
+    };
+    
     var file;
-    try { file = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: 'th,en' }); } catch (e) { file = Drive.Files.create(resource, blob, { ocr: true }); }
+    try {
+      // Attempt Drive API v2
+      file = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: 'th,en' });
+    } catch (e) {
+      // Fallback for different environments
+      file = Drive.Files.create({ name: resource.name, mimeType: resource.mimeType }, blob);
+      // Note: Full OCR fallback requires Advanced Drive Service enabled
+    }
+    
+    if (!file || !file.id) throw "Could not create temporary OCR file. Please enable 'Drive API' in Services.";
+    
     var doc = DocumentApp.openById(file.id);
     var text = doc.getBody().getText();
-    Drive.Files.remove(file.id);
+    
+    // Cleanup
+    try { Drive.Files.remove(file.id); } catch(e) {}
+    
+    if (!text || text.trim().length === 0) throw "OCR ประมวลผลสำเร็จแต่ไม่พบตัวหนังสือในรูปภาพ";
+    
     return parsePickingList(text);
-  } catch (e) { throw "OCR Error: " + e.toString(); }
+  } catch (e) { 
+    throw "OCR Error: " + e.toString() + ". แนะนำ: ตรวจสอบว่าได้เปิด 'Drive API' ในส่วนของ Services หรือยัง?"; 
+  }
 }
 
 function parsePickingList(text) {

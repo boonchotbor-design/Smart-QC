@@ -15,30 +15,41 @@
     .header-banner { background: linear-gradient(135deg, #0d6efd, #0043a8); color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
     .card-custom { border-radius: 15px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.05); background: white; padding: 15px; margin-bottom: 15px; }
     .item-row { background: #ffffff; padding: 15px; border-radius: 12px; border-left: 5px solid #ffc107; margin-bottom: 15px; border: 1px solid #ddd; }
-    #reader { width: 100%; border-radius: 15px; overflow: hidden; display: none; margin-bottom: 15px; border: 2px solid #0d6efd; background: #000; }
+
+    /* Full-Screen Scanner Overlay */
+    #reader-container { 
+      display: none; 
+      position: fixed; 
+      top: 0; left: 0; width: 100%; height: 100%; 
+      background: rgba(0,0,0,0.9); 
+      z-index: 10000; 
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    #reader { width: 100%; max-width: 500px; border-radius: 15px; overflow: hidden; border: 2px solid #0d6efd; background: #000; margin-bottom: 20px; }
+    .scanner-controls { width: 100%; max-width: 500px; }
+
     .loading-overlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:9999; text-align:center; padding-top:50%; }
   </style>
-</head>
-<body>
-  <div id="loader" class="loading-overlay"><div class="spinner-border text-primary"></div><div class="mt-2 fw-bold">AI Loading...</div></div>
+  </head>
+  <body>
+  <div id="loader" class="loading-overlay"><div class="spinner-border text-primary"></div><div class="mt-2 fw-bold">AI กำลังประมวลผล...</div></div>
 
   <div class="container-fluid">
     <div class="header-banner shadow">
-      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.8.8</h4>
-      <p class="mb-0 small opacity-75">Ultimate Stability Edition</p>
+      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.9.1</h4>
+      <p class="mb-0 small opacity-75">Overlay & Stability Fix</p>
     </div>
 
     <div id="ios-tip" class="alert alert-info small py-2 mb-2" style="display:none; font-size: 0.8em;">
-      💡 <b>สำหรับ iOS:</b> ต้องเปิดผ่าน <b>Safari</b> เท่านั้น! (หากใช้ Chrome/Line กล้องจะถูกบล็อก)
-    </div>
-
-    <div id="perm-banner" class="alert alert-warning small py-2 mb-2" style="display:none; font-size: 0.85em;">
-      ⚠️ <b>กล้องเปิดไม่ได้?</b> แนะนำให้ใช้ปุ่ม <b>"ถ่ายรูปแทนการสแกน"</b> แทนครับ
+      💡 <b>สำหรับ iOS:</b> ต้องเปิดผ่าน <b>Safari</b> เท่านั้น! (หากใช้ Chrome/Line กล้องวิดีโอจะถูกบล็อก)
     </div>
 
     <div class="d-grid gap-2 mb-3">
       <button class="btn btn-warning fw-bold py-3 shadow-sm text-dark" onclick="document.getElementById('fileInput').click()">
-        📸 ถ่ายรูปสแกนใบงาน (OCR)
+        📸 ถ่ายรูปสแกนใบงาน (OCR AI)
       </button>
       <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none" onchange="handleFile(this)">
     </div>
@@ -48,9 +59,9 @@
         <div class="col-6"><label class="small fw-bold">ลูกค้า</label><select id="customer" class="form-select form-select-sm"><option value="AIS">AIS</option><option value="TRUE">TRUE</option></select></div>
         <div class="col-6"><label class="small fw-bold">งาน</label><select id="type" class="form-select form-select-sm"><option value="IN">IN</option><option value="OUT">OUT</option><option value="DISMANTLE">DISMANTLE</option><option value="RETURN">RETURN</option></select></div>
         <div class="col-9"><label class="small fw-bold">Bill No.</label><input type="text" id="billNo" class="form-control form-control-sm"></div>
-        <div class="col-3 d-flex align-items-end"><button class="btn btn-info w-100 py-1 text-white" onclick="startScan('billNo')">📷</button></div>
+        <div class="col-3 d-flex align-items-end"><button class="btn btn-info w-100 py-1 text-white" onclick="startScan('billNo')">📸</button></div>
         <div class="col-9"><label class="small fw-bold">DUID</label><input type="text" id="duid" class="form-control form-control-sm"></div>
-        <div class="col-3 d-flex align-items-end"><button class="btn btn-info w-100 py-1 text-white" onclick="startScan('duid')">📷</button></div>
+        <div class="col-3 d-flex align-items-end"><button class="btn btn-info w-100 py-1 text-white" onclick="startScan('duid')">📸</button></div>
         <div class="col-6"><label class="small fw-bold">Site Code</label><input type="text" id="site" class="form-control form-control-sm"></div>
         <div class="col-6"><label class="small fw-bold">Project Code</label><input type="text" id="project" class="form-control form-control-sm"></div>
       </div>
@@ -59,20 +70,21 @@
     <div id="itemList"></div>
     <button class="btn btn-outline-primary w-100 mb-3 py-2 fw-bold" onclick="addItemRow()">➕ เพิ่มรายการใหม่</button>
 
-    <div id="reader-container" style="display:none;">
+    <!-- Scanner Overlay -->
+    <div id="reader-container">
+      <h5 class="text-white mb-3">สแกนรหัส (QR/Barcode)</h5>
       <div id="reader"></div>
-      <div class="d-grid gap-2 mb-3">
-        <button class="btn btn-warning fw-bold py-2 shadow-sm" onclick="document.getElementById('qrFileInput').click()">
-          📸 ถ่ายรูปแทนการสแกน (ใช้ได้แน่นอน 100%)
+      <div class="scanner-controls d-grid gap-2">
+        <button class="btn btn-warning fw-bold py-3 shadow-sm" onclick="document.getElementById('qrFileInput').click()">
+          📸 ถ่ายรูปแทนการสแกน (ใช้ได้ 100%)
         </button>
-        <button id="btnStopScan" class="btn btn-danger py-2 fw-bold" onclick="stopScanner()">✖ ยกเลิก</button>
+        <button class="btn btn-danger py-2 fw-bold" onclick="stopScanner()">✖ ปิดหน้าจอนี้</button>
       </div>
       <input type="file" id="qrFileInput" accept="image/*" capture="environment" style="display:none" onchange="handleQrFile(this)">
     </div>
 
-    <button class="btn btn-primary w-100 shadow-lg py-3 fw-bold mb-5" onclick="submitAll()" id="btnSubmit">🚀 บันทึกทั้งหมด</button>
-    </div>
-
+    <button class="btn btn-primary w-100 shadow-lg py-3 fw-bold mb-5" onclick="submitAll()" id="btnSubmit">🚀 บันทึกข้อมูลลง Sheet</button>
+  </div>
     <script>
     /* Global Error Handler for iOS Diagnostics */
     window.onerror = function(msg, url, line) {
@@ -196,14 +208,12 @@
     }
 
     function stopScanner() {
+      document.getElementById('reader-container').style.display = 'none';
+      activeScanId = null;
       if (html5QrCode) {
-        html5QrCode.stop().then(function() {
-          document.getElementById('reader-container').style.display = 'none';
-        }).catch(function(err) {
-          document.getElementById('reader-container').style.display = 'none';
+        html5QrCode.stop().catch(function(err) {
+          console.warn("Scanner stop warning:", err);
         });
-      } else {
-        document.getElementById('reader-container').style.display = 'none';
       }
     }
 
