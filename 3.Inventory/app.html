@@ -35,12 +35,12 @@
   </style>
 </head>
 <body>
-  <div id="loader" class="loading-overlay"><div class="spinner-border text-primary"></div><div class="mt-2 fw-bold">ประมวลผล AI...</div></div>
+  <div id="loader" class="loading-overlay"><div class="spinner-border text-primary"></div><div class="mt-2 fw-bold">AI กำลังอ่านข้อมูล...</div></div>
 
   <div class="container-fluid">
     <div class="header-banner shadow">
-      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.9.3</h4>
-      <p class="mb-0 small opacity-75">Smooth Mobile Experience</p>
+      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.9.4</h4>
+      <p class="mb-0 small opacity-75">AI OCR & Scanner Final</p>
     </div>
 
     <div id="ios-tip" class="alert alert-info small py-2 mb-2" style="display:none; font-size: 0.8em;">
@@ -49,7 +49,7 @@
 
     <div class="d-grid gap-2 mb-3">
       <button class="btn btn-warning fw-bold py-3 shadow-sm text-dark" onclick="document.getElementById('fileInput').click()">
-        📸 ถ่ายรูปสแกนใบงาน (OCR AI)
+        📸 ถ่ายรูปสแกนใบงาน (AI OCR)
       </button>
       <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none" onchange="handleFile(this)">
     </div>
@@ -96,7 +96,7 @@
       var reader = new FileReader();
       reader.onload = function(e) {
         google.script.run.withSuccessHandler(fillScannedData).withFailureHandler(function(err) {
-          alert("OCR AI Error: " + err);
+          alert("AI Error: " + err);
           document.getElementById('loader').style.display = 'none';
         }).processImageOcr(e.target.result);
       };
@@ -122,14 +122,19 @@
 
     function fillScannedData(res) {
       document.getElementById('loader').style.display = 'none';
-      if (!res) return;
+      if (!res) { alert("AI ไม่ออกผลลัพธ์ กรุณาลองใหม่อีกครั้ง"); return; }
+      
       document.getElementById('billNo').value = res.header.billNo || '';
       document.getElementById('site').value = res.header.site || '';
       document.getElementById('project').value = res.header.project || '';
+      
       if (res.items && res.items.length > 0) {
         for (var i = 0; i < res.items.length; i++) {
           addItemRow(res.items[i].model, res.items[i].code, res.items[i].qty, res.items[i].desc);
         }
+        alert("AI สแกนสำเร็จ! พบ " + res.items.length + " รายการ");
+      } else {
+        alert("AI อ่านหัวใบงานสำเร็จ แต่ไม่พบรายการสินค้า");
       }
     }
 
