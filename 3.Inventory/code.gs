@@ -111,12 +111,34 @@ function handleCallback(query) {
     var cached = CacheService.getScriptCache().get("pending_" + userId);
     if (cached) {
       var data = JSON.parse(cached);
-      saveToSheet({ customer: data.customer, project: data.project, site: data.site, duid: data.duid, type: data.type, itemType: "", billNo: "", itemCode: data.itemCode, qty: data.qty, serial: data.serial });
+      saveToSheet({ 
+        customer: data.customer, project: data.project, site: data.site, 
+        duid: data.duid, type: data.type, itemType: "TELEGRAM", 
+        billNo: "BOT", itemCode: data.itemCode, qty: data.qty, serial: data.serial,
+        model: "", desc: ""
+      });
       sendMessage(query.message.chat.id, "✅ Saved Successfully!");
     }
   } else {
     sendMessage(query.message.chat.id, "❌ Cancelled");
   }
+}
+
+function saveToSheet(d) {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheetName = d.customer === "AIS" ? "INOUT_HW_AIS" : "INOUT_HW_TRUE";
+    var sheet = ss.getSheetByName(sheetName);
+    var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
+    var lastRow = sheet.getLastRow();
+    var nextNo = lastRow > 0 ? (parseInt(sheet.getRange(lastRow, 1).getValue()) || 0) + 1 : 1;
+    sheet.appendRow([
+      nextNo, d.project || "", "", d.site || "", "", d.duid || "", 
+      d.type || "", d.itemType || "", dateStr, d.billNo || "", 
+      d.model || "", d.itemCode || "", d.desc || "", d.qty || "1", d.serial || ""
+    ]);
+    return "Success";
+  } catch (e) { return "Error: " + e.toString(); }
 }
 
 /* [3] UTILITIES & SETUP */

@@ -24,8 +24,8 @@
 
   <div class="container-fluid">
     <div class="header-banner shadow">
-      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.8</h4>
-      <p class="mb-0 small opacity-75">iOS Stability Mode</p>
+      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.8.5</h4>
+      <p class="mb-0 small opacity-75">iOS/Android Stability Pro</p>
     </div>
 
     <div class="d-grid gap-2 mb-3">
@@ -50,11 +50,16 @@
 
     <div id="itemList"></div>
     <button class="btn btn-outline-primary w-100 mb-3 py-2 fw-bold" onclick="addItemRow()">➕ เพิ่มรายการใหม่</button>
-    <div id="reader"></div>
-    <button class="btn btn-primary w-100 shadow-lg py-3 fw-bold mb-5" onclick="submitAll()" id="btnSubmit">🚀 บันทึกทั้งหมด</button>
-  </div>
 
-  <script>
+    <div id="reader-container" style="display:none;">
+      <div id="reader"></div>
+      <button id="btnStopScan" class="btn btn-danger w-100 mb-3 py-2 fw-bold" onclick="stopScanner()">✖ ยกเลิกการสแกน</button>
+    </div>
+
+    <button class="btn btn-primary w-100 shadow-lg py-3 fw-bold mb-5" onclick="submitAll()" id="btnSubmit">🚀 บันทึกทั้งหมด</button>
+    </div>
+
+    <script>
     /* Global Error Handler for iOS Diagnostics */
     window.onerror = function(msg, url, line) {
       alert("App Error: " + msg + " at line " + line);
@@ -97,19 +102,18 @@
         '<div class="col-12"><label class="small fw-bold">ประเภท</label><select id="item_type_' + rowCount + '" class="form-select form-select-sm"><option value="ANTENNA">ANTENNA</option><option value="AAU">AAU</option><option value="RRU">RRU</option><option value="BBU">BBU</option><option value="BOARD">BOARD</option><option value="DCDU/DPU">DCDU/DPU</option></select></div>' +
         '<div class="col-12"><label class="small fw-bold">Model</label><input type="text" id="model_' + rowCount + '" class="form-control form-control-sm" value="' + model + '"></div>' +
         '<div class="col-9"><label class="small fw-bold">Item Code</label><input type="text" id="code_' + rowCount + '" class="form-control form-control-sm" value="' + code + '"></div>' +
-        '<div class="col-3 d-flex align-items-end"><button class="btn btn-info w-100 py-1 text-white" onclick="startScan(\'code_' + rowCount + '\')">📷</button></div>' +
+        '<div class="col-3 d-flex align-items-end"><button class="btn btn-info w-100 py-1 text-white" onclick="startScan(\'code_' + rowCount + '\')">📷</button></div>' +       
         '<div class="col-12"><label class="small fw-bold">Description</label><input type="text" id="desc_' + rowCount + '" class="form-control form-control-sm" value="' + desc + '"></div>' +
         '<div class="col-4"><label class="small fw-bold">จำนวน</label><input type="number" id="qty_' + rowCount + '" class="form-control form-control-sm" value="' + qty + '"></div>' +
         '<div class="col-8"><label class="small fw-bold">Serial (SN)</label><input type="text" id="sn_' + rowCount + '" class="form-control form-control-sm" placeholder="สแกน SN"></div>' +
-        '<div class="col-12 mt-1"><button class="btn btn-info w-100 py-2 text-white shadow-sm" onclick="startScan(\'sn_' + rowCount + '\')">📷 สแกน SN</button></div>' +
+        '<div class="col-12 mt-1"><button class="btn btn-info w-100 py-2 text-white shadow-sm" onclick="startScan(\'sn_' + rowCount + '\')">📷 สแกน SN</button></div>' +        
         '<div class="col-12 text-end mt-2"><button class="btn btn-link btn-sm text-danger p-0" onclick="document.getElementById(\'row_' + rowCount + '\').remove()">ลบรายการ</button></div>' +
         '</div>';
       document.getElementById('itemList').appendChild(div);
     }
 
     function startScan(id) {
-      var r = document.getElementById('reader');
-      r.style.display = 'block';
+      document.getElementById('reader-container').style.display = 'block';
       if (html5QrCode) {
         html5QrCode.stop().then(function() { startScanner(id); }).catch(function() { startScanner(id); });
       } else {
@@ -119,13 +123,37 @@
 
     function startScanner(id) {
       html5QrCode = new Html5Qrcode("reader");
-      html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: {width: 250, height: 150} }, function(txt) {
+      var config = { fps: 10, qrbox: {width: 250, height: 150} };
+
+      html5QrCode.start({ facingMode: "environment" }, config, function(txt) {
         document.getElementById(id).value = txt;
-        html5QrCode.stop();
-        document.getElementById('reader').style.display = 'none';
+        stopScanner();
       }).catch(function(err) {
-        alert("Camera error: Please use Safari/Chrome directly.");
+        console.error("Camera error:", err);
+        Html5Qrcode.getCameras().then(function(cameras) {
+          if (cameras && cameras.length > 0) {
+            var cameraId = cameras[cameras.length - 1].id;
+            html5QrCode.start(cameraId, config, function(txt) {
+              document.getElementById(id).value = txt;
+              stopScanner();
+            }).catch(function(e) { alert("Camera error: " + e); });
+          } else {
+            alert("ไม่พบกล้อง กรุณาตรวจสอบสิทธิ์การเข้าถึงกล้อง");
+          }
+        }).catch(function(e) { alert("Camera Permission Denied"); });
       });
+    }
+
+    function stopScanner() {
+      if (html5QrCode) {
+        html5QrCode.stop().then(function() {
+          document.getElementById('reader-container').style.display = 'none';
+        }).catch(function(err) {
+          document.getElementById('reader-container').style.display = 'none';
+        });
+      } else {
+        document.getElementById('reader-container').style.display = 'none';
+      }
     }
 
     function submitAll() {
