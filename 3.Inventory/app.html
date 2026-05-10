@@ -24,17 +24,16 @@
 
   <div class="container-fluid">
     <div class="header-banner shadow">
-      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.8.7</h4>
-      <p class="mb-0 small opacity-75">Camera Fix Master</p>
+      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.8.8</h4>
+      <p class="mb-0 small opacity-75">Ultimate Stability Edition</p>
     </div>
 
     <div id="ios-tip" class="alert alert-info small py-2 mb-2" style="display:none; font-size: 0.8em;">
-      💡 <b>สำหรับ iOS:</b> ต้องเปิดผ่าน <b>Safari</b> และกด "อนุญาต" เมื่อมีป๊อปอัพขอใช้กล้อง
+      💡 <b>สำหรับ iOS:</b> ต้องเปิดผ่าน <b>Safari</b> เท่านั้น! (หากใช้ Chrome/Line กล้องจะถูกบล็อก)
     </div>
 
-    <div id="perm-banner" class="alert alert-danger small py-2 mb-2" style="display:none; font-size: 0.8em;">
-      ⚠️ <b>กล้องถูกบล็อก:</b> กรุณากดปุ่มด้านล่างเพื่อขอสิทธิ์ใหม่ หรือตั้งค่า Browser ให้ "อนุญาตกล้อง"
-      <button class="btn btn-sm btn-dark ms-2" onclick="requestPermission()">ขอสิทธิ์กล้อง</button>
+    <div id="perm-banner" class="alert alert-warning small py-2 mb-2" style="display:none; font-size: 0.85em;">
+      ⚠️ <b>กล้องเปิดไม่ได้?</b> แนะนำให้ใช้ปุ่ม <b>"ถ่ายรูปแทนการสแกน"</b> แทนครับ
     </div>
 
     <div class="d-grid gap-2 mb-3">
@@ -62,7 +61,13 @@
 
     <div id="reader-container" style="display:none;">
       <div id="reader"></div>
-      <button id="btnStopScan" class="btn btn-danger w-100 mb-3 py-2 fw-bold" onclick="stopScanner()">✖ ยกเลิกการสแกน</button>
+      <div class="d-grid gap-2 mb-3">
+        <button class="btn btn-warning fw-bold py-2 shadow-sm" onclick="document.getElementById('qrFileInput').click()">
+          📸 ถ่ายรูปแทนการสแกน (ใช้ได้แน่นอน 100%)
+        </button>
+        <button id="btnStopScan" class="btn btn-danger py-2 fw-bold" onclick="stopScanner()">✖ ยกเลิก</button>
+      </div>
+      <input type="file" id="qrFileInput" accept="image/*" capture="environment" style="display:none" onchange="handleQrFile(this)">
     </div>
 
     <button class="btn btn-primary w-100 shadow-lg py-3 fw-bold mb-5" onclick="submitAll()" id="btnSubmit">🚀 บันทึกทั้งหมด</button>
@@ -77,6 +82,7 @@
 
     var rowCount = 0;
     var html5QrCode;
+    var activeScanId;
 
     function handleFile(input) {
       if (!input.files[0]) return;
@@ -89,6 +95,23 @@
         }).processImageOcr(e.target.result);
       };
       reader.readAsDataURL(input.files[0]);
+    }
+
+    function handleQrFile(input) {
+      if (!input.files[0] || !activeScanId) return;
+      document.getElementById('loader').style.display = 'block';
+      var scanner = new Html5Qrcode("reader");
+      scanner.scanFile(input.files[0], true)
+        .then(function(qrCodeMessage) {
+          document.getElementById(activeScanId).value = qrCodeMessage;
+          document.getElementById('loader').style.display = 'none';
+          stopScanner();
+          alert("สแกนสำเร็จ: " + qrCodeMessage);
+        })
+        .catch(function(err) {
+          alert("ไม่พบ QR/Barcode ในรูปภาพ กรุณาถ่ายให้ชัดเจนและเห็นรหัสชัดๆ");
+          document.getElementById('loader').style.display = 'none';
+        });
     }
 
     function fillScannedData(res) {
@@ -122,6 +145,7 @@
     }
 
     function startScan(id) {
+      activeScanId = id;
       document.getElementById('reader-container').style.display = 'block';
       if (html5QrCode) {
         html5QrCode.stop().then(function() { startScanner(id); }).catch(function() { startScanner(id); });
