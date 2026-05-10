@@ -1,164 +1,198 @@
 /**
- * 🚀 Telegram Inventory Bot (AIS & TRUE) - Ver 2.6 (STABLE)
- * ระบบปุ่มกดทีละขั้นตอน (Step-by-Step) + บันทึก Google Sheets
+ * 🚀 Inventory All-in-One System (Web App + Telegram + OCR)
+ * 1. Web App: สำหรับบันทึกใบงานที่มีหลายรายการ (Multiple Items) ในครั้งเดียว
+ * 2. Telegram Bot: สำหรับบันทึกด่วนผ่านการพิมพ์หรือสแกน OCR
+ * 3. Google Form: สำหรับการบันทึกแบบมาตรฐาน
  */
 
 const TELEGRAM_BOT_TOKEN = '8585490322:AAHdjJHtn0tT84T-QEg5NLUUWymEkhBrtHk';
 const SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycby8YHANDSWzyzeE8P336rdEtNMdiXl4Evq9b0OfAqtje83FpSkC2r7wtUBZxMfvbdIa/exec';
 
-// 🚩 สำคัญ: นำ URL ที่ได้หลังกด Deploy (ต้องจบด้วย /exec) มาวางที่นี่
-const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyRkdlnT68mhIU9-iZyZYfHzBRz9gQbUIrPJFSkSibSWhqjyCEq_gccUEIrSqpnNT0Q/exec';
-
-const ITEM_LISTS = {
-  "ANTENNA": ["AMB4519R9v06", "AMB4520R9v06", "MBMF-65-18DDE-IN(R)-TH", "ADU4521R0v06"],
-  "AAU": ["AAU5726e", "AAU5768", "AAU5636m", "AAU5614"],
-  "RRU": ["RRU5258", "RRU3962", "RRU5505", "RRU5508"],
-  "BBU": ["BBU5900", "BBU5900A", "UMPTg2", "UPEUg"],
-  "BOARD": ["UBBPg1", "UBBPg2", "UBBPg5", "UBBPg3"],
-  "DCDU/DPU": ["EPS100D", "DCDU12B", "DCDU16D", "OPM30"]
-};
+// ---------------------------------------------------------
+// 1. ระบบจัดการ WEB APP (Master-Detail Interface)
+// ---------------------------------------------------------
 
 /**
- * ทดสอบความพร้อม (เปิด URL นี้ใน Chrome)
+ * ฟังก์ชันหลักในการเปิดหน้าเว็บ (Web App)
  */
-function doGet(e) { 
-  return ContentService.createTextOutput("✅ Bot Ver 2.6 is Ready and Publicly Accessible!"); 
+function doGet(e) {
+  return HtmlService.createTemplateFromFile('app')
+      .evaluate()
+      .setTitle('Inventory Multi-Record')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
+
+/**
+ * ฟังก์ชันบันทึกข้อมูลแบบหลายรายการจาก Web App
+ */
+function saveMultiData(header, items) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheetName = header.customer === "AIS" ? "INOUT_HW_AIS" : "INOUT_HW_TRUE";
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return "Error: Sheet not found";
+
+  const dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
+
+  items.forEach(item => {
+    const lastRow = sheet.getLastRow();
+    const nextNo = lastRow > 0 ? (parseInt(sheet.getRange(lastRow, 1).getValue()) || 0) + 1 : 1;
+    
+    // บันทึกแยกแถว: No(A), Project(B), Phase(C), Site(D), WON(E), DUID(F), IN/OUT(G), Type(H), Date(I), Bill(J), Item(K), Desc(L), Qty(M), Serial(N)
+    sheet.appendRow([
+      nextNo, header.project, "", header.site, "", header.duid, 
+      header.type, "", dateStr, header.billNo, item.code, "", item.qty, item.sn
+    ]);
+  });
+  
+  return "Success";
+}
+
+// ---------------------------------------------------------
+// 2. ระบบจัดการ TELEGRAM & OCR (เดิม)
+// ---------------------------------------------------------
 
 function doPost(e) {
   try {
-    const contents = JSON.parse(e.postData.contents);
-    if (contents.callback_query) { 
-      handleCallback(contents.callback_query); 
-      return ContentService.createTextOutput("ok"); 
-    }
-    
-    const message = contents.message || contents.edited_message;
-    if (!message || !message.text) return ContentService.createTextOutput("ok");
+    const data = JSON.parse(e.postData.contents);
+    if (data.callback_query) { handleCallback(data.callback_query); return ContentService.createTextOutput("ok"); }
+    const msg = data.message;
+    if (!msg) return ContentService.createTextOutput("ok");
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
 
-    const chatId = message.chat.id;
-    const userId = message.from.id;
-    const text = message.text.trim();
-
-    // เช็คคำสั่ง /start
-    if (text.toLowerCase().indexOf('/start') === 0) {
-      CacheService.getScriptCache().remove("user_" + userId);
-      const keyboard = { inline_keyboard: [[{ text: "AIS", callback_data: "SET_CUST:AIS" }, { text: "TRUE", callback_data: "SET_CUST:TRUE" }]] };
-      sendKeyboard(chatId, "📦 *ยินดีต้อนรับสู่ระบบ Ver 2.6*\n\n*ขั้นตอนที่ 1:* เลือกโครงการ / ลูกค้า", keyboard);
-    } else {
-      handleStepInput(chatId, userId, text);
+    if (msg.photo) {
+      handlePhotoMessage(chatId, userId, msg.photo);
+    } else if (msg.text) {
+      const text = msg.text.trim();
+      if (text === "/start") sendMessage(chatId, "👋 ยินดีต้อนรับ! ส่งข้อมูลรูปแบบ `ลูกค้า ประเภท DUID Project Site Item SN Qty` หรือส่งรูปภาพเพื่อ OCR");
+      else handleTextMessage(chatId, userId, text);
     }
-  } catch (err) { console.error(err); }
+  } catch (err) { Logger.log(err.toString()); }
   return ContentService.createTextOutput("ok");
 }
 
+function handleTextMessage(chatId, userId, text) {
+  const p = text.split(/\s+/).filter(x => x.length > 0);
+  if (p.length < 8) { sendMessage(chatId, "❌ ข้อมูลไม่ครบ 8 รายการ"); return; }
+  const data = { customer: p[0].toUpperCase(), type: p[1].toUpperCase(), duid: p[2], project: p[3], site: p[4], itemCode: p[5], serial: p[6], qty: p[7] };
+  askConfirmation(chatId, userId, data);
+}
+
+function handlePhotoMessage(chatId, userId, photoArray) {
+  sendMessage(chatId, "🔍 กำลังประมวลผล OCR...");
+  try {
+    const fileId = photoArray[photoArray.length - 1].file_id;
+    const blob = UrlFetchApp.fetch(getTelegramFileUrl(fileId)).getBlob();
+    const ocrFile = Drive.Files.create({ name: "temp", mimeType: "image/jpeg" }, blob, { ocr: true, ocrLanguage: 'th' });
+    const text = DocumentApp.openById(ocrFile.id).getBody().getText();
+    Drive.Files.remove(ocrFile.id);
+    const data = parseOcrText(text);
+    if (data) askConfirmation(chatId, userId, data);
+    else sendMessage(chatId, "❌ ไม่สามารถระบุข้อมูลจากรูปภาพได้");
+  } catch (e) { sendMessage(chatId, "⚠️ OCR Error"); }
+}
+
+function parseOcrText(text) {
+  let data = {
+    customer: text.includes("AIS") ? "AIS" : (text.includes("TRUE") ? "TRUE" : ""),
+    type: text.includes("IN") ? "IN" : (text.includes("OUT") ? "OUT" : ""),
+    duid: (text.match(/[A-Z0-9]{8,12}/) || [""])[0],
+    project: "", site: "", itemCode: "", serial: "", qty: "1"
+  };
+  return (data.customer && data.type) ? data : null;
+}
+
+function askConfirmation(chatId, userId, data) {
+  CacheService.getScriptCache().put("pending_" + userId, JSON.stringify(data), 600);
+  const summary = `🏢: ${data.customer}\n🔄: ${data.type}\n🆔: ${data.duid}\n📁: ${data.project}\n📍: ${data.site}\n📦: ${data.itemCode}\n🔢: ${data.serial}\n🔢: ${data.qty}`;
+  sendKeyboard(chatId, "📝 *ยืนยันข้อมูล:*\n" + summary, { inline_keyboard: [[{ text: "✅ ยืนยัน", callback_data: "CONFIRM" }, { text: "❌ ยกเลิก", callback_data: "CANCEL" }]] });
+}
+
 function handleCallback(query) {
-  const chatId = query.message.chat.id;
   const userId = query.from.id;
-  const messageId = query.message.message_id;
-  const data = query.data;
-  const cache = CacheService.getScriptCache();
-
-  if (data.indexOf("SET_CUST:") === 0) {
-    const cust = data.split(":")[1];
-    cache.put("user_" + userId, JSON.stringify({ customer: cust, step: "TYPE" }), 600);
-    const keyboard = { inline_keyboard: [[{ text: "📥 IN", callback_data: "SET_TYPE:IN" }, { text: "📤 OUT", callback_data: "SET_TYPE:OUT" }], [{ text: "🛠 DISMANTLE", callback_data: "SET_TYPE:DISMANTLE" }, { text: "🔄 RETURN", callback_data: "SET_TYPE:RETURN" }]] };
-    editMessage(chatId, messageId, "👤 ลูกค้า: *" + cust + "*\n\n🔄 *ขั้นตอนที่ 2:* เลือกประเภทงาน", keyboard);
-  } 
-  else if (data.indexOf("SET_TYPE:") === 0) {
-    const type = data.split(":")[1];
-    let session = JSON.parse(cache.get("user_" + userId));
-    session.type = type; session.step = "DUID";
-    cache.put("user_" + userId, JSON.stringify(session), 600);
-    editMessage(chatId, messageId, "👤 ลูกค้า: *" + session.customer + "*\n🔄 ประเภท: *" + type + "*\n\n🆔 *ขั้นตอนที่ 3:* พิมพ์หมายเลข *DUID*");
-  } 
-  else if (data.indexOf("SET_CAT:") === 0) {
-    const cat = data.split(":")[1];
-    let session = JSON.parse(cache.get("user_" + userId));
-    session.category = cat; cache.put("user_" + userId, JSON.stringify(session), 600);
-    let buttons = [];
-    ITEM_LISTS[cat].forEach((item, index) => {
-      if (index % 2 === 0) buttons.push([{ text: item, callback_data: "SET_ITEM:" + item }]);
-      else buttons[buttons.length-1].push({ text: item, callback_data: "SET_ITEM:" + item });
-    });
-    editMessage(chatId, messageId, "📂 กลุ่ม: *" + cat + "*\n\n📦 *ขั้นตอนที่ 6:* เลือกอุปกรณ์", { inline_keyboard: buttons });
-  } 
-  else if (data.indexOf("SET_ITEM:") === 0) {
-    const item = data.split(":")[1];
-    let session = JSON.parse(cache.get("user_" + userId));
-    session.item = item; session.step = "SERIAL";
-    cache.put("user_" + userId, JSON.stringify(session), 600);
-    editMessage(chatId, messageId, "📦 อุปกรณ์: *" + item + "*\n\n🔢 *ขั้นตอนที่ 7:* พิมพ์ *Serial Number*");
-  } 
-  else if (data === "CONFIRM_SAVE") {
-    const session = JSON.parse(cache.get("user_" + userId));
-    if (saveToSheet(session)) editMessage(chatId, messageId, "✅ *บันทึกสำเร็จ!*\nข้อมูลถูกบันทึกเรียบร้อย");
-    cache.remove("user_" + userId);
-  } 
-  else if (data === "CANCEL_SAVE") { editMessage(chatId, messageId, "❌ ยกเลิกรายการแล้ว"); cache.remove("user_" + userId); }
+  if (query.data === "CONFIRM") {
+    const data = JSON.parse(CacheService.getScriptCache().get("pending_" + userId) || "{}");
+    if (saveToSheet(data)) editMessage(query.message.chat.id, query.message.message_id, "✅ บันทึกสำเร็จ!");
+  } else { editMessage(query.message.chat.id, query.message.message_id, "❌ ยกเลิกแล้ว"); }
 }
 
-function handleStepInput(chatId, userId, text) {
-  const cache = CacheService.getScriptCache();
-  let sessionStr = cache.get("user_" + userId);
-  if (!sessionStr) return;
-  let session = JSON.parse(sessionStr);
-
-  if (session.step === "DUID") {
-    session.duid = text; session.step = "PROJ";
-    cache.put("user_" + userId, JSON.stringify(session), 600);
-    sendMessage(chatId, "🆔 DUID: `" + text + "`\n\n📁 *ขั้นตอนที่ 4:* พิมพ์ *Project Code*");
-  } 
-  else if (session.step === "PROJ") {
-    session.project = text; session.step = "SITE";
-    cache.put("user_" + userId, JSON.stringify(session), 600);
-    sendMessage(chatId, "📁 Project: `" + text + "`\n\n📍 *ขั้นตอนที่ 5:* พิมพ์ *Site Code*");
-  } 
-  else if (session.step === "SITE") {
-    session.site = text; session.step = "CAT";
-    cache.put("user_" + userId, JSON.stringify(session), 600);
-    const keyboard = { inline_keyboard: [[{ text: "ANTENNA", callback_data: "SET_CAT:ANTENNA" }, { text: "AAU", callback_data: "SET_CAT:AAU" }], [{ text: "RRU", callback_data: "SET_CAT:RRU" }, { text: "BBU", callback_data: "SET_CAT:BBU" }], [{ text: "BOARD", callback_data: "SET_CAT:BOARD" }, { text: "DCDU/DPU", callback_data: "SET_CAT:DCDU/DPU" }]] };
-    sendMessage(chatId, "📍 Site: `" + text + "`\n\n📂 *ขั้นตอนที่ 6:* เลือกกลุ่มอุปกรณ์", keyboard);
-  } 
-  else if (session.step === "SERIAL") {
-    session.serial = text; session.step = "QTY";
-    cache.put("user_" + userId, JSON.stringify(session), 600);
-    sendMessage(chatId, "🔢 Serial: `" + text + "`\n\n🔢 *ขั้นตอนสุดท้าย:* พิมพ์ *จำนวน (Qty)*");
-  } 
-  else if (session.step === "QTY") {
-    session.qty = text; session.step = "CONFIRM";
-    cache.put("user_" + userId, JSON.stringify(session), 600);
-    const summary = "📝 *ตรวจสอบข้อมูล*\n\n" +
-                    "🏢 ลูกค้า: " + session.customer + "\n" +
-                    "🔄 ประเภท: " + session.type + "\n" +
-                    "🆔 DUID: " + session.duid + "\n" +
-                    "📁 Project: " + session.project + "\n" +
-                    "📍 Site Code: " + session.site + "\n" +
-                    "📦 อุปกรณ์: " + session.item + "\n" +
-                    "🔢 Serial: " + session.serial + "\n" +
-                    "🔢 จำนวน: " + session.qty;
-    const keyboard = { inline_keyboard: [[{ text: "✅ ยืนยันบันทึก", callback_data: "CONFIRM_SAVE" }, { text: "❌ ยกเลิก", callback_data: "CANCEL_SAVE" }]] };
-    sendKeyboard(chatId, summary, keyboard);
-  }
-}
+// ---------------------------------------------------------
+// 3. ระบบบันทึกข้อมูลลง SPREADSHEET (Shared Logic)
+// ---------------------------------------------------------
 
 function saveToSheet(data) {
   try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheetName = data.customer === "AIS" ? "INOUT_HW_AIS" : "INOUT_HW_TRUE";
-    const sheet = ss.getSheetByName(sheetName);
+    const sheet = ss.getSheetByName(data.customer === "AIS" ? "INOUT_HW_AIS" : "INOUT_HW_TRUE");
     if (!sheet) return false;
     const lastRow = sheet.getLastRow();
-    const nextNo = lastRow > 0 ? (Number(sheet.getRange(lastRow, 1).getValue()) || 0) + 1 : 1;
-    const dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
-    sheet.appendRow([nextNo, data.project, "", data.site, "", data.duid, data.type, "", dateStr, "", data.item, "", data.qty, data.serial]);
+    const nextNo = lastRow > 0 ? (parseInt(sheet.getRange(lastRow, 1).getValue()) || 0) + 1 : 1;
+    const date = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
+    sheet.appendRow([nextNo, data.project, "", data.site, "", data.duid, data.type, "", date, "", data.itemCode, "", data.qty, data.serial]);
     return true;
   } catch (e) { return false; }
 }
 
-function sendMessage(chatId, text) { UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "post", contentType: "application/json", payload: JSON.stringify({ chat_id: chatId, text: text, parse_mode: "Markdown" }) }); }
-function sendKeyboard(chatId, text, keyboard) { UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "post", contentType: "application/json", payload: JSON.stringify({ chat_id: chatId, text: text, reply_markup: keyboard, parse_mode: "Markdown" }) }); }
-function editMessage(chatId, messageId, text, keyboard) { UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/editMessageText", { method: "post", contentType: "application/json", payload: JSON.stringify({ chat_id: chatId, message_id: messageId, text: text, reply_markup: keyboard || {inline_keyboard:[]}, parse_mode: "Markdown" }) }); }
-function setWebhook() { 
-  Logger.log(UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/setWebhook?url=" + WEB_APP_URL).getContentText()); 
+// ---------------------------------------------------------
+// 4. ระบบจัดการ GOOGLE FORM (เดิม)
+// ---------------------------------------------------------
+
+function setupInventoryForm() {
+  const form = FormApp.create('Inventory Recording Form (AIS/TRUE)')
+      .setDescription('ฟอร์มบันทึกข้อมูลเข้า-ออกคลังสินค้า')
+      .setConfirmationMessage('บันทึกข้อมูลเรียบร้อยแล้ว!')
+      .setAllowResponseEdits(false);
+
+  form.addMultipleChoiceItem().setTitle('ลูกค้า (Customer)').setChoiceValues(['AIS', 'TRUE']).setRequired(true);
+  form.addMultipleChoiceItem().setTitle('ประเภทงาน (Type)').setChoiceValues(['IN', 'OUT', 'DISMANTLE', 'RETURN']).setRequired(true);
+  form.addTextItem().setTitle('DUID').setRequired(true);
+  form.addTextItem().setTitle('Project Code').setRequired(true);
+  form.addTextItem().setTitle('Site Code').setRequired(true);
+  form.addListItem().setTitle('กลุ่มอุปกรณ์ (Category)').setChoiceValues(['ANTENNA', 'AAU', 'RRU', 'BBU', 'BOARD', 'DCDU/DPU']).setRequired(true);
+  form.addTextItem().setTitle('รุ่นอุปกรณ์ (Item Model)').setRequired(true);
+  form.addTextItem().setTitle('Serial Number').setRequired(true);
+  form.addTextItem().setTitle('จำนวน (Qty)').setRequired(true);
+
+  form.setDestination(FormApp.DestinationType.SPREADSHEET, SPREADSHEET_ID);
+  
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(t => { if (t.getHandlerFunction() === 'processFormSubmission') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('processFormSubmission').forForm(form).onFormSubmit().create();
+
+  Logger.log('✅ สร้างฟอร์มสำเร็จ! ลิงก์: ' + form.getPublishedUrl());
 }
+
+function processFormSubmission(e) {
+  const r = e.response.getItemResponses();
+  const data = { 
+    customer: r[0].getResponse().toUpperCase(), 
+    type: r[1].getResponse().toUpperCase(), 
+    duid: r[2].getResponse(), 
+    project: r[3].getResponse(), 
+    site: r[4].getResponse(), 
+    // r[5] คือ Category
+    itemCode: r[6].getResponse(), 
+    serial: r[7].getResponse(), 
+    qty: r[8].getResponse() 
+  };
+  saveToSheet(data);
+}
+
+// ---------------------------------------------------------
+// 5. HELPER FUNCTIONS
+// ---------------------------------------------------------
+
+function setWebhook() {
+  const res = UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/setWebhook?url=" + WEB_APP_URL);
+  Logger.log("Webhook: " + res.getContentText());
+}
+
+function getTelegramFileUrl(id) {
+  const res = UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/getFile?file_id=" + id);
+  return "https://api.telegram.org/file/bot" + TELEGRAM_BOT_TOKEN + "/" + JSON.parse(res.getContentText()).result.file_path;
+}
+
+function sendMessage(id, txt) { UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "post", contentType: "application/json", payload: JSON.stringify({ chat_id: id, text: txt, parse_mode: "Markdown" }) }); }
+function sendKeyboard(id, txt, kbd) { UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "post", contentType: "application/json", payload: JSON.stringify({ chat_id: id, text: txt, reply_markup: kbd, parse_mode: "Markdown" }) }); }
+function editMessage(id, mid, txt) { UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/editMessageText", { method: "post", contentType: "application/json", payload: JSON.stringify({ chat_id: id, message_id: mid, text: txt, parse_mode: "Markdown" }) }); }
