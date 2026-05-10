@@ -24,12 +24,17 @@
 
   <div class="container-fluid">
     <div class="header-banner shadow">
-      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.8.6</h4>
-      <p class="mb-0 small opacity-75">iOS Safari Optimized</p>
+      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.8.7</h4>
+      <p class="mb-0 small opacity-75">Camera Fix Master</p>
     </div>
 
     <div id="ios-tip" class="alert alert-info small py-2 mb-2" style="display:none; font-size: 0.8em;">
-      💡 <b>สำหรับ iOS:</b> กรุณาเปิดผ่าน <b>Safari</b> เท่านั้น (ห้ามเปิดใน Line/FB) เพื่อให้กล้องทำงานได้
+      💡 <b>สำหรับ iOS:</b> ต้องเปิดผ่าน <b>Safari</b> และกด "อนุญาต" เมื่อมีป๊อปอัพขอใช้กล้อง
+    </div>
+
+    <div id="perm-banner" class="alert alert-danger small py-2 mb-2" style="display:none; font-size: 0.8em;">
+      ⚠️ <b>กล้องถูกบล็อก:</b> กรุณากดปุ่มด้านล่างเพื่อขอสิทธิ์ใหม่ หรือตั้งค่า Browser ให้ "อนุญาตกล้อง"
+      <button class="btn btn-sm btn-dark ms-2" onclick="requestPermission()">ขอสิทธิ์กล้อง</button>
     </div>
 
     <div class="d-grid gap-2 mb-3">
@@ -134,18 +139,36 @@
         stopScanner();
       }).catch(function(err) {
         console.error("Camera error:", err);
+        document.getElementById('perm-banner').style.display = 'block';
         Html5Qrcode.getCameras().then(function(cameras) {
           if (cameras && cameras.length > 0) {
             var cameraId = cameras[cameras.length - 1].id;
             html5QrCode.start(cameraId, config, function(txt) {
               document.getElementById(id).value = txt;
+              document.getElementById('perm-banner').style.display = 'none';
               stopScanner();
-            }).catch(function(e) { alert("Camera error: " + e); });
-          } else {
-            alert("ไม่พบกล้อง กรุณาตรวจสอบสิทธิ์การเข้าถึงกล้อง");
+            }).catch(function(e) { 
+              console.error(e);
+            });
           }
-        }).catch(function(e) { alert("Camera Permission Denied"); });
+        }).catch(function(e) { console.error(e); });
       });
+    }
+
+    function requestPermission() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Browser ของคุณไม่รองรับการขอสิทธิ์กล้องผ่านวิธีนี้ กรุณาเปิดใน Safari (iOS) หรือ Chrome (Android)");
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        .then(function(stream) {
+          alert("สิทธิ์การใช้กล้องได้รับการอนุญาตแล้ว กรุณาลองกดสแกนใหม่อีกครั้ง");
+          document.getElementById('perm-banner').style.display = 'none';
+          stream.getTracks().forEach(function(track) { track.stop(); });
+        })
+        .catch(function(err) {
+          alert("ไม่สามารถขอสิทธิ์ได้: " + err.message + "\nกรุณาไปที่การตั้งค่า Browser เพื่อ 'อนุญาตกล้อง' สำหรับเว็บนี้");
+        });
     }
 
     function stopScanner() {
