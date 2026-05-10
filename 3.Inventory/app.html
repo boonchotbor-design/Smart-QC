@@ -21,12 +21,12 @@
       display: none; 
       position: fixed; 
       top: 0; left: 0; width: 100%; height: 100%; 
-      background: rgba(0,0,0,0.9); 
+      background: rgba(0,0,0,0.95); 
       z-index: 10000; 
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      padding: 20px;
+      padding: 15px;
     }
     #reader { width: 100%; max-width: 500px; border-radius: 15px; overflow: hidden; border: 2px solid #0d6efd; background: #000; margin-bottom: 20px; }
     .scanner-controls { width: 100%; max-width: 500px; }
@@ -35,16 +35,16 @@
   </style>
 </head>
 <body>
-  <div id="loader" class="loading-overlay"><div class="spinner-border text-primary"></div><div class="mt-2 fw-bold">AI กำลังประมวลผล...</div></div>
+  <div id="loader" class="loading-overlay"><div class="spinner-border text-primary"></div><div class="mt-2 fw-bold">ประมวลผล AI...</div></div>
 
   <div class="container-fluid">
     <div class="header-banner shadow">
-      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.9.2</h4>
-      <p class="mb-0 small opacity-75">OCR AI & Stability Edition</p>
+      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.9.3</h4>
+      <p class="mb-0 small opacity-75">Smooth Mobile Experience</p>
     </div>
 
     <div id="ios-tip" class="alert alert-info small py-2 mb-2" style="display:none; font-size: 0.8em;">
-      💡 <b>สำหรับ iOS:</b> ต้องเปิดผ่าน <b>Safari</b> เท่านั้น! (หากใช้ Chrome กล้องวิดีโอจะถูกบล็อก)
+      💡 <b>สำหรับ iOS:</b> ต้องเปิดผ่าน <b>Safari</b> เท่านั้น!
     </div>
 
     <div class="d-grid gap-2 mb-3">
@@ -70,7 +70,6 @@
     <div id="itemList"></div>
     <button class="btn btn-outline-primary w-100 mb-3 py-2 fw-bold" onclick="addItemRow()">➕ เพิ่มรายการใหม่</button>
 
-    <!-- Scanner Overlay -->
     <div id="reader-container">
       <h5 class="text-white mb-3">สแกนรหัส (QR/Barcode)</h5>
       <div id="reader"></div>
@@ -83,15 +82,10 @@
       <input type="file" id="qrFileInput" accept="image/*" capture="environment" style="display:none" onchange="handleQrFile(this)">
     </div>
 
-    <button class="btn btn-primary w-100 shadow-lg py-3 fw-bold mb-5" onclick="submitAll()" id="btnSubmit">🚀 บันทึกข้อมูลลง Sheet</button>
+    <button class="btn btn-primary w-100 shadow-lg py-3 fw-bold mb-5" onclick="submitAll()" id="btnSubmit">🚀 บันทึกข้อมูลทั้งหมด</button>
   </div>
 
   <script>
-    window.onerror = function(msg, url, line) {
-      alert("System Error: " + msg + " at line " + line);
-      return false;
-    };
-
     var rowCount = 0;
     var html5QrCode;
     var activeScanId;
@@ -121,26 +115,21 @@
           alert("สแกนสำเร็จ: " + qrCodeMessage);
         })
         .catch(function(err) {
-          alert("ไม่พบ QR/Barcode ในรูปภาพ กรุณาถ่ายให้ชัดเจน");
+          alert("ไม่พบ QR/Barcode ในรูปภาพ");
           document.getElementById('loader').style.display = 'none';
         });
     }
 
     function fillScannedData(res) {
       document.getElementById('loader').style.display = 'none';
-      if (!res) { alert("AI ไม่สามารถวิเคราะห์ข้อมูลได้ กรุณาลองใหม่อีกครั้ง"); return; }
-      
+      if (!res) return;
       document.getElementById('billNo').value = res.header.billNo || '';
       document.getElementById('site').value = res.header.site || '';
       document.getElementById('project').value = res.header.project || '';
-      
       if (res.items && res.items.length > 0) {
         for (var i = 0; i < res.items.length; i++) {
           addItemRow(res.items[i].model, res.items[i].code, res.items[i].qty, res.items[i].desc);
         }
-        alert("AI สแกนข้อมูลสำเร็จ! กรุณาตรวจสอบและกรอก SN ต่อครับ");
-      } else {
-        alert("AI อ่านหัวกระดาษสำเร็จ แต่ไม่พบรายการสินค้า");
       }
     }
 
@@ -167,30 +156,22 @@
     function startScan(id) {
       activeScanId = id;
       document.getElementById('reader-container').style.display = 'flex';
-      if (html5QrCode) {
-        html5QrCode.stop().then(function() { startScanner(id); }).catch(function() { startScanner(id); });
-      } else {
-        startScanner(id);
-      }
+      if (!html5QrCode) { html5QrCode = new Html5Qrcode("reader"); }
+      startScanner();
     }
 
-    function startScanner(id) {
-      html5QrCode = new Html5Qrcode("reader");
+    function startScanner() {
       var config = { fps: 10, qrbox: {width: 250, height: 150} };
-
       html5QrCode.start({ facingMode: "environment" }, config, function(txt) {
-        document.getElementById(id).value = txt;
+        document.getElementById(activeScanId).value = txt;
         stopScanner();
-      }).catch(function(err) {
-        console.error("Camera error:", err);
-      });
+      }).catch(function(err) { console.warn("Camera failed:", err); });
     }
 
     function stopScanner() {
       document.getElementById('reader-container').style.display = 'none';
-      activeScanId = null;
-      if (html5QrCode) {
-        html5QrCode.stop().catch(function(err) { console.warn(err); });
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().catch(function(e) { console.warn(e); });
       }
     }
 
@@ -224,9 +205,9 @@
         alert('✅ บันทึกสำเร็จ!');
         location.reload();
       }).withFailureHandler(function(err) {
-        alert("บันทึกไม่สำเร็จ: " + err);
+        alert("Error: " + err);
         btn.disabled = false;
-        btn.innerText = '🚀 บันทึกข้อมูลลง Sheet';
+        btn.innerText = '🚀 บันทึกข้อมูลทั้งหมด';
       }).saveMultiData(header, items);
     }
 
