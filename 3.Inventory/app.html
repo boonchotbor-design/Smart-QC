@@ -24,8 +24,12 @@
 
   <div class="container-fluid">
     <div class="header-banner shadow">
-      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.8.5</h4>
-      <p class="mb-0 small opacity-75">iOS/Android Stability Pro</p>
+      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.8.6</h4>
+      <p class="mb-0 small opacity-75">iOS Safari Optimized</p>
+    </div>
+
+    <div id="ios-tip" class="alert alert-info small py-2 mb-2" style="display:none; font-size: 0.8em;">
+      💡 <b>สำหรับ iOS:</b> กรุณาเปิดผ่าน <b>Safari</b> เท่านั้น (ห้ามเปิดใน Line/FB) เพื่อให้กล้องทำงานได้
     </div>
 
     <div class="d-grid gap-2 mb-3">
@@ -192,7 +196,12 @@
       }).saveMultiData(header, items);
     }
 
-    window.onload = function() { addItemRow(); };
+    window.onload = function() { 
+      addItemRow(); 
+      if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) {
+        document.getElementById('ios-tip').style.display = 'block';
+      }
+    };
   </script>
 </body>
 </html>
