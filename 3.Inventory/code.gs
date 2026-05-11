@@ -1,5 +1,5 @@
 /*
- * 🚀 Inventory Smart System - MASTER VERSION 5.9.4
+ * 🚀 Inventory Smart System - MASTER VERSION 5.9.6
  * ALL-IN-ONE: Web App + Telegram Bot + OCR AI + Utilities
  */
 
@@ -10,11 +10,11 @@ function doGet(e) {
   try {
     var template = HtmlService.createTemplateFromFile('app');
     return template.evaluate()
-        .setTitle('Inventory Mobile App')
+        .setTitle('Inventory Mobile App V.5.9.6')
         .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   } catch (err) {
-    return ContentService.createTextOutput("System Error: " + err.toString());
+    return ContentService.createTextOutput("Critical System Error: " + err.toString());
   }
 }
 
@@ -23,18 +23,22 @@ function saveMultiData(header, items) {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheetName = header.customer === "AIS" ? "INOUT_HW_AIS" : "INOUT_HW_TRUE";
     var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) throw "ไม่พบแผ่นงานชื่อ " + sheetName;
+    
     var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
 
     items.forEach(function(item) {
       var lastRow = sheet.getLastRow();
       var nextNo = lastRow > 0 ? (parseInt(sheet.getRange(lastRow, 1).getValue()) || 0) + 1 : 1;
       sheet.appendRow([
-        nextNo, header.project, "", header.site, "", header.duid, 
-        header.type, item.type, dateStr, header.billNo, item.model, item.code, item.desc, item.qty, item.sn
+        nextNo, header.project || "", "", header.site || "", "", header.duid || "", 
+        header.type || "", item.type || "", dateStr, header.billNo || "", item.model || "", item.code || "", item.desc || "", item.qty || 1, item.sn || ""
       ]);
     });
-    return "Success";
-  } catch (e) { return "Error: " + e.toString(); }
+    return { success: true, message: "บันทึกเรียบร้อย " + items.length + " รายการ" };
+  } catch (e) { 
+    return { success: false, message: "เกิดข้อผิดพลาดในการบันทึก: " + e.toString() }; 
+  }
 }
 
 function processImageOcr(base64Data) {
@@ -106,7 +110,7 @@ function doPost(e) {
       handleTelegramOCR(chatId, userId, msg);
     } else if (msg.text) {
       var text = msg.text.trim();
-      if (text === "/start") sendMessage(chatId, "ยินดีต้อนรับ! ส่งรูปภาพใบงานเพื่อบันทึก Inventory");
+      if (text === "/start") sendMessage(chat_id, "ยินดีต้อนรับ! ส่งรูปภาพใบงานเพื่อบันทึก Inventory");
       else handleTextMessage(chatId, userId, text);
     }
   } catch (err) {}
@@ -147,10 +151,16 @@ function handleCallback(query) {
     var cached = CacheService.getScriptCache().get("pending_" + userId);
     if (cached) {
       var data = JSON.parse(cached);
-      saveToSheet({ customer: data.customer, project: data.project, site: data.site, duid: data.duid, type: data.type, itemType: "BOT", billNo: "TELEGRAM", itemCode: data.itemCode, qty: data.qty, serial: data.serial, model: "", desc: "" });
-      sendMessage(query.message.chat.id, "✅ บันทึกข้อมูลเรียบร้อย!");
+      var result = saveToSheet({ customer: data.customer, project: data.project, site: data.site, duid: data.duid, type: data.type, itemType: "BOT", billNo: "TELEGRAM", itemCode: data.itemCode, qty: data.qty, serial: data.serial, model: "", desc: "" });
+      if (result.success) {
+        sendMessage(query.message.chat.id, "✅ " + result.message);
+      } else {
+        sendMessage(query.message.chat.id, "❌ " + result.message);
+      }
     }
-  } else { sendMessage(query.message.chat.id, "❌ ยกเลิกรายการ"); }
+  } else { 
+    sendMessage(query.message.chat.id, "❌ ยกเลิกรายการ"); 
+  }
 }
 
 function saveToSheet(d) {
@@ -158,12 +168,16 @@ function saveToSheet(d) {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheetName = d.customer === "AIS" ? "INOUT_HW_AIS" : "INOUT_HW_TRUE";
     var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) throw "ไม่พบแผ่นงานชื่อ " + sheetName;
+
     var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
     var lastRow = sheet.getLastRow();
     var nextNo = lastRow > 0 ? (parseInt(sheet.getRange(lastRow, 1).getValue()) || 0) + 1 : 1;
     sheet.appendRow([nextNo, d.project || "", "", d.site || "", "", d.duid || "", d.type || "", d.itemType || "", dateStr, d.billNo || "", d.model || "", d.itemCode || "", d.desc || "", d.qty || "1", d.serial || ""]);
-    return "Success";
-  } catch (e) { return "Error: " + e.toString(); }
+    return { success: true, message: "บันทึกข้อมูลเรียบร้อย!" };
+  } catch (e) { 
+    return { success: false, message: "Error: " + e.toString() }; 
+  }
 }
 
 function sendMessage(id, txt) { UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "post", contentType: "application/json", payload: JSON.stringify({ chat_id: id, text: txt }) }); }

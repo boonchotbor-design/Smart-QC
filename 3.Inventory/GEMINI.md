@@ -29,7 +29,13 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
 
+## 🐞 Bug Fixes & Stability (V.5.9.6)
+- **Android Compatibility:** Removed `capture="environment"` from file inputs. This ensures that all Android devices can choose between the Camera and Files, resolving the issue where some devices couldn't take photos.
+- **Scanner Stability:** Optimized `qrbox` and `fps` for more reliable barcode scanning.
+- **Improved Validation:** Server-side responses now return objects `{success, message}` for both Web App and Telegram.
+
 ## ⚠️ Important Rules
+- **Deployment:** When updating code, always **Deploy as Web App** and select **"New Version"** to ensure changes take effect.
 - **Telegram Token:** Do NOT expose `TELEGRAM_BOT_TOKEN` in logs or public commits.
 - **Data Integrity:** When changing `saveMultiData`, ensure `saveToSheet` (for Telegram) is also updated to maintain consistency.
 - **Mobile First:** All UI changes in `app.html` must be tested for mobile responsiveness.
