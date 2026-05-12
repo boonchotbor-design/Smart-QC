@@ -91,7 +91,23 @@ function parsePickingList(text) {
     var itemMatch = line.match(/\b([A-Z0-9-]{8,15})\b/);
     if (itemMatch && !itemMatch[0].includes("DTH") && !itemMatch[0].includes("SITE") && !itemMatch[0].includes("PROJECT")) {
       var qtyMatch = line.match(/([0-9]+)\s*(PCS|M|SET)?/i);
-      result.items.push({ model: "", code: itemMatch[0], desc: "", qty: qtyMatch ? qtyMatch[1] : "1", sn: "" });
+      var type = "ANTENNA"; // Default
+      if (line.match(/BBU/i)) type = "BBU";
+      else if (line.match(/RRU/i)) type = "RRU";
+      else if (line.match(/AAU/i)) type = "AAU";
+      else if (line.match(/BOARD/i)) type = "BOARD";
+      else if (line.match(/SFP/i)) type = "SFP";
+      else if (line.match(/DCDU|DPU/i)) type = "DCDU/DPU";
+      else if (line.match(/2x10/)) type = "Power Cable 2x10 sqmm.";
+      else if (line.match(/2x6/)) type = "Power Cable 2x6 sqmm.";
+      else if (line.match(/THWA.*25/i)) type = "THWA Gnd Cable 1x25 sqmm.";
+      else if (line.match(/THWA.*16/i)) type = "THWA Gnd Cable 1x16 sqmm.";
+      else if (line.match(/THW.*16/i)) type = "THW Gnd Cable 1x16 sqmm.";
+      else if (line.match(/THW.*6/i)) type = "THW Gnd Cable 1x6 sqmm.";
+      else if (line.match(/RG8/i)) type = "Cable RG8";
+      else if (line.match(/GPS/i)) type = "GPS";
+      
+      result.items.push({ type: type, model: "", code: itemMatch[0], desc: "", qty: qtyMatch ? qtyMatch[1] : "1", sn: "" });
     }
   });
   return result;
@@ -128,7 +144,8 @@ function handleTelegramOCR(chatId, userId, msg) {
     var text = DocumentApp.openById(file.id).getBody().getText();
     Drive.Files.remove(file.id);
     var ocrData = parsePickingList(text);
-    var data = { customer: text.includes("AIS") ? "AIS" : "TRUE", type: "IN", duid: ocrData.header.billNo, project: ocrData.header.project, site: ocrData.header.site, itemCode: ocrData.items.length > 0 ? ocrData.items[0].code : "", serial: "", qty: "1" };
+    var firstItem = ocrData.items.length > 0 ? ocrData.items[0] : { code: "", type: "BOT", qty: "1" };
+    var data = { customer: text.includes("AIS") ? "AIS" : "TRUE", type: "IN", duid: ocrData.header.billNo, project: ocrData.header.project, site: ocrData.header.site, itemCode: firstItem.code, itemType: firstItem.type, serial: "", qty: firstItem.qty };
     askConfirmation(chatId, userId, data);
   } catch (e) { sendMessage(chatId, "OCR Error: " + e.toString()); }
 }
@@ -136,12 +153,12 @@ function handleTelegramOCR(chatId, userId, msg) {
 function handleTextMessage(chatId, userId, text) {
   var p = text.split(/\s+/).filter(function(x) { return x.length > 0; });
   if (p.length < 8) return sendMessage(chatId, "❌ ข้อมูลไม่ครบ (ต้องมี 8 ส่วน)");
-  askConfirmation(chatId, userId, { customer: p[0].toUpperCase(), type: p[1].toUpperCase(), duid: p[2], project: p[3], site: p[4], itemCode: p[5], serial: p[6], qty: p[7] });
+  askConfirmation(chatId, userId, { customer: p[0].toUpperCase(), type: p[1].toUpperCase(), duid: p[2], project: p[3], site: p[4], itemCode: p[5], serial: p[6], qty: p[7], itemType: "MANUAL" });
 }
 
 function askConfirmation(chatId, userId, data) {
   CacheService.getScriptCache().put("pending_" + userId, JSON.stringify(data), 600);
-  var summary = "🏢: " + data.customer + "\n🔄: " + data.type + "\n🆔: " + data.duid + "\n📁: " + data.project + "\n📍: " + data.site + "\n📦: " + data.itemCode + "\n🔢: " + data.serial + "\n🔢: " + data.qty;
+  var summary = "🏢: " + data.customer + "\n🔄: " + data.type + "\n🆔: " + data.duid + "\n📁: " + data.project + "\n📍: " + data.site + "\n📦: " + data.itemType + " (" + data.itemCode + ")\n🔢: " + data.serial + "\n🔢: " + data.qty;
   UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage", { method: "post", contentType: "application/json", payload: JSON.stringify({ chat_id: chatId, text: "ยืนยันข้อมูล:\n" + summary, reply_markup: { inline_keyboard: [[{ text: "✅ ยืนยัน", callback_data: "CONFIRM" }, { text: "❌ ยกเลิก", callback_data: "CANCEL" }]] } }) });
 }
 
@@ -151,7 +168,7 @@ function handleCallback(query) {
     var cached = CacheService.getScriptCache().get("pending_" + userId);
     if (cached) {
       var data = JSON.parse(cached);
-      var result = saveToSheet({ customer: data.customer, project: data.project, site: data.site, duid: data.duid, type: data.type, itemType: "BOT", billNo: "TELEGRAM", itemCode: data.itemCode, qty: data.qty, serial: data.serial, model: "", desc: "" });
+      var result = saveToSheet({ customer: data.customer, project: data.project, site: data.site, duid: data.duid, type: data.type, itemType: data.itemType || "BOT", billNo: "TELEGRAM", itemCode: data.itemCode, qty: data.qty, serial: data.serial, model: "", desc: "" });
       if (result.success) {
         sendMessage(query.message.chat.id, "✅ " + result.message);
       } else {

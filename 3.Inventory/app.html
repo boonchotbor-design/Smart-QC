@@ -113,24 +113,41 @@
       document.getElementById('billNo').value = res.header.billNo || '';
       document.getElementById('site').value = res.header.site || '';
       document.getElementById('project').value = res.header.project || '';
-      if (res.items) res.items.forEach(function(it) { addItemRow(it.model, it.code, it.qty, it.desc); });
+      if (res.items) res.items.forEach(function(it) { addItemRow(it.type, it.model, it.code, it.qty, it.desc); });
     }
 
-    function addItemRow(model, code, qty, desc) {
+    function addItemRow(type, model, code, qty, desc) {
       rowCount++;
       var div = document.createElement('div');
       div.className = 'item-row shadow-sm';
       div.id = 'row_' + rowCount;
       div.innerHTML = '<div class="row g-2">' +
-        '<div class="col-12"><label class="small fw-bold">ประเภท</label><select id="item_type_' + rowCount + '" class="form-select form-select-sm"><option value="ANTENNA">ANTENNA</option><option value="AAU">AAU</option><option value="RRU">RRU</option><option value="BBU">BBU</option><option value="BOARD">BOARD</option><option value="DCDU/DPU">DCDU/DPU</option><option value="SFP">SFP</option><option value="Power Cable">Power Cable</option><option value="GNG Cable">GNG Cable</option><option value="GPS">GPS</option></select></div>' +
+        '<div class="col-12"><label class="small fw-bold">ประเภท</label><select id="item_type_' + rowCount + '" class="form-select form-select-sm">' +
+        '<option value="ANTENNA">ANTENNA</option>' +
+        '<option value="AAU">AAU</option>' +
+        '<option value="RRU">RRU</option>' +
+        '<option value="BBU">BBU</option>' +
+        '<option value="BOARD">BOARD</option>' +
+        '<option value="DCDU/DPU">DCDU/DPU</option>' +
+        '<option value="SFP">SFP</option>' +
+        '<option value="Power Cable 2x10 sqmm.">Power Cable 2x10 sqmm.</option>' +
+        '<option value="Power Cable 2x6 sqmm.">Power Cable 2x6 sqmm.</option>' +
+        '<option value="THWA Gnd Cable 1x25 sqmm.">THWA Gnd Cable 1x25 sqmm.</option>' +
+        '<option value="THWA Gnd Cable 1x16 sqmm.">THWA Gnd Cable 1x16 sqmm.</option>' +
+        '<option value="THW Gnd Cable 1x16 sqmm.">THW Gnd Cable 1x16 sqmm.</option>' +
+        '<option value="THW Gnd Cable 1x6 sqmm.">THW Gnd Cable 1x6 sqmm.</option>' +
+        '<option value="Cable RG8">Cable RG8</option>' +
+        '<option value="GPS">GPS</option></select></div>' +
         '<div class="col-6"><label class="small fw-bold">Model</label><input type="text" id="model_' + rowCount + '" class="form-control form-control-sm" value="' + (model||'') + '"></div>' +
         '<div class="col-6"><label class="small fw-bold">Item Code</label><input type="text" id="code_' + rowCount + '" class="form-control form-control-sm" value="' + (code||'') + '"></div>' +
         '<div class="col-12"><label class="small fw-bold">Item Description</label><input type="text" id="desc_' + rowCount + '" class="form-control form-control-sm" value="' + (desc||'') + '"></div>' +
         '<div class="col-12"><label class="small fw-bold">Serial (SN)</label><input type="text" id="sn_' + rowCount + '" class="form-control form-control-sm"></div>' +
         '<div class="col-12 mt-1"><button class="btn btn-info w-100 py-2 text-white" onclick="startScan(\'sn_' + rowCount + '\')">📸 สแกน SN</button></div>' +        
-        '<div class="col-12 text-end mt-2"><button class="btn btn-link btn-sm text-danger" onclick="document.getElementById(\'row_' + rowCount + '\').remove()">ลบรายการ</button></div>' +
+        '<div class="col-4 mt-2"><label class="small fw-bold">Qty</label><input type="number" id="qty_' + rowCount + '" class="form-control form-control-sm" value="' + (qty||'1') + '"></div>' +
+        '<div class="col-8 text-end d-flex align-items-end justify-content-end"><button class="btn btn-link btn-sm text-danger" onclick="document.getElementById(\'row_' + rowCount + '\').remove()">ลบรายการ</button></div>' +
         '</div>';
       document.getElementById('itemList').appendChild(div);
+      if (type) document.getElementById('item_type_' + rowCount).value = type;
     }
 
     function startScan(id) {
@@ -160,7 +177,7 @@
           code: document.getElementById('code_' + id).value, 
           desc: document.getElementById('desc_' + id).value,
           sn: document.getElementById('sn_' + id).value, 
-          qty: 1 
+          qty: document.getElementById('qty_' + id).value || 1 
         });
       });
       if (!header.billNo || items.length === 0) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
