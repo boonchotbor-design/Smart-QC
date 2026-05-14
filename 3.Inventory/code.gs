@@ -1,6 +1,6 @@
 /*
- * 🚀 Inventory Smart System - MASTER VERSION 5.9.9
- * ALL-IN-ONE: Cascading BOM + 19 Columns + BKK Region + Folder Management
+ * 🚀 Inventory Smart System - MASTER VERSION 6.0.2
+ * ALL-IN-ONE: Autocomplete + Cascading BOM + 19 Columns + BKK Region + Folder Management
  */
 
 var SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -9,7 +9,7 @@ function doGet(e) {
   try {
     var template = HtmlService.createTemplateFromFile('app');
     return template.evaluate()
-        .setTitle('Inventory Smart App V.5.9.9')
+        .setTitle('Inventory Smart App V.6.0.2')
         .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   } catch (err) {
@@ -27,9 +27,8 @@ function saveMultiData(header, items) {
     var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
     
     // จัดการ Folder และรูปภาพ
-    var folderUrl = "";
     if (header.photoBase64) {
-      folderUrl = uploadInventoryPhoto(header);
+      uploadInventoryPhoto(header);
     }
 
     items.forEach(function(item) {
@@ -53,7 +52,7 @@ function saveMultiData(header, items) {
         item.model || "",        // M: Model
         item.code || "",         // N: Item Code
         item.desc || "",         // O: Item Description
-        item.qty || 1,           // P: Qty
+        item.qty || 1,           // P: Sum of Req.Qty
         item.sn || "",           // Q: Serial
         header.ownerWarehouse || "", // R: Owner warehouse
         header.ownerReceiver || ""   // S: Owner Receiver
@@ -73,7 +72,6 @@ function getBOMData(customer) {
     if (!sheet) return [];
     var data = sheet.getDataRange().getValues();
     var result = [];
-    // คอลัมน์ A:Type, B:Model, C:Code, D:Description
     for (var i = 1; i < data.length; i++) {
       if (data[i][0] || data[i][1]) {
         result.push({ type: data[i][0], model: data[i][1], code: data[i][2], desc: data[i][3] });
@@ -81,6 +79,57 @@ function getBOMData(customer) {
     }
     return result;
   } catch (e) { return []; }
+}
+
+function getProjectData() {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var targetSheet = ss.getSheets().find(s => s.getSheetId() == 1568241517);
+    if (!targetSheet) return [];
+    
+    var data = targetSheet.getDataRange().getValues();
+    var result = [];
+    var headers = data[0];
+    
+    var colDUID = headers.indexOf("DUID");
+    var colProject = headers.indexOf("Project Code");
+    var colInternal = headers.indexOf("Internal Project");
+    var colSite = headers.indexOf("Site Code");
+    var colWON = headers.indexOf("WON");
+    var colRegion = headers.indexOf("Region");
+    var colPhase = headers.indexOf("Phase Internal");
+    
+    if (colDUID === -1) colDUID = 6;
+    if (colProject === -1) colProject = 1;
+    if (colInternal === -1) colInternal = 2;
+    
+    var seen = new Set();
+    // Process from bottom to top to get the most recent data if there are duplicates
+    for (var i = data.length - 1; i >= 1; i--) {
+      var d = String(data[i][colDUID] || "");
+      var p = String(data[i][colProject] || "");
+      var n = String(data[i][colInternal] || "");
+      
+      if (!d && !p && !n) continue;
+      
+      var key = d + "|" + p + "|" + n;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      
+      result.push({
+        duid: d,
+        project: p,
+        internal: n,
+        site: colSite > -1 ? String(data[i][colSite] || "") : "",
+        won: colWON > -1 ? String(data[i][colWON] || "") : "",
+        region: colRegion > -1 ? String(data[i][colRegion] || "") : "",
+        phase: colPhase > -1 ? String(data[i][colPhase] || "") : ""
+      });
+      
+      if (result.length >= 3000) break; // Limit to 3000 unique records for performance
+    }
+    return result;
+  } catch (e) { console.error(e); return []; }
 }
 
 function searchByBillNo(billNo, customer) {
@@ -94,7 +143,7 @@ function searchByBillNo(billNo, customer) {
     var foundData = null, items = [];
     
     for (var i = data.length - 1; i >= 1; i--) {
-      if (data[i][11] == billNo) { // คอลัมน์ L (Index 11)
+      if (data[i][11] == billNo) {
         if (!foundData) {
           foundData = {
             project: data[i][1], internalProject: data[i][2], phaseInternal: data[i][3],
@@ -102,7 +151,7 @@ function searchByBillNo(billNo, customer) {
             ownerWarehouse: data[i][17], ownerReceiver: data[i][18]
           };
         }
-        items.push({ type: data[i][9], model: data[i][12], code: data[i][13], desc: data[i][14], qty: data[i][15], sn: data[i][16] });
+        items.push({ category: data[i][9], model: data[i][12], code: data[i][13], desc: data[i][14], qty: data[i][15], sn: data[i][16] });
       }
     }
     return foundData ? { success: true, data: foundData, items: items } : { success: false };
@@ -116,9 +165,8 @@ function uploadInventoryPhoto(h) {
   var duidFolder = getOrCreateSubFolder(regionFolder, h.duid);
   var typeFolder = getOrCreateSubFolder(duidFolder, h.type.replace("/", "_"));
   
-  var blob = Utilities.newBlob(Utilities.base64Decode(h.photoBase64.split(',')[1]), "image/jpeg", h.type.replace("/", "_") + "_" + h.billNo + ".jpg");
-  var file = typeFolder.createFile(blob);
-  return file.getUrl();
+  var blob = Utilities.newBlob(Utilities.base64Decode(h.photoBase64.split(',')[1]), "image/jpeg", h.type.replace("/", "_") + "_" + h.billNo + "_" + new Date().getTime() + ".jpg");
+  typeFolder.createFile(blob);
 }
 
 function getOrCreateSubFolder(parent, name) {

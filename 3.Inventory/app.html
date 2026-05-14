@@ -19,7 +19,7 @@
 
   <div class="container-fluid">
     <div class="header-banner shadow">
-      <h4 class="fw-bold mb-0">📦 Smart Inventory V.5.9.9</h4>
+      <h4 class="fw-bold mb-0">📦 Smart Inventory V.6.0.2</h4>
       <p class="mb-0 small opacity-75">BKK Region & Cascading BOM</p>
     </div>
 
@@ -36,10 +36,10 @@
         <div class="col-12"><label class="small fw-bold">Region</label><select id="region" class="form-select form-select-sm"><option value="ER">ER</option><option value="NER">NER</option><option value="SR">SR</option><option value="NR">NR</option><option value="CR">CR</option><option value="BKK">BKK</option></select></div>
         <div class="col-8"><label class="small fw-bold">Bill No.</label><input type="text" id="billNo" class="form-control form-control-sm"></div>
         <div class="col-4 d-flex align-items-end"><button class="btn btn-primary w-100 py-1 text-white" onclick="searchBill()">🔍 ค้นหา</button></div>
-        <div class="col-12"><label class="small fw-bold">DUID</label><input type="text" id="duid" class="form-control form-control-sm"></div>
+        <div class="col-12"><label class="small fw-bold">DUID</label><input type="text" id="duid" class="form-control form-control-sm" list="duidList" onchange="onProjectDataChange('duid')"></div>
         <div class="col-6"><label class="small fw-bold">Site Code</label><input type="text" id="site" class="form-control form-control-sm"></div>
-        <div class="col-6"><label class="small fw-bold">Project Code</label><input type="text" id="project" class="form-control form-control-sm"></div>
-        <div class="col-6"><label class="small fw-bold">Internal Project</label><input type="text" id="internalProject" class="form-control form-control-sm"></div>
+        <div class="col-6"><label class="small fw-bold">Project Code</label><input type="text" id="project" class="form-control form-control-sm" list="projectCodeList" onchange="onProjectDataChange('project')"></div>
+        <div class="col-6"><label class="small fw-bold">Internal Project</label><input type="text" id="internalProject" class="form-control form-control-sm" list="internalProjectList" onchange="onProjectDataChange('internal')"></div>
         <div class="col-6"><label class="small fw-bold">Phase Internal</label><input type="text" id="phaseInternal" class="form-control form-control-sm"></div>
         <div class="col-12"><label class="small fw-bold">WON</label><input type="text" id="won" class="form-control form-control-sm"></div>
         
@@ -68,12 +68,17 @@
 
     <div id="itemList"></div>
     <button class="btn btn-outline-primary w-100 mb-3 py-2 fw-bold" onclick="addItemRow()">➕ เพิ่มรายการสินค้า</button>
+    
+    <datalist id="modelList"></datalist>
+    <datalist id="duidList"></datalist>
+    <datalist id="projectCodeList"></datalist>
+    <datalist id="internalProjectList"></datalist>
 
     <button class="btn btn-primary w-100 py-3 fw-bold mb-5 shadow-lg" onclick="submitAll()" id="btnSubmit">🚀 บันทึกข้อมูลทั้งหมด</button>
   </div>
 
   <script>
-    var rowCount = 0, lastPhotoBase64 = null, bomData = [];
+    var rowCount = 0, lastPhotoBase64 = null, bomData = [], projectData = [];
 
     function handleFile(input) {
       if (!input.files[0]) return;
@@ -100,6 +105,37 @@
         bomData = data || []; 
         updateAllTypeDropdowns(); 
       }).getBOMData(customer);
+    }
+
+    function loadProjectData() {
+      google.script.run.withFailureHandler(err => {
+        console.error("Failed to load project data:", err);
+        document.getElementById('loader').style.display = 'none';
+      }).withSuccessHandler(data => {
+        projectData = data || [];
+        const uniqueDuid = [...new Set(projectData.map(i => i.duid))].sort();
+        const uniqueProject = [...new Set(projectData.map(i => i.project))].sort();
+        const uniqueInternal = [...new Set(projectData.map(i => i.internal))].sort();
+
+        document.getElementById('duidList').innerHTML = uniqueDuid.map(v => v ? `<option value="${v}">` : '').join('');
+        document.getElementById('projectCodeList').innerHTML = uniqueProject.map(v => v ? `<option value="${v}">` : '').join('');
+        document.getElementById('internalProjectList').innerHTML = uniqueInternal.map(v => v ? `<option value="${v}">` : '').join('');
+      }).getProjectData();
+    }
+
+    function onProjectDataChange(field) {
+      var val = document.getElementById(field === 'internal' ? 'internalProject' : field).value;
+      if (!val) return;
+      var found = projectData.find(i => i[field] === val);
+      if (found) {
+        if (field !== 'duid') document.getElementById('duid').value = found.duid || '';
+        if (field !== 'project') document.getElementById('project').value = found.project || '';
+        if (field !== 'internal') document.getElementById('internalProject').value = found.internal || '';
+        if (found.site) document.getElementById('site').value = found.site;
+        if (found.won) document.getElementById('won').value = found.won;
+        if (found.region) document.getElementById('region').value = found.region;
+        if (found.phase) document.getElementById('phaseInternal').value = found.phase;
+      }
     }
 
     function addItemRow(type, model, code, qty, desc) {
@@ -203,7 +239,10 @@
         if(res.success) location.reload(); else { btn.disabled = false; btn.innerText = '🚀 บันทึกข้อมูลทั้งหมด'; }
       }).saveMultiData(header, items);
     }
-    window.onload = function() { loadBOM(); addItemRow(); };
+    window.onload = function() { 
+      addItemRow(); 
+      setTimeout(() => { loadBOM(); loadProjectData(); }, 500); 
+    };
   </script>
 </body>
 </html>
