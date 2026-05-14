@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>Inventory Smart App V.5.9.9</title>
+  <title>Inventory Smart App V.6.0.2</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -14,6 +14,7 @@
     .card-custom { border-radius: 15px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.05); background: white; padding: 15px; margin-bottom: 15px; }
     .item-row { background: #ffffff; padding: 15px; border-radius: 12px; border-left: 5px solid #ffc107; margin-bottom: 15px; border: 1px solid #ddd; }
     .loading-overlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:9999; text-align:center; padding-top:50%; }
+    #reader { width: 100%; min-height: 250px; background: #eee; border-radius: 10px; overflow: hidden; }
   </style>
 </head>
 <body>
@@ -27,8 +28,8 @@
           <h5 class="modal-title">สแกน Barcode / QR Code</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="stopScanner()"></button>
         </div>
-        <div class="modal-body text-center p-0">
-          <div id="reader" style="width: 100%; min-height: 250px; background: #eee;"></div>
+        <div class="modal-body text-center p-2">
+          <div id="reader"></div>
         </div>
       </div>
     </div>
@@ -104,23 +105,43 @@
 
   <script>
     var rowCount = 0, lastPhotoBase64 = null, bomData = [], projectData = [];
-    var html5QrCode;
+    var html5QrCode = null;
+    var currentScanTarget = null;
+    var scannerModal = null;
 
     function openScanner(targetId) {
-      var modal = new bootstrap.Modal(document.getElementById('scannerModal'));
-      modal.show();
-      html5QrCode = new Html5Qrcode("reader");
-      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+      currentScanTarget = targetId;
+      if (!scannerModal) {
+        scannerModal = new bootstrap.Modal(document.getElementById('scannerModal'));
+        document.getElementById('scannerModal').addEventListener('shown.bs.modal', function () {
+          startCamera();
+        });
+        document.getElementById('scannerModal').addEventListener('hidden.bs.modal', function () {
+          stopScanner();
+        });
+      }
+      scannerModal.show();
+    }
+
+    function startCamera() {
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+      const config = { fps: 15, qrbox: { width: 250, height: 150 } };
       html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-        document.getElementById(targetId).value = decodedText;
-        stopScanner();
-        modal.hide();
-      }).catch(err => console.error(err));
+        document.getElementById(currentScanTarget).value = decodedText;
+        scannerModal.hide();
+      }).catch(err => {
+        console.error(err);
+        alert("ไม่สามารถเปิดกล้องได้: " + err);
+      });
     }
 
     function stopScanner() {
       if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().catch(err => console.error(err));
+        html5QrCode.stop().then(() => {
+          console.log("Scanner stopped.");
+        }).catch(err => console.error(err));
       }
     }
 
@@ -171,7 +192,8 @@
     }
 
     function onProjectDataChange(field) {
-      var val = document.getElementById(field === 'internal' ? 'internalProject' : field).value;
+      var idField = field === 'internal' ? 'internalProject' : field;
+      var val = document.getElementById(idField).value;
       if (!val) return;
       var found = projectData.find(i => i[field] === val);
       if (found) {
@@ -298,18 +320,4 @@
     };
   </script>
 </body>
-</html>
-body>
-</html>
-ccess) location.reload(); else { btn.disabled = false; btn.innerText = '🚀 บันทึกข้อมูลทั้งหมด'; }
-      }).saveMultiData(header, items);
-    }
-    window.onload = function() { 
-      addItemRow(); 
-      setTimeout(() => { loadBOM(); loadProjectData(); }, 500); 
-    };
-  </script>
-</body>
-</html>
-body>
 </html>
