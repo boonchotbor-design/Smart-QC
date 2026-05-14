@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>Inventory Smart App V.6.0.2</title>
+  <title>Inventory Smart App V.6.0.5</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -14,7 +14,7 @@
     .card-custom { border-radius: 15px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.05); background: white; padding: 15px; margin-bottom: 15px; }
     .item-row { background: #ffffff; padding: 15px; border-radius: 12px; border-left: 5px solid #ffc107; margin-bottom: 15px; border: 1px solid #ddd; }
     .loading-overlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:9999; text-align:center; padding-top:50%; }
-    #reader { width: 100%; min-height: 250px; background: #eee; border-radius: 10px; overflow: hidden; }
+    #reader { width: 100%; min-height: 250px; background: #000; border-radius: 10px; overflow: hidden; }
   </style>
 </head>
 <body>
@@ -29,7 +29,13 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="stopScanner()"></button>
         </div>
         <div class="modal-body text-center p-2">
-          <div id="reader"></div>
+          <div id="reader" class="mb-3"></div>
+          <div class="d-grid gap-2">
+            <!-- เพิ่ม capture="environment" เพื่อบังคับเปิดกล้องบน Android -->
+            <button class="btn btn-warning fw-bold" onclick="document.getElementById('fileScanner').click()">📸 ถ่ายภาพสแกน (บังคับเปิดกล้อง)</button>
+            <input type="file" id="fileScanner" accept="image/*" capture="environment" style="display:none" onchange="scanFromFile(this)">
+          </div>
+          <p class="text-muted mt-2" style="font-size: 0.7rem;">* หากกล้องไม่ขึ้นอัตโนมัติ ให้ใช้ปุ่มถ่ายภาพสีเหลืองด้านบนครับ</p>
         </div>
       </div>
     </div>
@@ -37,13 +43,14 @@
 
   <div class="container-fluid">
     <div class="header-banner shadow">
-      <h4 class="fw-bold mb-0">📦 Smart Inventory V.6.0.2</h4>
-      <p class="mb-0 small opacity-75">BKK Region & Cascading BOM</p>
+      <h4 class="fw-bold mb-0">📦 Smart Inventory V.6.0.5</h4>
+      <p class="mb-0 small opacity-75">Android Camera Fixed & Stability</p>
     </div>
 
     <div class="d-grid gap-2 mb-3">
       <button class="btn btn-warning fw-bold py-3 shadow-sm" onclick="document.getElementById('fileInput').click()">📸 ถ่ายรูปบิล (Mandatory)</button>
-      <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(this)">
+      <!-- เพิ่ม capture เพื่อให้ Android เลือกกล้องได้ง่ายขึ้น -->
+      <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none" onchange="handleFile(this)">
       <div id="photoStatus" class="text-center small text-danger fw-bold">⚠️ ยังไม่มีการถ่ายรูปบิล</div>
     </div>
 
@@ -52,97 +59,53 @@
         <div class="col-6"><label class="small fw-bold">ลูกค้า</label><select id="customer" class="form-select form-select-sm" onchange="onCustomerChange()"><option value="AIS">AIS</option><option value="TRUE">TRUE</option></select></div>
         <div class="col-6"><label class="small fw-bold">งาน</label><select id="type" class="form-select form-select-sm"><option value="IN">IN</option><option value="OUT">OUT</option><option value="STR/IN">STR/IN</option><option value="STR/OUT">STR/OUT</option><option value="DISMANTLE">DISMANTLE</option><option value="RETURN">RETURN</option></select></div>
         <div class="col-12"><label class="small fw-bold">Region</label><select id="region" class="form-select form-select-sm"><option value="ER">ER</option><option value="NER">NER</option><option value="SR">SR</option><option value="NR">NR</option><option value="CR">CR</option><option value="BKK">BKK</option></select></div>
-        
         <div class="col-8">
           <label class="small fw-bold">Bill No.</label>
-          <div class="input-group input-group-sm">
-            <input type="text" id="billNo" class="form-control form-control-sm">
-            <button class="btn btn-outline-secondary" type="button" onclick="openScanner('billNo')">📷</button>
-          </div>
+          <div class="input-group input-group-sm"><input type="text" id="billNo" class="form-control form-control-sm"><button class="btn btn-outline-secondary" type="button" onclick="openScanner('billNo')">📷</button></div>
         </div>
         <div class="col-4 d-flex align-items-end"><button class="btn btn-primary w-100 py-1 text-white" onclick="searchBill()">🔍 ค้นหา</button></div>
-        
         <div class="col-12"><label class="small fw-bold">DUID</label><input type="text" id="duid" class="form-control form-control-sm" list="duidList" onchange="onProjectDataChange('duid')"></div>
         <div class="col-6"><label class="small fw-bold">Site Code</label><input type="text" id="site" class="form-control form-control-sm"></div>
         <div class="col-6"><label class="small fw-bold">Project Code</label><input type="text" id="project" class="form-control form-control-sm" list="projectCodeList" onchange="onProjectDataChange('project')"></div>
         <div class="col-6"><label class="small fw-bold">Internal Project</label><input type="text" id="internalProject" class="form-control form-control-sm" list="internalProjectList" onchange="onProjectDataChange('internal')"></div>
         <div class="col-6"><label class="small fw-bold">Phase Internal</label><input type="text" id="phaseInternal" class="form-control form-control-sm"></div>
         <div class="col-12"><label class="small fw-bold">WON</label><input type="text" id="won" class="form-control form-control-sm"></div>
-        
-        <div class="col-6"><label class="small fw-bold">Owner Warehouse</label>
-          <select id="ownerWarehouse" class="form-select form-select-sm">
-            <option value="">-- เลือก --</option>
-            <option value="HW_Prapat Jutavijittum">HW_Prapat Jutavijittum</option><option value="HW_Sirikan Anuratphanit">HW_Sirikan Anuratphanit</option>
-            <option value="TLN_Adisak Chanmao">TLN_Adisak Chanmao</option><option value="TLN_nammon manakiat">TLN_nammon manakiat</option>
-            <option value="TLN_thossapol chaloemrit">TLN_thossapol chaloemrit</option><option value="TLN_Payon Sapphat">TLN_Payon Sapphat</option>
-            <option value="TLN_Palagon Prommueangma">TLN_Palagon Prommueangma</option><option value="TLN_Wachira SAOWARO">TLN_Wachira SAOWARO</option>
-            <option value="TLN_Phet SAITHONG">TLN_Phet SAITHONG</option><option value="TLN_Adirak Kong-ang">TLN_Adirak Kong-ang</option>
-          </select>
-        </div>
-        <div class="col-6"><label class="small fw-bold">Owner Receiver</label>
-          <select id="ownerReceiver" class="form-select form-select-sm">
-            <option value="">-- เลือก --</option>
-            <option value="HW_Prapat Jutavijittum">HW_Prapat Jutavijittum</option><option value="HW_Sirikan Anuratphanit">HW_Sirikan Anuratphanit</option>
-            <option value="TLN_Adisak Chanmao">TLN_Adisak Chanmao</option><option value="TLN_nammon manakiat">TLN_nammon manakiat</option>
-            <option value="TLN_thossapol chaloemrit">TLN_thossapol chaloemrit</option><option value="TLN_Payon Sapphat">TLN_Payon Sapphat</option>
-            <option value="TLN_Palagon Prommueangma">TLN_Palagon Prommueangma</option><option value="TLN_Wachira SAOWARO">TLN_Wachira SAOWARO</option>
-            <option value="TLN_Phet SAITHONG">TLN_Phet SAITHONG</option><option value="TLN_Adirak Kong-ang">TLN_Adirak Kong-ang</option>
-          </select>
-        </div>
+        <div class="col-6"><label class="small fw-bold">Owner Warehouse</label><select id="ownerWarehouse" class="form-select form-select-sm"><option value="">-- เลือก --</option><option value="HW_Prapat Jutavijittum">HW_Prapat Jutavijittum</option><option value="TLN_Adisak Chanmao">TLN_Adisak Chanmao</option></select></div>
+        <div class="col-6"><label class="small fw-bold">Owner Receiver</label><select id="ownerReceiver" class="form-select form-select-sm"><option value="">-- เลือก --</option><option value="HW_Prapat Jutavijittum">HW_Prapat Jutavijittum</option><option value="TLN_Adisak Chanmao">TLN_Adisak Chanmao</option></select></div>
       </div>
     </div>
 
     <div id="itemList"></div>
     <button class="btn btn-outline-primary w-100 mb-3 py-2 fw-bold" onclick="addItemRow()">➕ เพิ่มรายการสินค้า</button>
-    
-    <datalist id="modelList"></datalist>
-    <datalist id="duidList"></datalist>
-    <datalist id="projectCodeList"></datalist>
-    <datalist id="internalProjectList"></datalist>
-
+    <datalist id="duidList"></datalist><datalist id="projectCodeList"></datalist><datalist id="internalProjectList"></datalist>
     <button class="btn btn-primary w-100 py-3 fw-bold mb-5 shadow-lg" onclick="submitAll()" id="btnSubmit">🚀 บันทึกข้อมูลทั้งหมด</button>
   </div>
 
   <script>
-    var rowCount = 0, lastPhotoBase64 = null, bomData = [], projectData = [];
-    var html5QrCode = null;
-    var currentScanTarget = null;
-    var scannerModal = null;
+    var rowCount = 0, lastPhotoBase64 = null, bomData = [], projectData = [], html5QrCode = null, currentScanTarget = null, scannerModal = null;
 
     function openScanner(targetId) {
       currentScanTarget = targetId;
       if (!scannerModal) {
         scannerModal = new bootstrap.Modal(document.getElementById('scannerModal'));
-        document.getElementById('scannerModal').addEventListener('shown.bs.modal', function () {
-          startCamera();
-        });
-        document.getElementById('scannerModal').addEventListener('hidden.bs.modal', function () {
-          stopScanner();
-        });
+        document.getElementById('scannerModal').addEventListener('shown.bs.modal', function () { startCamera(); });
+        document.getElementById('scannerModal').addEventListener('hidden.bs.modal', function () { stopScanner(); });
       }
       scannerModal.show();
     }
 
     function startCamera() {
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("reader");
-      }
+      if (!html5QrCode) { html5QrCode = new Html5Qrcode("reader"); }
       const config = { fps: 15, qrbox: { width: 250, height: 150 } };
-      html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-        document.getElementById(currentScanTarget).value = decodedText;
-        scannerModal.hide();
-      }).catch(err => {
-        console.error(err);
-        alert("ไม่สามารถเปิดกล้องได้: " + err);
-      });
+      html5QrCode.start({ facingMode: "environment" }, config, (text) => { document.getElementById(currentScanTarget).value = text; scannerModal.hide(); }).catch(err => { console.error(err); });
     }
 
-    function stopScanner() {
-      if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => {
-          console.log("Scanner stopped.");
-        }).catch(err => console.error(err));
-      }
+    function stopScanner() { if (html5QrCode && html5QrCode.isScanning) { html5QrCode.stop().catch(err => console.error(err)); } }
+
+    function scanFromFile(input) {
+      if (!input.files[0]) return;
+      if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+      html5QrCode.scanFile(input.files[0], true).then(text => { document.getElementById(currentScanTarget).value = text; scannerModal.hide(); }).catch(err => alert("ไม่อ่านรหัส กรุณาถ่ายใหม่ให้ชัดเจนครับ"));
     }
 
     function handleFile(input) {
@@ -168,42 +131,34 @@
       var customer = document.getElementById('customer').value;
       google.script.run.withSuccessHandler(data => { 
         bomData = data || []; 
-        if (customer === 'AIS' && !bomData.find(i => i.type === 'Single Rectifier')) {
-          bomData.push({ type: 'Single Rectifier', model: '-', code: '-', desc: '-' });
-        }
+        if (customer === 'AIS' && !bomData.find(i => i.type === 'Single Rectifier')) { bomData.push({ type: 'Single Rectifier', model: '-', code: '-', desc: '-' }); }
         updateAllTypeDropdowns(); 
       }).getBOMData(customer);
     }
 
     function loadProjectData() {
-      google.script.run.withFailureHandler(err => {
-        console.error("Failed to load project data:", err);
-        document.getElementById('loader').style.display = 'none';
-      }).withSuccessHandler(data => {
+      google.script.run.withSuccessHandler(data => {
         projectData = data || [];
-        const uniqueDuid = [...new Set(projectData.map(i => i.duid))].sort();
-        const uniqueProject = [...new Set(projectData.map(i => i.project))].sort();
-        const uniqueInternal = [...new Set(projectData.map(i => i.internal))].sort();
-
-        document.getElementById('duidList').innerHTML = uniqueDuid.map(v => v ? `<option value="${v}">` : '').join('');
-        document.getElementById('projectCodeList').innerHTML = uniqueProject.map(v => v ? `<option value="${v}">` : '').join('');
-        document.getElementById('internalProjectList').innerHTML = uniqueInternal.map(v => v ? `<option value="${v}">` : '').join('');
+        const setD = [...new Set(projectData.map(i => i.duid))].sort();
+        const setP = [...new Set(projectData.map(i => i.project))].sort();
+        const setI = [...new Set(projectData.map(i => i.internal))].sort();
+        document.getElementById('duidList').innerHTML = setD.map(v => v ? `<option value="${v}">` : '').join('');
+        document.getElementById('projectCodeList').innerHTML = setP.map(v => v ? `<option value="${v}">` : '').join('');
+        document.getElementById('internalProjectList').innerHTML = setI.map(v => v ? `<option value="${v}">` : '').join('');
       }).getProjectData();
     }
 
     function onProjectDataChange(field) {
-      var idField = field === 'internal' ? 'internalProject' : field;
-      var val = document.getElementById(idField).value;
+      var id = field === 'internal' ? 'internalProject' : field;
+      var val = document.getElementById(id).value;
       if (!val) return;
-      var found = projectData.find(i => i[field] === val);
-      if (found) {
-        if (field !== 'duid') document.getElementById('duid').value = found.duid || '';
-        if (field !== 'project') document.getElementById('project').value = found.project || '';
-        if (field !== 'internal') document.getElementById('internalProject').value = found.internal || '';
-        if (found.site) document.getElementById('site').value = found.site;
-        if (found.won) document.getElementById('won').value = found.won;
-        if (found.region) document.getElementById('region').value = found.region;
-        if (found.phase) document.getElementById('phaseInternal').value = found.phase;
+      var f = projectData.find(i => i[field] === val);
+      if (f) {
+        if (field !== 'duid') document.getElementById('duid').value = f.duid || '';
+        if (field !== 'project') document.getElementById('project').value = f.project || '';
+        if (field !== 'internal') document.getElementById('internalProject').value = f.internal || '';
+        ['site','won','region'].forEach(k => { if(f[k]) document.getElementById(k).value = f[k]; });
+        if (f.phase) document.getElementById('phaseInternal').value = f.phase;
       }
     }
 
@@ -211,19 +166,12 @@
       rowCount++;
       var div = document.createElement('div');
       div.className = 'item-row shadow-sm'; div.id = 'row_' + rowCount;
-      div.innerHTML = `
-        <div class="row g-2">
+      div.innerHTML = `<div class="row g-2">
           <div class="col-12"><label class="small fw-bold">1. ประเภท (Type)</label><select id="type_${rowCount}" class="form-select form-select-sm" onchange="onTypeChange(${rowCount})"><option value="">-- เลือกประเภท --</option></select></div>
           <div class="col-12"><label class="small fw-bold">2. รุ่น (Model)</label><select id="model_${rowCount}" class="form-select form-select-sm" onchange="onModelChange(${rowCount})"><option value="">-- เลือก Model --</option></select></div>
           <div class="col-12"><label class="small fw-bold">3. รหัสสินค้า (Code)</label><select id="code_${rowCount}" class="form-select form-select-sm" onchange="onCodeChange(${rowCount})"><option value="">-- เลือก Code --</option></select></div>
           <div class="col-12"><label class="small fw-bold">รายละเอียด (Description)</label><textarea id="desc_${rowCount}" class="form-control form-control-sm" rows="2" readonly></textarea></div>
-          <div class="col-6">
-            <label class="small fw-bold">Serial (SN)</label>
-            <div class="input-group input-group-sm">
-              <input type="text" id="sn_${rowCount}" class="form-control form-control-sm">
-              <button class="btn btn-outline-secondary" type="button" onclick="openScanner('sn_${rowCount}')">📷</button>
-            </div>
-          </div>
+          <div class="col-6"><label class="small fw-bold">Serial (SN)</label><div class="input-group input-group-sm"><input type="text" id="sn_${rowCount}" class="form-control form-control-sm"><button class="btn btn-outline-secondary" type="button" onclick="openScanner('sn_${rowCount}')">📷</button></div></div>
           <div class="col-6"><label class="small fw-bold">จำนวน</label><input type="number" id="qty_${rowCount}" class="form-control form-control-sm" value="${qty||1}"></div>
           <div class="col-12 text-end"><button class="btn btn-link text-danger btn-sm" onclick="document.getElementById('row_${rowCount}').remove()">ลบรายการ</button></div>
         </div>`;
@@ -231,93 +179,61 @@
       populateType(rowCount, type, model, code);
     }
 
-    function populateType(id, selType, selModel, selCode) {
-      var types = [...new Set(bomData.map(i => i.type))].sort();
+    function populateType(id, selT, selM, selC) {
+      var ts = [...new Set(bomData.map(i => i.type))].sort();
       var el = document.getElementById('type_'+id);
-      types.forEach(t => { if(t) el.innerHTML += `<option value="${t}">${t}</option>`; });
-      if(selType) { el.value = selType; onTypeChange(id, selModel, selCode); }
+      ts.forEach(t => { if(t) el.innerHTML += `<option value="${t}">${t}</option>`; });
+      if(selT) { el.value = selT; onTypeChange(id, selM, selC); }
     }
 
-    function onTypeChange(id, selModel, selCode) {
-      var type = document.getElementById('type_'+id).value;
-      var models = [...new Set(bomData.filter(i => i.type === type).map(i => i.model))].sort();
+    function onTypeChange(id, selM, selC) {
+      var t = document.getElementById('type_'+id).value;
+      var ms = [...new Set(bomData.filter(i => i.type === t).map(i => i.model))].sort();
       var el = document.getElementById('model_'+id);
       el.innerHTML = '<option value="">-- เลือก Model --</option>';
-      models.forEach(m => { if(m) el.innerHTML += `<option value="${m}">${m}</option>`; });
-      if(selModel) { el.value = selModel; onModelChange(id, selCode); }
+      ms.forEach(m => { if(m) el.innerHTML += `<option value="${m}">${m}</option>`; });
+      if(selM) { el.value = selM; onModelChange(id, selC); }
     }
 
-    function onModelChange(id, selCode) {
-      var model = document.getElementById('model_'+id).value;
-      var codes = [...new Set(bomData.filter(i => i.model === model).map(i => i.code))].sort();
+    function onModelChange(id, selC) {
+      var m = document.getElementById('model_'+id).value;
+      var cs = [...new Set(bomData.filter(i => i.model === m).map(i => i.code))].sort();
       var el = document.getElementById('code_'+id);
       el.innerHTML = '<option value="">-- เลือก Code --</option>';
-      codes.forEach(c => { if(c) el.innerHTML += `<option value="${c}">${c}</option>`; });
-      if(selCode) { el.value = selCode; onCodeChange(id); }
+      cs.forEach(c => { if(c) el.innerHTML += `<option value="${c}">${c}</option>`; });
+      if(selC) { el.value = selC; onCodeChange(id); }
     }
 
     function onCodeChange(id) {
-      var code = document.getElementById('code_'+id).value;
-      var found = bomData.find(i => i.code === code);
-      document.getElementById('desc_'+id).value = found ? found.desc : "";
+      var c = document.getElementById('code_'+id).value;
+      var f = bomData.find(i => i.code === c);
+      document.getElementById('desc_'+id).value = f ? f.desc : "";
     }
 
-    function updateAllTypeDropdowns() {
-      document.querySelectorAll('[id^="type_"]').forEach(el => {
-        var id = el.id.split('_')[1], current = el.value;
-        el.innerHTML = '<option value="">-- เลือกประเภท --</option>';
-        populateType(id, current);
-      });
-    }
+    function updateAllTypeDropdowns() { document.querySelectorAll('[id^="type_"]').forEach(el => { var id = el.id.split('_')[1], cur = el.value; el.innerHTML = '<option value="">-- เลือกประเภท --</option>'; populateType(id, cur); }); }
 
     function searchBill() {
-      var billNo = document.getElementById('billNo').value;
-      if (!billNo) return alert("กรุณากรอก Bill No.");
+      var b = document.getElementById('billNo').value;
+      if (!b) return alert("กรุณากรอก Bill No.");
       document.getElementById('loader').style.display = 'block';
       google.script.run.withSuccessHandler(res => {
         document.getElementById('loader').style.display = 'none';
         if (res.success) {
-          ['duid','site','project','internalProject','phaseInternal','won','region','ownerWarehouse','ownerReceiver'].forEach(f => {
-            if(document.getElementById(f)) document.getElementById(f).value = res.data[f] || '';
-          });
-          if (res.items) { 
-            document.getElementById('itemList').innerHTML = ''; 
-            res.items.forEach(it => addItemRow(it.category, it.model, it.code, it.qty, it.desc)); 
-          }
+          ['duid', 'site', 'project', 'internalProject', 'phaseInternal', 'won', 'region', 'ownerWarehouse', 'ownerReceiver'].forEach(f => { if (document.getElementById(f)) document.getElementById(f).value = res.data[f] || ''; });
+          if (res.items) { document.getElementById('itemList').innerHTML = ''; res.items.forEach(it => addItemRow(it.category, it.model, it.code, it.qty, it.desc)); }
         } else alert("ไม่พบข้อมูลเดิม");
-      }).searchByBillNo(billNo, document.getElementById('customer').value);
+      }).searchByBillNo(b, document.getElementById('customer').value);
     }
 
     function submitAll() {
       if (!lastPhotoBase64) return alert('❌ กรุณาถ่ายรูปบิลก่อนบันทึก!');
-      var btn = document.getElementById('btnSubmit');
-      btn.disabled = true; btn.innerText = 'กำลังบันทึก...';
-      
-      var header = { 
-        customer: document.getElementById('customer').value, type: document.getElementById('type').value, region: document.getElementById('region').value, billNo: document.getElementById('billNo').value, 
-        duid: document.getElementById('duid').value, site: document.getElementById('site').value, project: document.getElementById('project').value, internalProject: document.getElementById('internalProject').value,
-        phaseInternal: document.getElementById('phaseInternal').value, won: document.getElementById('won').value, ownerWarehouse: document.getElementById('ownerWarehouse').value, ownerReceiver: document.getElementById('ownerReceiver').value, photoBase64: lastPhotoBase64 
-      };
-      
+      var btn = document.getElementById('btnSubmit'); btn.disabled = true; btn.innerText = 'กำลังบันทึก...';
+      var header = { customer: document.getElementById('customer').value, type: document.getElementById('type').value, region: document.getElementById('region').value, billNo: document.getElementById('billNo').value, duid: document.getElementById('duid').value, site: document.getElementById('site').value, project: document.getElementById('project').value, internalProject: document.getElementById('internalProject').value, phaseInternal: document.getElementById('phaseInternal').value, won: document.getElementById('won').value, ownerWarehouse: document.getElementById('ownerWarehouse').value, ownerReceiver: document.getElementById('ownerReceiver').value, photoBase64: lastPhotoBase64 };
       var items = [];
-      document.querySelectorAll('.item-row').forEach(row => {
-        var id = row.id.split('_')[1];
-        items.push({ 
-          type: document.getElementById('type_'+id).value, model: document.getElementById('model_'+id).value, 
-          code: document.getElementById('code_'+id).value, desc: document.getElementById('desc_'+id).value, 
-          sn: document.getElementById('sn_'+id).value, qty: document.getElementById('qty_'+id).value 
-        });
-      });
-      
-      google.script.run.withSuccessHandler(res => { 
-        alert(res.message); 
-        if(res.success) location.reload(); else { btn.disabled = false; btn.innerText = '🚀 บันทึกข้อมูลทั้งหมด'; }
-      }).saveMultiData(header, items);
+      document.querySelectorAll('.item-row').forEach(row => { var id = row.id.split('_')[1]; items.push({ type: document.getElementById('type_'+id).value, model: document.getElementById('model_'+id).value, code: document.getElementById('code_'+id).value, desc: document.getElementById('desc_'+id).value, sn: document.getElementById('sn_'+id).value, qty: document.getElementById('qty_'+id).value }); });
+      google.script.run.withSuccessHandler(res => { alert(res.message); if(res.success) location.reload(); else { btn.disabled = false; btn.innerText = '🚀 บันทึกข้อมูลทั้งหมด'; } }).saveMultiData(header, items);
     }
-    window.onload = function() { 
-      addItemRow(); 
-      setTimeout(() => { loadBOM(); loadProjectData(); }, 500); 
-    };
+    window.onload = function() { addItemRow(); setTimeout(() => { loadBOM(); loadProjectData(); }, 500); };
   </script>
 </body>
 </html>

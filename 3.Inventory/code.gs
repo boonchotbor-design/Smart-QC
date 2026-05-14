@@ -1,6 +1,6 @@
 /*
- * 🚀 Inventory Smart System - MASTER VERSION 6.0.2
- * ALL-IN-ONE: Autocomplete + Cascading BOM + 19 Columns + BKK Region + Folder Management
+ * 🚀 Inventory Smart System - MASTER VERSION 6.0.5
+ * FIX: Android Camera Intent + Camera Permission + Auto-fill
  */
 
 var SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -9,7 +9,7 @@ function doGet(e) {
   try {
     var template = HtmlService.createTemplateFromFile('app');
     return template.evaluate()
-        .setTitle('Inventory Smart App V.6.0.2')
+        .setTitle('Inventory Smart App V.6.0.5')
         .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   } catch (err) {
@@ -23,45 +23,22 @@ function saveMultiData(header, items) {
     var sheetName = header.customer === "AIS" ? "INOUT_HW_AIS" : "INOUT_HW_TRUE";
     var sheet = ss.getSheetByName(sheetName);
     if (!sheet) throw "ไม่พบแผ่นงาน: " + sheetName;
-    
     var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
-    
-    // จัดการ Folder และรูปภาพ
-    if (header.photoBase64) {
-      uploadInventoryPhoto(header);
-    }
+    if (header.photoBase64) { uploadInventoryPhoto(header); }
 
     items.forEach(function(item) {
       var lastRow = sheet.getLastRow();
       var nextNo = lastRow > 0 ? (parseInt(sheet.getRange(lastRow, 1).getValue()) || 0) + 1 : 1;
-      
-      // บันทึก 19 คอลัมน์ (A-S)
       sheet.appendRow([
-        nextNo,                  // A: No
-        header.project || "",    // B: Project Code
-        header.internalProject || "", // C: Internal Project
-        header.phaseInternal || "",   // D: Phase Internal
-        header.site || "",       // E: Site Code
-        header.won || "",        // F: WON
-        header.duid || "",       // G: DUID
-        header.region || "",     // H: Region
-        header.type || "",       // I: IN/OUT
-        item.type || "",         // J: Item Category (Type จาก BOM)
-        dateStr,                 // K: Pick up Date
-        header.billNo || "",     // L: Bill No.
-        item.model || "",        // M: Model
-        item.code || "",         // N: Item Code
-        item.desc || "",         // O: Item Description
-        item.qty || 1,           // P: Sum of Req.Qty
-        item.sn || "",           // Q: Serial
-        header.ownerWarehouse || "", // R: Owner warehouse
-        header.ownerReceiver || ""   // S: Owner Receiver
+        nextNo, header.project || "", header.internalProject || "", header.phaseInternal || "", 
+        header.site || "", header.won || "", header.duid || "", header.region || "", 
+        header.type || "", item.type || "", dateStr, header.billNo || "", 
+        item.model || "", item.code || "", item.desc || "", item.qty || 1, 
+        item.sn || "", header.ownerWarehouse || "", header.ownerReceiver || ""
       ]);
     });
     return { success: true, message: "บันทึกข้อมูลเรียบร้อย " + items.length + " รายการ" };
-  } catch (e) { 
-    return { success: false, message: "Error: " + e.toString() }; 
-  }
+  } catch (e) { return { success: false, message: "Error: " + e.toString() }; }
 }
 
 function getBOMData(customer) {
@@ -73,9 +50,7 @@ function getBOMData(customer) {
     var data = sheet.getDataRange().getValues();
     var result = [];
     for (var i = 1; i < data.length; i++) {
-      if (data[i][0] || data[i][1]) {
-        result.push({ type: data[i][0], model: data[i][1], code: data[i][2], desc: data[i][3] });
-      }
+      if (data[i][0] || data[i][1]) { result.push({ type: data[i][0], model: data[i][1], code: data[i][2], desc: data[i][3] }); }
     }
     return result;
   } catch (e) { return []; }
@@ -86,50 +61,28 @@ function getProjectData() {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var targetSheet = ss.getSheets().find(s => s.getSheetId() == 1568241517);
     if (!targetSheet) return [];
-    
     var data = targetSheet.getDataRange().getValues();
     var result = [];
     var headers = data[0];
-    
-    var colDUID = headers.indexOf("DUID");
-    var colProject = headers.indexOf("Project Code");
-    var colInternal = headers.indexOf("Internal Project");
-    var colSite = headers.indexOf("Site Code");
-    var colWON = headers.indexOf("WON");
-    var colRegion = headers.indexOf("Region");
-    var colPhase = headers.indexOf("Phase Internal");
-    
-    if (colDUID === -1) colDUID = 6;
-    if (colProject === -1) colProject = 1;
-    if (colInternal === -1) colInternal = 2;
-    
+    var colDUID = headers.indexOf("DUID"), colProject = headers.indexOf("Project Code"), colInternal = headers.indexOf("Internal Project");
+    var colSite = headers.indexOf("Site Code"), colWON = headers.indexOf("WON"), colRegion = headers.indexOf("Region"), colPhase = headers.indexOf("Phase Internal");
+    if (colDUID === -1) colDUID = 6; if (colProject === -1) colProject = 1; if (colInternal === -1) colInternal = 2;
     var seen = new Set();
-    // Process from bottom to top to get the most recent data if there are duplicates
     for (var i = data.length - 1; i >= 1; i--) {
-      var d = String(data[i][colDUID] || "");
-      var p = String(data[i][colProject] || "");
-      var n = String(data[i][colInternal] || "");
-      
+      var d = String(data[i][colDUID] || ""), p = String(data[i][colProject] || ""), n = String(data[i][colInternal] || "");
       if (!d && !p && !n) continue;
-      
       var key = d + "|" + p + "|" + n;
       if (seen.has(key)) continue;
       seen.add(key);
-      
       result.push({
-        duid: d,
-        project: p,
-        internal: n,
-        site: colSite > -1 ? String(data[i][colSite] || "") : "",
-        won: colWON > -1 ? String(data[i][colWON] || "") : "",
-        region: colRegion > -1 ? String(data[i][colRegion] || "") : "",
+        duid: d, project: p, internal: n, site: colSite > -1 ? String(data[i][colSite] || "") : "",
+        won: colWON > -1 ? String(data[i][colWON] || "") : "", region: colRegion > -1 ? String(data[i][colRegion] || "") : "",
         phase: colPhase > -1 ? String(data[i][colPhase] || "") : ""
       });
-      
-      if (result.length >= 3000) break; // Limit to 3000 unique records for performance
+      if (result.length >= 3000) break;
     }
     return result;
-  } catch (e) { console.error(e); return []; }
+  } catch (e) { return []; }
 }
 
 function searchByBillNo(billNo, customer) {
@@ -138,18 +91,12 @@ function searchByBillNo(billNo, customer) {
     var sheetName = customer === "AIS" ? "INOUT_HW_AIS" : "INOUT_HW_TRUE";
     var sheet = ss.getSheetByName(sheetName);
     if (!sheet) return { success: false };
-    
     var data = sheet.getDataRange().getValues();
     var foundData = null, items = [];
-    
     for (var i = data.length - 1; i >= 1; i--) {
       if (data[i][11] == billNo) {
         if (!foundData) {
-          foundData = {
-            project: data[i][1], internalProject: data[i][2], phaseInternal: data[i][3],
-            site: data[i][4], won: data[i][5], duid: data[i][6], region: data[i][7],
-            ownerWarehouse: data[i][17], ownerReceiver: data[i][18]
-          };
+          foundData = { project: data[i][1], internalProject: data[i][2], phaseInternal: data[i][3], site: data[i][4], won: data[i][5], duid: data[i][6], region: data[i][7], ownerWarehouse: data[i][17], ownerReceiver: data[i][18] };
         }
         items.push({ category: data[i][9], model: data[i][12], code: data[i][13], desc: data[i][14], qty: data[i][15], sn: data[i][16] });
       }
@@ -164,7 +111,6 @@ function uploadInventoryPhoto(h) {
   var regionFolder = getOrCreateSubFolder(rootFolder, h.region);
   var duidFolder = getOrCreateSubFolder(regionFolder, h.duid);
   var typeFolder = getOrCreateSubFolder(duidFolder, h.type.replace("/", "_"));
-  
   var blob = Utilities.newBlob(Utilities.base64Decode(h.photoBase64.split(',')[1]), "image/jpeg", h.type.replace("/", "_") + "_" + h.billNo + "_" + new Date().getTime() + ".jpg");
   typeFolder.createFile(blob);
 }
@@ -180,12 +126,6 @@ function processImageOcr(base64) {
     var file = Drive.Files.insert({ title: 'OCR_TEMP' }, blob, { ocr: true, ocrLanguage: 'th,en' });
     var text = DocumentApp.openById(file.id).getBody().getText();
     Drive.Files.remove(file.id);
-    return { 
-      header: { 
-        billNo: (text.match(/DTH[0-9]{10,15}/) || [""])[0], 
-        site: (text.match(/Site:\s*([^\n]+)/i) || ["", ""])[1].trim(), 
-        project: (text.match(/Project:\s*([^\n]+)/i) || ["", ""])[1].trim() 
-      } 
-    };
+    return { header: { billNo: (text.match(/DTH[0-9]{10,15}/) || [""])[0], site: (text.match(/Site:\s*([^\n]+)/i) || ["", ""])[1].trim(), project: (text.match(/Project:\s*([^\n]+)/i) || ["", ""])[1].trim() } };
   } catch (e) { throw "OCR Error: " + e.toString(); }
 }
