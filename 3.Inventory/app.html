@@ -31,11 +31,10 @@
         <div class="modal-body text-center p-2">
           <div id="reader" class="mb-3"></div>
           <div class="d-grid gap-2">
-            <!-- เพิ่ม capture="environment" เพื่อบังคับเปิดกล้องบน Android -->
-            <button class="btn btn-warning fw-bold" onclick="document.getElementById('fileScanner').click()">📸 ถ่ายภาพสแกน (บังคับเปิดกล้อง)</button>
-            <input type="file" id="fileScanner" accept="image/*" capture="environment" style="display:none" onchange="scanFromFile(this)">
+            <button class="btn btn-warning fw-bold" onclick="document.getElementById('fileScanner').click()">📸 เลือกรูปภาพหรือถ่ายรูปสแกน</button>
+            <input type="file" id="fileScanner" accept="image/*" style="display:none" onchange="scanFromFile(this)">
           </div>
-          <p class="text-muted mt-2" style="font-size: 0.7rem;">* หากกล้องไม่ขึ้นอัตโนมัติ ให้ใช้ปุ่มถ่ายภาพสีเหลืองด้านบนครับ</p>
+          <p class="text-muted mt-2" style="font-size: 0.7rem;">* หากกล้องไม่ขึ้นอัตโนมัติ ให้ใช้ปุ่มสีเหลืองด้านบนครับ</p>
         </div>
       </div>
     </div>
@@ -43,14 +42,13 @@
 
   <div class="container-fluid">
     <div class="header-banner shadow">
-      <h4 class="fw-bold mb-0">📦 Smart Inventory V.6.0.5</h4>
-      <p class="mb-0 small opacity-75">Android Camera Fixed & Stability</p>
+      <h4 class="fw-bold mb-0">📦 Smart Inventory V.6.0.6</h4>
+      <p class="mb-0 small opacity-75">Simplified Fields & Flexible Camera</p>
     </div>
 
     <div class="d-grid gap-2 mb-3">
-      <button class="btn btn-warning fw-bold py-3 shadow-sm" onclick="document.getElementById('fileInput').click()">📸 ถ่ายรูปบิล (Mandatory)</button>
-      <!-- เพิ่ม capture เพื่อให้ Android เลือกกล้องได้ง่ายขึ้น -->
-      <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none" onchange="handleFile(this)">
+      <button class="btn btn-warning fw-bold py-3 shadow-sm" onclick="document.getElementById('fileInput').click()">📸 ถ่ายรูป/แนบบิล (Mandatory)</button>
+      <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(this)">
       <div id="photoStatus" class="text-center small text-danger fw-bold">⚠️ ยังไม่มีการถ่ายรูปบิล</div>
     </div>
 
@@ -65,20 +63,28 @@
         </div>
         <div class="col-4 d-flex align-items-end"><button class="btn btn-primary w-100 py-1 text-white" onclick="searchBill()">🔍 ค้นหา</button></div>
         <div class="col-12"><label class="small fw-bold">DUID</label><input type="text" id="duid" class="form-control form-control-sm" list="duidList" onchange="onProjectDataChange('duid')"></div>
-        <div class="col-6"><label class="small fw-bold">Site Code</label><input type="text" id="site" class="form-control form-control-sm"></div>
-        <div class="col-6"><label class="small fw-bold">Project Code</label><input type="text" id="project" class="form-control form-control-sm" list="projectCodeList" onchange="onProjectDataChange('project')"></div>
-        <div class="col-6"><label class="small fw-bold">Internal Project</label><input type="text" id="internalProject" class="form-control form-control-sm" list="internalProjectList" onchange="onProjectDataChange('internal')"></div>
-        <div class="col-6"><label class="small fw-bold">Phase Internal</label><input type="text" id="phaseInternal" class="form-control form-control-sm"></div>
-        <div class="col-12"><label class="small fw-bold">WON</label><input type="text" id="won" class="form-control form-control-sm"></div>
-        <div class="col-6"><label class="small fw-bold">Owner Warehouse</label><select id="ownerWarehouse" class="form-select form-select-sm"><option value="">-- เลือก --</option><option value="HW_Prapat Jutavijittum">HW_Prapat Jutavijittum</option><option value="TLN_Adisak Chanmao">TLN_Adisak Chanmao</option></select></div>
-        <div class="col-6"><label class="small fw-bold">Owner Receiver</label><select id="ownerReceiver" class="form-select form-select-sm"><option value="">-- เลือก --</option><option value="HW_Prapat Jutavijittum">HW_Prapat Jutavijittum</option><option value="TLN_Adisak Chanmao">TLN_Adisak Chanmao</option></select></div>
+        <div class="col-6"><label class="small fw-bold">Owner Warehouse</label><input type="text" id="ownerWarehouse" class="form-control form-control-sm" list="ownerList"></div>
+        <div class="col-6"><label class="small fw-bold">Owner Receiver</label><input type="text" id="ownerReceiver" class="form-control form-control-sm" list="ownerList"></div>
       </div>
     </div>
 
     <div id="itemList"></div>
     <button class="btn btn-outline-primary w-100 mb-3 py-2 fw-bold" onclick="addItemRow()">➕ เพิ่มรายการสินค้า</button>
-    <datalist id="duidList"></datalist><datalist id="projectCodeList"></datalist><datalist id="internalProjectList"></datalist>
+    <datalist id="duidList"></datalist>
+    <datalist id="ownerList">
+      <option value="HW_Prapat Jutavijittum">
+      <option value="HW_Sirikan Anuratphanit">
+      <option value="TLN_Adisak Chanmao">
+      <option value="TLN_nammon manakiat">
+      <option value="TLN_thossapol chaloemrit">
+      <option value="TLN_Payon Sapphat">
+      <option value="TLN_Palagon Prommueangma">
+      <option value="TLN_Wachira SAOWARO">
+      <option value="TLN_Phet SAITHONG">
+      <option value="TLN_Adirak Kong-ang">
+    </datalist>
     <button class="btn btn-primary w-100 py-3 fw-bold mb-5 shadow-lg" onclick="submitAll()" id="btnSubmit">🚀 บันทึกข้อมูลทั้งหมด</button>
+  </div>
   </div>
 
   <script>
@@ -119,8 +125,6 @@
         google.script.run.withSuccessHandler(res => {
           document.getElementById('loader').style.display = 'none';
           if (res.header.billNo) document.getElementById('billNo').value = res.header.billNo;
-          if (res.header.site) document.getElementById('site').value = res.header.site;
-          if (res.header.project) document.getElementById('project').value = res.header.project;
         }).processImageOcr(e.target.result);
       };
       reader.readAsDataURL(input.files[0]);
@@ -140,25 +144,17 @@
       google.script.run.withSuccessHandler(data => {
         projectData = data || [];
         const setD = [...new Set(projectData.map(i => i.duid))].sort();
-        const setP = [...new Set(projectData.map(i => i.project))].sort();
-        const setI = [...new Set(projectData.map(i => i.internal))].sort();
         document.getElementById('duidList').innerHTML = setD.map(v => v ? `<option value="${v}">` : '').join('');
-        document.getElementById('projectCodeList').innerHTML = setP.map(v => v ? `<option value="${v}">` : '').join('');
-        document.getElementById('internalProjectList').innerHTML = setI.map(v => v ? `<option value="${v}">` : '').join('');
       }).getProjectData();
     }
 
     function onProjectDataChange(field) {
-      var id = field === 'internal' ? 'internalProject' : field;
-      var val = document.getElementById(id).value;
+      var val = document.getElementById(field).value;
       if (!val) return;
       var f = projectData.find(i => i[field] === val);
       if (f) {
         if (field !== 'duid') document.getElementById('duid').value = f.duid || '';
-        if (field !== 'project') document.getElementById('project').value = f.project || '';
-        if (field !== 'internal') document.getElementById('internalProject').value = f.internal || '';
-        ['site','won','region'].forEach(k => { if(f[k]) document.getElementById(k).value = f[k]; });
-        if (f.phase) document.getElementById('phaseInternal').value = f.phase;
+        ['region'].forEach(k => { if(f[k] && document.getElementById(k)) document.getElementById(k).value = f[k]; });
       }
     }
 
@@ -219,7 +215,7 @@
       google.script.run.withSuccessHandler(res => {
         document.getElementById('loader').style.display = 'none';
         if (res.success) {
-          ['duid', 'site', 'project', 'internalProject', 'phaseInternal', 'won', 'region', 'ownerWarehouse', 'ownerReceiver'].forEach(f => { if (document.getElementById(f)) document.getElementById(f).value = res.data[f] || ''; });
+          ['duid', 'region', 'ownerWarehouse', 'ownerReceiver'].forEach(f => { if (document.getElementById(f)) document.getElementById(f).value = res.data[f] || ''; });
           if (res.items) { document.getElementById('itemList').innerHTML = ''; res.items.forEach(it => addItemRow(it.category, it.model, it.code, it.qty, it.desc)); }
         } else alert("ไม่พบข้อมูลเดิม");
       }).searchByBillNo(b, document.getElementById('customer').value);
@@ -228,7 +224,16 @@
     function submitAll() {
       if (!lastPhotoBase64) return alert('❌ กรุณาถ่ายรูปบิลก่อนบันทึก!');
       var btn = document.getElementById('btnSubmit'); btn.disabled = true; btn.innerText = 'กำลังบันทึก...';
-      var header = { customer: document.getElementById('customer').value, type: document.getElementById('type').value, region: document.getElementById('region').value, billNo: document.getElementById('billNo').value, duid: document.getElementById('duid').value, site: document.getElementById('site').value, project: document.getElementById('project').value, internalProject: document.getElementById('internalProject').value, phaseInternal: document.getElementById('phaseInternal').value, won: document.getElementById('won').value, ownerWarehouse: document.getElementById('ownerWarehouse').value, ownerReceiver: document.getElementById('ownerReceiver').value, photoBase64: lastPhotoBase64 };
+      var header = { 
+        customer: document.getElementById('customer').value, 
+        type: document.getElementById('type').value, 
+        region: document.getElementById('region').value, 
+        billNo: document.getElementById('billNo').value, 
+        duid: document.getElementById('duid').value, 
+        ownerWarehouse: document.getElementById('ownerWarehouse').value, 
+        ownerReceiver: document.getElementById('ownerReceiver').value, 
+        photoBase64: lastPhotoBase64 
+      };
       var items = [];
       document.querySelectorAll('.item-row').forEach(row => { var id = row.id.split('_')[1]; items.push({ type: document.getElementById('type_'+id).value, model: document.getElementById('model_'+id).value, code: document.getElementById('code_'+id).value, desc: document.getElementById('desc_'+id).value, sn: document.getElementById('sn_'+id).value, qty: document.getElementById('qty_'+id).value }); });
       google.script.run.withSuccessHandler(res => { alert(res.message); if(res.success) location.reload(); else { btn.disabled = false; btn.innerText = '🚀 บันทึกข้อมูลทั้งหมด'; } }).saveMultiData(header, items);

@@ -1,6 +1,6 @@
 /*
- * 🚀 Inventory Smart System - MASTER VERSION 6.0.5
- * FIX: Android Camera Intent + Camera Permission + Auto-fill
+ * 🚀 Inventory Smart System - MASTER VERSION 6.0.6
+ * Simplified Fields: Removed Site, Project, Internal Project, Phase, WON
  */
 
 var SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -9,7 +9,7 @@ function doGet(e) {
   try {
     var template = HtmlService.createTemplateFromFile('app');
     return template.evaluate()
-        .setTitle('Inventory Smart App V.6.0.5')
+        .setTitle('Inventory Smart App V.6.0.6')
         .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   } catch (err) {
@@ -30,8 +30,8 @@ function saveMultiData(header, items) {
       var lastRow = sheet.getLastRow();
       var nextNo = lastRow > 0 ? (parseInt(sheet.getRange(lastRow, 1).getValue()) || 0) + 1 : 1;
       sheet.appendRow([
-        nextNo, header.project || "", header.internalProject || "", header.phaseInternal || "", 
-        header.site || "", header.won || "", header.duid || "", header.region || "", 
+        nextNo, "", "", "", // Project Code, Internal Project, Phase Internal (Removed)
+        "", "", header.duid || "", header.region || "", // Site Code, WON (Removed)
         header.type || "", item.type || "", dateStr, header.billNo || "", 
         item.model || "", item.code || "", item.desc || "", item.qty || 1, 
         item.sn || "", header.ownerWarehouse || "", header.ownerReceiver || ""
@@ -96,7 +96,7 @@ function searchByBillNo(billNo, customer) {
     for (var i = data.length - 1; i >= 1; i--) {
       if (data[i][11] == billNo) {
         if (!foundData) {
-          foundData = { project: data[i][1], internalProject: data[i][2], phaseInternal: data[i][3], site: data[i][4], won: data[i][5], duid: data[i][6], region: data[i][7], ownerWarehouse: data[i][17], ownerReceiver: data[i][18] };
+          foundData = { duid: data[i][6], region: data[i][7], ownerWarehouse: data[i][17], ownerReceiver: data[i][18] };
         }
         items.push({ category: data[i][9], model: data[i][12], code: data[i][13], desc: data[i][14], qty: data[i][15], sn: data[i][16] });
       }
@@ -126,6 +126,6 @@ function processImageOcr(base64) {
     var file = Drive.Files.insert({ title: 'OCR_TEMP' }, blob, { ocr: true, ocrLanguage: 'th,en' });
     var text = DocumentApp.openById(file.id).getBody().getText();
     Drive.Files.remove(file.id);
-    return { header: { billNo: (text.match(/DTH[0-9]{10,15}/) || [""])[0], site: (text.match(/Site:\s*([^\n]+)/i) || ["", ""])[1].trim(), project: (text.match(/Project:\s*([^\n]+)/i) || ["", ""])[1].trim() } };
+    return { header: { billNo: (text.match(/DTH[0-9]{10,15}/) || [""])[0] } };
   } catch (e) { throw "OCR Error: " + e.toString(); }
 }

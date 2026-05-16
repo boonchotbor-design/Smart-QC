@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.5.9.4)
+# 📦 Inventory Smart System (V.6.0.6)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI) and Telegram Bot with AI OCR capabilities.
 
@@ -29,13 +29,15 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
 
-## 🐞 Bug Fixes & Stability (V.5.9.6)
-- **Android Compatibility:** Removed `capture="environment"` from file inputs. This ensures that all Android devices can choose between the Camera and Files, resolving the issue where some devices couldn't take photos.
-- **Scanner Stability:** Optimized `qrbox` and `fps` for more reliable barcode scanning.
-- **Improved Validation:** Server-side responses now return objects `{success, message}` for both Web App and Telegram.
+## 🐞 Bug Fixes & Stability (V.6.0.6)
+- **Field Simplification:** Removed Internal Project, Internal Phase, Internal WON, Site Code, and Project Code for a leaner workflow.
+- **Flexible Photo Upload:** Removed `capture="environment"` to allow users to choose between taking a photo or importing from the gallery.
+- **Dynamic Owners:** Converted 'Owner Warehouse' and 'Owner Receiver' to searchable datalists that allow adding new entries.
+- **Improved OCR:** Refined OCR to focus on essential fields like Bill Number.
+- **UI Cleanup:** Optimized `app.html` for better mobile experience and less clutter.
 
 ## ⚠️ Important Rules
 - **Deployment:** When updating code, always **Deploy as Web App** and select **"New Version"** to ensure changes take effect.
 - **Telegram Token:** Do NOT expose `TELEGRAM_BOT_TOKEN` in logs or public commits.
-- **Data Integrity:** When changing `saveMultiData`, ensure `saveToSheet` (for Telegram) is also updated to maintain consistency.
+- **Data Integrity:** The Google Sheet structure is maintained; removed fields will now save as empty strings to ensure backward compatibility with existing reporting tools.
 - **Mobile First:** All UI changes in `app.html` must be tested for mobile responsiveness.
