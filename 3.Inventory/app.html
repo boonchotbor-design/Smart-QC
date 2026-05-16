@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>Inventory Smart App V.6.1.4</title>
+  <title>Inventory Smart App V.6.1.5</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -15,19 +15,16 @@
     .item-row { background: #ffffff; padding: 15px; border-radius: 12px; border-left: 5px solid #ffc107; margin-bottom: 15px; border: 1px solid #ddd; }
     .loading-overlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:9999; text-align:center; padding-top:50%; }
     .btn-mandatory { background-color: #ffc107; border: none; font-weight: bold; padding: 15px; border-radius: 10px; width: 100%; color: #000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    #reader { width: 100%; min-height: 280px; }
   </style>
 </head>
 <body>
   <div id="loader" class="loading-overlay"><div class="spinner-border text-primary"></div><div id="loaderText" class="mt-2 fw-bold">กำลังประมวลผล...</div></div>
-
   <div class="container-fluid">
     <div class="header-banner shadow">
-      <h4 class="fw-bold mb-0">📦 Smart Inventory V.6.1.4</h4>
+      <h4 class="fw-bold mb-0">📦 Smart Inventory V.6.1.5</h4>
       <p class="mb-0 small opacity-75">Android Stable (Manual + Photo)</p>
     </div>
 
-    <!-- ปุ่มถ่ายรูปบิล -->
     <div class="mb-3">
       <button class="btn-mandatory mb-2" onclick="document.getElementById('fileInputCamera').click()">📸 ถ่ายรูปบิล (Mandatory)</button>
       <button class="btn btn-outline-secondary w-100" onclick="document.getElementById('fileInputGallery').click()">🖼️ แนบรูปจากเครื่อง</button>
@@ -41,58 +38,38 @@
         <div class="col-6"><label class="small fw-bold">ลูกค้า</label><select id="customer" class="form-select form-select-sm" onchange="onCustomerChange()"><option value="AIS">AIS</option><option value="TRUE">TRUE</option></select></div>
         <div class="col-6"><label class="small fw-bold">งาน</label><select id="type" class="form-select form-select-sm"><option value="IN">IN</option><option value="OUT">OUT</option><option value="STR/IN">STR/IN</option><option value="STR/OUT">STR/OUT</option><option value="DISMANTLE">DISMANTLE</option><option value="RETURN">RETURN</option></select></div>
         <div class="col-12"><label class="small fw-bold">Region</label><select id="region" class="form-select form-select-sm"><option value="ER">ER</option><option value="NER">NER</option><option value="SR">SR</option><option value="NR">NR</option><option value="CR">CR</option><option value="BKK">BKK</option></select></div>
-        
-        <div class="col-12">
-          <label class="small fw-bold">Bill No. <span class="text-danger">*</span></label>
-          <div class="input-group input-group-sm">
-            <input type="text" id="billNo" class="form-control form-control-sm" placeholder="กรอกเลขที่บิล">
-            <button class="btn btn-outline-primary" type="button" onclick="openScanner('billNo')">📷 Scan</button>
-          </div>
-        </div>
-
-        <div class="col-12 mt-2"><button class="btn btn-primary w-100 py-2 text-white shadow-sm" onclick="searchBill()">🔍 ค้นหาข้อมูลเดิมจาก Bill No.</button></div>
-        
-        <div class="col-12 mt-2">
-          <label class="small fw-bold">DUID <span class="text-danger">*</span></label>
-          <input type="text" id="duid" class="form-control form-control-sm" list="duidList" oninput="onDuidInput()" onchange="onProjectDataChange('duid')" placeholder="พิมพ์ชื่อเพื่อค้นหา DUID">
-        </div>
+        <div class="col-12"><label class="small fw-bold">Bill No. <span class="text-danger">*</span></label><div class="input-group input-group-sm"><input type="text" id="billNo" class="form-control form-control-sm" placeholder="กรอกเลขที่บิล"><button class="btn btn-outline-primary" type="button" onclick="openScanner('billNo')">📷 Scan</button></div></div>
+        <div class="col-12 mt-2"><button class="btn btn-primary w-100 py-2 text-white shadow-sm" onclick="searchBill()">🔍 ค้นหาจาก Bill No.</button></div>
+        <div class="col-12 mt-2"><label class="small fw-bold">DUID <span class="text-danger">*</span></label><input type="text" id="duid" class="form-control form-control-sm" list="duidList" oninput="onDuidInput()" placeholder="ค้นหา DUID"></div>
+        <div class="col-6 mt-2"><label class="small fw-bold">คลัง <span class="text-danger">*</span></label><input type="text" id="ownerWarehouse" class="form-control form-control-sm" list="warehouseList" placeholder="ชื่อคลัง"></div>
+        <div class="col-6 mt-2"><label class="small fw-bold">ผู้รับ <span class="text-danger">*</span></label><input type="text" id="ownerReceiver" class="form-control form-control-sm" list="receiverList" placeholder="ชื่อผู้รับ"></div>
       </div>
     </div>
 
     <div id="itemList"></div>
     <button class="btn btn-outline-primary w-100 mb-3 py-2 fw-bold" onclick="addItemRow()">➕ เพิ่มรายการสินค้า</button>
-    <datalist id="duidList"></datalist>
     <button class="btn btn-primary w-100 py-3 fw-bold mb-5 shadow-lg" onclick="submitAll()" id="btnSubmit">🚀 บันทึกข้อมูล (SAVE)</button>
+
+    <datalist id="duidList"></datalist>
+    <datalist id="warehouseList"></datalist>
+    <datalist id="receiverList"></datalist>
   </div>
+
   <div class="modal fade" id="scanModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">สแกนบาร์โค้ด</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div id="reader"></div>
-          <div id="scanStatus" class="small text-muted mt-2 text-center">กำลังเปิดกล้อง...</div>
-        </div>
-      </div>
-    </div>
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">สแกนบาร์โค้ด</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body"><div id="reader" style="width:100%"></div><div id="scanStatus" class="small text-muted mt-2 text-center">กำลังเปิดกล้อง...</div></div>
+    </div></div>
   </div>
 
   <script>
-    var rowCount = 0, photoArray = [], bomData = [], projectData = [];
-    var selectedProjectInfo = {};
-    var html5QrCode = null, scanModal = null, scanTarget = null, scanRowId = null, isScanning = false;
-    var allDuidOptions = [];
+    var rowCount = 0, photoArray = [], bomData = [], projectData = [], allDuidOptions = [];
+    var html5QrCode = null, scanModal = null, scanTarget = null;
 
     async function handleFile(input) {
       if (!input.files || input.files.length === 0) return;
       document.getElementById('loader').style.display = 'block';
-      document.getElementById('loaderText').innerText = 'กำลังเตรียมรูปภาพ...';
-      var files = Array.from(input.files);
-      for (let file of files) {
-        try { const compressed = await compressImage(file); photoArray.push(compressed); } catch (e) {}
-      }
+      for (let f of Array.from(input.files)) { try { photoArray.push(await compressImage(f)); } catch (e) {} }
       document.getElementById('photoStatus').innerText = '✅ พร้อมแล้ว (' + photoArray.length + ' รูป)';
       document.getElementById('photoStatus').className = 'text-center mt-2 small text-success fw-bold';
       document.getElementById('loader').style.display = 'none';
@@ -100,178 +77,100 @@
     }
 
     function compressImage(file) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = event => {
-          const img = new Image();
-          img.src = event.target.result;
+      return new Promise((res) => {
+        const reader = new FileReader(); reader.readAsDataURL(file);
+        reader.onload = e => {
+          const img = new Image(); img.src = e.target.result;
           img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const MAX = 1280;
-            let w = img.width, h = img.height;
-            if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
-            else { if (h > MAX) { w *= MAX / h; h = MAX; } }
-            canvas.width = w; canvas.height = h;
-            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            resolve(canvas.toDataURL('image/jpeg', 0.7));
+            const canvas = document.createElement('canvas'); const MAX = 1280; let w = img.width, h = img.height;
+            if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } } else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+            canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            res(canvas.toDataURL('image/jpeg', 0.7));
           };
         };
       });
     }
 
     function onCustomerChange() { loadBOM(); loadProjectData(); }
-    function loadBOM() {
-      var customer = document.getElementById('customer').value;
-      google.script.run.withSuccessHandler(data => { bomData = data || []; updateAllTypeDropdowns(); }).getBOMData(customer);
-    }
+    function loadBOM() { google.script.run.withSuccessHandler(d => { bomData = d || []; updateAllTypeDropdowns(); }).getBOMData(document.getElementById('customer').value); }
     function loadProjectData() {
-      google.script.run.withSuccessHandler(data => {
-        projectData = data || [];
-        allDuidOptions = [...new Set(projectData.map(i => (i.duid || '').toString().trim()).filter(v => v))].sort();
-        renderDuidList(allDuidOptions);
+      google.script.run.withSuccessHandler(d => {
+        projectData = d || []; allDuidOptions = [...new Set(projectData.map(i => i.duid))].sort();
+        document.getElementById('duidList').innerHTML = allDuidOptions.map(v => `<option value="${v}">`).join('');
       }).getProjectData();
-    }
-    function renderDuidList(list) {
-      document.getElementById('duidList').innerHTML = list.map(v => `<option value="${v}">`).join('');
-    }
-    function onDuidInput() {
-      var keyword = (document.getElementById('duid').value || '').trim().toLowerCase();
-      if (!keyword) {
-        renderDuidList(allDuidOptions);
-        return;
-      }
-      var filtered = allDuidOptions.filter(v => v.toLowerCase().indexOf(keyword) !== -1).slice(0, 200);
-      renderDuidList(filtered);
-      onProjectDataChange('duid');
-    }
-    function onProjectDataChange(field) {
-      var val = (document.getElementById(field).value || '').toString().trim().toLowerCase();
-      var f = projectData.find(i => ((i.duid || '').toString().trim().toLowerCase() === val));
-      if (f) { selectedProjectInfo = f; document.getElementById('region').value = f.region || "ER"; }
+      google.script.run.withSuccessHandler(d => {
+        if(d.warehouses) document.getElementById('warehouseList').innerHTML = d.warehouses.map(v => `<option value="${v}">`).join('');
+        if(d.receivers) document.getElementById('receiverList').innerHTML = d.receivers.map(v => `<option value="${v}">`).join('');
+      }).getOwnerData();
     }
 
-    function addItemRow(type, model, code, qty, desc, sn) {
-      rowCount++;
-      var div = document.createElement('div');
-      div.className = 'item-row shadow-sm'; div.id = 'row_' + rowCount;
+    function onDuidInput() {
+      var val = document.getElementById('duid').value.toLowerCase();
+      var f = projectData.find(i => i.duid.toLowerCase() === val);
+      if (f) document.getElementById('region').value = f.region || "ER";
+    }
+
+    function addItemRow() {
+      rowCount++; var div = document.createElement('div'); div.className = 'item-row shadow-sm'; div.id = 'row_' + rowCount;
       div.innerHTML = `<div class="row g-2">
           <div class="col-12"><label class="small fw-bold">ประเภท</label><select id="type_${rowCount}" class="form-select form-select-sm" onchange="onTypeChange(${rowCount})"><option value="">-- เลือก --</option></select></div>
           <div class="col-12"><label class="small fw-bold">Model</label><select id="model_${rowCount}" class="form-select form-select-sm" onchange="onModelChange(${rowCount})"><option value="">-- เลือก --</option></select></div>
           <div class="col-12"><label class="small fw-bold">Code</label><select id="code_${rowCount}" class="form-select form-select-sm" onchange="onCodeChange(${rowCount})"><option value="">-- เลือก --</option></select></div>
           <div class="col-12"><textarea id="desc_${rowCount}" class="form-control form-control-sm" rows="1" readonly placeholder="รายละเอียด"></textarea></div>
-          <div class="col-12"><label class="small fw-bold">Serial (SN)</label><div class="input-group input-group-sm"><input type="text" id="sn_${rowCount}" class="form-control form-control-sm" value="${sn||''}" placeholder="กรอก SN"><button class="btn btn-outline-primary" type="button" onclick="openScanner('sn', ${rowCount})">📷 Scan</button></div></div>
-          <div class="col-6"><label class="small fw-bold">จำนวน</label><input type="number" id="qty_${rowCount}" class="form-control form-control-sm" value="${qty||1}"></div>
-          <div class="col-6 d-flex align-items-end"><button class="btn btn-danger btn-sm w-100" onclick="document.getElementById('row_${rowCount}').remove()">ลบรายการ</button></div>
+          <div class="col-12"><label class="small fw-bold">SN</label><div class="input-group input-group-sm"><input type="text" id="sn_${rowCount}" class="form-control form-control-sm" placeholder="SN"><button class="btn btn-outline-primary" type="button" onclick="openScanner('sn', ${rowCount})">📷 Scan</button></div></div>
+          <div class="col-6"><label class="small fw-bold">จำนวน</label><input type="number" id="qty_${rowCount}" class="form-control form-control-sm" value="1"></div>
+          <div class="col-6 d-flex align-items-end"><button class="btn btn-danger btn-sm w-100" onclick="document.getElementById('row_${rowCount}').remove()">ลบ</button></div>
         </div>`;
       document.getElementById('itemList').appendChild(div);
-      var ts = [...new Set(bomData.map(i => i.type))].sort();
-      var el = document.getElementById('type_'+rowCount);
-      ts.forEach(t => { if(t) el.innerHTML += `<option value="${t}">${t}</option>`; });
+      var el = document.getElementById('type_'+rowCount); [...new Set(bomData.map(i => i.type))].sort().forEach(t => { if(t) el.innerHTML += `<option value="${t}">${t}</option>`; });
     }
 
-    function onTypeChange(id) {
-      var t = document.getElementById('type_'+id).value;
-      var ms = [...new Set(bomData.filter(i => i.type === t).map(i => i.model))].sort();
-      var el = document.getElementById('model_'+id); el.innerHTML = '<option value="">-- เลือก --</option>';
-      ms.forEach(m => { el.innerHTML += `<option value="${m}">${m}</option>`; });
-    }
-    function onModelChange(id) {
-      var m = document.getElementById('model_'+id).value;
-      var cs = [...new Set(bomData.filter(i => i.model === m).map(i => i.code))].sort();
-      var el = document.getElementById('code_'+id); el.innerHTML = '<option value="">-- เลือก --</option>';
-      cs.forEach(c => { el.innerHTML += `<option value="${c}">${c}</option>`; });
-    }
-    function onCodeChange(id) {
-      var c = document.getElementById('code_'+id).value;
-      var f = bomData.find(i => i.code === c);
-      document.getElementById('desc_'+id).value = f ? f.desc : "";
-    }
-    function updateAllTypeDropdowns() { document.querySelectorAll('[id^="type_"]').forEach(el => { var id = el.id.split('_')[1]; el.innerHTML = '<option value="">-- เลือก --</option>'; var ts = [...new Set(bomData.map(i => i.type))].sort(); ts.forEach(t => { if(t) el.innerHTML += `<option value="${t}">${t}</option>`; }); }); }
+    function onTypeChange(id) { var t = document.getElementById('type_'+id).value; var ms = [...new Set(bomData.filter(i => i.type === t).map(i => i.model))].sort(); var el = document.getElementById('model_'+id); el.innerHTML = '<option value="">-- เลือก --</option>'; ms.forEach(m => { el.innerHTML += `<option value="${m}">${m}</option>`; }); }
+    function onModelChange(id) { var m = document.getElementById('model_'+id).value; var cs = [...new Set(bomData.filter(i => i.model === m).map(i => i.code))].sort(); var el = document.getElementById('code_'+id); el.innerHTML = '<option value="">-- เลือก --</option>'; cs.forEach(c => { el.innerHTML += `<option value="${c}">${c}</option>`; }); }
+    function onCodeChange(id) { var c = document.getElementById('code_'+id).value; var f = bomData.find(i => i.code === c); document.getElementById('desc_'+id).value = f ? f.desc : ""; }
+    function updateAllTypeDropdowns() { document.querySelectorAll('[id^="type_"]').forEach(el => { var id = el.id.split('_')[1]; el.innerHTML = '<option value="">-- เลือก --</option>'; [...new Set(bomData.map(i => i.type))].sort().forEach(t => { if(t) el.innerHTML += `<option value="${t}">${t}</option>`; }); }); }
     
     function searchBill() {
-      var b = document.getElementById('billNo').value;
-      if (!b) return alert("กรุณาระบุ Bill No.");
+      var b = document.getElementById('billNo').value; if (!b) return alert("กรุณาระบุ Bill No.");
       document.getElementById('loader').style.display = 'block';
       google.script.run.withSuccessHandler(res => {
         document.getElementById('loader').style.display = 'none';
-        if (res.success) {
-          selectedProjectInfo = res.data; document.getElementById('duid').value = res.data.duid;
-          if (res.items) { document.getElementById('itemList').innerHTML = ''; res.items.forEach(it => addItemRow(it.category, it.model, it.code, it.qty, it.desc, it.sn)); }
-        } else alert("ไม่พบข้อมูลเดิม");
+        if (res.success) { document.getElementById('duid').value = res.data.duid; document.getElementById('region').value = res.data.region; }
+        else alert("ไม่พบข้อมูลเดิม");
       }).searchByBillNo(b, document.getElementById('customer').value);
     }
 
     function submitAll() {
-      var billNo = document.getElementById('billNo').value, duid = document.getElementById('duid').value;
-      if (!billNo || !duid || photoArray.length === 0) return alert('❌ กรุณากรอกข้อมูลและถ่ายรูปบิลให้ครบ');
-      var items = [];
-      document.querySelectorAll('.item-row').forEach(row => { 
+      var bN = document.getElementById('billNo').value, du = document.getElementById('duid').value;
+      var wh = document.getElementById('ownerWarehouse').value, rc = document.getElementById('ownerReceiver').value;
+      if (!bN || !du || !wh || !rc || photoArray.length === 0) return alert('❌ กรุณากรอกข้อมูลและถ่ายรูปบิลให้ครบ');
+      var items = []; document.querySelectorAll('.item-row').forEach(row => { 
         var id = row.id.split('_')[1]; 
         items.push({ type: document.getElementById('type_'+id).value, model: document.getElementById('model_'+id).value, code: document.getElementById('code_'+id).value, desc: document.getElementById('desc_'+id).value, sn: document.getElementById('sn_'+id).value, qty: document.getElementById('qty_'+id).value }); 
       });
       if (items.length === 0) return alert('❌ กรุณาเพิ่มรายการสินค้า');
-      var btn = document.getElementById('btnSubmit'); btn.disabled = true; btn.innerText = 'กำลังบันทึก...';
-      document.getElementById('loader').style.display = 'block';
-      var header = { customer: document.getElementById('customer').value, type: document.getElementById('type').value, region: document.getElementById('region').value || selectedProjectInfo.region || "", billNo: billNo, duid: duid, photoArray: photoArray, projectCode: selectedProjectInfo.projectCode || "", internalProject: selectedProjectInfo.internalProject || "", phaseInternal: selectedProjectInfo.phaseInternal || "", siteCode: selectedProjectInfo.siteCode || "", won: selectedProjectInfo.won || "" };
-      google.script.run.withSuccessHandler(res => { 
-        document.getElementById('loader').style.display = 'none'; alert(res.message); if(res.success) location.reload(); 
-        else { btn.disabled = false; btn.innerText = '🚀 บันทึกข้อมูล (SAVE)'; } 
-      }).withFailureHandler(err => { document.getElementById('loader').style.display = 'none'; alert("❌ เกิดข้อผิดพลาด: " + err.toString()); btn.disabled = false; }).saveMultiData(header, items);
-    }
-    function openScanner(target, rowId) {
-      scanTarget = target;
-      scanRowId = rowId || null;
-      document.getElementById('scanStatus').innerText = 'กำลังเปิดกล้อง...';
-      scanModal.show();
-      startScanner();
+      document.getElementById('btnSubmit').disabled = true; document.getElementById('loader').style.display = 'block';
+      var header = { customer: document.getElementById('customer').value, type: document.getElementById('type').value, region: document.getElementById('region').value, billNo: bN, duid: du, ownerWarehouse: wh, ownerReceiver: rc, photoArray: photoArray };
+      google.script.run.withSuccessHandler(res => { alert(res.message); if(res.success) location.reload(); else document.getElementById('btnSubmit').disabled = false; }).saveMultiData(header, items);
     }
 
+    function openScanner(t, id) { scanTarget = t; scanRowId = id || null; scanModal.show(); }
     async function startScanner() {
+      if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
       try {
-        if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-        const cameras = await Html5Qrcode.getCameras();
-        if (!cameras || cameras.length === 0) {
-          document.getElementById('scanStatus').innerText = 'ไม่พบกล้องบนอุปกรณ์';
-          return;
-        }
-        const backCam = cameras.find(c => /back|rear|environment/i.test(c.label)) || cameras[0];
-        await html5QrCode.start(
-          backCam.id,
-          { fps: 10, qrbox: { width: 260, height: 120 } },
-          (decodedText) => {
-            applyScannedValue(decodedText);
-            stopScanner();
-            scanModal.hide();
-          },
-          () => {}
-        );
-        isScanning = true;
-        document.getElementById('scanStatus').innerText = 'เล็งกล้องไปที่บาร์โค้ด';
-      } catch (e) {
-        document.getElementById('scanStatus').innerText = 'เปิดกล้องไม่สำเร็จ กรุณาอนุญาตสิทธิ์กล้อง';
-      }
-    }
-
-    function applyScannedValue(value) {
-      var text = (value || '').trim();
-      if (!text) return;
-      if (scanTarget === 'billNo') document.getElementById('billNo').value = text;
-      if (scanTarget === 'sn' && scanRowId) document.getElementById('sn_' + scanRowId).value = text;
-    }
-
-    async function stopScanner() {
-      if (!html5QrCode || !isScanning) return;
-      try { await html5QrCode.stop(); } catch (e) {}
-      try { await html5QrCode.clear(); } catch (e) {}
-      isScanning = false;
+        await html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 150 } }, (text) => {
+          if (scanTarget === 'billNo') document.getElementById('billNo').value = text;
+          else if (scanTarget === 'sn') document.getElementById('sn_' + scanRowId).value = text;
+          html5QrCode.stop(); scanModal.hide();
+        });
+      } catch (e) { document.getElementById('scanStatus').innerText = "เปิดกล้องไม่สำเร็จ"; }
     }
 
     window.onload = function() {
       scanModal = new bootstrap.Modal(document.getElementById('scanModal'));
-      document.getElementById('scanModal').addEventListener('hidden.bs.modal', stopScanner);
-      addItemRow();
-      setTimeout(() => { loadBOM(); }, 500);
+      document.getElementById('scanModal').addEventListener('shown.bs.modal', startScanner);
+      document.getElementById('scanModal').addEventListener('hidden.bs.modal', () => { if(html5QrCode) html5QrCode.stop(); });
+      addItemRow(); setTimeout(() => { loadBOM(); loadProjectData(); }, 500);
     };
   </script>
 </body>
