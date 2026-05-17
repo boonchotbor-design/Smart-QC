@@ -39,7 +39,7 @@
 
     <!-- Photo Section -->
     <div class="mb-3">
-      <button class="btn-mandatory mb-2" onclick="document.getElementById('fileInputCamera').click()">📸 ถ่ายรูปบิล (Mandatory)</button>
+      <button class="btn-mandatory mb-2" onclick="document.getElementById('fileInputCamera').click()">📸 ถ่ายรูปบิล (Mandatory) <span style="color: red !important;">*</span></button>
       <button class="btn btn-outline-secondary w-100" onclick="document.getElementById('fileInputGallery').click()">🖼️ แนบรูปจากเครื่อง</button>
       <input type="file" id="fileInputCamera" accept="image/*" capture="environment" style="display:none" onchange="handleFile(this)" multiple>
       <input type="file" id="fileInputGallery" accept="image/*" style="display:none" onchange="handleFile(this)" multiple>
@@ -52,11 +52,11 @@
         <div class="col-6"><label class="small fw-bold">ลูกค้า</label><select id="customer" class="form-select form-select-sm" onchange="onCustomerChange()"><option value="AIS">AIS</option><option value="TRUE">TRUE</option></select></div>
         <div class="col-6"><label class="small fw-bold">งาน</label><select id="type" class="form-select form-select-sm"><option value="IN">IN</option><option value="OUT">OUT</option><option value="STR/IN">STR/IN</option><option value="STR/OUT">STR/OUT</option><option value="DISMANTLE">DISMANTLE</option><option value="RETURN">RETURN</option></select></div>
         <div class="col-12"><label class="small fw-bold">Region</label><select id="region" class="form-select form-select-sm"><option value="ER">ER</option><option value="NER">NER</option><option value="SR">SR</option><option value="NR">NR</option><option value="CR">CR</option><option value="BKK">BKK</option></select></div>
-        <div class="col-12"><label class="small fw-bold">Bill No. *</label><div class="input-group input-group-sm"><input type="text" id="billNo" class="form-control form-control-sm" placeholder="กรอกเลขที่บิล"><button class="btn btn-outline-primary" type="button" onclick="triggerNativeScanner('billNo')">📷 Scan</button></div></div>
+        <div class="col-12"><label class="small fw-bold">Bill No. <span style="color: red !important;">*</span></label><div class="input-group input-group-sm"><input type="text" id="billNo" class="form-control form-control-sm" placeholder="กรอกเลขที่บิล"><button class="btn btn-outline-primary" type="button" onclick="triggerNativeScanner('billNo')">📷 Scan</button></div></div>
         <div class="col-12 mt-2"><button class="btn btn-primary w-100 py-2 text-white shadow-sm" onclick="searchBill()">🔍 ค้นหาจาก Bill No.</button></div>
-        <div class="col-12 mt-2"><label class="small fw-bold">DUID *</label><input type="text" id="duid" class="form-control form-control-sm" list="duidList" oninput="onDuidInput()" placeholder="ค้นหา DUID"></div>
-        <div class="col-6 mt-2"><label class="small fw-bold">คลัง *</label><input type="text" id="ownerWarehouse" class="form-control form-control-sm" list="warehouseList" placeholder="ชื่อคลัง"></div>
-        <div class="col-6 mt-2"><label class="small fw-bold">ผู้รับ *</label><input type="text" id="ownerReceiver" class="form-control form-control-sm" list="receiverList" placeholder="ชื่อผู้รับ"></div>
+        <div class="col-12 mt-2"><label class="small fw-bold">DUID <span style="color: red !important;">*</span></label><input type="text" id="duid" class="form-control form-control-sm" list="duidList" oninput="onDuidInput()" placeholder="ค้นหา DUID"></div>
+        <div class="col-6 mt-2"><label class="small fw-bold">คลัง Owner warehouse <span style="color: red !important;">*</span></label><input type="text" id="ownerWarehouse" class="form-control form-control-sm" list="warehouseList" placeholder="ชื่อคลัง"></div>
+        <div class="col-6 mt-2"><label class="small fw-bold">ผู้รับ Owner Receiver <span style="color: red !important;">*</span></label><input type="text" id="ownerReceiver" class="form-control form-control-sm" list="receiverList" placeholder="ชื่อผู้รับ"></div>
       </div>
     </div>
 
@@ -115,46 +115,60 @@
       var div = document.createElement('div'); 
       div.className = 'item-row shadow-sm'; div.id = 'row_' + rowCount; 
       div.innerHTML = `<div class="row g-2">
-        <div class="col-12"><label class="small fw-bold">ประเภท</label><select id="type_${rowCount}" class="form-select form-select-sm" onchange="onTypeChange(${rowCount})"><option value="">-- เลือก --</option></select></div>
-        <div class="col-12"><label class="small fw-bold">Model</label><select id="model_${rowCount}" class="form-select form-select-sm" onchange="onModelChange(${rowCount})"><option value="">-- เลือก --</option></select></div>
-        <div class="col-12"><label class="small fw-bold">Code</label><select id="code_${rowCount}" class="form-select form-select-sm" onchange="onCodeChange(${rowCount})"><option value="">-- เลือก --</option></select></div>
-        <div class="col-12"><textarea id="desc_${rowCount}" class="form-control form-control-sm" rows="1" readonly placeholder="รายละเอียด"></textarea></div>
+        <div class="col-12"><label class="small fw-bold">ประเภท(Type) </label>
+          <input type="text" id="type_${rowCount}" class="form-control form-control-sm" list="typeData_${rowCount}" oninput="onTypeChange(${rowCount})" placeholder="เลือกหรือพิมพ์เอง">
+          <datalist id="typeData_${rowCount}"></datalist>
+        </div>
+        <div class="col-12"><label class="small fw-bold">Model</label>
+          <input type="text" id="model_${rowCount}" class="form-control form-control-sm" list="modelData_${rowCount}" oninput="onModelChange(${rowCount})" placeholder="เลือกหรือพิมพ์เอง">
+          <datalist id="modelData_${rowCount}"></datalist>
+        </div>
+        <div class="col-12"><label class="small fw-bold">Item Code</label>
+          <input type="text" id="code_${rowCount}" class="form-control form-control-sm" list="codeData_${rowCount}" oninput="onCodeChange(${rowCount})" placeholder="เลือกหรือพิมพ์เอง">
+          <datalist id="codeData_${rowCount}"></datalist>
+        </div>
+        <div class="col-12"><label class="small fw-bold">Item Description</label><textarea id="desc_${rowCount}" class="form-control form-control-sm" rows="1" readonly placeholder="รายละเอียด"></textarea></div>
         <div class="col-12"><label class="small fw-bold">SN</label><div class="input-group input-group-sm"><input type="text" id="sn_${rowCount}" class="form-control form-control-sm" placeholder="SN"><button class="btn btn-outline-primary" type="button" onclick="triggerNativeScanner('sn', ${rowCount})">📷 Scan</button></div></div>
         <div class="col-6"><label class="small fw-bold">จำนวน</label><input type="number" id="qty_${rowCount}" class="form-control form-control-sm" value="1"></div>
-        <div class="col-6 d-flex align-items-end"><button class="btn btn-danger btn-sm w-100" onclick="document.getElementById('row_${rowCount}').remove()">ลบ</button></div>
+        <div class="col-6 d-flex align-items-end"><button class="btn btn-danger btn-sm w-100" onclick="document.getElementById('row_${rowCount}').remove()">ลบรายการ</button></div>
       </div>`; 
       document.getElementById('itemList').appendChild(div); 
       updateRowDropdowns(rowCount);
     }
 
     function updateRowDropdowns(id) {
-      var tEl = document.getElementById('type_'+id);
-      tEl.innerHTML = '<option value="">-- เลือก --</option>';
-      [...new Set(bomData.map(i => i.type))].sort().forEach(t => tEl.innerHTML += `<option value="${t}">${t}</option>`);
-      onTypeChange(id);
+      var dl = document.getElementById('typeData_'+id);
+      var types = [...new Set(bomData.map(i => i.type))].sort();
+      dl.innerHTML = types.map(t => `<option value="${t}">`).join('');
     }
 
     function onTypeChange(id) {
       var t = document.getElementById('type_'+id).value;
-      var mEl = document.getElementById('model_'+id);
-      mEl.innerHTML = '<option value="">-- เลือก --</option>';
-      [...new Set(bomData.filter(i => !t || i.type === t).map(i => i.model))].sort().forEach(m => mEl.innerHTML += `<option value="${m}">${m}</option>`);
-      onModelChange(id);
+      var dl = document.getElementById('modelData_'+id);
+      var models = [...new Set(bomData.filter(i => !t || i.type === t).map(i => i.model))].sort();
+      dl.innerHTML = models.map(m => `<option value="${m}">`).join('');
     }
 
     function onModelChange(id) {
       var m = document.getElementById('model_'+id).value;
-      var cEl = document.getElementById('code_'+id);
-      cEl.innerHTML = '<option value="">-- เลือก --</option>';
-      var cs = [...new Set(bomData.filter(i => i.model === m).map(i => i.code))].sort();
-      cs.forEach(c => cEl.innerHTML += `<option value="${c}">${c}</option>`);
-      if (cs.length === 1) { cEl.selectedIndex = 1; onCodeChange(id); }
+      var dl = document.getElementById('codeData_'+id);
+      var codes = [...new Set(bomData.filter(i => i.model === m).map(i => i.code))].sort();
+      dl.innerHTML = codes.map(c => `<option value="${c}">`).join('');
+      if (codes.length === 1 && !document.getElementById('code_'+id).value) { 
+        document.getElementById('code_'+id).value = codes[0]; 
+        onCodeChange(id); 
+      }
     }
 
     function onCodeChange(id) {
       var c = document.getElementById('code_'+id).value;
       var f = bomData.find(i => i.code === c);
-      document.getElementById('desc_'+id).value = f ? f.desc : "";
+      if (f) {
+        document.getElementById('desc_'+id).value = f.desc;
+        // Auto fill Type/Model if not set
+        if (!document.getElementById('type_'+id).value) { document.getElementById('type_'+id).value = f.type; onTypeChange(id); }
+        if (!document.getElementById('model_'+id).value) { document.getElementById('model_'+id).value = f.model; onModelChange(id); }
+      }
     }
 
     function updateAllRows() { document.querySelectorAll('[id^="type_"]').forEach(el => updateRowDropdowns(el.id.split('_')[1])); }
@@ -203,7 +217,46 @@
       if (percent !== null) { bar.parentElement.parentElement.style.display = 'block'; bar.style.width = percent + '%'; bar.innerText = Math.round(percent) + '%'; }
       else { bar.parentElement.parentElement.style.display = 'none'; }
     }
-    function searchBill() { var b = document.getElementById('billNo').value; if (!b) return alert("ระบุ Bill No."); updateProgress(null, "ค้นหาข้อมูล..."); google.script.run.withSuccessHandler(res => { document.getElementById('loader').style.display = 'none'; if (res.success) { document.getElementById('duid').value = res.data.duid; document.getElementById('region').value = res.data.region; } else alert("ไม่พบข้อมูล"); }).searchByBillNo(b, document.getElementById('customer').value); }
+
+    function searchBill() { 
+      var b = document.getElementById('billNo').value; 
+      if (!b) return alert("ระบุ Bill No."); 
+      updateProgress(null, "กำลังค้นหาข้อมูลเดิม..."); 
+      google.script.run.withSuccessHandler(res => { 
+        document.getElementById('loader').style.display = 'none'; 
+        if (res.success) { 
+          document.getElementById('duid').value = res.data.duid; 
+          document.getElementById('region').value = res.data.region; 
+          document.getElementById('ownerWarehouse').value = res.data.ownerWarehouse || "";
+          document.getElementById('ownerReceiver').value = res.data.ownerReceiver || "";
+          
+          // ลบรายการเดิมออกก่อน
+          document.getElementById('itemList').innerHTML = "";
+          rowCount = 0;
+
+          // เพิ่มรายการใหม่ตามข้อมูลที่ค้นพบ
+          res.data.items.forEach((item, index) => {
+            addItemRow();
+            let id = rowCount;
+            // ใช้ timeout เล็กน้อยเพื่อให้ dropdown โหลดข้อมูลทัน
+            setTimeout(() => {
+              if (document.getElementById('type_' + id)) {
+                document.getElementById('type_' + id).value = item.type;
+                onTypeChange(id);
+                document.getElementById('model_' + id).value = item.model;
+                onModelChange(id);
+                document.getElementById('code_' + id).value = item.code;
+                onCodeChange(id);
+                document.getElementById('qty_' + id).value = item.qty;
+                document.getElementById('sn_' + id).value = item.sn;
+              }
+            }, 100 * (index + 1));
+          });
+          
+          alert("✅ ดึงข้อมูลสำเร็จ! กรุณาตรวจสอบรายการ และเปลี่ยน 'งาน' เป็น OUT หากต้องการเบิกออก");
+        } else alert("ไม่พบข้อมูล"); 
+      }).searchByBillNo(b, document.getElementById('customer').value); 
+    }
     function triggerNativeScanner(t, id) { scanTarget = t; scanRowId = id || null; document.getElementById('cameraTrigger').click(); }
     function processImageScan(input) {
       if (!input.files || input.files.length === 0) return;
