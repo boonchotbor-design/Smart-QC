@@ -1,16 +1,16 @@
 /*
- * 🚀 Inventory Smart System - MASTER VERSION 6.4.2
+ * 🚀 Inventory Smart System - V.6.4.3 (DEBUG VERSION)
  * รวมฟีเจอร์: บันทึกแยกส่วน + Progress Bar + ค้นหา Model จากทุก Sheet (Cascading Dropdown) + จัด Folder เป็นระเบียบ
  */
 
 var SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
 var LINE_ACCESS_TOKEN = 'eZe15XyurA2eFNBEjeMJ1PNG3lEiujNpzJ01GGarnoq7GFaYDqBttYZk0BHHh7KE5ZOaQdNJUdmhoCc+UoXxqmT1CdHZ7KHUWr7XACo1VY4ezEZpWVHuzufGydzTBOWnVgEgcksIJQDFeQrL3dvkUQdB04t89/1O/w1cDnyilFU=';
 var LINE_DESTINATIONS = ['Cb4baf5e474773f54f2b6538e4cd4d9ac', 'U110afe8872d7f73074e56c457df2859']; 
-var ROOT_FOLDER_ID = '1164j34sS24xhE-iM9b2r2spMFg7N3_sh';
+var ROOT_FOLDER_ID = '1IKefCE5rhBAoyM0uQBTLvEkPlRUm6lD_';
 
 function doGet(e) {
   return HtmlService.createTemplateFromFile('app').evaluate()
-      .setTitle('Inventory Smart App V.6.4.2')
+      .setTitle('Inventory Smart App V.6.4.3')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -99,30 +99,51 @@ function saveMainData(header, items) {
   } catch (e) { return { success: false, message: "❌ Error: " + e.toString() }; }
 }
 
-// --- 3. อัปโหลดรูปภาพ (โครงสร้าง Region > DUID > Type) ---
+// --- 3. อัปโหลดรูปภาพพร้อมตรวจสอบเส้นทาง (Region > DUID > Type) ---
 function uploadPhotoOnly(h, base64, pNum) { 
   try { 
-    var root = DriveApp.getFolderById(ROOT_FOLDER_ID); 
+    var root;
+    try {
+      root = DriveApp.getFolderById(ROOT_FOLDER_ID); 
+      console.log("Root folder found: " + root.getName());
+    } catch (e) {
+      return { success: false, error: "ไม่พบ Root Folder ID: " + ROOT_FOLDER_ID + " หรือไม่มีสิทธิ์เข้าถึง" };
+    }
     
     // ชั้นที่ 1: Region
     var regionName = (h.region || "NoRegion").toString().trim();
+    if (regionName === "") regionName = "NoRegion";
     var regF = getOrCreateSubFolder(root, regionName); 
+    console.log("Level 1 (Region): " + regF.getName());
     
     // ชั้นที่ 2: DUID
     var duidName = (h.duid || "NoDUID").toString().trim();
+    if (duidName === "") duidName = "NoDUID";
     var duidF = getOrCreateSubFolder(regF, duidName); 
+    console.log("Level 2 (DUID): " + duidF.getName());
     
     // ชั้นที่ 3: Type (งาน)
-    var typeFolderName = h.type.toString().trim().replace("/", "_");
+    var typeFolderName = (h.type || "OTHER").toString().trim().replace("/", "_");
+    if (typeFolderName === "") typeFolderName = "OTHER";
     var typeF = getOrCreateSubFolder(duidF, typeFolderName); 
+    console.log("Level 3 (Type): " + typeF.getName());
     
     // ตั้งชื่อไฟล์รูป
     var fileName = typeFolderName + "_" + (h.billNo || "NoBill").toString().trim() + "_" + new Date().getTime() + "_" + pNum + ".jpg"; 
     var blob = Utilities.newBlob(Utilities.base64Decode(base64.split(',')[1]), "image/jpeg", fileName); 
     
-    typeF.createFile(blob); 
-    return { success: true };
-  } catch (e) { return { success: false, error: e.toString() }; } 
+    var file = typeF.createFile(blob); 
+    console.log("File created: " + fileName + " in " + typeF.getName());
+    
+    return { 
+      success: true, 
+      debugPath: root.getName() + " > " + regF.getName() + " > " + duidF.getName() + " > " + typeF.getName(),
+      folderUrl: duidF.getUrl()
+    };
+  } catch (e) { 
+    console.error("Upload error details:", e.toString());
+    return { success: false, error: "Upload failed: " + e.toString() }; 
+  } 
 }
 
 // --- 4. ส่งแจ้งเตือน Line ---
@@ -181,7 +202,7 @@ function sendLineNotification(header, items) {
   var url = 'https://api.line.me/v2/bot/message/push';
   var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
   
-  var messageText = "📦 รายงาน Inventory (V.6.4.2)\n" +
+  var messageText = "📦 รายงาน Inventory (V.6.4.3)\n" +
                 "━━━━━━━━━━━━━━━\n" +
                 "👤 ลูกค้า: " + header.customer + "\n" +
                 "🛠 งาน: " + header.type + "\n" +

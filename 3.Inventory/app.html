@@ -188,25 +188,50 @@
       });
       
       document.getElementById('btnSubmit').disabled = true;
-      var header = { customer: document.getElementById('customer').value, type: document.getElementById('type').value, region: document.getElementById('region').value, billNo: bN, duid: du, ownerWarehouse: wh, ownerReceiver: rc, photoArray: photoArray };
+      // แยก header ข้อมูล กับ photoArray ออกจากกันเพื่อลดขนาด Payload
+      var header = { 
+        customer: document.getElementById('customer').value, 
+        type: document.getElementById('type').value, 
+        region: document.getElementById('region').value, 
+        billNo: bN, 
+        duid: du, 
+        ownerWarehouse: wh, 
+        ownerReceiver: rc 
+      };
       
       try {
         updateProgress(10, "บันทึกข้อมูลหลัก...");
         const saveRes = await new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej).saveMainData(header, items));
-        if (!saveRes.success) throw new Error(saveRes.message);
+        if (!saveRes || !saveRes.success) throw new Error(saveRes ? saveRes.message : "ไม่สามารถบันทึกข้อมูลหลักได้");
+
+        var lastFolderPath = "";
+        var lastFolderUrl = "";
 
         for (let i = 0; i < photoArray.length; i++) {
           let p = 20 + Math.floor(((i + 1) / photoArray.length) * 70);
           updateProgress(p, `อัปโหลดรูปภาพ (${i + 1}/${photoArray.length})...`);
-          await new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej).uploadPhotoOnly(header, photoArray[i], i + 1));
+          const uploadRes = await new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej).uploadPhotoOnly(header, photoArray[i], i + 1));
+          if (!uploadRes || !uploadRes.success) throw new Error(uploadRes ? uploadRes.error : "อัปโหลดรูปภาพล้มเหลว");
+          lastFolderPath = uploadRes.debugPath;
+          lastFolderUrl = uploadRes.folderUrl;
         }
 
         updateProgress(95, "แจ้งเตือน Line...");
-        await new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej).notifyOnly(header, items));
+        const notifyRes = await new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej).notifyOnly(header, items));
+        if (!notifyRes || !notifyRes.success) console.warn("Line Notification failed, but data was saved.");
 
         updateProgress(100, "เสร็จสิ้น!");
-        setTimeout(() => { alert("บันทึกเรียบร้อย!"); location.reload(); }, 500);
-      } catch (err) { alert("❌ Error: " + err.message); document.getElementById('btnSubmit').disabled = false; document.getElementById('loader').style.display = 'none'; }
+        setTimeout(() => { 
+          alert("✅ บันทึกเรียบร้อย!\n\nเส้นทางเก็บรูป:\n" + lastFolderPath + "\n\n(ระบบจะเปิดโฟลเดอร์ให้คุณตรวจสอบ)");
+          if (lastFolderUrl) window.open(lastFolderUrl, '_blank');
+          location.reload(); 
+        }, 500);
+      } catch (err) { 
+        console.error(err);
+        alert("❌ Error: " + err.message); 
+        document.getElementById('btnSubmit').disabled = false; 
+        document.getElementById('loader').style.display = 'none'; 
+      }
     }
 
     // --- UI Helpers ---
