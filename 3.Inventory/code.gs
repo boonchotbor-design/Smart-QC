@@ -91,7 +91,7 @@ function saveMainData(header, items) {
     var nextRow = actualLastRow + 1;
     var lastNo = actualLastRow > 1 ? (parseInt(sheet.getRange(actualLastRow, 1).getValue()) || 0) : 0;
     var allRows = items.map(function(item, index) {
-      return [ lastNo+index+1, header.duid, header.region, header.type, item.type, dateStr, header.billNo, item.model, item.code, item.desc, item.qty, item.sn, header.ownerWarehouse, header.ownerReceiver, "", "", "", "", "" ];
+      return [ lastNo+index+1, header.duid, header.region, header.type, item.type, dateStr, header.billNo, item.model, item.code, item.desc, item.qty, item.sn, header.ownerWarehouse, header.ownerReceiver, header.locationWarehouse || "", header.locationReceiver || "", "", "", "" ];
     });
     if (allRows.length > 0) sheet.getRange(nextRow, 1, allRows.length, 19).setValues(allRows);
     SpreadsheetApp.flush();
@@ -135,6 +135,8 @@ function sendLineNotification(header, items) {
                 "🆔 DUID: " + header.duid + "\n" +
                 "🏢 คลัง: " + (header.ownerWarehouse || "-") + "\n" +
                 "👷 ผู้รับ: " + (header.ownerReceiver || "-") + "\n" +
+                "📍 Loc Warehouse: " + (header.locationWarehouse || "-") + "\n" +
+                "📍 Loc Receiver: " + (header.locationReceiver || "-") + "\n" +
                 "━━━━━━━━━━━━━━━\n" +
                 "📦 รายการสินค้า (" + items.length + " รายการ):\n";
 
@@ -164,8 +166,8 @@ function getProjectData() { try { var ss = SpreadsheetApp.openById(SPREADSHEET_I
 function getOwnerData() { try { var ss = SpreadsheetApp.openById(SPREADSHEET_ID); var ws=[], rs=[]; ss.getSheets().forEach(function(s){ if(s.getName().indexOf("INOUT")>-1){ var d=s.getDataRange().getValues(); for(var i=1;i<d.length;i++){ if(d[i][12]) ws.push(String(d[i][12])); if(d[i][13]) rs.push(String(d[i][13])); } } }); return { warehouses: [...new Set(ws)].sort(), receivers: [...new Set(rs)].sort() }; } catch(e){return {warehouses:[],receivers:[]};} }
 function searchByBillNo(billNo, customer) {
   try {
-    var ss = SpreadsheetApp.openById(SPREADSHEET_ID); var sheet = ss.getSheetByName("INOUT_HW_" + customer) || ss.getSheets()[0]; var data = sheet.getDataRange().getValues(); var results = { duid: "", region: "", ownerWarehouse: "", ownerReceiver: "", items: [] }; var found = false;
-    for (var i = 1; i < data.length; i++) { if (data[i][6] == billNo) { if (!found) { results.duid = data[i][1]; results.region = data[i][2]; results.ownerWarehouse = data[i][12]; results.ownerReceiver = data[i][13]; found = true; } results.items.push({ type: data[i][4], model: data[i][7], code: data[i][8], desc: data[i][9], qty: data[i][10], sn: data[i][11] }); } }
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID); var sheet = ss.getSheetByName("INOUT_HW_" + customer) || ss.getSheets()[0]; var data = sheet.getDataRange().getValues(); var results = { duid: "", region: "", ownerWarehouse: "", ownerReceiver: "", locationWarehouse: "", locationReceiver: "", items: [] }; var found = false;
+    for (var i = 1; i < data.length; i++) { if (data[i][6] == billNo) { if (!found) { results.duid = data[i][1]; results.region = data[i][2]; results.ownerWarehouse = data[i][12]; results.ownerReceiver = data[i][13]; results.locationWarehouse = data[i][14]; results.locationReceiver = data[i][15]; found = true; } results.items.push({ type: data[i][4], model: data[i][7], code: data[i][8], desc: data[i][9], qty: data[i][10], sn: data[i][11] }); } }
     return found ? { success: true, data: results } : { success: false };
   } catch (e) { return { success: false, error: e.toString() }; }
 }

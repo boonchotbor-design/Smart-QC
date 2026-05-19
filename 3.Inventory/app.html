@@ -48,6 +48,8 @@
         <div class="col-12 mt-2"><label class="small fw-bold">DUID *</label><input type="text" id="duid" class="form-control form-control-sm" list="duidList" oninput="onDuidInput()" placeholder="ค้นหา DUID"></div>
         <div class="col-6 mt-2"><label class="small fw-bold">คลัง Owner *</label><input type="text" id="ownerWarehouse" class="form-control form-control-sm" list="warehouseList"></div>
         <div class="col-6 mt-2"><label class="small fw-bold">ผู้รับ Owner *</label><input type="text" id="ownerReceiver" class="form-control form-control-sm" list="receiverList"></div>
+        <div class="col-6 mt-2"><label class="small fw-bold">Location warehouse</label><input type="text" id="locationWarehouse" class="form-control form-control-sm" placeholder="Location ต้นทาง"></div>
+        <div class="col-6 mt-2"><label class="small fw-bold">Location Receiver</label><input type="text" id="locationReceiver" class="form-control form-control-sm" placeholder="Location ปลายทาง"></div>
       </div>
     </div>
 
@@ -89,9 +91,18 @@
     }
     function loadProjectData() {
       google.script.run.withSuccessHandler(d => { projectData = d || []; document.getElementById('duidList').innerHTML = [...new Set(projectData.map(i => i.duid))].sort().map(v => `<option value="${v}">`).join(''); }).getProjectData();
+      
+      const hardcodedOwners = [
+        "HW_Prapat Jutavijittum", "HW_Sirikan Anuratphanit", "TLN_Adisak Chanmao", 
+        "TLN_nammon manakiat", "TLN_thossapol chaloemrit", "TLN_Payon Sapphat", 
+        "TLN_Palagon Prommueangma", "TLN_Wachira SAOWARO", "TLN_Phet SAITHONG", "TLN_Adirak Kong-ang"
+      ];
+      
       google.script.run.withSuccessHandler(d => { 
-        if(d.warehouses) document.getElementById('warehouseList').innerHTML = d.warehouses.map(v => `<option value="${v}">`).join(''); 
-        if(d.receivers) document.getElementById('receiverList').innerHTML = d.receivers.map(v => `<option value="${v}">`).join(''); 
+        let ws = [...new Set([...hardcodedOwners, ...(d.warehouses || [])])].sort();
+        let rs = [...new Set([...hardcodedOwners, ...(d.receivers || [])])].sort();
+        document.getElementById('warehouseList').innerHTML = ws.map(v => `<option value="${v}">`).join(''); 
+        document.getElementById('receiverList').innerHTML = rs.map(v => `<option value="${v}">`).join(''); 
       }).getOwnerData();
     }
     function onDuidInput() { var val = document.getElementById('duid').value.toLowerCase(); var f = projectData.find(i => i.duid.toLowerCase() === val); if (f) document.getElementById('region').value = f.region || "ER"; }
@@ -164,11 +175,12 @@
 
     async function submitAll() {
       var bN = document.getElementById('billNo').value, du = document.getElementById('duid').value, wh = document.getElementById('ownerWarehouse').value, rc = document.getElementById('ownerReceiver').value;
+      var lW = document.getElementById('locationWarehouse').value, lR = document.getElementById('locationReceiver').value;
       if (!bN || !du || !wh || !rc || photoArray.length === 0) return alert('❌ กรุณากรอกข้อมูลและถ่ายรูปให้ครบ');
       var items = [];
       document.querySelectorAll('.item-row').forEach(row => { var id = row.id.split('_')[1]; items.push({ type: document.getElementById('type_'+id).value, model: document.getElementById('model_'+id).value, code: document.getElementById('code_'+id).value, desc: document.getElementById('desc_'+id).value, sn: document.getElementById('sn_'+id).value, qty: document.getElementById('qty_'+id).value }); });
       document.getElementById('btnSubmit').disabled = true;
-      var header = { customer: document.getElementById('customer').value, type: document.getElementById('type').value, region: document.getElementById('region').value, billNo: bN, duid: du, ownerWarehouse: wh, ownerReceiver: rc };
+      var header = { customer: document.getElementById('customer').value, type: document.getElementById('type').value, region: document.getElementById('region').value, billNo: bN, duid: du, ownerWarehouse: wh, ownerReceiver: rc, locationWarehouse: lW, locationReceiver: lR };
       try {
         updateProgress(10, "บันทึกข้อมูลหลัก...");
         const saveRes = await new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej).saveMainData(header, items));
@@ -188,7 +200,7 @@
     }
 
     function updateProgress(percent, text) { document.getElementById('loader').style.display = 'flex'; document.getElementById('loaderText').innerText = text; let bar = document.getElementById('progressBar'); if (percent !== null) { bar.parentElement.parentElement.style.display = 'block'; bar.style.width = percent + '%'; } else { bar.parentElement.parentElement.style.display = 'none'; } }
-    function searchBill() { var b = document.getElementById('billNo').value; if (!b) return alert("ระบุ Bill No."); updateProgress(null, "ค้นหาข้อมูลเดิม..."); google.script.run.withSuccessHandler(res => { document.getElementById('loader').style.display = 'none'; if (res.success) { document.getElementById('duid').value = res.data.duid; document.getElementById('region').value = res.data.region; document.getElementById('ownerWarehouse').value = res.data.ownerWarehouse || ""; document.getElementById('ownerReceiver').value = res.data.ownerReceiver || ""; document.getElementById('itemList').innerHTML = ""; rowCount = 0; res.data.items.forEach((item, index) => { addItemRow(); let id = rowCount; setTimeout(() => { if (document.getElementById('model_' + id)) { document.getElementById('model_' + id).value = item.model; onModelChange(id); document.getElementById('code_' + id).value = item.code; onCodeChange(id); document.getElementById('qty_' + id).value = item.qty; document.getElementById('sn_' + id).value = item.sn; } }, 100 * (index + 1)); }); alert("✅ ดึงข้อมูลสำเร็จ!"); } else alert("ไม่พบข้อมูล"); }).searchByBillNo(b, document.getElementById('customer').value); }
+    function searchBill() { var b = document.getElementById('billNo').value; if (!b) return alert("ระบุ Bill No."); updateProgress(null, "ค้นหาข้อมูลเดิม..."); google.script.run.withSuccessHandler(res => { document.getElementById('loader').style.display = 'none'; if (res.success) { document.getElementById('duid').value = res.data.duid; document.getElementById('region').value = res.data.region; document.getElementById('ownerWarehouse').value = res.data.ownerWarehouse || ""; document.getElementById('ownerReceiver').value = res.data.ownerReceiver || ""; document.getElementById('locationWarehouse').value = res.data.locationWarehouse || ""; document.getElementById('locationReceiver').value = res.data.locationReceiver || ""; document.getElementById('itemList').innerHTML = ""; rowCount = 0; res.data.items.forEach((item, index) => { addItemRow(); let id = rowCount; setTimeout(() => { if (document.getElementById('model_' + id)) { document.getElementById('model_' + id).value = item.model; onModelChange(id); document.getElementById('code_' + id).value = item.code; onCodeChange(id); document.getElementById('qty_' + id).value = item.qty; document.getElementById('sn_' + id).value = item.sn; } }, 100 * (index + 1)); }); alert("✅ ดึงข้อมูลสำเร็จ!"); } else alert("ไม่พบข้อมูล"); }).searchByBillNo(b, document.getElementById('customer').value); }
     function triggerNativeScanner(t, id) { scanTarget = t; scanRowId = id || null; document.getElementById('cameraTrigger').click(); }
     function processImageScan(input) { if (!input.files || input.files.length === 0) return; updateProgress(null, "สแกน..."); const html5QrCode = new Html5Qrcode("cameraTrigger"); html5QrCode.scanFile(input.files[0], true).then(text => { document.getElementById('loader').style.display = 'none'; if (scanTarget === 'billNo') document.getElementById('billNo').value = text; else if (scanTarget === 'sn') document.getElementById('sn_' + scanRowId).value = text; }).catch(err => { document.getElementById('loader').style.display = 'none'; alert("❌ อ่านไม่ได้: ลองถ่ายใหม่ครับ"); }); }
     window.onload = function() { loadBOM(); loadProjectData(); addItemRow(); };
