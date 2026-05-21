@@ -1,16 +1,20 @@
 /*
- * 🚀 Inventory Smart System - V.6.4.5 (STABLE SYNC)
- * รวมฟีเจอร์: บันทึกแยกส่วน + Progress Bar + จัด Folder เป็นระเบียบ + ระบบค้นหาอัจฉริยะ (Cascading)
+ * 🚀 Inventory Smart System - V.6.4.8 (STABLE SYNC)
+ * รวมฟีเจอร์: บันทึกแยกส่วน + Progress Bar + จัด Folder เป็นระเบียบ + ระบบค้นหาอัจฉริยะ (Cascading) + ระบบ Multi-Bot แจ้งเตือน (กัน Quota เต็ม)
  */
 
 var SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
-var LINE_ACCESS_TOKEN = 'eZe15XyurA2eFNBEjeMJ1PNG3lEiujNpzJ01GGarnoq7GFaYDqBttYZk0BHHh7KE5ZOaQdNJUdmhoCc+UoXxqmT1CdHZ7KHUWr7XACo1VY4ezEZpWVHuzufGydzTBOWnVgEgcksIJQDFeQrL3dvkUQdB04t89/1O/w1cDnyilFU=';
+var LINE_ACCESS_TOKENS = [
+  'eZe15XyurA2eFNBEjeMJ1PNG3lEiujNpzJ01GGarnoq7GFaYDqBttYZk0BHHh7KE5ZOaQdNJUdmhoCc+UoXxqmT1CdHZ7KHUWr7XACo1VY4ezEZpWVHuzufGydzTBOWnVgEgcksIJQDFeQrL3dvkUQdB04t89/1O/w1cDnyilFU=',
+  'VOVhBbD6EG9VwKFo0V1s/wAclekysxBkWrudqSrkp5kFd/8tdrWyi1der1Eui54whdk/E0XWQxF9amI05MWgRq2/Nu628A/1O4yZJB/6warrshDOj2MtnhnM59yZh7b66qbEb/Qsx5XY3OzgXnkNZgdB04t89/1O/w1cDnyilFU=',
+  '+rX1Vp8W/wacBl/JTAqkRMDfx7oj/wvTV66GSpASORlUoTL2LHlAoNKIlQDXAX8cLYFHufC5EOPIBWElgRYXjC9qNUNbSjpq9JZ9rInybwWVSVSs9jYObP2EqRTgreI/30kjvTz8U2rnFvAYxX8mGwdB04t89/1O/w1cDnyilFU='
+];
 var LINE_DESTINATIONS = ['Cb4baf5e474773f54f2b6538e4cd4d9ac', 'U110afe8872d7f73074e56c457df2859']; 
 var ROOT_FOLDER_ID = '1IKefCE5rhBAoyM0uQBTLvEkPlRUm6lD_'; 
 
 function doGet(e) {
   return HtmlService.createTemplateFromFile('app').evaluate()
-      .setTitle('Inventory Smart App V.6.4.5')
+      .setTitle('Inventory Smart App V.6.4.8')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -89,7 +93,20 @@ function saveMainData(header, items) {
     var actualLastRow = 0;
     for (var i = 0; i < colA.length; i++) { if (colA[i][0] !== "") actualLastRow = i + 1; }
     var nextRow = actualLastRow + 1;
-    var lastNo = actualLastRow > 1 ? (parseInt(sheet.getRange(actualLastRow, 1).getValue()) || 0) : 0;
+    
+    // หาเลขลำดับล่าสุดเฉพาะ DUID นี้ เพื่อให้รันเลขต่อกัน (Continuous Sequence per DUID)
+    var lastNo = 0;
+    var duidToFind = String(header.duid || "").trim();
+    if (actualLastRow > 1) {
+      var allData = sheet.getRange(1, 1, actualLastRow, 2).getValues();
+      for (var i = 1; i < allData.length; i++) {
+        if (String(allData[i][1]).trim() === duidToFind) {
+          var num = parseInt(allData[i][0]);
+          if (!isNaN(num) && num > lastNo) lastNo = num;
+        }
+      }
+    }
+
     var allRows = items.map(function(item, index) {
       return [ lastNo+index+1, header.duid, header.region, header.type, item.type, dateStr, header.billNo, item.model, item.code, item.desc, item.qty, item.sn, header.ownerWarehouse, header.ownerReceiver, header.locationWarehouse || "", header.locationReceiver || "", "", "", "" ];
     });
@@ -127,7 +144,7 @@ function sendLineNotification(header, items) {
   var url = 'https://api.line.me/v2/bot/message/push';
   var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
 
-  var messageText = "📦 รายงาน Inventory (V.6.4.5)\n" +
+  var messageText = "📦 รายงาน Inventory (V.6.4.8)\n" +
                 "━━━━━━━━━━━━━━━\n" +
                 "👤 ลูกค้า: " + header.customer + "\n" +
                 "🛠 งาน: " + header.type + "\n" +
@@ -156,9 +173,11 @@ function sendLineNotification(header, items) {
   messageText += "━━━━━━━━━━━━━━━\n" +
                 "✅ บันทึกสำเร็จ!";
 
-  LINE_DESTINATIONS.forEach(function(destId) {
-    var payload = { to: destId, messages: [{ type: 'text', text: messageText }] };
-    UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', headers: { Authorization: 'Bearer ' + LINE_ACCESS_TOKEN }, payload: JSON.stringify(payload), muteHttpExceptions: true });
+  LINE_ACCESS_TOKENS.forEach(function(token) {
+    LINE_DESTINATIONS.forEach(function(destId) {
+      var payload = { to: destId, messages: [{ type: 'text', text: messageText }] };
+      UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', headers: { Authorization: 'Bearer ' + token }, payload: JSON.stringify(payload), muteHttpExceptions: true });
+    });
   });
 }
 
