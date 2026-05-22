@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>Inventory Smart App V.6.4.8</title>
+  <title>Inventory Smart App V.6.4.9</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -26,7 +26,7 @@
 
   <div class="container-fluid">
     <div class="header-banner shadow d-flex justify-content-between align-items-center">
-      <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.4.8</h5>
+      <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.4.9</h5>
       <button class="btn btn-sm btn-light fw-bold" onclick="onCustomerChange()">🔄 SYNC</button>
     </div>
 
@@ -41,7 +41,7 @@
     <div class="card-custom">
       <div class="row g-2">
         <div class="col-6"><label class="small fw-bold">ลูกค้า</label><select id="customer" class="form-select form-select-sm" onchange="onCustomerChange()"><option value="AIS">AIS</option><option value="TRUE">TRUE</option></select></div>
-        <div class="col-6"><label class="small fw-bold">งาน</label><select id="type" class="form-select form-select-sm"><option value="IN">IN</option><option value="OUT">OUT</option><option value="STR/IN">STR/IN</option><option value="STR/OUT">STR/OUT</option><option value="DISMANTLE">DISMANTLE</option><option value="RETURN">RETURN</option></select></div>
+        <div class="col-6"><label class="small fw-bold">งาน</label><select id="type" class="form-select font-select-sm"><option value="IN">IN</option><option value="OUT">OUT</option><option value="STR/IN">STR/IN</option><option value="STR/OUT">STR/OUT</option><option value="DISMANTLE">DISMANTLE</option><option value="RETURN">RETURN</option></select></div>
         <div class="col-12"><label class="small fw-bold">Region</label><select id="region" class="form-select form-select-sm"><option value="ER">ER</option><option value="NER">NER</option><option value="SR">SR</option><option value="NR">NR</option><option value="CR">CR</option><option value="BKK">BKK</option></select></div>
         <div class="col-12"><label class="small fw-bold">Bill No. *</label><div class="input-group input-group-sm"><input type="text" id="billNo" class="form-control form-control-sm" placeholder="เลขที่บิล"><button class="btn btn-outline-primary" type="button" onclick="triggerNativeScanner('billNo')">📷 Scan</button></div></div>
         <div class="col-12 mt-2"><button class="btn btn-primary w-100 btn-sm py-2 shadow-sm" onclick="searchBill()">🔍 ค้นหาข้อมูลเดิมจาก Bill No.</button></div>
@@ -177,7 +177,6 @@
       var bN = document.getElementById('billNo').value, du = document.getElementById('duid').value, wh = document.getElementById('ownerWarehouse').value, rc = document.getElementById('ownerReceiver').value;
       var lW = document.getElementById('locationWarehouse').value, lR = document.getElementById('locationReceiver').value;
       
-      // Strict Validation for DUID
       if (!du) return alert('❌ ห้ามว่าง! กรุณาระบุ DUID ก่อนบันทึกเพื่อให้ระบบรันเลขลำดับได้ถูกต้อง');
       if (!bN || !wh || !rc || photoArray.length === 0) return alert('❌ กรุณากรอกข้อมูลและถ่ายรูปให้ครบ');
       var items = [];
