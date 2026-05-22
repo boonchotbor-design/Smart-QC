@@ -7,8 +7,8 @@ const config = {
   channelSecret: (process.env.LINE_CHANNEL_SECRET || '').trim(),
 };
 
-// ใช้ค่าจาก Environment Variable หรือถ้าไม่มีให้ใช้ค่าเริ่มต้น
-const GAS_WEB_APP_URL = process.env.GAS_WEB_APP_URL || 'https://script.google.com/macros/s/AKfycbwoTnwaExeObR_54tVajXxz7j2rAsQlylWN3rbaGfTXxf9-HZ8oAMs4_gKOhrFx7b6b/exec';
+// ดึง URL จาก Environment Variable
+const GAS_WEB_APP_URL = (process.env.GAS_WEB_APP_URL || '').trim();
 
 const client = new messagingApi.MessagingApiClient({
   channelAccessToken: config.channelAccessToken
@@ -16,7 +16,7 @@ const client = new messagingApi.MessagingApiClient({
 
 const app = express();
 
-app.get('/', (req, res) => res.send('LINE Bot DUID Query System is alive! v6.4.9'));
+app.get('/', (req, res) => res.send('LINE Bot DUID Query System is alive! v6.5.3'));
 
 // Webhook สำหรับรับข้อความจาก LINE (DUID Query)
 app.post('/webhook', middleware(config), (req, res) => {
@@ -37,9 +37,8 @@ app.post('/notify', express.json(), (req, res) => {
   const { header, items } = req.body;
   if (!header) return res.status(400).send('Missing header');
 
-  const messageText = `✅ บันทึกสำเร็จ (V.6.4.9)\n` +
+  const messageText = `✅ บันทึกสำเร็จ (V.6.5.3)\n` +
                       `━━━━━━━━━━━━━━━\n` +
-                      `👤 ลูกค้า: ${header.customer}\n` +
                       `🛠 งาน: ${header.type}\n` +
                       `🆔 DUID: ${header.duid}\n` +
                       `📦 รายการสินค้า: ${items ? items.length : 0} รายการ\n` +
@@ -66,36 +65,13 @@ async function handleEvent(event) {
   }
 
   const userMessage = event.message.text.trim();
+  if (userMessage.length < 5) return null; // ข้ามคำทักทายสั้นๆ
 
   try {
-    // ส่ง DUID ไปถาม Google Script
-    const response = await axios.get(`${GAS_WEB_APP_URL}?duid=${encodeURIComponent(userMessage)}`);
-    const data = response.data;
-
-    let replyText = '';
-    if (data.success && data.items && data.items.length > 0) {
-      const h = data.header;
-      replyText = `📊 ข้อมูล DUID: ${userMessage}\n` +
-                  `━━━━━━━━━━━━━━━\n` +
-                  `📍 Region: ${h.region}\n` +
-                  `🏢 คลัง: ${h.ownerWarehouse || "-"}\n` +
-                  `👷 ผู้รับ: ${h.ownerReceiver || "-"}\n` +
-                  `━━━━━━━━━━━━━━━\n` +
-                  `📦 รายการสินค้า (${data.items.length} รายการ):\n`;
-
-      data.items.forEach((item, index) => {
-        replyText += `🔹 ${index + 1}: ${item.model}\n   (SN: ${item.sn || '-'}, Qty: ${item.qty})\n`;
-      });
-      replyText += `━━━━━━━━━━━━━━━\n🔍 ค้นหาเมื่อ: ${new Date().toLocaleTimeString('th-TH')}`;
-    } else {
-      // ถ้าไม่ใช่รูปแบบ DUID หรือหาไม่เจอ
-      // ถ้าผู้ใช้พิมพ์ "สวัสดี" หรืออื่นๆ ให้ตอบกลับปกติ
-      if (userMessage.length < 5) {
-        replyText = "สวัสดีครับ! ส่ง DUID มาให้ผมเพื่อเช็คสต็อกได้เลยนะครับ 📦";
-      } else {
-        replyText = `❌ ไม่พบข้อมูลสำหรับ DUID: "${userMessage}"\nกรุณาตรวจสอบความถูกต้องอีกครั้งครับ`;
-      }
-    }
+    // 🚀 ส่งไปขอข้อความแบบจัดรูปแบบแล้ว (format=text) จาก Google Script โดยตรง
+    // สิ่งนี้จะทำให้ Logic การจัดรูปแบบทั้งหมดถูกควบคุมโดย Google Script ที่เราเพิ่งแก้ไป
+    const response = await axios.get(`${GAS_WEB_APP_URL}?duid=${encodeURIComponent(userMessage)}&format=text`);
+    const replyText = response.data; // ดึงข้อความดิบที่ GAS จัดรูปแบบมาให้แล้ว
 
     return await client.replyMessage({
       replyToken: event.replyToken,
@@ -105,7 +81,7 @@ async function handleEvent(event) {
     console.error('Query Error:', err);
     return await client.replyMessage({
       replyToken: event.replyToken,
-      messages: [{ type: 'text', text: '⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล' }]
+      messages: [{ type: 'text', text: '⚠️ (V.6.5.3) เกิดข้อผิดพลาดในการเชื่อมต่อ Google Script' }]
     });
   }
 }
