@@ -32,6 +32,31 @@ app.post('/webhook', middleware(config), (req, res) => {
     });
 });
 
+// Webhook สำหรับรับข้อความจาก Telegram
+app.post('/telegram-webhook', express.json(), async (req, res) => {
+  const { message } = req.body;
+  if (!message || !message.text || !message.chat) return res.status(200).send('OK');
+
+  const chatId = message.chat.id;
+  const userMessage = message.text.trim();
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+
+  if (userMessage.length < 5) return res.status(200).send('OK');
+
+  try {
+    const response = await axios.get(`${GAS_WEB_APP_URL}?duid=${encodeURIComponent(userMessage)}&format=text`, { timeout: 25000 });
+    const replyText = response.data;
+
+    await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      chat_id: chatId,
+      text: replyText
+    });
+  } catch (err) {
+    console.error('Telegram Error:', err.message);
+  }
+  res.status(200).send('OK');
+});
+
 // Endpoint สำหรับรับแจ้งเตือนเมื่อมีการบันทึกข้อมูล (Save Notification)
 app.post('/notify', express.json(), (req, res) => {
   const { header, items } = req.body;
