@@ -1,8 +1,8 @@
 // =========================================================================
-// === AI SMART QC BOT - V.110 (TRIGGER KILLER & ULTRA-STABLE) ===
+// === AI SMART QC BOT - V.111 (VERCEL AI PROXY & ULTRA-STABLE) ===
 // =========================================================================
 
-const VERSION = "V.110 (FIX-REPETITIVE-MESSAGES)"; 
+const VERSION = "V.111 (VERCEL-AI-INTEGRATION)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA"; 
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7"; 
 const SHEET_NAME = "Dashboard"; 
@@ -15,8 +15,9 @@ const TYPE_LIST = ["MBB", "POWER"];
 
 // --- [API CONFIG] ---
 const TELEGRAM_BOT_TOKEN = "8625222790:AAHjU70oWGm88NyUaXaWIDJveo3b2KpnG90"; 
-const TELEGRAM_TARGET_ID = "7378939928"; 
+const TELEGRAM_TARGET_ID = "-5199951121"; 
 const GROQ_API_KEY = "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";
+const VERCEL_AI_URL = "https://vipcode-ai-inspector-jwrscvlrc-boonchot-boriwut-s-projects.vercel.app/v1/chat/completions";
 
 // --- [LINE CONFIG] ---
 const LINE_CHANNEL_ACCESS_TOKEN = "CnFH9VFWVp7HttiDfE56k2lCZ6aUlnETSKL9yA6Oj5f3Gb1lP6iR6CPGiEdz/8BNJUHtDcDU51y+K+o83fNoEkeKROSQ74PMlCuTErmr4clyWjzAWD27z/SQfFtYz3ALQ2+TqU06ZVoD7ASnbwD3NwdB04t89/1O/w1cDnyilFU="; 
@@ -101,7 +102,9 @@ function handleTelegramWebhook(data) {
   const msg = data.message || data.edited_message;
   if (!msg || (msg.from && msg.from.is_bot)) return;
 
-  const cid = msg.chat.id; const uid = "TG_" + msg.from.id; let text = (msg.text || "").trim(); const s = props.getProperty(uid + "_s") || "IDLE";
+  const cid = msg.chat.id; const uid = "TG_" + msg.from.id; let text = (msg.text || "").trim();
+  if (text.includes("@")) text = text.split("@")[0].trim(); // Handle bot mention in groups
+  const s = props.getProperty(uid + "_s") || "IDLE";
 
   if (text === "ส่งงาน" || text === "/start" || text === "สั่งงาน") {
     clearUser(uid); props.setProperty(uid + "_s", "W_PJ");
@@ -200,7 +203,7 @@ function sendDualFailNotify(fn, cat, reason, url, fid) {
 
 function analyzeAI(file) {
   const b64 = Utilities.base64Encode(file.getBlob().getBytes());
-  const res = UrlFetchApp.fetch("https://api.groq.com/openai/v1/chat/completions", { 
+  const res = UrlFetchApp.fetch(VERCEL_AI_URL, { 
     method: "post", headers: { Authorization: "Bearer " + GROQ_API_KEY, "Content-Type": "application/json" }, 
     payload: JSON.stringify({ "model": "llama-3.2-11b-vision-preview", "messages": [{ "role": "user", "content": [{ "type": "text", "text": "Analyze cell site installation photo and output EXACT JSON: {\"sheetReference\": \"...\", \"status\": \"PASS/FAIL\", \"reason\": \"Thai reason if FAIL\"}" }, { "type": "image_url", "image_url": { "url": `data:image/jpeg;base64,${b64}` } }] }], "response_format": { "type": "json_object" } }), muteHttpExceptions: true 
   });
