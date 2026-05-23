@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.6.1.5)
+# 📦 Inventory Smart System (V.6.5.4)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI) and Telegram Bot with AI OCR capabilities.
 
@@ -29,8 +29,14 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
 
+## 🐞 Bug Fixes & Stability (V.6.5.4)
+- **Column Mapping Lock:** Locked DUID to Column A (Index 0) across all sheets as requested.
+- **Header-Based Detection:** Implemented robust header detection for all sheet interactions (DUID, Region, Owners, Models, etc.) to handle variations in sheet structure.
+- **Transaction Alignment:** Updated `saveMainData` to use the new Column A alignment (DUID at index 0) and removed the redundant 'No' column.
+- **Search Optimization:** Improved `searchByDuidOnly` to correctly read metadata from the 'data' master sheet and items from transaction sheets.
+
 ## 🐞 Bug Fixes & Stability (V.6.1.5)
-- **Spreadsheet Mapping Fix:** Corrected column mapping in `saveMultiData` to match the actual spreadsheet structure (DUID in Column B).
+- **Spreadsheet Mapping Fix:** Corrected column mapping in `saveMainData` to match the actual spreadsheet structure.
 - **Notification Restoration:** Restored Line notification format to the rich text style with emojis as requested by the user.
 - **Field Restoration:** Re-added 'Owner Warehouse' and 'Owner Receiver' fields to the UI with searchable datalists.
 - **Camera Permission Fix:** Improved error handling for `NotAllowedError`. Added specific instructions and `alert` to guide users on how to reset camera permissions in their browser.

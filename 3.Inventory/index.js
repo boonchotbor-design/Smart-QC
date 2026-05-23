@@ -16,7 +16,7 @@ const client = new messagingApi.MessagingApiClient({
 
 const app = express();
 
-app.get('/', (req, res) => res.send('LINE Bot DUID Query System is alive! v6.5.3'));
+app.get('/', (req, res) => res.send('LINE Bot DUID Query System is alive! v6.5.4'));
 
 // Webhook สำหรับรับข้อความจาก LINE (DUID Query)
 app.post('/webhook', middleware(config), (req, res) => {
@@ -37,7 +37,7 @@ app.post('/notify', express.json(), (req, res) => {
   const { header, items } = req.body;
   if (!header) return res.status(400).send('Missing header');
 
-  const messageText = `✅ บันทึกสำเร็จ (V.6.5.3)\n` +
+  const messageText = `✅ บันทึกสำเร็จ (V.6.5.4)\n` +
                       `━━━━━━━━━━━━━━━\n` +
                       `🛠 งาน: ${header.type}\n` +
                       `🆔 DUID: ${header.duid}\n` +
@@ -81,7 +81,7 @@ async function handleEvent(event) {
     console.error('Query Error:', err);
     return await client.replyMessage({
       replyToken: event.replyToken,
-      messages: [{ type: 'text', text: '⚠️ (V.6.5.3) เกิดข้อผิดพลาดในการเชื่อมต่อ Google Script' }]
+      messages: [{ type: 'text', text: '⚠️ (V.6.5.4) เกิดข้อผิดพลาดในการเชื่อมต่อ Google Script' }]
     });
   }
 }

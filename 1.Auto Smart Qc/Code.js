@@ -1,8 +1,8 @@
 // =========================================================================
-// === AI SMART QC BOT - V.109 (ULTIMATE BACKLOG & TRIGGER KILLER) ===
+// === AI SMART QC BOT - V.110 (TRIGGER KILLER & ULTRA-STABLE) ===
 // =========================================================================
 
-const VERSION = "V.109 (ULTRA-CLEAN-STABLE)"; 
+const VERSION = "V.110 (FIX-REPETITIVE-MESSAGES)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA"; 
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7"; 
 const SHEET_NAME = "Dashboard"; 
@@ -27,7 +27,7 @@ function doGet() {
 }
 
 /**
- * Webhook entry point - FASTEST RESPONSE POSSIBLE
+ * Webhook entry point - OPTIMIZED FOR SPEED & DEDUPLICATION
  */
 function doPost(e) {
   const cache = CacheService.getScriptCache();
@@ -38,33 +38,37 @@ function doPost(e) {
     const contents = e.postData.contents;
     const data = JSON.parse(contents);
     
-    // 1. FAST DEDUPLICATION (Memory check first)
-    const updateId = data.update_id ? "uid_" + data.update_id : (data.events ? "eid_" + data.events[0].webhookEventId : null);
+    // 1. DEDUPLICATION (Prioritize Cache for Speed)
+    const updateId = data.update_id ? "u_" + data.update_id : (data.events ? "e_" + data.events[0].webhookEventId : null);
     if (updateId) {
-      if (cache.get(updateId) || props.getProperty(updateId)) return ContentService.createTextOutput("OK");
-      cache.put(updateId, "1", 21600); // 6 hours
-      props.setProperty(updateId, "1"); // Permanent (until manual clear)
+      if (cache.get(updateId)) return ContentService.createTextOutput("OK");
+      cache.put(updateId, "1", 600); // 10 minutes cache is enough for retries
+      
+      // Secondary check via Properties (if cache fails)
+      if (props.getProperty(updateId)) return ContentService.createTextOutput("OK");
+      props.setProperty(updateId, "1"); 
     }
 
-    // 2. BACKLOG PROTECTION (IGNORE OLD MESSAGES)
+    // 2. BACKLOG PROTECTION (IGNORE MESSAGES OLDER THAN 2 MINS)
     if (data.message && data.message.date) {
       const now = Math.floor(Date.now() / 1000);
       if (now - data.message.date > 120) return ContentService.createTextOutput("OK");
     }
 
-    // 3. ASYNC-LIKE LOGGING
-    try { logToSheet(data); } catch(l){}
-
-    // 4. PROCESS PLATFORMS
+    // 3. PROCESS PLATFORMS
     if (data.events) {
       handleLineWebhook(data.events[0]);
     } else {
       handleTelegramWebhook(data);
     }
 
+    // 4. ASYNC LOGGING (Last step to prevent blocking response)
+    try { logToSheet(data); } catch(l){}
+
   } catch (err) {
     console.error("doPost Error: " + err.toString());
   }
+  
   return ContentService.createTextOutput("OK");
 }
 
@@ -227,6 +231,7 @@ function logToSheet(data) {
     const ss = getSpreadsheet(); if (!ss) return;
     const sheet = ss.getSheetByName("BotLogs") || ss.insertSheet("BotLogs");
     sheet.appendRow([new Date(), JSON.stringify(data)]);
+    if (sheet.getLastRow() > 5000) { sheet.deleteRows(2, 500); }
   } catch (e) {}
 }
 
@@ -289,10 +294,14 @@ function FIX_WEBHOOK() {
   return "✅ Webhook set: " + url + "\nResult: " + res.getContentText();
 }
 
-function KILL_ALL_TRIGGERS_AND_CACHE() {
+function MASTER_CLEANUP_AND_RESET() {
   const ts = ScriptApp.getProjectTriggers();
   for (let t of ts) ScriptApp.deleteTrigger(t);
   PropertiesService.getUserProperties().deleteAllProperties();
-  CacheService.getScriptCache().removeAll(["uid_727994555", "uid_727994556"]); // ตัวอย่างการลบ ID ที่ค้าง
-  return "✅ All triggers and states cleared successfully.";
+  const url = WEB_APP_URL || ScriptApp.getService().getUrl();
+  let res = "N/A";
+  if (url) {
+    res = UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook?url=${url}&drop_pending_updates=true`).getContentText();
+  }
+  return "✅ ALL TRIGGERS DELETED\n✅ PROPERTIES CLEARED\n✅ WEBHOOK RESET: " + res;
 }

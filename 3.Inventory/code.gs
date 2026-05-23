@@ -1,5 +1,5 @@
 /*
- * 🚀 Inventory Smart System - V.6.5.3
+ * 🚀 Inventory Smart System - V.6.5.4
  * Includes: Ultimate Robust DUID Search (All Sheets)
  */
 
@@ -11,59 +11,93 @@ function doGet(e) {
   if (e.parameter.duid) {
     var result = searchByDuidOnly(e.parameter.duid);
     if (e.parameter.format === "text") {
-      return ContentService.createTextOutput(result.formattedText || result.message || "❌ V.6.5.3: Not found");
+      return ContentService.createTextOutput(result.formattedText || result.message || "❌ V.6.5.4: Not found");
     }
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-      .setTitle('Inventory Smart App V.6.5.3')
+      .setTitle('Inventory Smart App V.6.5.4')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function searchByDuidOnly(duid) {
-  if (!duid) return { success: false, message: "❌ (V.6.5.3) กรุณาระบุ DUID" };
+  if (!duid) return { success: false, message: "❌ (V.6.5.4) กรุณาระบุ DUID" };
   try {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheets = ss.getSheets();
     var groups = {}; 
     var found = false;
-    var totalItems = 0;
+    var totalItemsCount = 0;
     var targetDuid = duid.toString().replace(/\s+/g, ' ').trim().toLowerCase();
 
+    // Priority: Transaction sheets (INOUT_HW_...)
     sheets.forEach(function(sheet) {
       var sName = sheet.getName();
+      if (sName.indexOf("INOUT") === -1) return; 
+      
       var data = sheet.getDataRange().getValues();
+      if (data.length < 2) return;
+      
+      var headerRow = data[0].map(function(h) { return String(h || "").trim().toUpperCase(); });
+      var idx = {
+        duid: headerRow.indexOf("DUID"), 
+        region: Math.max(headerRow.indexOf("REGION"), headerRow.indexOf("INTERNAL PROJECT")),
+        transType: headerRow.indexOf("IN/OUT"),
+        itemType: headerRow.indexOf("TYPE"),
+        billNo: Math.max(headerRow.indexOf("BILL NO"), headerRow.indexOf("BILL NO.")),
+        model: headerRow.indexOf("MODEL"),
+        sn: Math.max(headerRow.indexOf("SN"), headerRow.indexOf("SERIAL")),
+        qty: Math.max(headerRow.indexOf("QTY"), headerRow.indexOf("SUM OF REQ.QTY"), headerRow.indexOf("SUM OF REQ. QTY")),
+        ownerW: Math.max(headerRow.indexOf("OWNER WAREHOUSE"), headerRow.indexOf("OWNER WAREHOUSE ")),
+        ownerR: Math.max(headerRow.indexOf("OWNER RECEIVER"), headerRow.indexOf("OWNER RECEIVER ")),
+        locW: headerRow.indexOf("LOCATION WAREHOUSE"),
+        locR: headerRow.indexOf("LOCATION RECEIVER")
+      };
+
+      if (idx.duid === -1) return;
+      
       var customer = sName.indexOf("TRUE") > -1 ? "TRUE" : "AIS"; 
       
       for (var i = 1; i < data.length; i++) {
-        var rawSheetDuid = String(data[i][1] || "");
+        var rawSheetDuid = String(data[i][idx.duid] || "");
         var sheetDuid = rawSheetDuid.replace(/\s+/g, ' ').trim().toLowerCase();
         
         if (sheetDuid === targetDuid) {
-          var jobType = String(data[i][3] || "UNKNOWN").trim() || "UNKNOWN";
-          if (!groups[jobType]) {
-            groups[jobType] = {
+          var tType = (idx.transType > -1 ? String(data[i][idx.transType] || "").trim() : "").toUpperCase();
+          var iType = (idx.itemType > -1 ? String(data[i][idx.itemType] || "").trim() : "");
+          var bNo = (idx.billNo > -1 ? String(data[i][idx.billNo] || "").trim() : "-");
+          
+          // Unique key to separate sections by Transaction, Bill, and Category
+          var groupKey = tType + "|" + bNo + "|" + iType + "|" + sName; 
+          
+          if (!groups[groupKey]) {
+            groups[groupKey] = {
               header: {
                 customer: customer,
-                jobType: jobType,
-                region: data[i][2] || "-",
-                duid: data[i][1] || rawSheetDuid,
-                ownerWarehouse: data[i][12] || "-",
-                ownerReceiver: data[i][13] || "-",
-                locWarehouse: data[i][14] || "-",
-                locReceiver: data[i][15] || "-"
+                transType: tType,
+                itemType: iType,
+                jobType: tType + (iType ? " (" + iType + ")" : ""),
+                billNo: bNo,
+                region: (idx.region > -1 ? data[i][idx.region] : "-") || "-",
+                duid: data[i][idx.duid] || rawSheetDuid,
+                ownerWarehouse: (idx.ownerW > -1 ? data[i][idx.ownerW] : "-") || "-",
+                ownerReceiver: (idx.ownerR > -1 ? data[i][idx.ownerR] : "-") || "-",
+                locWarehouse: (idx.locW > -1 ? data[i][idx.locW] : "-") || "-",
+                locReceiver: (idx.locR > -1 ? data[i][idx.locR] : "-") || "-"
               },
               items: []
             };
           }
-          groups[jobType].items.push({
-            model: data[i][7] || "NA",
-            sn: data[i][11] || "NA",
-            qty: data[i][10] || 0
-          });
-          totalItems++;
+          if (idx.model > -1) {
+            groups[groupKey].items.push({
+              model: data[i][idx.model] || "NA",
+              sn: (idx.sn > -1 ? data[i][idx.sn] : "NA") || "NA",
+              qty: (idx.qty > -1 ? data[i][idx.qty] : 0) || 0
+            });
+            totalItemsCount++;
+          }
           found = true;
         }
       }
@@ -72,38 +106,42 @@ function searchByDuidOnly(duid) {
     if (!found) {
       return { 
         success: false, 
-        message: "❌ (V.6.5.3) ไม่พบข้อมูลสำหรับ DUID: \"" + duid + "\"\nกรุณาตรวจสอบคอลัมน์ B ใน Sheet ของคุณครับ" 
+        message: "❌ (V.6.5.4) ไม่พบข้อมูลการเคลื่อนไหวสำหรับ DUID: \"" + duid + "\"\nกรุณาตรวจสอบข้อมูลใน Sheet INOUT_HW ครับ" 
       };
     }
 
-    var formattedText = formatDuidResponse(groups, totalItems);
-    return { success: true, groups: groups, totalItems: totalItems, formattedText: formattedText };
+    var formattedText = formatDuidResponse(groups, totalItemsCount);
+    return { success: true, groups: groups, totalItems: totalItemsCount, formattedText: formattedText };
   } catch (e) {
-    return { success: false, message: "❌ (V.6.5.3) ระบบขัดข้อง: " + e.toString() };
+    return { success: false, message: "❌ (V.6.5.4) ระบบขัดข้อง: " + e.toString() };
   }
 }
 
 function formatDuidResponse(groups, totalItems) {
   var order = ["IN", "OUT", "STR/IN", "STR/OUT", "DISMANTLE", "RETURN"];
-  var sortedJobTypes = Object.keys(groups).sort(function(a, b) {
-    var idxA = order.indexOf(a.toUpperCase());
-    var idxB = order.indexOf(b.toUpperCase());
+  var keys = Object.keys(groups).sort(function(a, b) {
+    var gA = groups[a].header, gB = groups[b].header;
+    var idxA = order.indexOf(gA.transType);
+    var idxB = order.indexOf(gB.transType);
     if (idxA === -1) idxA = 99;
     if (idxB === -1) idxB = 99;
-    return idxA - idxB;
+    if (idxA !== idxB) return idxA - idxB;
+    // ป้องกันการแครชโดยการแปลงเป็น String ก่อนเปรียบเทียบ
+    return String(gA.billNo || "").localeCompare(String(gB.billNo || ""));
   });
 
   var sections = [];
   var globalItemCount = 0;
   var timestamp = Utilities.formatDate(new Date(), "GMT+7", "HH:mm:ss");
 
-  sortedJobTypes.forEach(function(jobType, index) {
-    var g = groups[jobType];
+  keys.forEach(function(key, index) {
+    var g = groups[key];
     var h = g.header;
     var text = "📊 ข้อมูล DUID: " + h.duid + "\n";
     text += "━━━━━━━━━━━━━━━\n";
     text += "👤 ลูกค้า: " + h.customer + "\n";
     text += "🛠 งาน: " + h.jobType + "\n";
+    text += "📄 เลขที่บิล: " + h.billNo + "\n";
     text += "📍 Region: " + h.region + "\n";
     text += "🆔 DUID: " + h.duid + "\n";
     text += "🏢 คลัง: " + h.ownerWarehouse + "\n";
@@ -134,9 +172,16 @@ function getBOMData(customer) {
     var masterSheet = ss.getSheetByName(masterSheetName);
     if (masterSheet) {
       var data = masterSheet.getDataRange().getValues();
-      for (var i = 1; i < data.length; i++) {
-        var model = String(data[i][1] || "").trim(), code = String(data[i][2] || "").trim();
-        if (model || code) masterResults.push({ type: String(data[i][0] || "OTHER").trim(), model: model, code: code, desc: String(data[i][3] || "").trim(), source: "MASTER" });
+      if (data.length > 1) {
+        var h = data[0].map(v => String(v || "").trim().toUpperCase());
+        var idx = { model: h.indexOf("MODEL"), code: h.indexOf("CODE"), type: h.indexOf("TYPE"), desc: h.indexOf("DESCRIPTION") };
+        // Fallback for BOM sheets which might have fixed structure
+        if (idx.model === -1) idx.model = 1; if (idx.code === -1) idx.code = 2; if (idx.type === -1) idx.type = 0; if (idx.desc === -1) idx.desc = 3;
+        
+        for (var i = 1; i < data.length; i++) {
+          var model = String(data[i][idx.model] || "").trim(), code = String(data[i][idx.code] || "").trim();
+          if (model || code) masterResults.push({ type: String(data[i][idx.type] || "OTHER").trim(), model: model, code: code, desc: String(data[i][idx.desc] || "").trim(), source: "MASTER" });
+        }
       }
     }
     var historySheets = [customer === "AIS" ? "data AIS" : "data TRUE", "INOUT_HW_" + customer];
@@ -144,9 +189,15 @@ function getBOMData(customer) {
       var sheet = ss.getSheetByName(sName);
       if (!sheet) return;
       var data = sheet.getDataRange().getValues();
-      for (var i = 1; i < data.length; i++) {
-        var model = String(data[i][7] || "").trim(), code = String(data[i][8] || "").trim();
-        if (model || code) historyResults.push({ type: String(data[i][4] || "OTHER").trim(), model: model, code: code, desc: String(data[i][9] || "").trim(), source: "HISTORY" });
+      if (data.length > 1) {
+        var h = data[0].map(v => String(v || "").trim().toUpperCase());
+        var idx = { model: h.indexOf("MODEL"), code: h.indexOf("CODE"), type: h.indexOf("TYPE"), desc: h.indexOf("DESCRIPTION") };
+        if (idx.model === -1) return;
+        
+        for (var i = 1; i < data.length; i++) {
+          var model = String(data[i][idx.model] || "").trim(), code = String(data[i][idx.code] || "").trim();
+          if (model || code) historyResults.push({ type: String(data[i][idx.type] || "OTHER").trim(), model: model, code: code, desc: String(data[i][idx.desc] || "").trim(), source: "HISTORY" });
+        }
       }
     });
     var combined = masterResults.concat(historyResults), seen = {};
@@ -165,15 +216,31 @@ function saveMainData(header, items) {
     var customer = (header.customer || "AIS").toString().trim().toUpperCase();
     var sheet = ss.getSheetByName("INOUT_HW_" + customer) || ss.getSheets()[0];
     var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
-    var colA = sheet.getRange("A1:A").getValues(), actualLastRow = 0;
-    for (var i = 0; i < colA.length; i++) { if (colA[i][0] !== "") actualLastRow = i + 1; }
-    var nextRow = actualLastRow + 1, lastNo = 0, duidToFind = String(header.duid || "").trim();
-    if (actualLastRow > 1) {
-      var allData = sheet.getRange(1, 1, actualLastRow, 2).getValues();
-      for (var i = 1; i < allData.length; i++) { if (String(allData[i][1]).trim() === duidToFind) { var num = parseInt(allData[i][0]); if (!isNaN(num) && num > lastNo) lastNo = num; } }
-    }
-    var allRows = items.map(function(item, index) { return [ lastNo+index+1, header.duid, header.region, header.type, item.type, dateStr, header.billNo, item.model, item.code, item.desc, item.qty, item.sn, header.ownerWarehouse, header.ownerReceiver, header.locationWarehouse || "", header.locationReceiver || "", "", "", "" ]; });
-    if (allRows.length > 0) sheet.getRange(nextRow, 1, allRows.length, 19).setValues(allRows);
+    
+    // Structure: DUID(A), Region(B), JobType(C), ItemType(D), Date(E), BillNo(F), Model(G), Code(H), Desc(I), Qty(J), SN(K), OwnerW(L), OwnerR(M), LocW(N), LocR(O)
+    var allRows = items.map(function(item, index) { 
+      return [ 
+        header.duid, 
+        header.region, 
+        header.type, 
+        item.type, 
+        dateStr, 
+        header.billNo, 
+        item.model, 
+        item.code, 
+        item.desc, 
+        item.qty, 
+        item.sn, 
+        header.ownerWarehouse, 
+        header.ownerReceiver, 
+        header.locationWarehouse || "", 
+        header.locationReceiver || "", 
+        "", "", "" 
+      ]; 
+    });
+    
+    var lastRow = sheet.getLastRow();
+    if (allRows.length > 0) sheet.getRange(lastRow + 1, 1, allRows.length, 18).setValues(allRows);
     SpreadsheetApp.flush();
     return { success: true };
   } catch (e) { return { success: false, message: e.toString() }; }
@@ -203,24 +270,128 @@ function sendToNodeJS(header, items) { if (!NODE_JS_WEBHOOK_URL) return; var pay
 function getProjectData() { 
   try { 
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID); 
-    var sheets = ss.getSheets(), allDuidData = [];
-    sheets.forEach(function(s) {
-      var d = s.getDataRange().getValues();
-      if (d.length > 1) {
-        var rows = d.slice(1).map(r => ({ duid: String(r[1] || "").trim(), region: String(r[2] || "").trim() }));
-        allDuidData = allDuidData.concat(rows);
+    var sheet = ss.getSheetByName("data");
+    if (!sheet) return [];
+    
+    var data = sheet.getDataRange().getValues();
+    if (data.length < 2) return [];
+    
+    var header = data[0].map(h => String(h || "").trim().toUpperCase());
+    var duidCol = header.indexOf("DUID"); // Should be 0 (Col A)
+    var regionCol = Math.max(header.indexOf("REGION"), header.indexOf("INTERNAL PROJECT")); // Should be 2 (Col C)
+    
+    if (duidCol === -1) duidCol = 0;
+    if (regionCol === -1) regionCol = 2;
+
+    var results = [];
+    for (var i = 1; i < data.length; i++) {
+      var duid = String(data[i][duidCol] || "").trim();
+      if (duid) {
+        results.push({ 
+          duid: duid, 
+          region: String(data[i][regionCol] || "").trim() 
+        });
       }
-    });
+    }
+    
     var seen = {};
-    return allDuidData.filter(function(item) { if (!item.duid || seen[item.duid]) return false; seen[item.duid] = true; return true; });
+    return results.filter(function(item) { 
+      if (!item.duid || seen[item.duid]) return false; 
+      seen[item.duid] = true; 
+      return true; 
+    });
   } catch(e) { return []; } 
 }
 
-function getOwnerData() { try { var ss = SpreadsheetApp.openById(SPREADSHEET_ID); var ws=[], rs=[]; ss.getSheets().forEach(function(s){ if(s.getName().indexOf("INOUT")>-1){ var d=s.getDataRange().getValues(); for(var i=1;i<d.length;i++){ if(d[i][12]) ws.push(String(d[i][12])); if(d[i][13]) rs.push(String(d[i][13])); } } }); return { warehouses: [...new Set(ws)].sort(), receivers: [...new Set(rs)].sort() }; } catch(e){return {warehouses:[],receivers:[]};} }
+function getOwnerData() { 
+  try { 
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID); 
+    var ws=[], rs=[]; 
+    
+    // 1. Get from 'data' sheet (Master)
+    var masterSheet = ss.getSheetByName("data");
+    if (masterSheet) {
+      var d = masterSheet.getDataRange().getValues();
+      if (d.length > 1) {
+        var h = d[0].map(v => String(v || "").trim().toUpperCase());
+        var wCol = h.indexOf("OWNER WAREHOUSE");
+        var rCol = h.indexOf("OWNER RECEIVER");
+        if (wCol === -1) wCol = 3; // Col D
+        if (rCol === -1) rCol = 4; // Col E
+        for (var i = 1; i < d.length; i++) {
+          if (d[i][wCol]) ws.push(String(d[i][wCol]));
+          if (d[i][rCol]) rs.push(String(d[i][rCol]));
+        }
+      }
+    }
+
+    // 2. Get from transaction sheets (History)
+    ss.getSheets().forEach(function(s){ 
+      var sName = s.getName();
+      if(sName.indexOf("INOUT") > -1){ 
+        var d = s.getDataRange().getValues(); 
+        if (d.length < 2) return;
+        var header = d[0].map(h => String(h || "").trim().toUpperCase());
+        var wCol = Math.max(header.indexOf("OWNER WAREHOUSE"), header.indexOf("OWNER WAREHOUSE "));
+        var rCol = Math.max(header.indexOf("OWNER RECEIVER"), header.indexOf("OWNER RECEIVER "));
+        
+        for(var i=1; i<d.length; i++){ 
+          if(wCol > -1 && d[i][wCol]) ws.push(String(d[i][wCol])); 
+          if(rCol > -1 && d[i][rCol]) rs.push(String(d[i][rCol])); 
+        } 
+      } 
+    }); 
+    return { warehouses: [...new Set(ws)].sort(), receivers: [...new Set(rs)].sort() }; 
+  } catch(e){return {warehouses:[],receivers:[]};} 
+}
 function searchByBillNo(billNo, customer) {
   try {
-    var ss = SpreadsheetApp.openById(SPREADSHEET_ID); var sheet = ss.getSheetByName("INOUT_HW_" + customer) || ss.getSheets()[0]; var data = sheet.getDataRange().getValues(); var results = { duid: "", region: "", ownerWarehouse: "", ownerReceiver: "", locationWarehouse: "", locationReceiver: "", items: [] }; var found = false;
-    for (var i = 1; i < data.length; i++) { if (data[i][6] == billNo) { if (!found) { results.duid = data[i][1]; results.region = data[i][2]; results.ownerWarehouse = data[i][12]; results.ownerReceiver = data[i][13]; results.locationWarehouse = data[i][14]; results.locationReceiver = data[i][15]; found = true; } results.items.push({ type: data[i][4], model: data[i][7], code: data[i][8], desc: data[i][9], qty: data[i][10], sn: data[i][11] }); } }
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID); 
+    var sheet = ss.getSheetByName("INOUT_HW_" + customer) || ss.getSheets()[0]; 
+    var data = sheet.getDataRange().getValues(); 
+    if (data.length < 2) return { success: false };
+    
+    var header = data[0].map(h => String(h || "").trim().toUpperCase());
+    var idx = {
+      duid: header.indexOf("DUID"),
+      region: Math.max(header.indexOf("REGION"), header.indexOf("INTERNAL PROJECT")),
+      billNo: header.indexOf("BILL NO"),
+      type: header.indexOf("TYPE"),
+      model: header.indexOf("MODEL"),
+      code: header.indexOf("CODE"),
+      desc: header.indexOf("DESCRIPTION"),
+      qty: header.indexOf("QTY"),
+      sn: header.indexOf("SN"),
+      ownerW: Math.max(header.indexOf("OWNER WAREHOUSE"), header.indexOf("OWNER WAREHOUSE ")),
+      ownerR: Math.max(header.indexOf("OWNER RECEIVER"), header.indexOf("OWNER RECEIVER ")),
+      locW: header.indexOf("LOCATION WAREHOUSE"),
+      locR: header.indexOf("LOCATION RECEIVER")
+    };
+    
+    var results = { duid: "", region: "", ownerWarehouse: "", ownerReceiver: "", locationWarehouse: "", locationReceiver: "", items: [] }; 
+    var found = false;
+    
+    for (var i = 1; i < data.length; i++) { 
+      if (idx.billNo > -1 && data[i][idx.billNo] == billNo) { 
+        if (!found) { 
+          results.duid = idx.duid > -1 ? data[i][idx.duid] : ""; 
+          results.region = idx.region > -1 ? data[i][idx.region] : ""; 
+          results.ownerWarehouse = idx.ownerW > -1 ? data[i][idx.ownerW] : ""; 
+          results.ownerReceiver = idx.ownerR > -1 ? data[i][idx.ownerR] : ""; 
+          results.locationWarehouse = idx.locW > -1 ? data[i][idx.locW] : ""; 
+          results.locationReceiver = idx.locR > -1 ? data[i][idx.locR] : ""; 
+          found = true; 
+        } 
+        results.items.push({ 
+          type: idx.type > -1 ? data[i][idx.type] : "", 
+          model: idx.model > -1 ? data[i][idx.model] : "", 
+          code: idx.code > -1 ? data[i][idx.code] : "", 
+          desc: idx.desc > -1 ? data[i][idx.desc] : "", 
+          qty: idx.qty > -1 ? data[i][idx.qty] : 0, 
+          sn: idx.sn > -1 ? data[i][idx.sn] : "" 
+        }); 
+      } 
+    }
     return found ? { success: true, data: results } : { success: false };
   } catch (e) { return { success: false, error: e.toString() }; }
 }
