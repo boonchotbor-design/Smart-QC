@@ -26,16 +26,15 @@ function searchByDuidOnly(duid) {
   if (!duid) return { success: false, message: "❌ (V.6.5.4) กรุณาระบุ DUID" };
   try {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheets = ss.getSheets();
+    var targetSheets = ["INOUT_HW_AIS", "INOUT_HW_TRUE"]; // เฉพาะเจาะจงเพื่อความเร็ว
     var groups = {}; 
     var found = false;
     var totalItemsCount = 0;
     var targetDuid = duid.toString().replace(/\s+/g, ' ').trim().toLowerCase();
 
-    // Priority: Transaction sheets (INOUT_HW_...)
-    sheets.forEach(function(sheet) {
-      var sName = sheet.getName();
-      if (sName.indexOf("INOUT") === -1) return; 
+    targetSheets.forEach(function(sName) {
+      var sheet = ss.getSheetByName(sName);
+      if (!sheet) return;
       
       var data = sheet.getDataRange().getValues();
       if (data.length < 2) return;
@@ -45,7 +44,6 @@ function searchByDuidOnly(duid) {
         duid: headerRow.indexOf("DUID"), 
         region: Math.max(headerRow.indexOf("REGION"), headerRow.indexOf("INTERNAL PROJECT")),
         transType: headerRow.indexOf("IN/OUT"),
-        itemType: headerRow.indexOf("TYPE"),
         billNo: Math.max(headerRow.indexOf("BILL NO"), headerRow.indexOf("BILL NO.")),
         model: headerRow.indexOf("MODEL"),
         sn: Math.max(headerRow.indexOf("SN"), headerRow.indexOf("SERIAL")),
@@ -60,25 +58,22 @@ function searchByDuidOnly(duid) {
       
       var customer = sName.indexOf("TRUE") > -1 ? "TRUE" : "AIS"; 
       
+      // วนลูปหาข้อมูล (ใช้ Reverse Loop หรือ Filter อาจจะเร็วขึ้นในบางกรณี แต่หัวใจคือลดจำนวน Sheet)
       for (var i = 1; i < data.length; i++) {
         var rawSheetDuid = String(data[i][idx.duid] || "");
-        var sheetDuid = rawSheetDuid.replace(/\s+/g, ' ').trim().toLowerCase();
+        if (rawSheetDuid.length < 5) continue; // Skip empty/short values fast
         
+        var sheetDuid = rawSheetDuid.replace(/\s+/g, ' ').trim().toLowerCase();
         if (sheetDuid === targetDuid) {
           var tType = (idx.transType > -1 ? String(data[i][idx.transType] || "").trim() : "").toUpperCase();
-          var iType = (idx.itemType > -1 ? String(data[i][idx.itemType] || "").trim() : "");
           var bNo = (idx.billNo > -1 ? String(data[i][idx.billNo] || "").trim() : "-");
-          
-          // Unique key to separate sections by Transaction, Bill, and Category
-          var groupKey = tType + "|" + bNo + "|" + iType + "|" + sName; 
+          var groupKey = tType + "|" + bNo + "|" + sName; 
           
           if (!groups[groupKey]) {
             groups[groupKey] = {
               header: {
                 customer: customer,
                 transType: tType,
-                itemType: iType,
-                jobType: tType + (iType ? " (" + iType + ")" : ""),
                 billNo: bNo,
                 region: (idx.region > -1 ? data[i][idx.region] : "-") || "-",
                 duid: data[i][idx.duid] || rawSheetDuid,
@@ -106,7 +101,7 @@ function searchByDuidOnly(duid) {
     if (!found) {
       return { 
         success: false, 
-        message: "❌ (V.6.5.4) ไม่พบข้อมูลการเคลื่อนไหวสำหรับ DUID: \"" + duid + "\"\nกรุณาตรวจสอบข้อมูลใน Sheet INOUT_HW ครับ" 
+        message: "❌ (V.6.5.4) ไม่พบข้อมูลเคลื่อนไหวสำหรับ DUID: \"" + duid + "\"\nกรุณาตรวจสอบว่าข้อมูลอยู่ในคอลัมน์ B หรือไม่ครับ" 
       };
     }
 
@@ -126,7 +121,6 @@ function formatDuidResponse(groups, totalItems) {
     if (idxA === -1) idxA = 99;
     if (idxB === -1) idxB = 99;
     if (idxA !== idxB) return idxA - idxB;
-    // ป้องกันการแครชโดยการแปลงเป็น String ก่อนเปรียบเทียบ
     return String(gA.billNo || "").localeCompare(String(gB.billNo || ""));
   });
 
@@ -140,8 +134,8 @@ function formatDuidResponse(groups, totalItems) {
     var text = "📊 ข้อมูล DUID: " + h.duid + "\n";
     text += "━━━━━━━━━━━━━━━\n";
     text += "👤 ลูกค้า: " + h.customer + "\n";
-    text += "🛠 งาน: " + h.jobType + "\n";
-    text += "📄 เลขที่บิล: " + h.billNo + "\n";
+    text += "🛠 งาน: " + h.transType + "\n";
+    text += "bill No : " + h.billNo + "\n";
     text += "📍 Region: " + h.region + "\n";
     text += "🆔 DUID: " + h.duid + "\n";
     text += "🏢 คลัง: " + h.ownerWarehouse + "\n";
@@ -149,7 +143,12 @@ function formatDuidResponse(groups, totalItems) {
     text += "📍 Loc Warehouse: " + h.locWarehouse + "\n";
     text += "📍 Loc Receiver: " + h.locReceiver + "\n";
     text += "━━━━━━━━━━━━━━━\n";
-    if (index === 0) text += "📦 รายการสินค้า (" + totalItems + " รายการ):\n";
+    
+    // แสดงจำนวนรวมเฉพาะกลุ่มแรกเท่านั้น
+    if (index === 0) {
+      text += "📦 รายการสินค้า (" + totalItems + " รายการ):\n";
+    }
+
     g.items.forEach(function(item) {
       globalItemCount++;
       text += "🔹 " + globalItemCount + ": " + (item.model || "NA") + "\n";

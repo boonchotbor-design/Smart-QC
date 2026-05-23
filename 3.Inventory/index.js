@@ -65,24 +65,41 @@ async function handleEvent(event) {
   }
 
   const userMessage = event.message.text.trim();
-  if (userMessage.length < 5) return null; // ข้ามคำทักทายสั้นๆ
+  if (userMessage.length < 5) return null; 
 
+  let replyText = "";
   try {
-    // 🚀 ส่งไปขอข้อความแบบจัดรูปแบบแล้ว (format=text) จาก Google Script โดยตรง
-    // สิ่งนี้จะทำให้ Logic การจัดรูปแบบทั้งหมดถูกควบคุมโดย Google Script ที่เราเพิ่งแก้ไป
-    const response = await axios.get(`${GAS_WEB_APP_URL}?duid=${encodeURIComponent(userMessage)}&format=text`);
-    const replyText = response.data; // ดึงข้อความดิบที่ GAS จัดรูปแบบมาให้แล้ว
+    const response = await axios.get(`${GAS_WEB_APP_URL}?duid=${encodeURIComponent(userMessage)}&format=text`, { timeout: 25000 });
+    replyText = response.data;
+
+    // ตรวจสอบว่า GAS ส่ง HTML กลับมาหรือไม่ (แสดงว่ามี Error ที่ฝั่ง GAS)
+    if (typeof replyText === 'string' && replyText.includes('<!DOCTYPE html>')) {
+      console.error('GAS returned HTML instead of text. Likely a runtime error.');
+      replyText = '❌ (V.6.5.4) Google Script เกิดข้อผิดพลาดภายใน (Runtime Error)';
+    }
+
+    // จำกัดความยาวไม่ให้เกิน 5000 ตัวอักษรตามกฎของ LINE
+    if (typeof replyText === 'string' && replyText.length > 5000) {
+      replyText = replyText.substring(0, 4900) + "\n\n... (ข้อมูลยาวเกินไป ถูกตัดออก)";
+    }
+
+    if (!replyText) replyText = "❌ (V.6.5.4) ไม่พบข้อมูลตอบกลับจากระบบ";
 
     return await client.replyMessage({
       replyToken: event.replyToken,
       messages: [{ type: 'text', text: replyText }]
     });
   } catch (err) {
-    console.error('Query Error:', err);
-    return await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [{ type: 'text', text: '⚠️ (V.6.5.4) เกิดข้อผิดพลาดในการเชื่อมต่อ Google Script' }]
-    });
+    console.error('Query Error:', err.message);
+    // พยายามตอบกลับด้วยข้อความ Error สั้นๆ
+    try {
+      return await client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{ type: 'text', text: '⚠️ (V.6.5.4) เกิดข้อผิดพลาดในการเชื่อมต่อ Google Script\n' + (err.message || '') }]
+      });
+    } catch (innerErr) {
+      console.error('Failed to send error message:', innerErr.message);
+    }
   }
 }
 
