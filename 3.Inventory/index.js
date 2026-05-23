@@ -40,44 +40,61 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
   const chatId = message.chat.id;
   const userMessage = message.text.trim();
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const gasUrl = process.env.GAS_WEB_APP_URL || GAS_WEB_APP_URL; // ใช้จาก env หรือตัวแปร global
+
+  console.log(`Telegram Request: ChatID=${chatId}, Msg=${userMessage}`);
 
   // จัดการคำสั่งพื้นฐาน
   if (userMessage.toLowerCase() === '/start') {
-    await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      chat_id: chatId,
-      text: "👋 ยินดีต้อนรับสู่ AI Inventory Bot (V.6.5.4)\n\nกรุณาส่ง DUID ที่ต้องการค้นหาข้อมูลได้เลยครับ"
-    });
+    try {
+      await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        chat_id: chatId,
+        text: "👋 ยินดีต้อนรับสู่ AI Inventory Bot (V.6.5.4)\n\nกรุณาส่ง DUID ที่ต้องการค้นหาข้อมูลได้เลยครับ"
+      });
+    } catch (e) {
+      console.error('Failed to send /start reply:', e.message);
+    }
     return res.status(200).send('OK');
   }
 
-  if (userMessage.length < 5 && !userMessage.startsWith('/')) return res.status(200).send('OK');
+  if (userMessage.length < 5 && !userMessage.startsWith('/')) {
+    return res.status(200).send('OK');
+  }
 
   try {
-    const response = await axios.get(`${GAS_WEB_APP_URL}?duid=${encodeURIComponent(userMessage)}&format=text`, { timeout: 25000 });
+    if (!gasUrl) throw new Error('GAS_WEB_APP_URL is not defined');
+
+    console.log(`Querying GAS for DUID: ${userMessage}`);
+    const response = await axios.get(`${gasUrl}?duid=${encodeURIComponent(userMessage)}&format=text`, { timeout: 20000 });
     let replyText = response.data;
 
     if (typeof replyText === 'string' && replyText.includes('<!DOCTYPE html>')) {
-      replyText = '❌ (V.6.5.4) Google Script เกิดข้อผิดพลาดภายใน (Runtime Error)';
+      replyText = '❌ (V.6.5.4) Google Script ยังไม่ถูกตั้งค่าเป็น "Anyone" หรือเกิด Runtime Error\nกรุณาตรวจสอบการตั้งค่า Deploy ใน Google Script ครับ';
     }
 
     if (!replyText) replyText = "❌ (V.6.5.4) ไม่พบข้อมูลตอบกลับจากระบบ";
 
+    console.log(`Sending reply to Telegram (Length: ${replyText.length})`);
     await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       chat_id: chatId,
       text: replyText
     });
   } catch (err) {
-    console.error('Telegram Error:', err.message);
-    await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      chat_id: chatId,
-      text: "⚠️ (V.6.5.4) เกิดข้อผิดพลาดในการเชื่อมต่อระบบ:\n" + (err.message || 'Unknown error')
-    });
+    console.error('Telegram Processing Error:', err.message);
+    try {
+      await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        chat_id: chatId,
+        text: "⚠️ (V.6.5.4) เกิดข้อผิดพลาด:\n" + (err.message || 'Unknown error')
+      });
+    } catch (innerErr) {
+      console.error('Failed to send error message:', innerErr.message);
+    }
   }
   res.status(200).send('OK');
 });
 
 // Endpoint สำหรับรับแจ้งเตือนเมื่อมีการบันทึกข้อมูล (Save Notification)
-app.post('/notify', express.json(), (req, res) => {
+app.post('/notify', express.json(), async (req, res) => {
   const { header, items } = req.body;
   if (!header) return res.status(400).send('Missing header');
 
@@ -90,17 +107,30 @@ app.post('/notify', express.json(), (req, res) => {
                       `📍 คลัง: ${header.ownerWarehouse || "-"}\n` +
                       `👷 ผู้รับ: ${header.ownerReceiver || "-"}`;
   
-  const destId = process.env.LINE_DESTINATION_ID || 'Cb4baf5e474773f54f2b6538e4cd4d9ac';
-
+  // 1. ส่งไป LINE
+  const lineDestId = process.env.LINE_DESTINATION_ID || 'Cb4baf5e474773f54f2b6538e4cd4d9ac';
   client.pushMessage({
-    to: destId,
+    to: lineDestId,
     messages: [{ type: 'text', text: messageText }]
-  })
-    .then(() => res.send('OK'))
-    .catch((err) => {
-      console.error('Push Error:', err);
-      res.status(500).send(err.toString());
-    });
+  }).catch(err => console.error('LINE Push Error:', err.message));
+
+  // 2. ส่งไป Telegram
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '7378939928'; // ใช้ ID จากรูปภาพที่ส่งมาล่าสุด
+
+  if (botToken && telegramDestId) {
+    try {
+      await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        chat_id: telegramDestId,
+        text: messageText
+      });
+      console.log('Telegram Notification Sent');
+    } catch (err) {
+      console.error('Telegram Push Error:', err.message);
+    }
+  }
+
+  res.send('OK');
 });
 
 async function handleEvent(event) {
