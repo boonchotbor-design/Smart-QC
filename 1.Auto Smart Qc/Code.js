@@ -1,8 +1,8 @@
 // =========================================================================
-// === AI SMART QC BOT - V.111 (VERCEL AI PROXY & ULTRA-STABLE) ===
+// === AI SMART QC BOT - V.112 (FIX LOOP & RESTORE REJECT BUTTON) ===
 // =========================================================================
 
-const VERSION = "V.111 (VERCEL-AI-INTEGRATION)"; 
+const VERSION = "V.112 (STABLE-FLOW)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA"; 
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7"; 
 const SHEET_NAME = "Dashboard"; 
@@ -32,25 +32,19 @@ function doGet() {
  */
 function doPost(e) {
   const cache = CacheService.getScriptCache();
-  const props = PropertiesService.getUserProperties();
   
   try {
     if (!e.postData || !e.postData.contents) return ContentService.createTextOutput("OK");
-    const contents = e.postData.contents;
-    const data = JSON.parse(contents);
+    const data = JSON.parse(e.postData.contents);
     
-    // 1. DEDUPLICATION (Prioritize Cache for Speed)
+    // 1. DEDUPLICATION
     const updateId = data.update_id ? "u_" + data.update_id : (data.events ? "e_" + data.events[0].webhookEventId : null);
     if (updateId) {
       if (cache.get(updateId)) return ContentService.createTextOutput("OK");
-      cache.put(updateId, "1", 600); // 10 minutes cache is enough for retries
-      
-      // Secondary check via Properties (if cache fails)
-      if (props.getProperty(updateId)) return ContentService.createTextOutput("OK");
-      props.setProperty(updateId, "1"); 
+      cache.put(updateId, "1", 600);
     }
 
-    // 2. BACKLOG PROTECTION (IGNORE MESSAGES OLDER THAN 2 MINS)
+    // 2. BACKLOG PROTECTION
     if (data.message && data.message.date) {
       const now = Math.floor(Date.now() / 1000);
       if (now - data.message.date > 120) return ContentService.createTextOutput("OK");
@@ -63,7 +57,7 @@ function doPost(e) {
       handleTelegramWebhook(data);
     }
 
-    // 4. ASYNC LOGGING (Last step to prevent blocking response)
+    // 4. ASYNC LOGGING
     try { logToSheet(data); } catch(l){}
 
   } catch (err) {
@@ -78,23 +72,28 @@ function doPost(e) {
 // =========================================================================
 
 function handleTelegramWebhook(data) {
-  const props = PropertiesService.getUserProperties();
+  const props = PropertiesService.getScriptProperties();
   
   // A. Callback Query
   if (data.callback_query) {
     const cb = data.callback_query; const cid = cb.message.chat.id; const mid = cb.message.message_id; const uid = "TG_" + cb.from.id; const val = cb.data;
     callTG("answerCallbackQuery", { callback_query_id: cb.id });
+    
     if (val === "cancel") { clearUser(uid); return editTG(cid, mid, "❌ ยกเลิกเรียบร้อย\nพิมพ์ 'ส่งงาน' เพื่อเริ่มใหม่"); } 
+    
     if (val.startsWith("pj|")) {
       const pj = val.split("|")[1]; props.setProperties({ [uid+"_p"]: pj, [uid+"_s"]: "W_TY" });
       return editTGInline(cid, mid, `📁 โปรเจกต์: <b>${pj}</b>\n⚡ ขั้นตอนที่ 2: เลือกประเภทงาน`, TYPE_LIST.map(t => ({ text: t, data: "ty|"+t })));
     } 
+    
     if (val.startsWith("ty|")) {
       const ty = val.split("|")[1]; props.setProperties({ [uid+"_t"]: ty, [uid+"_s"]: "W_SI" });
       const pj = props.getProperty(uid+"_p") || "-";
       return editTGInline(cid, mid, `📁 โปรเจกต์: <b>${pj}</b>\n⚡ ประเภท: <b>${ty}</b>\n\n🏢 <b>พิมพ์รหัส Site ครับ</b>`, []);
     }
+    
     if (val.startsWith("app|")) return processManualApprove(val.split("|")[1], cid);
+    if (val.startsWith("rej|")) return processManualReject(val.split("|")[1], cid);
     return;
   }
 
@@ -103,7 +102,7 @@ function handleTelegramWebhook(data) {
   if (!msg || (msg.from && msg.from.is_bot)) return;
 
   const cid = msg.chat.id; const uid = "TG_" + msg.from.id; let text = (msg.text || "").trim();
-  if (text.includes("@")) text = text.split("@")[0].trim(); // Handle bot mention in groups
+  if (text.includes("@")) text = text.split("@")[0].trim();
   const s = props.getProperty(uid + "_s") || "IDLE";
 
   if (text === "ส่งงาน" || text === "/start" || text === "สั่งงาน") {
@@ -125,9 +124,11 @@ function handleTelegramWebhook(data) {
     const site = text.toUpperCase();
     const pj = props.getProperty(uid+"_p") || "Unknown";
     const ty = props.getProperty(uid+"_t") || "Unknown";
-    const folder = getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), `${pj}_${ty}_${site}`);
-    props.setProperties({ [uid+"_site"]: site, [uid+"_s"]: "W_PH" });
-    return sendTG(cid, `✅ <b>Site: ${site}</b>\n📂 <b>Folder:</b> <a href="${folder.getUrl()}">คลิกเพื่อส่งรูป</a>\n\n📸 ส่งรูปในนี้หรือผ่านลิงก์ก็ได้ครับ\n(พิมพ์ 'จบงาน' เมื่อส่งครบ)`, ["จบงาน", "ยกเลิก"]);
+    try {
+      const folder = getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), `${pj}_${ty}_${site}`);
+      props.setProperties({ [uid+"_site"]: site, [uid+"_s"]: "W_PH" });
+      return sendTG(cid, `✅ <b>Site: ${site}</b>\n📂 <b>Folder:</b> <a href="${folder.getUrl()}">คลิกเพื่อส่งรูป</a>\n\n📸 ส่งรูปในนี้หรือผ่านลิงก์ก็ได้ครับ\n(พิมพ์ 'จบงาน' เมื่อส่งครบ)`, ["จบงาน", "ยกเลิก"]);
+    } catch(e) { return sendTG(cid, "⚠️ เกิดข้อผิดพลาดในการสร้างโฟลเดอร์ กรุณาลองใหม่", ["ส่งงาน"]); }
   }
 
   if (msg.photo && s === "W_PH") return processImage("TG", uid, cid, msg.photo[msg.photo.length - 1].file_id);
@@ -138,7 +139,7 @@ function handleTelegramWebhook(data) {
 // =========================================================================
 
 function handleLineWebhook(ev) {
-  const uid = "LINE_" + ev.source.userId; const props = PropertiesService.getUserProperties();
+  const uid = "LINE_" + ev.source.userId; const props = PropertiesService.getScriptProperties();
   if (ev.type === 'message' && ev.message.type === 'text') {
     const text = ev.message.text.trim(); const s = props.getProperty(uid + "_s") || "IDLE";
     if (text === "ส่งงาน" || text === "สั่งงาน") {
@@ -196,7 +197,10 @@ function sendDualSummary(site, pass, fail) {
 }
 
 function sendDualFailNotify(fn, cat, reason, url, fid) {
-  const tgKb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "🔍 ดูรูป", url: url }]] };
+  const tgKb = { inline_keyboard: [
+    [{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไม่อนุมัติ", callback_data: "rej|" + fid }],
+    [{ text: "🔍 ดูรูป", url: url }]
+  ]};
   callTG("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: `🚨 <b>งานไม่ผ่าน: ${fn}</b>\n📌 หมวด: ${cat}\n❌ สาเหตุ: ${reason}`, parse_mode: "HTML", reply_markup: tgKb });
   for (let id of LINE_TARGET_IDS) sendMsg(id, `🚨 ไม่ผ่าน: ${fn}\n📌 หมวด: ${cat}\n❌ สาเหตุ: ${reason}\n🔍 ดูรูป: ${url}`);
 }
@@ -215,7 +219,7 @@ function analyzeAI(file) {
 // =========================================================================
 
 function processImage(platform, uid, cid, mid) {
-  const props = PropertiesService.getUserProperties();
+  const props = PropertiesService.getScriptProperties();
   try {
     const pj = props.getProperty(uid+"_p") || "Unknown"; const ty = props.getProperty(uid+"_t") || "Unknown"; const site = props.getProperty(uid+"_site") || "Temp";
     const folder = getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), `${pj}_${ty}_${site}`);
@@ -239,8 +243,9 @@ function logToSheet(data) {
 }
 
 function clearUser(uid) {
-  const props = PropertiesService.getUserProperties();
-  props.setProperties({ [uid + "_s"]: "IDLE", [uid + "_p"]: "", [uid + "_t"]: "", [uid + "_site"]: "" });
+  const props = PropertiesService.getScriptProperties();
+  const keys = [uid + "_s", uid + "_p", uid + "_t", uid + "_site"];
+  for (let k of keys) props.deleteProperty(k);
 }
 
 function getOrCreateSubFolder(p, n) { 
@@ -285,6 +290,7 @@ function sendMsg(t, txt, q) {
 function getLineImg(id) { return UrlFetchApp.fetch(`https://api-data.line.me/v2/bot/message/${id}/content`, { headers: { Authorization: "Bearer " + LINE_CHANNEL_ACCESS_TOKEN } }).getBlob(); }
 
 function processManualApprove(fid, cid) { try { DriveApp.getFileById(fid).setDescription("PASS (Approved)"); sendTG(cid, "✅ อนุมัติสำเร็จ", ["ส่งงาน"]); } catch(e){} }
+function processManualReject(fid, cid) { try { sendTG(cid, "❌ ปฏิเสธการอนุมัติแล้ว", ["ส่งงาน"]); } catch(e){} }
 
 // =========================================================================
 // === [MAINTENANCE & KILL SWITCH] ===
@@ -300,7 +306,7 @@ function FIX_WEBHOOK() {
 function MASTER_CLEANUP_AND_RESET() {
   const ts = ScriptApp.getProjectTriggers();
   for (let t of ts) ScriptApp.deleteTrigger(t);
-  PropertiesService.getUserProperties().deleteAllProperties();
+  PropertiesService.getScriptProperties().deleteAllProperties();
   const url = WEB_APP_URL || ScriptApp.getService().getUrl();
   let res = "N/A";
   if (url) {
