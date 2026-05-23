@@ -41,11 +41,26 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
   const userMessage = message.text.trim();
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
-  if (userMessage.length < 5) return res.status(200).send('OK');
+  // จัดการคำสั่งพื้นฐาน
+  if (userMessage.toLowerCase() === '/start') {
+    await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      chat_id: chatId,
+      text: "👋 ยินดีต้อนรับสู่ AI Inventory Bot (V.6.5.4)\n\nกรุณาส่ง DUID ที่ต้องการค้นหาข้อมูลได้เลยครับ"
+    });
+    return res.status(200).send('OK');
+  }
+
+  if (userMessage.length < 5 && !userMessage.startsWith('/')) return res.status(200).send('OK');
 
   try {
     const response = await axios.get(`${GAS_WEB_APP_URL}?duid=${encodeURIComponent(userMessage)}&format=text`, { timeout: 25000 });
-    const replyText = response.data;
+    let replyText = response.data;
+
+    if (typeof replyText === 'string' && replyText.includes('<!DOCTYPE html>')) {
+      replyText = '❌ (V.6.5.4) Google Script เกิดข้อผิดพลาดภายใน (Runtime Error)';
+    }
+
+    if (!replyText) replyText = "❌ (V.6.5.4) ไม่พบข้อมูลตอบกลับจากระบบ";
 
     await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       chat_id: chatId,
@@ -53,6 +68,10 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
     });
   } catch (err) {
     console.error('Telegram Error:', err.message);
+    await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      chat_id: chatId,
+      text: "⚠️ (V.6.5.4) เกิดข้อผิดพลาดในการเชื่อมต่อระบบ:\n" + (err.message || 'Unknown error')
+    });
   }
   res.status(200).send('OK');
 });

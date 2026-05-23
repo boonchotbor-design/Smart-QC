@@ -8,11 +8,17 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - **Integration:** Telegram Bot API, Google Drive OCR
 - **Storage:** Google Sheets
 
+## 🚀 Telegram Bot Setup (V.6.5.4)
+- **Webhook:** ต้องตั้งค่าให้ชี้มาที่ Vercel เท่านั้น: `https://[YOUR_VERCEL_URL]/telegram-webhook`
+- **GAS Permissions:** ใน Google Apps Script ต้อง Deploy เป็น Web App โดยตั้งค่า **"Who has access" เป็น "Anyone"** (สำคัญมาก)
+- **Environment Variables:** ใน Vercel ต้องมี `TELEGRAM_BOT_TOKEN` และ `GAS_WEB_APP_URL` (ต้องเป็น URL ของ GAS ที่ลงท้ายด้วย `/exec`)
+
 ## 🚀 Workflow
 1. **Research:** Analyze `code.gs` (logic) and `app.html` (UI) before changes.
 2. **Strategy:** Propose changes ensuring compatibility between Web App and Telegram Bot.
 3. **Execution:** Surgical edits using `replace` or `write_file`.
 4. **Validation:** Verify function logic and UI responsiveness.
+5. **Deployment:** Redeploy to Vercel after changing `index.js` and ensure GAS is deployed as "Anyone".
 
 ## 📝 Recommended Prompts
 
