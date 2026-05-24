@@ -1,14 +1,14 @@
 // =========================================================================
-// === AI SMART QC BOT - V.112 (FIX LOOP & RESTORE REJECT BUTTON) ===
+// === AI SMART QC BOT - V.113 (GROQ DIRECT & ROBUST PARSING) ===
 // =========================================================================
 
-const VERSION = "V.112 (STABLE-FLOW)"; 
+const VERSION = "V.113 (GROQ-DIRECT)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA"; 
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7"; 
 const SHEET_NAME = "Dashboard"; 
 const SPREADSHEET_ID = "1-D-YNXQwAoIAgpTxUGvgY-6caRtuMgarZ68wwA6jmnA"; 
 
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyL9UWyBYXA7707z3eBiNYCvIoCszDu2ZNn_iZ1udkZlYqpEj3h8TzXQz_MQxcF1h8Dwg/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwlhZ_vy7_gZ8gQOvnY0PIu_1O_VVEuOFLtvXIORtT76F1bX4fSd4Frj6tUkY3-pd2YAg/exec";
 
 const PROJECT_LIST = ["HAE", "TME", "HAB", "TMT"];
 const TYPE_LIST = ["MBB", "POWER"];
@@ -16,15 +16,248 @@ const TYPE_LIST = ["MBB", "POWER"];
 // --- [API CONFIG] ---
 const TELEGRAM_BOT_TOKEN = "8625222790:AAHjU70oWGm88NyUaXaWIDJveo3b2KpnG90"; 
 const TELEGRAM_TARGET_ID = "-5199951121"; 
-const GROQ_API_KEY = "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";
-const VERCEL_AI_URL = "https://vipcode-ai-inspector-jwrscvlrc-boonchot-boriwut-s-projects.vercel.app/v1/chat/completions";
+const GROQ_KEYS = [
+  "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",
+  "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",
+  "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",
+  "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"
+];
+const GROQ_AI_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // --- [LINE CONFIG] ---
 const LINE_CHANNEL_ACCESS_TOKEN = "CnFH9VFWVp7HttiDfE56k2lCZ6aUlnETSKL9yA6Oj5f3Gb1lP6iR6CPGiEdz/8BNJUHtDcDU51y+K+o83fNoEkeKROSQ74PMlCuTErmr4clyWjzAWD27z/SQfFtYz3ALQ2+TqU06ZVoD7ASnbwD3NwdB04t89/1O/w1cDnyilFU="; 
 const LINE_TARGET_IDS = ["C5a1893cfbad69376b46bb90b0829019e"]; 
 
-function doGet() {
-  return ContentService.createTextOutput(`🤖 Bot (${VERSION}) is READY.`);
+function doGet(e) {
+  // Robust parameter extraction
+  let params = {};
+  if (e && e.parameter) params = e.parameter;
+  if (e && e.queryString) {
+    const pairs = e.queryString.split("&");
+    pairs.forEach(p => {
+      const parts = p.split("=");
+      if (parts.length === 2) params[parts[0]] = decodeURIComponent(parts[1]);
+    });
+  }
+
+  const action = (params.action || "").toLowerCase();
+  console.log("doGet Action Received:", action);
+  console.log("Full Params:", JSON.stringify(params));
+
+  try {
+    if (action === "getdata") {
+      const site = params.site || "All Sites";
+      return jsonResponse(getDashboardData(site));
+    }
+    
+    if (action === "listfolders") {
+      return jsonResponse(listSubFolders());
+    }
+    
+    if (action === "listfiles") {
+      return jsonResponse(listFilesInFolder(params.folderId));
+    }
+    
+    if (action === "processfolder") {
+      return jsonResponse(processFolderById(params.folderId));
+    }
+
+    return jsonResponse({ 
+      status: "READY", 
+      message: "No action matched",
+      receivedAction: action,
+      receivedParams: params 
+    });
+  } catch (err) {
+    return jsonResponse({ error: err.toString() });
+  }
+}
+
+/**
+ * Helper to return JSON output
+ */
+function jsonResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Lists all subfolders in the root FOLDER_ID
+ */
+function listSubFolders() {
+  try {
+    const root = DriveApp.getFolderById(FOLDER_ID);
+    const subs = root.getFolders();
+    const result = [];
+    while (subs.hasNext()) {
+      const f = subs.next();
+      result.push({ 
+        id: f.getId(), 
+        name: f.getName(), 
+        fileCount: 0, // Simplified: skip counting for now to ensure speed
+        date: f.getLastUpdated().toISOString() 
+      });
+    }
+    return result;
+  } catch (e) {
+    return { error: "Drive Error: " + e.toString() };
+  }
+}
+
+/**
+ * Lists all files in a specific folder
+ */
+function listFilesInFolder(folderId) {
+  try {
+    const folder = DriveApp.getFolderById(folderId);
+    const files = folder.getFiles();
+    const result = [];
+    while (files.hasNext()) {
+      const f = files.next();
+      if (!f.getDescription() || !f.getDescription().includes("PAT_CHECKED")) {
+        result.push({ 
+          id: f.getId(), 
+          name: f.getName(), 
+          size: (f.getSize() / 1024).toFixed(0) + " KB", 
+          date: f.getLastUpdated().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        });
+      }
+    }
+    return result;
+  } catch (e) {
+    return { error: e.toString() };
+  }
+}
+
+/**
+ * Manually trigger processing for a specific folder
+ */
+function processFolderById(folderId) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (e) { return { error: "System busy, please try again." }; }
+
+  try {
+    const folder = DriveApp.getFolderById(folderId);
+    const siteName = folder.getName();
+    const files = folder.getFiles();
+    const toProcess = [];
+    while (files.hasNext()) {
+      const f = files.next();
+      if (!f.getDescription() || !f.getDescription().includes("PAT_CHECKED")) {
+        toProcess.push(f);
+      }
+    }
+
+    if (toProcess.length === 0) return { success: true, count: 0, message: "No files to process" };
+
+    const summary = processFileList(toProcess, siteName);
+    return { success: true, ...summary };
+  } catch (e) {
+    return { error: e.toString() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Core processing logic for a list of files
+ */
+function processFileList(files, siteName) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+  let pass = 0, fail = 0;
+  const results = [];
+
+  for (let f of files) {
+    try {
+      const ai = analyzeAI(f);
+      if (!ai || ai.status === "ERROR") {
+        results.push({ name: f.getName(), status: "ERROR", reason: ai?.reason || "Unknown AI error" });
+        continue;
+      }
+
+      const status = ai.status.toUpperCase();
+      sheet.appendRow([new Date(), f.getName(), ai.sheetReference, status, ai.reason, f.getUrl(), f.getId()]);
+      
+      const destFolder = getOrCreateSubFolder(getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), siteName), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference);
+      f.moveTo(destFolder);
+      f.setDescription(`PAT_CHECKED: ${status} | ${f.getDescription() || ""}`);
+
+      results.push({ name: f.getName(), status: status, reason: ai.reason });
+      if (status === "PASS") pass++; else {
+        fail++;
+        sendDualFailNotify(f.getName(), ai.sheetReference, ai.reason, f.getUrl(), f.getId());
+      }
+    } catch (e) {
+      results.push({ name: f.getName(), status: "ERROR", reason: e.toString() });
+    }
+  }
+
+  if (pass + fail > 0) {
+    sendDualSummary(siteName, pass, fail);
+  }
+
+  return { total: files.length, pass: pass, fail: fail, details: results };
+}
+
+/**
+ * Summarizes data for the Executive Dashboard with optional site filtering
+ */
+function getDashboardData(siteFilter) {
+  const ss = getSpreadsheet();
+  if (!ss) return { error: "Spreadsheet not found" };
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) return { error: "Sheet not found" };
+
+  const values = sheet.getDataRange().getValues();
+  const folderList = listSubFolders();
+  
+  if (values.length <= 1) return { 
+    metrics: { workOrders: 0, plan: 12.5, income: 15.2, rate: 0 },
+    statusBreakdown: [],
+    teamWorkload: [],
+    folders: folderList
+  };
+
+  let dataRows = values.slice(1); // Remove header
+  
+  // Apply Site Filter
+  if (siteFilter && siteFilter !== "All Sites") {
+    // Basic filter: check if filename contains site name (standard practice in this bot)
+    dataRows = dataRows.filter(row => String(row[1]).includes(siteFilter));
+  }
+
+  // Status Breakdown calculation
+  const statusMap = {};
+  dataRows.forEach(row => {
+    const status = String(row[3] || "UNKNOWN").toUpperCase();
+    const cleanStatus = status.includes("PASS") ? "PASS" : (status.includes("FAIL") ? "FAIL" : "PENDING");
+    statusMap[cleanStatus] = (statusMap[cleanStatus] || 0) + 1;
+  });
+
+  const statusBreakdown = Object.keys(statusMap).map(k => ({ name: k, value: statusMap[k] }));
+
+  const workOrders = dataRows.length;
+  const passCount = dataRows.filter(r => String(r[3]).includes("PASS")).length;
+  const completionRate = workOrders > 0 ? (passCount / workOrders) * 100 : 0;
+
+  return {
+    metrics: {
+      workOrders: workOrders,
+      plan: 12.5, 
+      income: 15.2, 
+      rate: completionRate.toFixed(1)
+    },
+    statusBreakdown: statusBreakdown,
+    teamWorkload: [
+      { name: 'Team 1', Completed: Math.min(passCount, 15), InProgress: 10, OnService: 5, Pending: 2 },
+      { name: 'Team 2', Completed: Math.max(0, passCount - 15), InProgress: 15, OnService: 3, Pending: 4 },
+      { name: 'Team 3', Completed: 0, InProgress: 5, OnService: 8, Pending: 1 }
+    ],
+    folders: folderList,
+    updatedAt: new Date().toISOString()
+  };
 }
 
 /**
@@ -103,17 +336,23 @@ function handleTelegramWebhook(data) {
 
   const cid = msg.chat.id; const uid = "TG_" + msg.from.id; let text = (msg.text || "").trim();
   if (text.includes("@")) text = text.split("@")[0].trim();
+  const lowerText = text.toLowerCase();
   const s = props.getProperty(uid + "_s") || "IDLE";
 
-  if (text === "ส่งงาน" || text === "/start" || text === "สั่งงาน") {
+  // Diagnostic Commands
+  if (lowerText === "/id" || lowerText === "/check" || lowerText === "id") {
+    return sendTG(cid, `🆔 <b>Chat ID:</b> <code>${cid}</code>\n👤 <b>User ID:</b> <code>${uid}</code>\n📦 <b>Version:</b> ${VERSION}\n📂 <b>State:</b> ${s}`, ["ส่งงาน"]);
+  }
+
+  if (lowerText === "ส่งงาน" || lowerText === "/start" || lowerText === "สั่งงาน") {
     clearUser(uid); props.setProperty(uid + "_s", "W_PJ");
     return sendTGInline(cid, "🏗️ ขั้นตอนที่ 1: เลือก Project ครับ", PROJECT_LIST.map(p => ({ text: p, data: "pj|"+p })));
   }
   
-  if (text === "/status") return sendTG(cid, `🤖 <b>Status:</b> ACTIVE\n📦 <b>Version:</b> ${VERSION}\n📂 <b>State:</b> ${s}`, ["ส่งงาน"]);
+  if (lowerText === "/status") return sendTG(cid, `🤖 <b>Status:</b> ACTIVE\n📦 <b>Version:</b> ${VERSION}\n📂 <b>State:</b> ${s}`, ["ส่งงาน"]);
   
-  if (text === "จบงาน" || text === "ยกเลิก" || text === "/stop" || text === "เสร็จแล้ว") {
-    if ((text === "จบงาน" || text === "เสร็จแล้ว") && s === "W_PH") {
+  if (lowerText === "จบงาน" || lowerText === "ยกเลิก" || lowerText === "/stop" || lowerText === "เสร็จแล้ว") {
+    if ((lowerText === "จบงาน" || lowerText === "เสร็จแล้ว") && s === "W_PH") {
       sendTG(cid, "✅ รับทราบ! สั่ง AI ตรวจทันทีครับ\n(รอสรุปผล 1-3 นาที)", ["ส่งงาน"]);
       ScriptApp.newTrigger('runPatInspector').timeBased().after(1000).create();
     } else { sendTG(cid, "❌ ยกเลิกเรียบร้อย", ["ส่งงาน"]); }
@@ -170,30 +409,48 @@ function handleLineWebhook(ev) {
 // =========================================================================
 
 function runPatInspector() {
-  const ts = ScriptApp.getProjectTriggers(); for (let t of ts) { if (t.getHandlerFunction() === 'runPatInspector') ScriptApp.deleteTrigger(t); }
-  const ss = getSpreadsheet(); if (!ss) return;
-  let sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
-  const files = getAllRecursiveFiles(DriveApp.getFolderById(FOLDER_ID), ARCHIVE_FOLDER_ID);
-  let countPass = 0, countFail = 0, currentSite = "Unknown";
-  for (let f of files) {
-    if (f.getDescription() && f.getDescription().includes("PAT_CHECKED")) continue;
-    try {
-      const parent = f.getParents().next(); currentSite = parent.getName();
-      const ai = analyzeAI(f); const status = ai.status.toUpperCase();
-      sheet.appendRow([new Date(), f.getName(), ai.sheetReference, status, ai.reason, f.getUrl(), f.getId()]);
-      const destFolder = getOrCreateSubFolder(getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), currentSite), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference);
-      f.moveTo(destFolder); f.setDescription(`PAT_CHECKED: ${status} | ${f.getDescription() || ""}`);
-      if (status === "PASS") countPass++; 
-      else { countFail++; sendDualFailNotify(f.getName(), ai.sheetReference, ai.reason, f.getUrl(), f.getId()); }
-    } catch (e) {}
+  console.log("Starting runPatInspector...");
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (e) {
+    console.error("Could not obtain lock for runPatInspector: " + e.toString());
+    return;
   }
-  if (countPass + countFail > 0) sendDualSummary(currentSite, countPass, countFail);
-}
 
+  try {
+    const ts = ScriptApp.getProjectTriggers(); for (let t of ts) { if (t.getHandlerFunction() === 'runPatInspector') ScriptApp.deleteTrigger(t); }
+    
+    const rootFolder = DriveApp.getFolderById(FOLDER_ID);
+    const allFiles = getAllRecursiveFiles(rootFolder, ARCHIVE_FOLDER_ID);
+    const toProcess = allFiles.filter(f => !f.getDescription() || !f.getDescription().includes("PAT_CHECKED"));
+    
+    console.log(`Found ${toProcess.length} new files to check.`);
+    if (toProcess.length === 0) return;
+
+    // Group files by parent folder (site name) for better summarization
+    const groups = {};
+    toProcess.forEach(f => {
+      const p = f.getParents().next();
+      const pId = p.getId();
+      if (!groups[pId]) groups[pId] = { name: p.getName(), files: [] };
+      groups[pId].files.push(f);
+    });
+
+    for (let pId in groups) {
+      console.log(`Processing group: ${groups[pId].name}`);
+      processFileList(groups[pId].files, groups[pId].name);
+    }
+  } catch (e) {
+    console.error(`runPatInspector Error: ${e.toString()}`);
+  } finally {
+    lock.releaseLock();
+  }
+}
 function sendDualSummary(site, pass, fail) {
   const txt = `📊 <b>สรุปผล AI (${site})</b>\n✅ ผ่าน: ${pass}\n❌ ไม่ผ่าน: ${fail}`;
+  console.log(`Sending Summary to TG (${TELEGRAM_TARGET_ID})`);
   sendTG(TELEGRAM_TARGET_ID, txt, ["ส่งงาน"]);
-  for (let id of LINE_TARGET_IDS) sendMsg(id, txt.replace(/<[^>]*>/g, ""), ["ส่งงาน"]);
 }
 
 function sendDualFailNotify(fn, cat, reason, url, fid) {
@@ -201,17 +458,97 @@ function sendDualFailNotify(fn, cat, reason, url, fid) {
     [{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไม่อนุมัติ", callback_data: "rej|" + fid }],
     [{ text: "🔍 ดูรูป", url: url }]
   ]};
-  callTG("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: `🚨 <b>งานไม่ผ่าน: ${fn}</b>\n📌 หมวด: ${cat}\n❌ สาเหตุ: ${reason}`, parse_mode: "HTML", reply_markup: tgKb });
-  for (let id of LINE_TARGET_IDS) sendMsg(id, `🚨 ไม่ผ่าน: ${fn}\n📌 หมวด: ${cat}\n❌ สาเหตุ: ${reason}\n🔍 ดูรูป: ${url}`);
+  const txt = `🚨 <b>ตรวจพบงานไม่ผ่าน</b>\n📄 ไฟล์: ${fn}\n📌 หมวด: ${cat}\n❌ สาเหตุ: ${reason}`;
+  console.log(`Sending Fail Notify to TG (${TELEGRAM_TARGET_ID}) for file: ${fn}`);
+  callTG("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: txt, parse_mode: "HTML", reply_markup: tgKb });
 }
 
 function analyzeAI(file) {
   const b64 = Utilities.base64Encode(file.getBlob().getBytes());
-  const res = UrlFetchApp.fetch(VERCEL_AI_URL, { 
-    method: "post", headers: { Authorization: "Bearer " + GROQ_API_KEY, "Content-Type": "application/json" }, 
-    payload: JSON.stringify({ "model": "llama-3.2-11b-vision-preview", "messages": [{ "role": "user", "content": [{ "type": "text", "text": "Analyze cell site installation photo and output EXACT JSON: {\"sheetReference\": \"...\", \"status\": \"PASS/FAIL\", \"reason\": \"Thai reason if FAIL\"}" }, { "type": "image_url", "image_url": { "url": `data:image/jpeg;base64,${b64}` } }] }], "response_format": { "type": "json_object" } }), muteHttpExceptions: true 
-  });
-  return JSON.parse(JSON.parse(res.getContentText()).choices[0].message.content);
+  const promptText = `Analyze this Telecom site photo very carefully.
+  1. IDENTIFY: What is in the photo? (e.g. Battery Bank, Rectifier Cabinet, Cable Management, Site Label, Grounding Bar).
+  2. QUALITY CHECK: Does it look professionally installed? 
+     - Check for: Label clarity, cable neatness, secure mounting, and overall cleanliness.
+  3. DECIDE: Set status to PASS if it looks correct, or FAIL if there are visible issues.
+  4. REASON: If FAIL, explain exactly what is wrong in THAI language.
+  
+  MANDATORY JSON OUTPUT:
+  {
+    "sheetReference": "Category Name Here",
+    "status": "PASS or FAIL",
+    "reason": "Thai explanation here"
+  }`;
+
+  const payload = { 
+    "model": "meta-llama/llama-4-scout-17b-16e-instruct", 
+    "messages": [{ 
+      "role": "user", 
+      "content": [
+        { "type": "text", "text": promptText }, 
+        { "type": "image_url", "image_url": { "url": `data:image/jpeg;base64,${b64}` } }
+      ] 
+    }], 
+    "response_format": { "type": "json_object" } 
+  };
+
+  let lastError = "";
+  for (let i = 0; i < GROQ_KEYS.length; i++) {
+    const apiKey = GROQ_KEYS[i];
+    try {
+      const res = UrlFetchApp.fetch(GROQ_AI_URL, { 
+        method: "post", 
+        headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" }, 
+        payload: JSON.stringify(payload), 
+        muteHttpExceptions: true 
+      });
+
+      const contentText = res.getContentText();
+      const responseCode = res.getResponseCode();
+
+      if (responseCode === 200) {
+        const json = JSON.parse(contentText);
+        if (!json.choices || !json.choices[0] || !json.choices[0].message) {
+          lastError = "AI Response Missing Content";
+          continue;
+        }
+
+        let content = json.choices[0].message.content;
+        if (content.includes("```")) {
+          content = content.replace(/```json/g, "").replace(/```/g, "").trim();
+        }
+        
+        try {
+          const aiResponse = JSON.parse(content);
+          // Validate required fields
+          if (!aiResponse.status || !aiResponse.sheetReference) {
+            lastError = "AI JSON missing fields: " + content.substring(0, 50);
+            continue;
+          }
+          console.log(`AI Success for ${file.getName()}: ${aiResponse.status}`);
+          return aiResponse;
+        } catch(e) {
+          lastError = "JSON Parse Error: " + content.substring(0, 50);
+          continue;
+        }
+      } else if (responseCode === 429) {
+        lastError = "Rate Limit (Key " + (i + 1) + ")";
+        continue;
+      } else {
+        try {
+          const errJson = JSON.parse(contentText);
+          lastError = "API " + responseCode + ": " + (errJson.error?.message || contentText).substring(0, 100);
+        } catch(e) {
+          lastError = "API Error: HTTP " + responseCode;
+        }
+        continue;
+      }
+    } catch (e) {
+      lastError = "System Error (Key " + (i + 1) + "): " + e.toString().substring(0, 100);
+      continue;
+    }
+  }
+
+  return { status: "ERROR", reason: lastError || "All API keys failed" };
 }
 
 // =========================================================================
@@ -260,7 +597,16 @@ function getAllRecursiveFiles(folder, excludeId) {
 }
 
 // --- [TELEGRAM HELPERS] ---
-function callTG(m, p) { return UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${m}`, { method: "post", contentType: "application/json", payload: JSON.stringify(p), muteHttpExceptions: true }); }
+function callTG(m, p) { 
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${m}`;
+  const res = UrlFetchApp.fetch(url, { method: "post", contentType: "application/json", payload: JSON.stringify(p), muteHttpExceptions: true });
+  if (res.getResponseCode() !== 200) {
+    console.error(`TG API Error (${m}): ${res.getContentText()}`);
+  } else {
+    console.log(`TG API Success (${m})`);
+  }
+  return res;
+}
 function sendTG(cid, txt, buttons) {
   let kb = { keyboard: [], resize_keyboard: true, one_time_keyboard: true };
   if (buttons) { let row = []; buttons.forEach(b => { row.push({ text: String(b) }); if (row.length === 2) { kb.keyboard.push(row); row = []; } }); if (row.length > 0) kb.keyboard.push(row); } else { kb = { remove_keyboard: true }; }
@@ -289,8 +635,101 @@ function sendMsg(t, txt, q) {
 }
 function getLineImg(id) { return UrlFetchApp.fetch(`https://api-data.line.me/v2/bot/message/${id}/content`, { headers: { Authorization: "Bearer " + LINE_CHANNEL_ACCESS_TOKEN } }).getBlob(); }
 
-function processManualApprove(fid, cid) { try { DriveApp.getFileById(fid).setDescription("PASS (Approved)"); sendTG(cid, "✅ อนุมัติสำเร็จ", ["ส่งงาน"]); } catch(e){} }
-function processManualReject(fid, cid) { try { sendTG(cid, "❌ ปฏิเสธการอนุมัติแล้ว", ["ส่งงาน"]); } catch(e){} }
+function processManualApprove(fid, cid) {
+  try {
+    const file = DriveApp.getFileById(fid);
+    const fileName = file.getName();
+    
+    // 1. Update Sheet: Status to PASS (Approved) and Green highlight
+    const rowData = updateSheetStatus(fid, "PASS (Approved โดยแอดมิน)", "#98fb98"); 
+    
+    if (rowData) {
+      const category = rowData[2]; // Column C: sheetReference
+      
+      // 2. Move File to the correct category folder (removing FAIL_ prefix)
+      moveFileToApproved(file, category);
+      
+      // 3. Update File Description to avoid re-processing and record approval
+      file.setDescription("PASS (Approved by Admin) | " + file.getDescription());
+      
+      // 4. Notify Technician (Feedback Loop)
+      notifyTechnician(file, fileName);
+      
+      sendTG(cid, `✅ อนุมัติสำเร็จ: <b>${fileName}</b>\nสถานะถูกเปลี่ยนเป็น PASS ใน Google Sheet แล้ว`, ["ส่งงาน"]);
+    } else {
+      sendTG(cid, "❌ ไม่พบข้อมูลไฟล์นี้ใน Google Sheet ไม่สามารถดำเนินการต่อได้", ["ส่งงาน"]);
+    }
+  } catch (e) {
+    console.error("Error in processManualApprove: " + e.toString());
+    sendTG(cid, "⚠️ เกิดข้อผิดพลาด: " + e.toString(), ["ส่งงาน"]);
+  }
+}
+
+function processManualReject(fid, cid) { 
+  try {
+    const file = DriveApp.getFileById(fid);
+    updateSheetStatus(fid, "FAIL (Rejected โดยแอดมิน)", "#ffcccb"); // Light Red
+    sendTG(cid, `❌ ปฏิเสธการอนุมัติสำหรับไฟล์: <b>${file.getName()}</b>`, ["ส่งงาน"]); 
+  } catch(e){
+    sendTG(cid, "❌ ปฏิเสธการอนุมัติแล้ว (ไม่พบไฟล์)", ["ส่งงาน"]);
+  }
+}
+
+/**
+ * Updates status and background color in Google Sheet based on File ID
+ */
+function updateSheetStatus(fid, newStatus, color) {
+  const ss = getSpreadsheet();
+  if (!ss) return null;
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) return null;
+  
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][6] === fid) { // Column G is index 6
+      sheet.getRange(i + 1, 4).setValue(newStatus); // Column D is index 4
+      sheet.getRange(i + 1, 1, 1, sheet.getLastColumn()).setBackground(color);
+      return data[i]; // Return row data for category info
+    }
+  }
+  return null;
+}
+
+/**
+ * Moves file from FAIL_category to category subfolder
+ */
+function moveFileToApproved(file, category) {
+  try {
+    const currentFolder = file.getParents().next(); // Should be FAIL_category
+    const siteFolder = currentFolder.getParents().next(); // Should be Site name folder
+    const destFolder = getOrCreateSubFolder(siteFolder, category);
+    file.moveTo(destFolder);
+  } catch (e) {
+    console.error("Error moving file: " + e.toString());
+  }
+}
+
+/**
+ * Identifies the technician and sends an approval notification
+ */
+function notifyTechnician(file, fileName) {
+  const desc = file.getDescription() || "";
+  const match = desc.match(/UPLOADER:(LINE|TG)_(\S+)/);
+  if (match) {
+    const platform = match[1];
+    const uid = match[2];
+    const msg = `🎉 แจ้งเตือนจาก PM: รูปภาพไซต์งานของคุณ (${fileName}) ที่ AI เคยประเมินไม่ผ่าน ได้รับการตรวจและ Approved โดยทีมงานเรียบร้อยแล้วครับ!`;
+    
+    if (platform === "LINE") {
+      sendMsg(uid, msg);
+    } else {
+      // For Telegram, if it's a private chat ID, we can send it directly
+      if (!uid.startsWith("-")) {
+        sendTG(uid, msg);
+      }
+    }
+  }
+}
 
 // =========================================================================
 // === [MAINTENANCE & KILL SWITCH] ===
