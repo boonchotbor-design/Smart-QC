@@ -2,7 +2,7 @@
   "name": "teloneer-dashboard",
   "private": true,
   "version": "0.1.0",
-  "homepage": "https://boonchotbor-design.github.io/Vipcode-AI-Inspector",
+  "homepage": "https://boonchotbor-design.github.io/Smart-QC",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -8,7 +8,7 @@ const ARCHIVE_FOLDER_ID = "YOUR_ARCHIVE_FOLDER_ID";
 const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID"; 
 const SHEET_NAME = "Sheet1"; 
 
-const WEB_APP_URL = "YOUR_WEB_APP_URL";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwlhZ_vy7_gZ8gQOvnY0PIu_1O_VVEuOFLtvXIORtT76F1bX4fSd4Frj6tUkY3-pd2YAg/exec";
 
 const PROJECT_LIST = ["HAE", "TME", "TMT", "HAT", "HTB", "HSN", "TMB", "HNN"];
 const TYPE_LIST = ["MBB", "POWER", "SOLACELL", "SMALL DC", "IPRAN"];
