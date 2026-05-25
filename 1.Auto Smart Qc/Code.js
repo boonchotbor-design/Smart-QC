@@ -3,29 +3,38 @@
 // =========================================================================
 
 const VERSION = "V.119 (DETAILED-FEEDBACK)"; 
-const FOLDER_ID = "YOUR_FOLDER_ID"; 
-const ARCHIVE_FOLDER_ID = "YOUR_ARCHIVE_FOLDER_ID"; 
-const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID"; 
-const SHEET_NAME = "Sheet1"; 
+const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
+const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
+const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c";
+const SHEET_NAME = "Sheet1";
 
-const WEB_APP_URL = "YOUR_WEB_APP_URL";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwlhZ_vy7_gZ8gQOvnY0PIu_1O_VVEuOFLtvXIORtT76F1bX4fSd4Frj6tUkY3-pd2YAg/exec";
 
 const PROJECT_LIST = ["HAE", "TME", "TMT", "HAT", "HTB", "HSN", "TMB", "HNN"];
 const TYPE_LIST = ["MBB", "POWER", "SOLACELL", "SMALL DC", "IPRAN"];
 
+// --- [AUTH CONFIG] ---
+const AUTH_PASSWORD = "QC-ADMIN-2024"; 
+const ALLOWED_USERS = [
+  "adisak.chanmao@teloneer.com",
+  "boonchot.boriwut@teloneer.com",
+  "apichart.kampuang@teloneer.com",
+  "pakpoom.t@teloneer.com"
+];
+
 // --- [API CONFIG] ---
-const TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"; 
-const TELEGRAM_TARGET_ID = "YOUR_TELEGRAM_CHAT_ID"; 
+const TELEGRAM_BOT_TOKEN = "8625222790:AAHjU70oWGm88NyUaXaWIDJveo3b2KpnG90"; 
+const TELEGRAM_TARGET_ID = "-5199951121";
 const GROQ_KEYS = [
-  "YOUR_GROQ_API_KEY_1",
-  "YOUR_GROQ_API_KEY_2",
-  "YOUR_GROQ_API_KEY_3",
-  "YOUR_GROQ_API_KEY_4"
+  "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",
+  "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",
+  "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",
+  "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"
 ];
 const GROQ_AI_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // --- [LINE CONFIG] ---
-const LINE_CHANNEL_ACCESS_TOKEN = "YOUR_LINE_CHANNEL_ACCESS_TOKEN"; 
+const LINE_CHANNEL_ACCESS_TOKEN = "CnFH9VFWVp7HttiDfE56k2lCZ6aUlnETSKL9yA6Oj5f3Gb1lP6iR6CPGiEdz/8BNJUHtDcDU51y+K+o83fNoEkeKROSQ74PMlCuTErmr4clyWjzAWD27z/SQfFtYz3ALQ2+TqU06ZVoD7ASnbwD3NwdB04t89/1O/w1cDnyilFU="; 
 
 function doGet(e) {
   let params = {};
@@ -33,6 +42,8 @@ function doGet(e) {
   const action = (params.action || "").toLowerCase();
   try {
     if (action === "getdata") return jsonResponse(getDashboardData(params.site || "All Sites"));
+    if (action === "sendotp") return jsonResponse(sendOTP(params.email, params.password));
+    if (action === "verifyotp") return jsonResponse(verifyOTP(params.email, params.otp));
     if (action === "listfolders") {
       const folders = listSubFolders();
       const rootFolder = DriveApp.getFolderById(FOLDER_ID);
@@ -73,6 +84,53 @@ function doPost(e) {
   return ContentService.createTextOutput("OK");
 }
 
+function verifyOTP(email, otp) {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get("OTP_" + email);
+  if (cached && cached === otp) {
+    cache.remove("OTP_" + email);
+    return { success: true };
+  }
+  return { error: "Invalid or expired OTP" };
+}
+
+function sendOTP(email, password) {
+  if (password !== AUTH_PASSWORD) {
+    return { error: "รหัสผ่านไม่ถูกต้อง" };
+  }
+  
+  if (!ALLOWED_USERS.includes(email.toLowerCase().trim())) {
+    return { error: "คุณไม่มีสิทธิ์เข้าใช้งาน" };
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const cache = CacheService.getScriptCache();
+  cache.put("OTP_" + email, otp, 600); // 10 minutes
+
+  try {
+    MailApp.sendEmail({
+      to: email,
+      subject: "Verification Code - AI SMART QC",
+      htmlBody: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #3b82f6;">AI SMART QC Verification</h2>
+          <p>Your verification code is:</p>
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1e293b; padding: 20px; background: #f1f5f9; border-radius: 8px; text-align: center; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p>This code will expire in 10 minutes.</p>
+          <p style="font-size: 12px; color: #666; margin-top: 40px;">
+            If you did not request this code, please ignore this email.
+          </p>
+        </div>
+      `
+    });
+    return { success: true };
+  } catch (e) {
+    return { error: "Failed to send email: " + e.toString() };
+  }
+}
+
 function listSubFolders() {
   try {
     const root = DriveApp.getFolderById(FOLDER_ID);
@@ -80,9 +138,16 @@ function listSubFolders() {
     const result = [];
     while (subs.hasNext()) {
       const f = subs.next();
-      result.push({ id: f.getId(), name: f.getName(), fileCount: 0, date: f.getLastUpdated().toISOString() });
+      result.push({ 
+        id: f.getId(), 
+        name: f.getName(), 
+        fileCount: 0, 
+        date: f.getLastUpdated().toISOString(),
+        parentName: root.getName()
+      });
     }
-    return result;
+    // เรียงลำดับตามวันที่แก้ไขล่าสุดเพื่อให้โฟลเดอร์ใหม่ขึ้นก่อน
+    return result.sort((a, b) => new Date(b.date) - new Date(a.date));
   } catch (e) { return []; }
 }
 

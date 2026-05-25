@@ -10,6 +10,12 @@
   --purple-metric: #9333ea;
   --green-metric: #10b981;
   --orange-metric: #f97316;
+  
+  /* Modern Theme Colors */
+  --primary-blue: #3b82f6;
+  --success-green: #10b981;
+  --card-light: #f8fafc;
+  --border-light: #e2e8f0;
 }
 
 body {
@@ -99,25 +105,54 @@ body {
 
 .auth-button {
   width: 100%;
-  padding: 12px;
-  background: linear-gradient(90deg, #6366f1, #d946ef);
+  padding: 14px;
+  background: #3b82f6;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
+  transition: all 0.2s ease;
 }
 
-.auth-footer {
-  margin-top: 24px;
+.auth-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.auth-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* New Modern Components */
+.process-card {
+  background: #f1f5f9;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 32px;
+  margin-bottom: 24px;
   text-align: center;
-  font-size: 14px;
-  color: #888;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 12px;
+  background: #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 16px 0;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: #3b82f6;
+  transition: width 0.5s ease;
 }
 
 /* Dashboard Layout */
@@ -181,29 +216,26 @@ body {
   margin-right: 16px;
 }
 
-.file-selection-card {
+.file-list-mini {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+  margin-top: 12px;
+  padding-right: 5px;
+}
+
+.file-item-mini {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #fff;
   display: flex;
   align-items: center;
-  padding: 16px 20px;
-  background: var(--card-dark);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  cursor: pointer;
-  position: relative;
-}
-
-.file-selection-card.selected {
-  border: 2px solid #2563eb;
-}
-
-.back-btn { background: transparent; border: 1px solid #2563eb; color: #2563eb; font-size: 15px; }
-.review-btn { background: #10b981; font-size: 15px; }
-.process-btn { background: #2563eb; font-size: 15px; }
-
-.step-line {
-  width: 30px;
-  height: 2px;
-  transition: all 0.3s;
+  gap: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
 .animate-spin {
@@ -213,4 +245,58 @@ body {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.step-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  position: relative;
+  z-index: 2;
+}
+
+.step-circle.active {
+  background: #3b82f6;
+  color: white;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.step-circle.done {
+  background: #10b981;
+  color: white;
+}
+
+.step-circle.pending {
+  background: #262626;
+  color: #666;
+}
+
+.step-connector {
+  width: 40px;
+  height: 2px;
+  background: #262626;
+}
+
+.step-connector.done {
+  background: #10b981;
+}
+
+.step-label {
+  position: absolute;
+  top: 38px;
+  font-size: 11px;
+  white-space: nowrap;
 }
