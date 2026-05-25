@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 import './styles/App.css';
 
-const BASE_URL = "https://script.google.com/macros/s/AKfycbwlhZ_vy7_gZ8gQOvnY0PIu_1O_VVEuOFLtvXIORtT76F1bX4fSd4Frj6tUkY3-pd2YAg/exec";
+const BASE_URL = "YOUR_WEB_APP_URL";
 const COLORS = ['#3b82f6', '#10b981', '#ef4444', '#f97316', '#9333ea', '#6b7280'];
 
 export default function DashboardApp() {

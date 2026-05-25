@@ -3,29 +3,29 @@
 // =========================================================================
 
 const VERSION = "V.119 (DETAILED-FEEDBACK)"; 
-const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA"; 
-const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7"; 
-const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c"; 
+const FOLDER_ID = "YOUR_FOLDER_ID"; 
+const ARCHIVE_FOLDER_ID = "YOUR_ARCHIVE_FOLDER_ID"; 
+const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID"; 
 const SHEET_NAME = "Sheet1"; 
 
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwlhZ_vy7_gZ8gQOvnY0PIu_1O_VVEuOFLtvXIORtT76F1bX4fSd4Frj6tUkY3-pd2YAg/exec";
+const WEB_APP_URL = "YOUR_WEB_APP_URL";
 
 const PROJECT_LIST = ["HAE", "TME", "TMT", "HAT", "HTB", "HSN", "TMB", "HNN"];
 const TYPE_LIST = ["MBB", "POWER", "SOLACELL", "SMALL DC", "IPRAN"];
 
 // --- [API CONFIG] ---
-const TELEGRAM_BOT_TOKEN = "8625222790:AAHjU70oWGm88NyUaXaWIDJveo3b2KpnG90"; 
-const TELEGRAM_TARGET_ID = "-5199951121"; 
+const TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"; 
+const TELEGRAM_TARGET_ID = "YOUR_TELEGRAM_CHAT_ID"; 
 const GROQ_KEYS = [
-  "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",
-  "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",
-  "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",
-  "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"
+  "YOUR_GROQ_API_KEY_1",
+  "YOUR_GROQ_API_KEY_2",
+  "YOUR_GROQ_API_KEY_3",
+  "YOUR_GROQ_API_KEY_4"
 ];
 const GROQ_AI_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // --- [LINE CONFIG] ---
-const LINE_CHANNEL_ACCESS_TOKEN = "CnFH9VFWVp7HttiDfE56k2lCZ6aUlnETSKL9yA6Oj5f3Gb1lP6iR6CPGiEdz/8BNJUHtDcDU51y+K+o83fNoEkeKROSQ74PMlCuTErmr4clyWjzAWD27z/SQfFtYz3ALQ2+TqU06ZVoD7ASnbwD3NwdB04t89/1O/w1cDnyilFU="; 
+const LINE_CHANNEL_ACCESS_TOKEN = "YOUR_LINE_CHANNEL_ACCESS_TOKEN"; 
 
 function doGet(e) {
   let params = {};
