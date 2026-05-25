@@ -95,12 +95,29 @@ function DashboardApp() {
         }
       } else if (authStep === 2 && password) {
         setLoading(true);
-        const res = await fetch(`${BASE_URL}?action=sendOTP&email=${email.toLowerCase().trim()}&password=${encodeURIComponent(password)}`);
-        const json = await res.json();
-        if (json.success) {
-          setAuthStep(3);
+        const deviceVerifiedKey = `deviceVerified_${email.toLowerCase().trim()}`;
+        const isDeviceVerified = localStorage.getItem(deviceVerifiedKey) === 'true';
+
+        if (isDeviceVerified) {
+          // Just verify password and log in
+          const res = await fetch(`${BASE_URL}?action=checkPassword&email=${email.toLowerCase().trim()}&password=${encodeURIComponent(password)}`);
+          const json = await res.json();
+          if (json.success) {
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userEmail', email);
+            setIsLoggedIn(true);
+          } else {
+            throw new Error(json.error || "รหัสผ่านไม่ถูกต้อง");
+          }
         } else {
-          throw new Error(json.error || "Failed to send verification code");
+          // First time on this device, send OTP
+          const res = await fetch(`${BASE_URL}?action=sendOTP&email=${email.toLowerCase().trim()}&password=${encodeURIComponent(password)}`);
+          const json = await res.json();
+          if (json.success) {
+            setAuthStep(3);
+          } else {
+            throw new Error(json.error || "Failed to send verification code");
+          }
         }
       } else if (authStep === 3 && otp) {
         setLoading(true);
@@ -109,6 +126,7 @@ function DashboardApp() {
         if (json.success) {
           localStorage.setItem('isLoggedIn', 'true');
           localStorage.setItem('userEmail', email);
+          localStorage.setItem(`deviceVerified_${email.toLowerCase().trim()}`, 'true');
           setIsLoggedIn(true);
         } else {
           throw new Error("รหัสยืนยันไม่ถูกต้องหรือหมดอายุ");
@@ -127,6 +145,7 @@ function DashboardApp() {
         const res = await fetch(`${BASE_URL}?action=resetPassword&email=${email.toLowerCase().trim()}&otp=${otp}&newPassword=${encodeURIComponent(password)}`);
         const json = await res.json();
         if (json.success) {
+          localStorage.setItem(`deviceVerified_${email.toLowerCase().trim()}`, 'true');
           setAuthStep(2);
           setPassword("");
           setOtp("");

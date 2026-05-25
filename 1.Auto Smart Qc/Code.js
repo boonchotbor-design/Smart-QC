@@ -47,6 +47,7 @@ function doGet(e) {
   const action = (params.action || "").toLowerCase();
   try {
     if (action === "getdata") return jsonResponse(getDashboardData(params.site || "All Sites"));
+    if (action === "checkpassword") return jsonResponse(checkPassword(params.email, params.password));
     if (action === "sendotp") return jsonResponse(sendOTP(params.email, params.password));
     if (action === "verifyotp") return jsonResponse(verifyOTP(params.email, params.otp));
     if (action === "sendresetotp") return jsonResponse(sendResetOTP(params.email));
@@ -89,6 +90,16 @@ function doPost(e) {
     }
   } catch (err) {}
   return ContentService.createTextOutput("OK");
+}
+
+function checkPassword(email, password) {
+  if (password !== getAuthPassword()) {
+    return { error: "รหัสผ่านไม่ถูกต้อง" };
+  }
+  if (!ALLOWED_USERS.includes(email.toLowerCase().trim())) {
+    return { error: "คุณไม่มีสิทธิ์เข้าใช้งาน" };
+  }
+  return { success: true };
 }
 
 function verifyOTP(email, otp) {
