@@ -1,8 +1,8 @@
 // =========================================================================
-// === AI SMART QC BOT - V.118 (FIX DUPLICATE ALERTS & WEB SYNC) ===
+// === AI SMART QC BOT - V.119 (DETAILED FEEDBACK & DUPLICATE FIX) ===
 // =========================================================================
 
-const VERSION = "V.118 (STABLE-SYNC)"; 
+const VERSION = "V.119 (DETAILED-FEEDBACK)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA"; 
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7"; 
 const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c"; 
@@ -55,23 +55,17 @@ function doPost(e) {
   const cache = CacheService.getScriptCache();
   try {
     const data = JSON.parse(e.postData.contents);
-    
-    // 1. DEDUPLICATION: Prevent duplicate processing of the same Telegram update
     const updateId = data.update_id ? "u_" + data.update_id : null;
     if (updateId) {
       if (cache.get(updateId)) return ContentService.createTextOutput("OK");
-      cache.put(updateId, "1", 600); // 10 mins
+      cache.put(updateId, "1", 600);
     }
-
     if (data.callback_query) {
       const cb = data.callback_query;
       const cid = cb.message.chat.id;
       const mid = cb.message.message_id;
       const val = cb.data;
-      
-      // Answer immediately to stop the loading spinner in Telegram
       callTG("answerCallbackQuery", { callback_query_id: cb.id });
-
       if (val.startsWith("app|")) processManualApprove(val.split("|")[1], cid, mid, cb.message.text);
       if (val.startsWith("rej|")) processManualReject(val.split("|")[1], cid, mid, cb.message.text);
     }
@@ -151,7 +145,7 @@ function processFileList(files, siteName) {
 function analyzeAI(file) {
   const b64 = Utilities.base64Encode(file.getBlob().getBytes());
   const checklist = "2.3(M16), 2.3(M17), 2.3(M19-A1), 2.3(M19-A2), 2.3(M20.1-Ant1), 2.3(M20.2-Ant1), 2.3(M20.1-Ant2), 2.3(M20.2-Ant2), 2.3(M20.1-Ant3), 2.3(M20.2-Ant3), 2.3(M20.1-Ant4), 2.3(M20.2-Ant4), 2.3(M22-GND BAR), 2.3(M22-MST GND), 2.3(M24-GND DCDU), 2.3(M24-GND DCDU (2)), 2.3(M22-GND-RRU), 2.3(M24-RRU view S 1st), 2.3(M24-RRU view S 2nd), 2.3(M24-RRU view S 3th), 2.3(M24-RRU view S 4th), 2.3(M24-Add card 1), 2.3(M24-add card 2), 2.3(M26-DCDU socket), 2.3(M24-DC-RRU 1st), 2.3(M25 RRU1-Clamp-RET), 2.3(M24-DC-RRU 2nd), 2.3(M25 RRU2-clamp-RET), 2.3(M24-DC-AAU 2nd), 2.3(M25 AAU2-Clamp-RET), 2.3(M24-DC-RRU 4th), 2.3(M25 RRU4-Clamp-RET), 2.3(M23-inlet-outlet), 2.3(M23-inlet-outlet (2)), 2.3(M27)Ladder, 2.3(M27)-J-Loop, 2.3(M30-Krone 1-2, 2.3(M30-GPS), 2.3(M32-rec C1-3), 2.3(M30 C1), 2.3(M30 C2), 2.3(M32) BreakerC1-3, 2.3(M32)DCDU, 2.3(M32) LED-load, Notch CPRI, No.POE+Clean (1), Remote Site, 2.4-BOQ, dismantle";
-  const promptText = `Analyze Telecom site photo carefully. MATCH TO: [${checklist}]. CHECK QUALITY. MANDATORY JSON: {"sheetReference": "Item Name", "status": "PASS/FAIL", "reason": "Thai reason"}`;
+  const promptText = `Analyze Telecom site photo carefully. MATCH ONE: [${checklist}]. CHECK QUALITY. MANDATORY JSON: {"sheetReference": "Exact Item Name", "status": "PASS/FAIL", "reason": "Thai audit finding"}`;
   const payload = { "model": "meta-llama/llama-4-scout-17b-16e-instruct", "messages": [{ "role": "user", "content": [{ "type": "text", "text": promptText }, { "type": "image_url", "image_url": { "url": `data:image/jpeg;base64,${b64}` } }] }], "response_format": { "type": "json_object" } };
   for (let i = 0; i < GROQ_KEYS.length; i++) {
     try {
@@ -162,24 +156,6 @@ function analyzeAI(file) {
   return { status: "ERROR", reason: "AI Analysis Failed" };
 }
 
-function getDashboardData(siteFilter) {
-  const ss = getSpreadsheet();
-  if (!ss) return { error: "Spreadsheet not found" };
-  const sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) return { error: "Sheet not found" };
-  const values = sheet.getDataRange().getValues();
-  if (values.length <= 1) return { metrics: { workOrders: 0, rate: 0 }, statusBreakdown: [], teamWorkload: [] };
-  let dataRows = values.slice(1);
-  if (siteFilter && siteFilter !== "All Sites") dataRows = dataRows.filter(row => String(row[1]).includes(siteFilter));
-  const statusMap = {};
-  dataRows.forEach(row => {
-    const status = String(row[3] || "").toUpperCase();
-    const cleanStatus = status.includes("PASS") ? "PASS" : (status.includes("FAIL") ? "FAIL" : "PENDING");
-    statusMap[cleanStatus] = (statusMap[cleanStatus] || 0) + 1;
-  });
-  return { metrics: { workOrders: dataRows.length, rate: (dataRows.filter(r => String(r[3]).includes("PASS")).length / dataRows.length * 100).toFixed(1) }, statusBreakdown: Object.keys(statusMap).map(k => ({ name: k, value: statusMap[k] })), teamWorkload: [] };
-}
-
 function processManualApprove(fid, cid, mid, originalText) {
   try {
     const file = DriveApp.getFileById(fid);
@@ -188,16 +164,10 @@ function processManualApprove(fid, cid, mid, originalText) {
     if (rowData) {
       const category = rowData[2] || "ทั่วไป";
       file.setDescription("PAT_CHECKED: PASS (Manual) | " + file.getDescription());
-      
-      // Update original message to remove buttons and show status
       const header = `✅ <b>อนุมัติสำเร็จ: ${category}</b>\n📄 <i>${fileName}</i>\n\n`;
       editTG(cid, mid, header + originalText);
-      
-      // Send small confirmation with details
       sendTG(cid, `✅ อนุมัติหมวด <b>${category}</b> เรียบร้อยครับ\nไฟล์: <i>${fileName}</i>`, ["ส่งงาน"]);
-    } else {
-      sendTG(cid, "❌ ไม่พบข้อมูลใน Sheet ไม่สามารถอนุมัติได้", ["ส่งงาน"]);
-    }
+    } else { sendTG(cid, "❌ ไม่พบข้อมูลใน Sheet", ["ส่งงาน"]); }
   } catch (e) { sendTG(cid, "⚠️ Error: " + e.toString(), ["ส่งงาน"]); }
 }
 
@@ -207,11 +177,8 @@ function processManualReject(fid, cid, mid, originalText) {
     const fileName = file.getName();
     const rowData = updateSheetStatus(fid, "FAIL (Rejected)", "#ffcccb");
     const category = rowData ? rowData[2] : "ทั่วไป";
-
-    // Update original message to remove buttons
     const header = `❌ <b>ปฏิเสธการอนุมัติ: ${category}</b>\n📄 <i>${fileName}</i>\n\n`;
     editTG(cid, mid, header + originalText);
-    
     sendTG(cid, `❌ ปฏิเสธหมวด <b>${category}</b> เรียบร้อยครับ\nไฟล์: <i>${fileName}</i>`, ["ส่งงาน"]);
   } catch (e) { sendTG(cid, "⚠️ Error: " + e.toString(), ["ส่งงาน"]); }
 }
@@ -231,6 +198,27 @@ function updateSheetStatus(fid, newStatus, color) {
   return null;
 }
 
+function getDashboardData(siteFilter) {
+  const ss = getSpreadsheet();
+  if (!ss) return { error: "Spreadsheet not found" };
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) return { error: "Sheet not found" };
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return { metrics: { workOrders: 0, rate: 0 }, statusBreakdown: [], teamWorkload: [] };
+  let dataRows = values.slice(1);
+  if (siteFilter && siteFilter !== "All Sites") dataRows = dataRows.filter(row => String(row[1]).includes(siteFilter));
+  const statusMap = {};
+  dataRows.forEach(row => {
+    const status = String(row[3] || "").toUpperCase();
+    const cleanStatus = status.includes("PASS") ? "PASS" : (status.includes("FAIL") ? "FAIL" : "PENDING");
+    statusMap[cleanStatus] = (statusMap[cleanStatus] || 0) + 1;
+  });
+  const workOrders = dataRows.length;
+  const passCount = dataRows.filter(r => String(r[3]).includes("PASS")).length;
+  return { metrics: { workOrders, rate: (passCount / workOrders * 100).toFixed(1) }, statusBreakdown: Object.keys(statusMap).map(k => ({ name: k, value: statusMap[k] })), teamWorkload: [] };
+}
+
+function jsonResponse(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 function getSpreadsheet() { try { return SpreadsheetApp.openById(SPREADSHEET_ID); } catch(e) { return null; } }
 function getOrCreateSubFolder(p, n) { const safeName = n.substring(0, 100); const f = p.getFoldersByName(safeName); return f.hasNext() ? f.next() : p.createFolder(safeName); }
 function sendDualSummary(site, pass, fail) { sendTG(TELEGRAM_TARGET_ID, `📊 <b>สรุปผล AI (${site})</b>\n✅ ผ่าน: ${pass}\n❌ ไม่ผ่าน: ${fail}`, ["ส่งงาน"]); }
