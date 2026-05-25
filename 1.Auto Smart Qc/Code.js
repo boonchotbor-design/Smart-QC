@@ -1,8 +1,8 @@
 // =========================================================================
-// === AI SMART QC BOT - V.119 (DETAILED FEEDBACK & DUPLICATE FIX) ===
+// === AI SMART QC BOT - V.120 (PASSWORD RESET & BUG FIXES) ===
 // =========================================================================
 
-const VERSION = "V.119 (DETAILED-FEEDBACK)"; 
+const VERSION = "V.120 (PASSWORD-RESET)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c";
@@ -14,13 +14,18 @@ const PROJECT_LIST = ["HAE", "TME", "TMT", "HAT", "HTB", "HSN", "TMB", "HNN"];
 const TYPE_LIST = ["MBB", "POWER", "SOLACELL", "SMALL DC", "IPRAN"];
 
 // --- [AUTH CONFIG] ---
-const AUTH_PASSWORD = "QC-ADMIN-2024"; 
+const DEFAULT_PASSWORD = "QC-ADMIN-2024"; 
 const ALLOWED_USERS = [
   "adisak.chanmao@teloneer.com",
   "boonchot.boriwut@teloneer.com",
   "apichart.kampuang@teloneer.com",
   "pakpoom.t@teloneer.com"
 ];
+
+function getAuthPassword() {
+  const props = PropertiesService.getScriptProperties();
+  return props.getProperty("AUTH_PASSWORD") || DEFAULT_PASSWORD;
+}
 
 // --- [API CONFIG] ---
 const TELEGRAM_BOT_TOKEN = "8625222790:AAHjU70oWGm88NyUaXaWIDJveo3b2KpnG90"; 
@@ -44,6 +49,8 @@ function doGet(e) {
     if (action === "getdata") return jsonResponse(getDashboardData(params.site || "All Sites"));
     if (action === "sendotp") return jsonResponse(sendOTP(params.email, params.password));
     if (action === "verifyotp") return jsonResponse(verifyOTP(params.email, params.otp));
+    if (action === "sendresetotp") return jsonResponse(sendResetOTP(params.email));
+    if (action === "resetpassword") return jsonResponse(resetPassword(params.email, params.otp, params.newPassword));
     if (action === "listfolders") {
       const folders = listSubFolders();
       const rootFolder = DriveApp.getFolderById(FOLDER_ID);
@@ -94,8 +101,45 @@ function verifyOTP(email, otp) {
   return { error: "Invalid or expired OTP" };
 }
 
+function sendResetOTP(email) {
+  if (!ALLOWED_USERS.includes(email.toLowerCase().trim())) {
+    return { error: "คุณไม่มีสิทธิ์เข้าใช้งาน" };
+  }
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const cache = CacheService.getScriptCache();
+  cache.put("RESET_OTP_" + email, otp, 600); // 10 minutes
+  try {
+    MailApp.sendEmail({
+      to: email,
+      subject: "Password Reset Code - AI SMART QC",
+      htmlBody: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #ef4444;">Password Reset Request</h2>
+          <p>Your verification code for resetting password is:</p>
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1e293b; padding: 20px; background: #fef2f2; border-radius: 8px; text-align: center; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p>This code will expire in 10 minutes. If you did not request this, please change your security settings.</p>
+        </div>
+      `
+    });
+    return { success: true };
+  } catch (e) { return { error: "Failed to send email: " + e.toString() }; }
+}
+
+function resetPassword(email, otp, newPassword) {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get("RESET_OTP_" + email);
+  if (cached && cached === otp) {
+    cache.remove("RESET_OTP_" + email);
+    PropertiesService.getScriptProperties().setProperty("AUTH_PASSWORD", newPassword);
+    return { success: true };
+  }
+  return { error: "Invalid or expired OTP" };
+}
+
 function sendOTP(email, password) {
-  if (password !== AUTH_PASSWORD) {
+  if (password !== getAuthPassword()) {
     return { error: "รหัสผ่านไม่ถูกต้อง" };
   }
   
@@ -141,6 +185,7 @@ function listSubFolders() {
       result.push({ 
         id: f.getId(), 
         name: f.getName(), 
+        url: f.getUrl(),
         fileCount: 0, 
         date: f.getLastUpdated().toISOString(),
         parentName: root.getName()

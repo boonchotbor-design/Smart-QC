@@ -84,7 +84,7 @@ function DashboardApp() {
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
     setError(null);
-    
+
     try {
       if (authStep === 1 && email) {
         if (ALLOWED_USERS.includes(email.toLowerCase().trim())) {
@@ -112,6 +112,27 @@ function DashboardApp() {
         } else {
           throw new Error("รหัสยืนยันไม่ถูกต้องหรือหมดอายุ");
         }
+      } else if (authStep === 4 && email) {
+        setLoading(true);
+        const res = await fetch(`${BASE_URL}?action=sendResetOTP&email=${email.toLowerCase().trim()}`);
+        const json = await res.json();
+        if (json.success) {
+          setAuthStep(5);
+        } else {
+          throw new Error(json.error || "Failed to send reset code");
+        }
+      } else if (authStep === 5 && otp && password) {
+        setLoading(true);
+        const res = await fetch(`${BASE_URL}?action=resetPassword&email=${email.toLowerCase().trim()}&otp=${otp}&newPassword=${encodeURIComponent(password)}`);
+        const json = await res.json();
+        if (json.success) {
+          setAuthStep(2);
+          setPassword("");
+          setOtp("");
+          setError("เปลี่ยนรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่");
+        } else {
+          throw new Error(json.error || "Reset failed");
+        }
       }
     } catch (err) {
       setError(err.message);
@@ -126,14 +147,16 @@ function DashboardApp() {
         <div className="auth-card">
           <div className="auth-logo"><Zap size={24} fill="white" /></div>
           <h1 className="auth-title">
-            {authStep === 3 ? "Verify Email" : "Welcome back"}
+            {authStep === 3 ? "Verify Email" : (authStep >= 4 ? "Reset Password" : "Welcome back")}
           </h1>
           <p className="auth-subtitle">
-            {authStep === 3 ? `Enter the 6-digit code sent to ${email}` : "Sign in with your authorized email"}
+            {authStep === 3 ? `Enter the 6-digit code sent to ${email}` : 
+             authStep === 5 ? "Enter OTP and your new password" :
+             "Sign in with your authorized email"}
           </p>
-          
-          {error && <div style={{ color: '#ef4444', fontSize: '13px', textAlign: 'center', marginBottom: '16px', background: '#fef2f2', padding: '12px', borderRadius: '8px', border: '1px solid #fee2e2' }}>{error}</div>}
-          
+
+          {error && <div style={{ color: error.includes("สำเร็จ") ? '#10b981' : '#ef4444', fontSize: '13px', textAlign: 'center', marginBottom: '16px', background: error.includes("สำเร็จ") ? '#f0fdf4' : '#fef2f2', padding: '12px', borderRadius: '8px', border: '1px solid ' + (error.includes("สำเร็จ") ? '#bbf7d0' : '#fee2e2') }}>{error}</div>}
+
           <form onSubmit={handleLogin}>
             {authStep === 1 && (
               <>
@@ -144,17 +167,20 @@ function DashboardApp() {
                 <button type="submit" className="auth-button">Continue <ChevronRight size={16} /></button>
               </>
             )}
-            
+
             {authStep === 2 && (
               <>
                 <div style={{ background: '#f5f5f5', padding: '12px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
                   <span style={{ fontSize: '14px', color: '#000' }}>{email}</span>
                   <Edit2 size={14} style={{ cursor: 'pointer', color: '#000' }} onClick={() => setAuthStep(1)} />
                 </div>
-                <input className="auth-input" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus />
+                <input className="auth-input" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus />   
                 <button type="submit" className="auth-button" disabled={loading}>
                   {loading ? <Loader2 size={18} className="animate-spin" /> : "Sign In"}
                 </button>
+                <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: '#3b82f6', cursor: 'pointer' }} onClick={() => setAuthStep(4)}>
+                  Forgot Password?
+                </p>
               </>
             )}
 
@@ -178,9 +204,39 @@ function DashboardApp() {
                 </p>
               </>
             )}
+
+            {authStep === 4 && (
+              <>
+                <input className="auth-input" type="email" placeholder="Confirm your email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <button type="submit" className="auth-button" disabled={loading}>
+                  {loading ? <Loader2 size={18} className="animate-spin" /> : "Request Reset OTP"}
+                </button>
+                <button type="button" className="auth-button" style={{ marginTop: '10px', background: 'transparent', color: '#666', border: '1px solid #ccc' }} onClick={() => setAuthStep(2)}>Back</button>
+              </>
+            )}
+
+            {authStep === 5 && (
+              <>
+                <input 
+                  className="auth-input" 
+                  type="text" 
+                  placeholder="6-digit OTP" 
+                  value={otp} 
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g,'').slice(0,6))} 
+                  required 
+                  style={{ textAlign: 'center', fontSize: '20px' }}
+                />
+                <input className="auth-input" type="password" placeholder="Enter New Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <button type="submit" className="auth-button" disabled={loading || otp.length < 6 || !password}>
+                  {loading ? <Loader2 size={18} className="animate-spin" /> : "Reset & Save Password"}
+                </button>
+                <button type="button" className="auth-button" style={{ marginTop: '10px', background: 'transparent', color: '#666', border: '1px solid #ccc' }} onClick={() => setAuthStep(4)}>Back</button>
+              </>
+            )}
           </form>
+
           <div className="auth-footer">
-            Powered by <b>TLN AI Automation</b> v1.19
+            Powered by <b>TLN AI Automation</b> v1.20
           </div>
         </div>
       </div>
