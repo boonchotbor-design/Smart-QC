@@ -2,7 +2,7 @@ import React, { useState, useEffect, Component } from 'react';
 import { 
   LayoutDashboard, User, BarChart2, Folder, Kanban, Calendar, 
   Zap, Building2, DollarSign, FileInput, History, Settings,
-  LogOut, ChevronRight, Search, Bell, Monitor, Edit2, Play, CheckCircle2, Rocket, ArrowLeft, Loader2, RefreshCw, Home
+  LogOut, ChevronRight, Search, Bell, Monitor, Edit2, Play, CheckCircle2, Rocket, ArrowLeft, Loader2, RefreshCw, Home, Eye, EyeOff
 } from 'lucide-react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, 
@@ -54,6 +54,7 @@ function DashboardApp() {
   const [authStep, setAuthStep] = useState(1);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState("");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -174,7 +175,15 @@ function DashboardApp() {
                   <span style={{ fontSize: '14px', color: '#000' }}>{email}</span>
                   <Edit2 size={14} style={{ cursor: 'pointer', color: '#000' }} onClick={() => setAuthStep(1)} />
                 </div>
-                <input className="auth-input" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus />   
+                <div style={{ position: 'relative', marginBottom: '16px' }}>
+                  <input className="auth-input" type={showPassword ? "text" : "password"} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus style={{ marginBottom: 0 }} />
+                  <div 
+                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#666' }}
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </div>
+                </div>
                 <button type="submit" className="auth-button" disabled={loading}>
                   {loading ? <Loader2 size={18} className="animate-spin" /> : "Sign In"}
                 </button>
@@ -226,7 +235,15 @@ function DashboardApp() {
                   required 
                   style={{ textAlign: 'center', fontSize: '20px' }}
                 />
-                <input className="auth-input" type="password" placeholder="Enter New Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <div style={{ position: 'relative', marginBottom: '16px' }}>
+                  <input className="auth-input" type={showPassword ? "text" : "password"} placeholder="Enter New Password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ marginBottom: 0 }} />
+                  <div 
+                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#666' }}
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </div>
+                </div>
                 <button type="submit" className="auth-button" disabled={loading || otp.length < 6 || !password}>
                   {loading ? <Loader2 size={18} className="animate-spin" /> : "Reset & Save Password"}
                 </button>
