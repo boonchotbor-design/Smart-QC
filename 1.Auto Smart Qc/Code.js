@@ -255,11 +255,14 @@ function processFileList(files, siteName) {
       const destFolder = getOrCreateSubFolder(getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), siteName), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference);
       f.moveTo(destFolder);
       f.setDescription(`PAT_CHECKED: ${status} | ${f.getDescription() || ""}`);
-      results.push({ name: f.getName(), status: status, reason: ai.reason });
+      results.push({ name: f.getName(), status: status, reason: ai.reason, category: ai.sheetReference });
       if (status === "PASS") pass++; else { fail++; sendDualFailNotify(f.getName(), ai.sheetReference, ai.reason, f.getUrl(), f.getId()); }
     } catch (e) { results.push({ name: f.getName(), status: "ERROR", reason: e.toString() }); }
   }
-  if (pass + fail > 0) sendDualSummary(siteName, pass, fail);
+  if (pass + fail > 0) {
+    const failItems = results.filter(r => r.status === "FAIL");
+    sendDualSummary(siteName, pass, fail, failItems);
+  }
   return { total: files.length, pass: pass, fail: fail, details: results };
 }
 
@@ -342,7 +345,16 @@ function getDashboardData(siteFilter) {
 function jsonResponse(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 function getSpreadsheet() { try { return SpreadsheetApp.openById(SPREADSHEET_ID); } catch(e) { return null; } }
 function getOrCreateSubFolder(p, n) { const safeName = n.substring(0, 100); const f = p.getFoldersByName(safeName); return f.hasNext() ? f.next() : p.createFolder(safeName); }
-function sendDualSummary(site, pass, fail) { sendTG(TELEGRAM_TARGET_ID, `📊 <b>สรุปผล AI (${site})</b>\n✅ ผ่าน: ${pass}\n❌ ไม่ผ่าน: ${fail}`, ["ส่งงาน"]); }
+function sendDualSummary(site, pass, fail, failItems) {
+  let text = `📊 <b>สรุปผล AI (${site})</b>\n✅ ผ่าน: ${pass}\n❌ ไม่ผ่าน: ${fail}`;
+  if (failItems && failItems.length > 0) {
+    text += "\n";
+    failItems.forEach((item, index) => {
+      text += `\n${index + 1}.📄 ไฟล์: ${item.name}\n📌 หมวด: ${item.category}`;
+    });
+  }
+  sendTG(TELEGRAM_TARGET_ID, text, ["ส่งงาน"]);
+}
 function sendDualFailNotify(fn, cat, reason, url, fid) {
   const tgKb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไม่อนุมัติ", callback_data: "rej|" + fid }], [{ text: "🔍 ดูรูป", url: url }]] };
   callTG("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: `🚨 <b>พบงานไม่ผ่าน</b>\n📄 ไฟล์: ${fn}\n📌 หมวด: ${cat}\n❌ สาเหตุ: ${reason}`, parse_mode: "HTML", reply_markup: tgKb });
