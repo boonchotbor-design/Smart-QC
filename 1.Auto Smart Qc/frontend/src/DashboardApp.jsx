@@ -224,7 +224,7 @@ function DashboardApp() {
                 <button type="button" className="auth-input" style={{ background: '#fff', textAlign: 'center', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <img src="https://www.google.com/favicon.ico" width="16" alt="G" /> Continue with Google
                 </button>
-                <input className="auth-input" type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <input className="auth-input" type="text" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 <button type="submit" className="auth-button">Continue <ChevronRight size={16} /></button>
               </>
             )}
