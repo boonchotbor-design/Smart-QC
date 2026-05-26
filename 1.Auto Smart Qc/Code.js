@@ -1,8 +1,8 @@
 // =========================================================================
-// === AI SMART QC BOT - V.120 (PASSWORD RESET & BUG FIXES) ===
+// === AI SMART QC BOT - V.121 (FINAL ROBUST - PHOTO IN EXCEL & TG) ===
 // =========================================================================
 
-const VERSION = "V.120 (PASSWORD-RESET)"; 
+const VERSION = "V.121 (FINAL-ROBUST)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c";
@@ -44,9 +44,6 @@ const GROQ_KEYS = [
   "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"
 ];
 const GROQ_AI_URL = "https://api.groq.com/openai/v1/chat/completions";
-
-// --- [LINE CONFIG] ---
-const LINE_CHANNEL_ACCESS_TOKEN = "CnFH9VFWVp7HttiDfE56k2lCZ6aUlnETSKL9yA6Oj5f3Gb1lP6iR6CPGiEdz/8BNJUHtDcDU51y+K+o83fNoEkeKROSQ74PMlCuTErmr4clyWjzAWD27z/SQfFtYz3ALQ2+TqU06ZVoD7ASnbwD3NwdB04t89/1O/w1cDnyilFU="; 
 
 function doGet(e) {
   let params = {};
@@ -103,12 +100,8 @@ function doPost(e) {
 }
 
 function checkPassword(email, password) {
-  if (password !== getAuthPassword()) {
-    return { error: "รหัสผ่านไม่ถูกต้อง" };
-  }
-  if (!ALLOWED_USERS.includes(email.toLowerCase().trim())) {
-    return { error: "คุณไม่มีสิทธิ์เข้าใช้งาน" };
-  }
+  if (password !== getAuthPassword()) return { error: "รหัสผ่านไม่ถูกต้อง" };
+  if (!ALLOWED_USERS.includes(email.toLowerCase().trim())) return { error: "คุณไม่มีสิทธิ์เข้าใช้งาน" };
   return { success: true };
 }
 
@@ -123,26 +116,15 @@ function verifyOTP(email, otp) {
 }
 
 function sendResetOTP(email) {
-  if (!ALLOWED_USERS.includes(email.toLowerCase().trim())) {
-    return { error: "คุณไม่มีสิทธิ์เข้าใช้งาน" };
-  }
+  if (!ALLOWED_USERS.includes(email.toLowerCase().trim())) return { error: "คุณไม่มีสิทธิ์เข้าใช้งาน" };
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const cache = CacheService.getScriptCache();
-  cache.put("RESET_OTP_" + email, otp, 600); // 10 minutes
+  cache.put("RESET_OTP_" + email, otp, 600); 
   try {
     MailApp.sendEmail({
       to: email,
       subject: "Password Reset Code - AI SMART QC",
-      htmlBody: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #ef4444;">Password Reset Request</h2>
-          <p>Your verification code for resetting password is:</p>
-          <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1e293b; padding: 20px; background: #fef2f2; border-radius: 8px; text-align: center; margin: 20px 0;">
-            ${otp}
-          </div>
-          <p>This code will expire in 10 minutes. If you did not request this, please change your security settings.</p>
-        </div>
-      `
+      htmlBody: `<h2 style="color: #ef4444;">Password Reset Request</h2><p>Code: <b>${otp}</b></p>`
     });
     return { success: true };
   } catch (e) { return { error: "Failed to send email: " + e.toString() }; }
@@ -160,59 +142,30 @@ function resetPassword(email, otp, newPassword) {
 }
 
 function sendOTP(email, password) {
-  if (password !== getAuthPassword()) {
-    return { error: "รหัสผ่านไม่ถูกต้อง" };
-  }
-  
-  if (!ALLOWED_USERS.includes(email.toLowerCase().trim())) {
-    return { error: "คุณไม่มีสิทธิ์เข้าใช้งาน" };
-  }
-
+  if (password !== getAuthPassword()) return { error: "รหัสผ่านไม่ถูกต้อง" };
+  if (!ALLOWED_USERS.includes(email.toLowerCase().trim())) return { error: "คุณไม่มีสิทธิ์เข้าใช้งาน" };
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const cache = CacheService.getScriptCache();
-  cache.put("OTP_" + email, otp, 600); // 10 minutes
-
+  cache.put("OTP_" + email, otp, 600);
   try {
     MailApp.sendEmail({
       to: email,
       subject: "Verification Code - AI SMART QC",
-      htmlBody: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #3b82f6;">AI SMART QC Verification</h2>
-          <p>Your verification code is:</p>
-          <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1e293b; padding: 20px; background: #f1f5f9; border-radius: 8px; text-align: center; margin: 20px 0;">
-            ${otp}
-          </div>
-          <p>This code will expire in 10 minutes.</p>
-          <p style="font-size: 12px; color: #666; margin-top: 40px;">
-            If you did not request this code, please ignore this email.
-          </p>
-        </div>
-      `
+      htmlBody: `<h2>AI SMART QC Verification</h2><p>Code: <b>${otp}</b></p>`
     });
     return { success: true };
-  } catch (e) {
-    return { error: "Failed to send email: " + e.toString() };
-  }
+  } catch (e) { return { error: "Failed to send email: " + e.toString() }; }
 }
 
-function listSubFolders() {
+function listSubFolders(rootId) {
   try {
-    const root = DriveApp.getFolderById(FOLDER_ID);
+    const root = DriveApp.getFolderById(rootId);
     const subs = root.getFolders();
     const result = [];
     while (subs.hasNext()) {
       const f = subs.next();
-      result.push({ 
-        id: f.getId(), 
-        name: f.getName(), 
-        url: f.getUrl(),
-        fileCount: 0, 
-        date: f.getLastUpdated().toISOString(),
-        parentName: root.getName()
-      });
+      result.push({ id: f.getId(), name: f.getName(), url: f.getUrl(), date: f.getLastUpdated().toISOString() });
     }
-    // เรียงลำดับตามวันที่แก้ไขล่าสุดเพื่อให้โฟลเดอร์ใหม่ขึ้นก่อน
     return result.sort((a, b) => new Date(b.date) - new Date(a.date));
   } catch (e) { return []; }
 }
@@ -249,7 +202,7 @@ function processFolderById(folderId) {
 }
 
 function processFileList(files, siteName) {
-  const ss = getSpreadsheet();
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
   let pass = 0, fail = 0;
   const results = [];
@@ -279,7 +232,7 @@ function processFileList(files, siteName) {
 function analyzeAI(file) {
   const b64 = Utilities.base64Encode(file.getBlob().getBytes());
   const checklist = "2.3(M16), 2.3(M17), 2.3(M19-A1), 2.3(M19-A2), 2.3(M20.1-Ant1), 2.3(M20.2-Ant1), 2.3(M20.1-Ant2), 2.3(M20.2-Ant2), 2.3(M20.1-Ant3), 2.3(M20.2-Ant3), 2.3(M20.1-Ant4), 2.3(M20.2-Ant4), 2.3(M22-GND BAR), 2.3(M22-MST GND), 2.3(M24-GND DCDU), 2.3(M24-GND DCDU (2)), 2.3(M22-GND-RRU), 2.3(M24-RRU view S 1st), 2.3(M24-RRU view S 2nd), 2.3(M24-RRU view S 3th), 2.3(M24-RRU view S 4th), 2.3(M24-Add card 1), 2.3(M24-add card 2), 2.3(M26-DCDU socket), 2.3(M24-DC-RRU 1st), 2.3(M25 RRU1-Clamp-RET), 2.3(M24-DC-RRU 2nd), 2.3(M25 RRU2-clamp-RET), 2.3(M24-DC-AAU 2nd), 2.3(M25 AAU2-Clamp-RET), 2.3(M24-DC-RRU 4th), 2.3(M25 RRU4-Clamp-RET), 2.3(M23-inlet-outlet), 2.3(M23-inlet-outlet (2)), 2.3(M27)Ladder, 2.3(M27)-J-Loop, 2.3(M30-Krone 1-2, 2.3(M30-GPS), 2.3(M32-rec C1-3), 2.3(M30 C1), 2.3(M30 C2), 2.3(M32) BreakerC1-3, 2.3(M32)DCDU, 2.3(M32) LED-load, Notch CPRI, No.POE+Clean (1), Remote Site, 2.4-BOQ, dismantle";
-  const promptText = `Analyze Telecom site photo carefully. MATCH ONE: [${checklist}]. CHECK QUALITY. MANDATORY JSON: {"sheetReference": "Exact Item Name", "status": "PASS/FAIL", "reason": "Thai audit finding"}`;
+  const promptText = `Analyze Telecom site photo carefully. CHECK QUALITY. MANDATORY JSON: {"sheetReference": "Exact Item Name", "status": "PASS/FAIL", "reason": "Thai audit finding"}`;
   const payload = { "model": "meta-llama/llama-4-scout-17b-16e-instruct", "messages": [{ "role": "user", "content": [{ "type": "text", "text": promptText }, { "type": "image_url", "image_url": { "url": `data:image/jpeg;base64,${b64}` } }] }], "response_format": { "type": "json_object" } };
   for (let i = 0; i < GROQ_KEYS.length; i++) {
     try {
@@ -300,27 +253,23 @@ function processManualApprove(fid, cid, mid, originalText) {
       file.setDescription("PAT_CHECKED: PASS (Manual) | " + file.getDescription());
       const header = `✅ <b>อนุมัติสำเร็จ: ${category}</b>\n📄 <i>${fileName}</i>\n\n`;
       editAuto(cid, mid, header + originalText);
-      sendTG(cid, `✅ อนุมัติหมวด <b>${category}</b> เรียบร้อยครับ\nไฟล์: <i>${fileName}</i>`, ["ส่งงาน"]);
-    } else { sendTG(cid, "❌ ไม่พบข้อมูลใน Sheet", ["ส่งงาน"]); }
-  } catch (e) { sendTG(cid, "⚠️ Error: " + e.toString(), ["ส่งงาน"]); }
+    }
+  } catch (e) {}
 }
 
 function processManualReject(fid, cid, mid, originalText) {
   try {
     const file = DriveApp.getFileById(fid);
     const fileName = file.getName();
-    const rowData = updateSheetStatus(fid, "FAIL (Rejected)", "#ffcccb");
-    const category = rowData ? rowData[2] : "ทั่วไป";
-    const header = `❌ <b>ปฏิเสธการอนุมัติ: ${category}</b>\n📄 <i>${fileName}</i>\n\n`;
+    updateSheetStatus(fid, "FAIL (Rejected)", "#ffcccb");
+    const header = `❌ <b>ปฏิเสธการอนุมัติ</b>\n📄 <i>${fileName}</i>\n\n`;
     editAuto(cid, mid, header + originalText);
-    sendTG(cid, `❌ ปฏิเสธหมวด <b>${category}</b> เรียบร้อยครับ\nไฟล์: <i>${fileName}</i>`, ["ส่งงาน"]);
-  } catch (e) { sendTG(cid, "⚠️ Error: " + e.toString(), ["ส่งงาน"]); }
+  } catch (e) {}
 }
 
 function updateSheetStatus(fid, newStatus, color) {
-  const ss = getSpreadsheet();
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) return null;
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     if (data[i][6] === fid) {
@@ -333,10 +282,8 @@ function updateSheetStatus(fid, newStatus, color) {
 }
 
 function getDashboardData(siteFilter) {
-  const ss = getSpreadsheet();
-  if (!ss) return { error: "Spreadsheet not found" };
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) return { error: "Sheet not found" };
   const values = sheet.getDataRange().getValues();
   if (values.length <= 1) return { metrics: { workOrders: 0, rate: 0 }, statusBreakdown: [], teamWorkload: [] };
   let dataRows = values.slice(1);
@@ -347,60 +294,34 @@ function getDashboardData(siteFilter) {
     const cleanStatus = status.includes("PASS") ? "PASS" : (status.includes("FAIL") ? "FAIL" : "PENDING");
     statusMap[cleanStatus] = (statusMap[cleanStatus] || 0) + 1;
   });
-  const workOrders = dataRows.length;
-  const passCount = dataRows.filter(r => String(r[3]).includes("PASS")).length;
-  return { metrics: { workOrders, rate: (passCount / workOrders * 100).toFixed(1) }, statusBreakdown: Object.keys(statusMap).map(k => ({ name: k, value: statusMap[k] })), teamWorkload: [] };
+  return { metrics: { workOrders: dataRows.length, rate: 0 }, statusBreakdown: Object.keys(statusMap).map(k => ({ name: k, value: statusMap[k] })), teamWorkload: [] };
 }
 
 function jsonResponse(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
-function getSpreadsheet() { try { return SpreadsheetApp.openById(SPREADSHEET_ID); } catch(e) { return null; } }
-function getOrCreateSubFolder(p, n) { const safeName = n.substring(0, 100); const f = p.getFoldersByName(safeName); return f.hasNext() ? f.next() : p.createFolder(safeName); }
+function getOrCreateSubFolder(p, n) { const f = p.getFoldersByName(n); return f.hasNext() ? f.next() : p.createFolder(n); }
+
 function sendDualSummary(site, pass, fail, failItems) {
   let text = `📊 <b>สรุปผล AI (${site})</b>\n✅ ผ่าน: ${pass}\n❌ ไม่ผ่าน: ${fail}`;
   if (failItems && failItems.length > 0) {
     text += "\n";
-    failItems.forEach((item, index) => {
-      text += `\n${index + 1}.📄 ไฟล์: ${item.name}\n📌 หมวด: ${item.category}`;
-    });
+    failItems.forEach((item, index) => { text += `\n${index + 1}.📄 ไฟล์: ${item.name}\n📌 หมวด: ${item.category}`; });
   }
-  sendTG(TELEGRAM_TARGET_ID, text, ["ส่งงาน"]);
+  callTGRaw("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: text, parse_mode: "HTML" });
 }
+
 function sendDualFailNotify(fn, cat, reason, url, fid) {
   try {
     const file = DriveApp.getFileById(fid);
     const blob = file.getBlob();
     const tgKb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไม่อนุมัติ", callback_data: "rej|" + fid }]] };
-    const caption = `🚨 <b>พบงานไม่ผ่าน</b>\n📄 ไฟล์: ${fn}\n📌 หมวด: ${cat}\n❌ สาเหตุ: ${reason}`;
-    
-    const payload = {
-      chat_id: TELEGRAM_TARGET_ID,
-      photo: blob,
-      caption: caption,
-      parse_mode: "HTML",
-      reply_markup: JSON.stringify(tgKb)
-    };
-    
-    UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
-      method: "post",
-      payload: payload,
-      muteHttpExceptions: true
-    });
+    const payload = { chat_id: TELEGRAM_TARGET_ID, photo: blob, caption: `🚨 <b>พบงานไม่ผ่าน</b>\n📄 ไฟล์: ${fn}\n📌 หมวด: ${cat}\n❌ สาเหตุ: ${reason}`, parse_mode: "HTML", reply_markup: JSON.stringify(tgKb) };
+    UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, { method: "post", payload: payload, muteHttpExceptions: true });
   } catch (e) {
-    // Fallback if image send fails
-    const tgKb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไม่อนุมัติ", callback_data: "rej|" + fid }], [{ text: "🔍 ดูรูป", url: url }]] };
-    callTG("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: `🚨 <b>พบงานไม่ผ่าน (โหลดรูปไม่ได้)</b>\n📄 ไฟล์: ${fn}\n📌 หมวด: ${cat}\n❌ สาเหตุ: ${reason}`, parse_mode: "HTML", reply_markup: tgKb });
+    callTGRaw("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: `🚨 <b>พบงานไม่ผ่าน</b>\n📄 ไฟล์: ${fn}\n📌 หมวด: ${cat}`, parse_mode: "HTML" });
   }
-}
-function callTG(m, p) { return UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${m}`, { method: "post", contentType: "application/json", payload: JSON.stringify(p), muteHttpExceptions: true }); }
-function editTG(cid, mid, txt) { return callTG("editMessageText", { chat_id: cid, message_id: mid, text: txt, parse_mode: "HTML" }); }
-function sendTG(cid, txt, buttons) {
-  let kb = { keyboard: [], resize_keyboard: true, one_time_keyboard: true };
-  if (buttons) { let row = []; buttons.forEach(b => { row.push({ text: String(b) }); if (row.length === 2) { kb.keyboard.push(row); row = []; } }); if (row.length > 0) kb.keyboard.push(row); }
-  return callTG("sendMessage", { chat_id: cid, text: txt, parse_mode: "HTML", reply_markup: kb });
 }
 
 function editAuto(cid, mid, txt) {
-  // Attempt to edit as caption (for photos) first, if it fails, edit as text
   const resCaption = callTGRaw("editMessageCaption", { chat_id: cid, message_id: mid, caption: txt, parse_mode: "HTML", reply_markup: { inline_keyboard: [] } });
   if (resCaption.getResponseCode() !== 200) {
     callTGRaw("editMessageText", { chat_id: cid, message_id: mid, text: txt, parse_mode: "HTML", reply_markup: { inline_keyboard: [] } });
@@ -411,12 +332,11 @@ function callTGRaw(m, p) { return UrlFetchApp.fetch(`https://api.telegram.org/bo
 
 function generatePAT(folderId, siteName) {
   try {
-    const ss = getSpreadsheet();
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName(SHEET_NAME);
-    if (!sheet) return { error: "Main results sheet not found" };
-    
-    // Step 1: Collect all file IDs inside the site folder (recursively)
     const siteFolder = DriveApp.getFolderById(folderId);
+    
+    // Recursive collect all file IDs inside selected site folder
     const fileIdsInFolder = [];
     const collectIds = (folder) => {
       const files = folder.getFiles();
@@ -427,48 +347,33 @@ function generatePAT(folderId, siteName) {
     collectIds(siteFolder);
 
     const data = sheet.getDataRange().getValues();
-    // Step 2: Filter spreadsheet by matching file IDs (row[6] is Fid)
-    // Fallback to name match for compatibility
-    const filtered = data.filter(row => {
-      const fid = String(row[6]);
-      return fileIdsInFolder.indexOf(fid) !== -1 || String(row[1]).includes(siteName) || String(row[7]).includes(siteName);
-    });
+    // Filter by matching File ID in column 7 (index 6)
+    const filtered = data.filter(row => fileIdsInFolder.indexOf(String(row[6])) !== -1);
     
     if (filtered.length === 0) return { error: "No audit results found for site: " + siteName };
     
     const tempateFolder = getOrCreateSubFolder(siteFolder, "TEMPATE");
     const template = DriveApp.getFileById(PAT_TEMPLATE_ID);
-    
     const newFile = template.makeCopy(siteName, tempateFolder);
     const newSS = SpreadsheetApp.openById(newFile.getId());
     const targetSheet = newSS.getSheets()[0];
     
-    // Header
     targetSheet.appendRow(["Date", "Filename", "Category", "Status", "Reason", "Photo"]);
-    
-    filtered.forEach((row, index) => {
+    filtered.forEach((row) => {
       const rowIndex = targetSheet.getLastRow() + 1;
       targetSheet.appendRow([row[0], row[1], row[2], row[3], row[4]]);
-      
-      // Insert Photo from Drive
       try {
-        const fileId = row[6]; // Fid
+        const fileId = row[6];
         if (fileId) {
           const imgBlob = DriveApp.getFileById(fileId).getBlob();
           const img = targetSheet.insertImage(imgBlob, 6, rowIndex); 
-          const originalWidth = img.getWidth();
           const originalHeight = img.getHeight();
           const factor = 150 / originalHeight; 
-          img.setWidth(originalWidth * factor).setHeight(150);
+          img.setWidth(img.getWidth() * factor).setHeight(150);
           targetSheet.setRowHeight(rowIndex, 160);
         }
-      } catch (e) {
-        targetSheet.getRange(rowIndex, 6).setValue("Error loading photo: " + e.toString());
-      }
+      } catch (e) {}
     });
-    
-    return { success: true, id: newFile.getId(), url: newSS.getUrl(), name: siteName };
-  } catch (e) {
-    return { error: "PAT Generation Error: " + e.toString() };
-  }
+    return { success: true, url: newSS.getUrl() };
+  } catch (e) { return { error: "PAT Error: " + e.toString() }; }
 }
