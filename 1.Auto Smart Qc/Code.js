@@ -382,23 +382,23 @@ function generatePAT(folderId, siteName) {
     if (!sheet) return { error: "Main results sheet not found" };
     
     const data = sheet.getDataRange().getValues();
-    const filtered = data.filter(row => String(row[1]).includes(siteName) || String(row[2]).includes(siteName)); // Simple filter
+    const filtered = data.filter(row => String(row[1]).includes(siteName) || String(row[2]).includes(siteName));
     
     if (filtered.length === 0) return { error: "No audit results found for site: " + siteName };
     
+    const siteFolder = DriveApp.getFolderById(folderId);
+    const tempateFolder = getOrCreateSubFolder(siteFolder, "TEMPATE");
     const template = DriveApp.getFileById(PAT_TEMPLATE_ID);
-    const folder = DriveApp.getFolderById(folderId);
-    const newFile = template.makeCopy(`PAT_Report_${siteName}_${new Date().getTime()}`, folder);
-    const newSS = SpreadsheetApp.openById(newFile.getId());
-    const targetSheet = newSS.getSheets()[0]; // Assume first sheet
     
-    // Simple mapping: just append the filtered data to the template
-    // In a real scenario, you'd map specific cells.
+    const newFile = template.makeCopy("Convert PAT", tempateFolder);
+    const newSS = SpreadsheetApp.openById(newFile.getId());
+    const targetSheet = newSS.getSheets()[0];
+    
     filtered.forEach(row => {
-      targetSheet.appendRow([row[0], row[1], row[2], row[3], row[4]]); // Date, File, Cat, Status, Reason
+      targetSheet.appendRow([row[0], row[1], row[2], row[3], row[4]]);
     });
     
-    return { success: true, id: newFile.getId(), url: newSS.getUrl() };
+    return { success: true, id: newFile.getId(), url: newSS.getUrl(), name: "Convert PAT" };
   } catch (e) {
     return { error: "PAT Generation Error: " + e.toString() };
   }

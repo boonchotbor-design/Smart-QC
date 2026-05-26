@@ -669,8 +669,24 @@ function BatchProcessView({ setActiveView }) {
                 )) : <div style={{color: '#94a3b8', textAlign: 'center', fontSize: 12}}>No logs available</div>}
               </div>
 
-              <button className="auth-button" onClick={() => { setStep(2); setSelectedFolder(null); setResult(null); }} style={{ width: '100%' }}>
+              <button className="auth-button" onClick={() => { setStep(2); setSelectedFolder(null); setResult(null); }} style={{ width: '100%', marginBottom: '12px' }}>
                 <Home size={18} /> Back to Home
+              </button>
+
+              <button 
+                className="auth-button" 
+                style={{ width: '100%', background: '#3b82f6' }}
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    const res = await fetch(`${BASE_URL}?action=generatePAT&folderId=${selectedFolder.id}&siteName=${encodeURIComponent(selectedFolder.name)}`);
+                    const json = await res.json();
+                    if (json.success) window.open(json.url, '_blank');
+                    else alert("Generation failed: " + (json.error || "Unknown error"));
+                  } catch (e) { alert("Error: " + e.message); } finally { setLoading(false); }
+                }}
+              >
+                <FileText size={18} /> Generate PAT Report
               </button>
             </>
           )}
