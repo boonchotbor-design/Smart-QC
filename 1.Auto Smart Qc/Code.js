@@ -364,8 +364,30 @@ function sendDualSummary(site, pass, fail, failItems) {
   sendTG(TELEGRAM_TARGET_ID, text, ["ส่งงาน"]);
 }
 function sendDualFailNotify(fn, cat, reason, url, fid) {
-  const tgKb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไม่อนุมัติ", callback_data: "rej|" + fid }], [{ text: "🔍 ดูรูป", url: url }]] };
-  callTG("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: `🚨 <b>พบงานไม่ผ่าน</b>\n📄 ไฟล์: ${fn}\n📌 หมวด: ${cat}\n❌ สาเหตุ: ${reason}`, parse_mode: "HTML", reply_markup: tgKb });
+  try {
+    const file = DriveApp.getFileById(fid);
+    const blob = file.getBlob();
+    const tgKb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไม่อนุมัติ", callback_data: "rej|" + fid }]] };
+    const caption = `🚨 <b>พบงานไม่ผ่าน</b>\n📄 ไฟล์: ${fn}\n📌 หมวด: ${cat}\n❌ สาเหตุ: ${reason}`;
+    
+    const payload = {
+      chat_id: TELEGRAM_TARGET_ID,
+      photo: blob,
+      caption: caption,
+      parse_mode: "HTML",
+      reply_markup: JSON.stringify(tgKb)
+    };
+    
+    UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+      method: "post",
+      payload: payload,
+      muteHttpExceptions: true
+    });
+  } catch (e) {
+    // Fallback if image send fails
+    const tgKb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไม่อนุมัติ", callback_data: "rej|" + fid }], [{ text: "🔍 ดูรูป", url: url }]] };
+    callTG("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: `🚨 <b>พบงานไม่ผ่าน (โหลดรูปไม่ได้)</b>\n📄 ไฟล์: ${fn}\n📌 หมวด: ${cat}\n❌ สาเหตุ: ${reason}`, parse_mode: "HTML", reply_markup: tgKb });
+  }
 }
 function callTG(m, p) { return UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${m}`, { method: "post", contentType: "application/json", payload: JSON.stringify(p), muteHttpExceptions: true }); }
 function editTG(cid, mid, txt) { return callTG("editMessageText", { chat_id: cid, message_id: mid, text: txt, parse_mode: "HTML" }); }
