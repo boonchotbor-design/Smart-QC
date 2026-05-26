@@ -60,8 +60,9 @@ function doGet(e) {
     if (action === "sendresetotp") return jsonResponse(sendResetOTP(params.email));
     if (action === "resetpassword") return jsonResponse(resetPassword(params.email, params.otp, params.newPassword));
     if (action === "listfolders") {
-      const folders = listSubFolders();
-      const rootFolder = DriveApp.getFolderById(FOLDER_ID);
+      const rootId = params.root || FOLDER_ID;
+      const folders = listSubFolders(rootId);
+      const rootFolder = DriveApp.getFolderById(rootId);
       return jsonResponse({ folders: folders, rootName: rootFolder.getName() });
     }
     if (action === "listfiles") return jsonResponse(listFilesInFolder(params.folderId));

@@ -328,7 +328,8 @@ function PATGenerateView() {
   const fetchFolders = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${BASE_URL}?action=listFolders`);
+      const ARCHIVE_ROOT = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
+      const res = await fetch(`${BASE_URL}?action=listFolders&root=${ARCHIVE_ROOT}`);
       const json = await res.json();
       setFolders(Array.isArray(json.folders) ? json.folders : []);
     } catch (e) { setError("Failed to load folders"); } finally { setLoading(false); }
