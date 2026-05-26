@@ -69,24 +69,58 @@ function DashboardApp() {
 
   useEffect(() => {
     const logged = localStorage.getItem('isLoggedIn') === 'true';
-    if (logged) setIsLoggedIn(true);
+    const loginTime = localStorage.getItem('loginTimestamp');
+    const TEN_MINUTES = 10 * 60 * 1000;
+    
+    if (logged && loginTime) {
+      const isExpired = Date.now() - parseInt(loginTime) > TEN_MINUTES;
+      if (isExpired) {
+        handleLogout();
+      } else {
+        setIsLoggedIn(true);
+      }
+    }
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('loginTimestamp');
+    setIsLoggedIn(false);
+    setAuthStep(1);
+    setPassword("");
+    setOtp("");
+  };
 
   const fetchData = async (site = "All Sites") => {
     try {
-      setLoading(true);
+      setLoading(true); setError(null);
       const res = await fetch(`${BASE_URL}?action=getData&site=${encodeURIComponent(site)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       const json = await res.json();
+      if (json.error) throw new Error(json.error);
       setData(json);
     } catch (e) {
       console.error("Fetch Error:", e);
+      setError("Fetch Failed: " + e.message + ". Please check GAS deployment settings (Access: Anyone).");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (isLoggedIn) fetchData();
+    if (isLoggedIn) {
+      const checkSession = setInterval(() => {
+        const loginTime = localStorage.getItem('loginTimestamp');
+        if (loginTime && Date.now() - parseInt(loginTime) > 10 * 60 * 1000) {
+          handleLogout();
+          alert("Session expired (10 mins). Please login again.");
+        }
+      }, 30000); // Check every 30 seconds
+      
+      fetchData();
+      return () => clearInterval(checkSession);
+    }
   }, [isLoggedIn]);
 
   const handleLogin = async (e) => {
@@ -106,18 +140,17 @@ function DashboardApp() {
         const isDeviceVerified = localStorage.getItem(deviceVerifiedKey) === 'true';
 
         if (isDeviceVerified) {
-          // Just verify password and log in
           const res = await fetch(`${BASE_URL}?action=checkPassword&email=${email.toLowerCase().trim()}&password=${encodeURIComponent(password)}`);
           const json = await res.json();
           if (json.success) {
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userEmail', email);
+            localStorage.setItem('loginTimestamp', Date.now().toString());
             setIsLoggedIn(true);
           } else {
             throw new Error(json.error || "รหัสผ่านไม่ถูกต้อง");
           }
         } else {
-          // First time on this device, send OTP
           const res = await fetch(`${BASE_URL}?action=sendOTP&email=${email.toLowerCase().trim()}&password=${encodeURIComponent(password)}`);
           const json = await res.json();
           if (json.success) {
@@ -133,6 +166,7 @@ function DashboardApp() {
         if (json.success) {
           localStorage.setItem('isLoggedIn', 'true');
           localStorage.setItem('userEmail', email);
+          localStorage.setItem('loginTimestamp', Date.now().toString());
           localStorage.setItem(`deviceVerified_${email.toLowerCase().trim()}`, 'true');
           setIsLoggedIn(true);
         } else {

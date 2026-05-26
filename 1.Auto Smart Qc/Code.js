@@ -1,8 +1,8 @@
 // =========================================================================
-// === AI SMART QC BOT - V.121 (FINAL ROBUST - PHOTO IN EXCEL & TG) ===
+// === AI SMART QC BOT - V.122 (STABLE ROBUST - DEBUGGING & FIXES) ===
 // =========================================================================
 
-const VERSION = "V.121 (FINAL-ROBUST)"; 
+const VERSION = "V.122 (STABLE-DEBUG)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c";
@@ -336,7 +336,6 @@ function generatePAT(folderId, siteName) {
     const sheet = ss.getSheetByName(SHEET_NAME);
     const siteFolder = DriveApp.getFolderById(folderId);
     
-    // Recursive collect all file IDs inside selected site folder
     const fileIdsInFolder = [];
     const collectIds = (folder) => {
       const files = folder.getFiles();
@@ -347,10 +346,9 @@ function generatePAT(folderId, siteName) {
     collectIds(siteFolder);
 
     const data = sheet.getDataRange().getValues();
-    // Filter by matching File ID in column 7 (index 6)
     const filtered = data.filter(row => fileIdsInFolder.indexOf(String(row[6])) !== -1);
     
-    if (filtered.length === 0) return { error: "No audit results found for site: " + siteName };
+    if (filtered.length === 0) return { error: "No audit results found in Sheet for: " + siteName };
     
     const tempateFolder = getOrCreateSubFolder(siteFolder, "TEMPATE");
     const template = DriveApp.getFileById(PAT_TEMPLATE_ID);
@@ -375,5 +373,5 @@ function generatePAT(folderId, siteName) {
       } catch (e) {}
     });
     return { success: true, url: newSS.getUrl() };
-  } catch (e) { return { error: "PAT Error: " + e.toString() }; }
+  } catch (e) { return { error: "Server Error: " + e.toString() }; }
 }
