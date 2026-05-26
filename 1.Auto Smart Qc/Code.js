@@ -1,8 +1,8 @@
 // =========================================================================
-// === AI SMART QC BOT - V.125 (OPTIMIZED & BUG FIX) ===
+// === AI SMART QC BOT - V.125 (ULTRA STABLE) ===
 // =========================================================================
 
-const VERSION = "V.125 (STABLE)"; 
+const VERSION = "V.125 (ULTRA)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c";
@@ -77,7 +77,6 @@ function listTemplates(project, workType) {
   try {
     const rootFolder = DriveApp.getFolderById(TEMPLATE_FOLDER_ID);
     let targetFolder = rootFolder;
-    
     if (project) {
       const projectFolders = rootFolder.getFoldersByName(project);
       if (projectFolders.hasNext()) {
@@ -91,7 +90,6 @@ function listTemplates(project, workType) {
         if (typeFolders.hasNext()) targetFolder = typeFolders.next();
       }
     }
-
     const files = targetFolder.getFiles();
     const result = [];
     while (files.hasNext()) {
@@ -216,12 +214,8 @@ function processFolderById(folderId, templateId) {
       if (!(f.getDescription() || "").includes("PAT_CHECKED")) toProcess.push(f);
     }
     if (toProcess.length === 0) return { success: true, count: 0 };
-    
     let checklist = null;
-    if (templateId) {
-      checklist = getChecklistFromTemplate(templateId);
-    }
-    
+    if (templateId) checklist = getChecklistFromTemplate(templateId);
     return { success: true, ...processFileList(toProcess, folder.getName(), checklist) };
   } catch (e) { return { error: e.toString() }; } finally { lock.releaseLock(); }
 }
@@ -230,20 +224,13 @@ function getChecklistFromTemplate(templateId) {
   try {
     const file = DriveApp.getFileById(templateId);
     const mime = file.getMimeType();
-    
     if (mime === MimeType.GOOGLE_SHEETS) {
       const ss = SpreadsheetApp.openById(templateId);
       const sheet = ss.getSheets()[0];
       const data = sheet.getDataRange().getValues();
-      return data.map(row => row[0])
-                 .filter(val => val && !["Item", "Category", "Task", "Description"].includes(val))
-                 .join(", ");
-    } else {
-      return file.getBlob().getDataAsString();
-    }
-  } catch (e) {
-    return null;
-  }
+      return data.map(row => row[0]).filter(val => val && !["Item", "Category", "Task", "Description"].includes(val)).join(", ");
+    } else return file.getBlob().getDataAsString();
+  } catch (e) { return null; }
 }
 
 function processFileList(files, siteName, checklist) {
@@ -302,13 +289,7 @@ function processManualReject(fid, cid, mid, originalText) {
 function updateSheetStatus(fid, newStatus, color) {
   const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
   const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][6] === fid) {
-      sheet.getRange(i + 1, 4).setValue(newStatus);
-      sheet.getRange(i + 1, 1, 1, sheet.getLastColumn()).setBackground(color);
-      return data[i];
-    }
-  }
+  for (let i = 1; i < data.length; i++) { if (data[i][6] === fid) { sheet.getRange(i + 1, 4).setValue(newStatus); sheet.getRange(i + 1, 1, 1, sheet.getLastColumn()).setBackground(color); return data[i]; } }
   return null;
 }
 
@@ -318,12 +299,8 @@ function getDashboardData(siteFilter) {
   let dataRows = values.slice(1);
   if (siteFilter && siteFilter !== "All Sites") dataRows = dataRows.filter(row => String(row[1]).includes(siteFilter) || String(row[7]).includes(siteFilter));
   const statusMap = {};
-  dataRows.forEach(row => {
-    const status = String(row[3] || "").toUpperCase();
-    const cleanStatus = status.includes("PASS") ? "PASS" : (status.includes("FAIL") ? "FAIL" : "PENDING");
-    statusMap[cleanStatus] = (statusMap[cleanStatus] || 0) + 1;
-  });
-  return { metrics: { workOrders: dataRows.length, rate: 0 }, statusBreakdown: Object.keys(statusMap).map(k => ({ name: k, value: statusMap[k] })) };
+  dataRows.forEach(row => { const status = String(row[3] || "").toUpperCase(); const cleanStatus = status.includes("PASS") ? "PASS" : (status.includes("FAIL") ? "FAIL" : "PENDING"); statusMap[cleanStatus] = (statusMap[cleanStatus] || 0) + 1; });
+  return { metrics: { workOrders: dataRows.length, rate: dataRows.length > 0 ? Math.round((statusMap["PASS"] || 0) / dataRows.length * 100) : 0 }, statusBreakdown: Object.keys(statusMap).map(k => ({ name: k, value: statusMap[k] })) };
 }
 
 function jsonResponse(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
@@ -331,10 +308,7 @@ function getOrCreateSubFolder(p, n) { const f = p.getFoldersByName(n); return f.
 
 function sendDualSummary(site, pass, fail, failItems) {
   let text = `📊 <b>สรุปผล AI (${site})</b>\n✅ ผ่าน: ${pass}\n❌ ไม่ผ่าน: ${fail}`;
-  if (failItems.length > 0) {
-    text += "\n";
-    failItems.forEach((item, index) => { text += `\n${index + 1}.📄 ไฟล์: ${item.name}\n📌 หมวด: ${item.category}`; });
-  }
+  if (failItems.length > 0) { text += "\n"; failItems.forEach((item, index) => { text += `\n${index + 1}.📄 ไฟล์: ${item.name}\n📌 หมวด: ${item.category}`; }); }
   callTGRaw("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: text, parse_mode: "HTML" });
 }
 
@@ -344,16 +318,12 @@ function sendDualFailNotify(fn, cat, reason, url, fid) {
     const tgKb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไม่อนุมัติ", callback_data: "rej|" + fid }]] };
     const payload = { chat_id: TELEGRAM_TARGET_ID, photo: blob, caption: `🚨 <b>พบงานไม่ผ่าน</b>\n📄 ไฟล์: ${fn}\n📌 หมวด: ${cat}\n❌ สาเหตุ: ${reason}`, parse_mode: "HTML", reply_markup: JSON.stringify(tgKb) };
     UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, { method: "post", payload: payload, muteHttpExceptions: true });
-  } catch (e) {
-    callTGRaw("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: `🚨 <b>พบงานไม่ผ่าน</b>\n📄 ไฟล์: ${fn}`, parse_mode: "HTML" });
-  }
+  } catch (e) { callTGRaw("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: `🚨 <b>พบงานไม่ผ่าน</b>\n📄 ไฟล์: ${fn}`, parse_mode: "HTML" }); }
 }
 
 function editAuto(cid, mid, txt) {
   const resCaption = callTGRaw("editMessageCaption", { chat_id: cid, message_id: mid, caption: txt, parse_mode: "HTML", reply_markup: { inline_keyboard: [] } });
-  if (resCaption.getResponseCode() !== 200) {
-    callTGRaw("editMessageText", { chat_id: cid, message_id: mid, text: txt, parse_mode: "HTML", reply_markup: { inline_keyboard: [] } });
-  }
+  if (resCaption.getResponseCode() !== 200) callTGRaw("editMessageText", { chat_id: cid, message_id: mid, text: txt, parse_mode: "HTML", reply_markup: { inline_keyboard: [] } });
 }
 
 function callTGRaw(m, p) { return UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${m}`, { method: "post", contentType: "application/json", payload: JSON.stringify(p), muteHttpExceptions: true }); }
@@ -362,8 +332,6 @@ function generatePAT(folderId, siteName) {
   try {
     const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
     const siteFolder = DriveApp.getFolderById(folderId);
-    
-    // ค้นหา IDs ทั้งหมดใน Folder และ Folder ย่อย
     const fileIdsInFolder = [];
     const collectIds = (folder) => {
       const files = folder.getFiles();
@@ -372,49 +340,26 @@ function generatePAT(folderId, siteName) {
       while (subs.hasNext()) collectIds(subs.next());
     };
     collectIds(siteFolder);
-
-    // ใช้ Set เพื่อการค้นหาที่เร็วขึ้น (O(1))
     const idSet = new Set(fileIdsInFolder);
     const data = sheet.getDataRange().getValues();
-    
-    // กรองข้อมูลเฉพาะที่เกี่ยวข้องกับ Site หรือ Folder นี้
     const filtered = data.filter(row => idSet.has(String(row[6])) || String(row[7]) === siteName);
-    if (filtered.length === 0) return { error: "No audit results found for this site." };
-    
-    // สร้างสำเนาไฟล์ Template
-    const templateFile = DriveApp.getFileById(PAT_TEMPLATE_ID);
+    if (filtered.length === 0) return { error: "No audit results found." };
     const destinationFolder = getOrCreateSubFolder(siteFolder, "TEMPATE");
-    const newFile = templateFile.makeCopy(`PAT_${siteName}_${new Date().getTime()}`, destinationFolder);
-    const newSS = SpreadsheetApp.openById(newFile.getId());
+    const newSS = SpreadsheetApp.openById(DriveApp.getFileById(PAT_TEMPLATE_ID).makeCopy(`PAT_${siteName}_${new Date().getTime()}`, destinationFolder).getId());
     const targetSheet = newSS.getSheets()[0];
-    
-    // ตั้งค่าหัวตาราง (ถ้า Template ยังไม่มี)
-    if (targetSheet.getLastRow() === 0) {
-      targetSheet.appendRow(["Date", "Filename", "Category", "Status", "Reason", "Photo"]);
-    }
-    
-    // จำกัดจำนวนรูปเพื่อป้องกัน Timeout (50 รูป)
-    const maxImages = 50;
-    const processData = filtered.slice(0, maxImages);
-    
-    processData.forEach((row) => {
+    if (targetSheet.getLastRow() === 0) targetSheet.appendRow(["Date", "Filename", "Category", "Status", "Reason", "Photo"]);
+    filtered.slice(0, 50).forEach((row) => {
       const rowIndex = targetSheet.getLastRow() + 1;
       targetSheet.appendRow([row[0], row[1], row[2], row[3], row[4]]);
       try {
         const fileId = row[6];
         if (fileId) {
-          const fileBlob = DriveApp.getFileById(fileId).getBlob();
-          const img = targetSheet.insertImage(fileBlob, 6, rowIndex); 
+          const img = targetSheet.insertImage(DriveApp.getFileById(fileId).getBlob(), 6, rowIndex); 
           img.setWidth(img.getWidth() * (150 / img.getHeight())).setHeight(150);
           targetSheet.setRowHeight(rowIndex, 160);
         }
-      } catch (e) {
-        targetSheet.getRange(rowIndex, 6).setValue("Image Error: " + e.toString());
-      }
+      } catch (e) { targetSheet.getRange(rowIndex, 6).setValue("Image Error"); }
     });
-    
     return { success: true, url: newSS.getUrl() };
-  } catch (e) { 
-    return { error: "Backend Error: " + e.toString() }; 
-  }
+  } catch (e) { return { error: "Backend Error: " + e.toString() }; }
 }
