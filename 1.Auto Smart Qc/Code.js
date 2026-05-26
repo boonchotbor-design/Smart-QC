@@ -121,11 +121,10 @@ function doPost(e) {
 }
 
 function checkPassword(email, password) {
-  const inputEmail = (email || "").toLowerCase().trim();
   const inputPass = (password || "").trim();
   const currentPass = getAuthPassword().trim();
+  // เช็คแค่รหัสผ่านเท่านั้น ใครมีรหัสผ่านเข้าได้ทุกคน
   if (inputPass !== currentPass && inputPass !== DEFAULT_PASSWORD) return { error: "รหัสผ่านไม่ถูกต้อง" };
-  if (!ALLOWED_USERS.includes(inputEmail)) return { error: "คุณไม่มีสิทธิ์เข้าใช้งาน" };
   return { success: true };
 }
 
