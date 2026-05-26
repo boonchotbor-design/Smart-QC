@@ -21,7 +21,7 @@ const ALLOWED_USERS = [
   "payon.sapphat@teloneer.com",
   "palagon.prommueangma@teloneer.com",
   "thossapol.chaloemrit@teloneer.com",
-  "Auttaseth.klomthaisong@teloneer.com",
+  "auttaseth.klomthaisong@teloneer.com",
   "nammon.manakiat@teloneer.com",
   "pakpoom.t@teloneer.com"
 ];
