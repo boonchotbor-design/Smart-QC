@@ -288,7 +288,14 @@ function processManualReject(fid, cid, mid, originalText) {
 function updateSheetStatus(fid, newStatus, color) {
   const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
   const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) { if (data[i][6] === fid) { sheet.getRange(i + 1, 4).setValue(newStatus); sheet.getRange(i + 1, 1, 1, sheet.getLastColumn()).setBackground(color); return data[i]; } }
+  // ค้นหาจากแถวล่างสุดขึ้นบนเพื่อให้เจอข้อมูลล่าสุดก่อน
+  for (let i = data.length - 1; i >= 1; i--) { 
+    if (String(data[i][6]) === String(fid)) {
+      sheet.getRange(i + 1, 4).setValue(newStatus);
+      sheet.getRange(i + 1, 1, 1, sheet.getLastColumn()).setBackground(color);
+      return data[i];
+    }
+  }
   return null;
 }
 
