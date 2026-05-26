@@ -92,9 +92,10 @@ function doPost(e) {
       const cid = cb.message.chat.id;
       const mid = cb.message.message_id;
       const val = cb.data;
+      const originalText = cb.message.text || cb.message.caption || "";
       callTG("answerCallbackQuery", { callback_query_id: cb.id });
-      if (val.startsWith("app|")) processManualApprove(val.split("|")[1], cid, mid, cb.message.text);
-      if (val.startsWith("rej|")) processManualReject(val.split("|")[1], cid, mid, cb.message.text);
+      if (val.startsWith("app|")) processManualApprove(val.split("|")[1], cid, mid, originalText);
+      if (val.startsWith("rej|")) processManualReject(val.split("|")[1], cid, mid, originalText);
     }
   } catch (err) {}
   return ContentService.createTextOutput("OK");
@@ -412,15 +413,38 @@ function generatePAT(folderId, siteName) {
     const tempateFolder = getOrCreateSubFolder(siteFolder, "TEMPATE");
     const template = DriveApp.getFileById(PAT_TEMPLATE_ID);
     
-    const newFile = template.makeCopy("Convert PAT", tempateFolder);
+    const newFile = template.makeCopy(siteName, tempateFolder);
     const newSS = SpreadsheetApp.openById(newFile.getId());
     const targetSheet = newSS.getSheets()[0];
     
-    filtered.forEach(row => {
+    // Header for the appended data
+    targetSheet.appendRow(["Date", "Filename", "Category", "Status", "Reason", "Photo"]);
+    
+    filtered.forEach((row, index) => {
+      const rowIndex = targetSheet.getLastRow() + 1;
       targetSheet.appendRow([row[0], row[1], row[2], row[3], row[4]]);
+      
+      // Insert Photo from Drive
+      try {
+        const fileId = row[6]; // Fid
+        if (fileId) {
+          const imgBlob = DriveApp.getFileById(fileId).getBlob();
+          const img = targetSheet.insertImage(imgBlob, 6, rowIndex); // Column F
+          
+          // Resize image
+          const originalWidth = img.getWidth();
+          const originalHeight = img.getHeight();
+          const factor = 150 / originalHeight; 
+          img.setWidth(originalWidth * factor).setHeight(150);
+          
+          targetSheet.setRowHeight(rowIndex, 160);
+        }
+      } catch (e) {
+        targetSheet.getRange(rowIndex, 6).setValue("Error loading photo: " + e.toString());
+      }
     });
     
-    return { success: true, id: newFile.getId(), url: newSS.getUrl(), name: "Convert PAT" };
+    return { success: true, id: newFile.getId(), url: newSS.getUrl(), name: siteName };
   } catch (e) {
     return { error: "PAT Generation Error: " + e.toString() };
   }
