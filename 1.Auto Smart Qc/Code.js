@@ -24,7 +24,7 @@ const ALLOWED_USERS = [
   "payon.sapphat@teloneer.com",
   "palagon.prommueangma@teloneer.com",
   "thossapol.chaloemrit@teloneer.com",
-  "Auttaseth.klomthaisong@teloneer.com",
+  "auttaseth.klomthaisong@teloneer.com",
   "nammon.manakiat@teloneer.com",
   "pakpoom.t@teloneer.com"
 ];
@@ -298,7 +298,7 @@ function processManualApprove(fid, cid, mid, originalText) {
       const category = rowData[2] || "ทั่วไป";
       file.setDescription("PAT_CHECKED: PASS (Manual) | " + file.getDescription());
       const header = `✅ <b>อนุมัติสำเร็จ: ${category}</b>\n📄 <i>${fileName}</i>\n\n`;
-      editTG(cid, mid, header + originalText);
+      editAuto(cid, mid, header + originalText);
       sendTG(cid, `✅ อนุมัติหมวด <b>${category}</b> เรียบร้อยครับ\nไฟล์: <i>${fileName}</i>`, ["ส่งงาน"]);
     } else { sendTG(cid, "❌ ไม่พบข้อมูลใน Sheet", ["ส่งงาน"]); }
   } catch (e) { sendTG(cid, "⚠️ Error: " + e.toString(), ["ส่งงาน"]); }
@@ -311,7 +311,7 @@ function processManualReject(fid, cid, mid, originalText) {
     const rowData = updateSheetStatus(fid, "FAIL (Rejected)", "#ffcccb");
     const category = rowData ? rowData[2] : "ทั่วไป";
     const header = `❌ <b>ปฏิเสธการอนุมัติ: ${category}</b>\n📄 <i>${fileName}</i>\n\n`;
-    editTG(cid, mid, header + originalText);
+    editAuto(cid, mid, header + originalText);
     sendTG(cid, `❌ ปฏิเสธหมวด <b>${category}</b> เรียบร้อยครับ\nไฟล์: <i>${fileName}</i>`, ["ส่งงาน"]);
   } catch (e) { sendTG(cid, "⚠️ Error: " + e.toString(), ["ส่งงาน"]); }
 }
@@ -397,6 +397,16 @@ function sendTG(cid, txt, buttons) {
   if (buttons) { let row = []; buttons.forEach(b => { row.push({ text: String(b) }); if (row.length === 2) { kb.keyboard.push(row); row = []; } }); if (row.length > 0) kb.keyboard.push(row); }
   return callTG("sendMessage", { chat_id: cid, text: txt, parse_mode: "HTML", reply_markup: kb });
 }
+
+function editAuto(cid, mid, txt) {
+  // Attempt to edit as caption (for photos) first, if it fails, edit as text
+  const resCaption = callTGRaw("editMessageCaption", { chat_id: cid, message_id: mid, caption: txt, parse_mode: "HTML", reply_markup: { inline_keyboard: [] } });
+  if (resCaption.getResponseCode() !== 200) {
+    callTGRaw("editMessageText", { chat_id: cid, message_id: mid, text: txt, parse_mode: "HTML", reply_markup: { inline_keyboard: [] } });
+  }
+}
+
+function callTGRaw(m, p) { return UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${m}`, { method: "post", contentType: "application/json", payload: JSON.stringify(p), muteHttpExceptions: true }); }
 
 function generatePAT(folderId, siteName) {
   try {
