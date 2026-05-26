@@ -9,6 +9,7 @@ const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c";
 const SHEET_NAME = "Sheet1";
 
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwlhZ_vy7_gZ8gQOvnY0PIu_1O_VVEuOFLtvXIORtT76F1bX4fSd4Frj6tUkY3-pd2YAg/exec";
+const PAT_TEMPLATE_ID = "1Pxdkd0Nxn-HzObefgkzcNFlCTDHrrVkj";
 
 const PROJECT_LIST = ["HAE", "TME", "TMT", "HAT", "HTB", "HSN", "TMB", "HNN"];
 const TYPE_LIST = ["MBB", "POWER", "SOLACELL", "SMALL DC", "IPRAN"];
@@ -70,6 +71,7 @@ function doGet(e) {
       const folder = getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), folderName);
       return jsonResponse({ success: true, id: folder.getId(), url: folder.getUrl(), name: folderName });
     }
+    if (action === "generatepat") return jsonResponse(generatePAT(params.folderId, params.siteName));
     return jsonResponse({ status: "READY", version: VERSION });
   } catch (err) {
     return jsonResponse({ error: "GAS Error: " + err.toString() });
@@ -371,4 +373,33 @@ function sendTG(cid, txt, buttons) {
   let kb = { keyboard: [], resize_keyboard: true, one_time_keyboard: true };
   if (buttons) { let row = []; buttons.forEach(b => { row.push({ text: String(b) }); if (row.length === 2) { kb.keyboard.push(row); row = []; } }); if (row.length > 0) kb.keyboard.push(row); }
   return callTG("sendMessage", { chat_id: cid, text: txt, parse_mode: "HTML", reply_markup: kb });
+}
+
+function generatePAT(folderId, siteName) {
+  try {
+    const ss = getSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAME);
+    if (!sheet) return { error: "Main results sheet not found" };
+    
+    const data = sheet.getDataRange().getValues();
+    const filtered = data.filter(row => String(row[1]).includes(siteName) || String(row[2]).includes(siteName)); // Simple filter
+    
+    if (filtered.length === 0) return { error: "No audit results found for site: " + siteName };
+    
+    const template = DriveApp.getFileById(PAT_TEMPLATE_ID);
+    const folder = DriveApp.getFolderById(folderId);
+    const newFile = template.makeCopy(`PAT_Report_${siteName}_${new Date().getTime()}`, folder);
+    const newSS = SpreadsheetApp.openById(newFile.getId());
+    const targetSheet = newSS.getSheets()[0]; // Assume first sheet
+    
+    // Simple mapping: just append the filtered data to the template
+    // In a real scenario, you'd map specific cells.
+    filtered.forEach(row => {
+      targetSheet.appendRow([row[0], row[1], row[2], row[3], row[4]]); // Date, File, Cat, Status, Reason
+    });
+    
+    return { success: true, id: newFile.getId(), url: newSS.getUrl() };
+  } catch (e) {
+    return { error: "PAT Generation Error: " + e.toString() };
+  }
 }

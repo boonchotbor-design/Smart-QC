@@ -2,7 +2,7 @@ import React, { useState, useEffect, Component } from 'react';
 import { 
   LayoutDashboard, User, BarChart2, Folder, Kanban, Calendar, 
   Zap, Building2, DollarSign, FileInput, History, Settings,
-  LogOut, ChevronRight, Search, Bell, Monitor, Edit2, Play, CheckCircle2, Rocket, ArrowLeft, Loader2, RefreshCw, Home, Eye, EyeOff
+  LogOut, ChevronRight, Search, Bell, Monitor, Edit2, Play, CheckCircle2, Rocket, ArrowLeft, Loader2, RefreshCw, Home, Eye, EyeOff, FileText
 } from 'lucide-react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, 
@@ -12,6 +12,7 @@ import './styles/App.css';
 
 const BASE_URL = "https://script.google.com/macros/s/AKfycbwlhZ_vy7_gZ8gQOvnY0PIu_1O_VVEuOFLtvXIORtT76F1bX4fSd4Frj6tUkY3-pd2YAg/exec";
 const COLORS = ['#3b82f6', '#10b981', '#ef4444', '#f97316', '#9333ea', '#6b7280'];
+const PAT_TEMPLATE_ID = "1Pxdkd0Nxn-HzObefgkzcNFlCTDHrrVkj";
 const ALLOWED_USERS = [
   "adisak.chanmao@teloneer.com",
   "boonchot.boriwut@teloneer.com",
@@ -297,6 +298,7 @@ function DashboardApp() {
           <NavItem icon={<LayoutDashboard size={18} />} label="Dashboard" active={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} />
           <div style={{ color: '#666', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', padding: '10px', marginTop: '16px' }}>Automations</div>
           <NavItem icon={<Zap size={18} />} label="AI Smart QC" active={activeView === 'batch'} onClick={() => setActiveView('batch')} />
+          <NavItem icon={<FileText size={18} />} label="PAT Generate" active={activeView === 'pat'} onClick={() => setActiveView('pat')} />
           <div style={{ marginTop: 'auto', padding: '10px' }}>
             <div style={{ cursor: 'pointer', padding: '10px', display: 'flex', alignItems: 'center', gap: '12px', color: '#ef4444' }} onClick={() => { localStorage.removeItem('isLoggedIn'); setIsLoggedIn(false); setAuthStep(1); setPassword(""); setOtp(""); }}>
               <LogOut size={18} /> <span>Sign Out</span>
@@ -305,8 +307,82 @@ function DashboardApp() {
         </nav>
       </aside>
       <main className="main-content">
-        {activeView === 'dashboard' ? <DashboardContent data={data} loading={loading} /> : <BatchProcessView setActiveView={setActiveView} />}
+        {activeView === 'dashboard' ? <DashboardContent data={data} loading={loading} /> : 
+         activeView === 'batch' ? <BatchProcessView setActiveView={setActiveView} /> :
+         <PATGenerateView />}
       </main>
+    </div>
+  );
+}
+
+function PATGenerateView() {
+  const [folders, setFolders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState(null);
+  const [generating, setGenerating] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => { fetchFolders(); }, []);
+
+  const fetchFolders = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${BASE_URL}?action=listFolders`);
+      const json = await res.json();
+      setFolders(Array.isArray(json.folders) ? json.folders : []);
+    } catch (e) { setError("Failed to load folders"); } finally { setLoading(false); }
+  };
+
+  const handleGenerate = async () => {
+    if (!selectedFolder) return;
+    try {
+      setGenerating(true); setError(null);
+      const res = await fetch(`${BASE_URL}?action=generatePAT&folderId=${selectedFolder.id}&siteName=${encodeURIComponent(selectedFolder.name)}`);
+      const json = await res.json();
+      if (json.success) setResult(json);
+      else throw new Error(json.error || "Generation failed");
+    } catch (e) { setError(e.message); } finally { setGenerating(false); }
+  };
+
+  return (
+    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+      <div className="process-card" style={{background: 'var(--card-dark)', textAlign: 'center'}}>
+        <h2 style={{ color: '#fff', marginBottom: 24 }}>PAT Report Generator</h2>
+        
+        {error && <div style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '12px', borderRadius: '8px', marginBottom: '24px' }}>{error}</div>}
+
+        {!selectedFolder ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '24px', maxHeight: '400px', overflowY: 'auto' }}>
+            {folders.map(f => (
+              <div key={f.id} onClick={() => setSelectedFolder(f)} className="folder-selection-card" style={{padding: 16}}>
+                <Building2 size={20} color="#10b981" /> 
+                <div style={{fontSize: 14, marginTop: 8, fontWeight: '600'}}>{f.name}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ background: 'rgba(59, 130, 246, 0.05)', padding: 32, borderRadius: 16, border: '1px dashed #3b82f6', marginBottom: 24 }}>
+            <Building2 size={48} color="#3b82f6" style={{margin: '0 auto 16px'}} />
+            <h3 style={{fontSize: 20, marginBottom: 8}}>{selectedFolder.name}</h3>
+            <p style={{color: '#94a3b8', fontSize: 14, marginBottom: 24}}>Ready to generate PAT Excel report using the latest audit results.</p>
+            
+            {result ? (
+              <div style={{background: '#10b981', padding: '16px', borderRadius: '12px', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', cursor: 'pointer'}} onClick={() => window.open(result.url, '_blank')}>
+                <FileText size={20} /> <b>Download PAT Report</b>
+              </div>
+            ) : (
+              <button className="auth-button" onClick={handleGenerate} disabled={generating}>
+                {generating ? <Loader2 size={20} className="animate-spin" /> : <><Rocket size={20} /> Generate Excel</>}
+              </button>
+            )}
+            
+            <button className="auth-button" style={{marginTop: 12, background: 'transparent', color: '#666', border: 'none'}} onClick={() => {setSelectedFolder(null); setResult(null);}}>
+              Select Different Site
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
