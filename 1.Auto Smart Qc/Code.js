@@ -1,8 +1,8 @@
 // =========================================================================
-// === AI SMART QC BOT - V.124 (STABLE PERFORMANCE & DEBUG) ===
+// === AI SMART QC BOT - V.125 (OPTIMIZED & BUG FIX) ===
 // =========================================================================
 
-const VERSION = "V.124 (STABLE-PERF)"; 
+const VERSION = "V.125 (STABLE)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c";
@@ -10,6 +10,7 @@ const SHEET_NAME = "Sheet1";
 
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwlhZ_vy7_gZ8gQOvnY0PIu_1O_VVEuOFLtvXIORtT76F1bX4fSd4Frj6tUkY3-pd2YAg/exec";
 const PAT_TEMPLATE_ID = "1Pxdkd0Nxn-HzObefgkzcNFlCTDHrrVkj";
+const TEMPLATE_FOLDER_ID = "1h2GLkJr-wtYCAM75ruBO4MBiNwirOoMT";
 
 // --- [AUTH CONFIG] ---
 const DEFAULT_PASSWORD = "QC-ADMIN-2024"; 
@@ -58,17 +59,50 @@ function doGet(e) {
       return jsonResponse({ folders: folders, rootName: "Drive" });
     }
     if (action === "listfiles") return jsonResponse(listFilesInFolder(params.folderId));
-    if (action === "processfolder") return jsonResponse(processFolderById(params.folderId));
+    if (action === "processfolder") return jsonResponse(processFolderById(params.folderId, params.templateId));
     if (action === "createsitefolder") {
       const folderName = `${params.project}_${params.type}_${params.site}`;
       const folder = getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), folderName);
       return jsonResponse({ success: true, id: folder.getId(), url: folder.getUrl(), name: folderName });
     }
     if (action === "generatepat") return jsonResponse(generatePAT(params.folderId, params.siteName));
+    if (action === "listtemplates") return jsonResponse(listTemplates(params.project, params.type));
     return jsonResponse({ status: "READY", version: VERSION });
   } catch (err) {
     return jsonResponse({ error: "Server Side Error: " + err.toString() });
   }
+}
+
+function listTemplates(project, workType) {
+  try {
+    const rootFolder = DriveApp.getFolderById(TEMPLATE_FOLDER_ID);
+    let targetFolder = rootFolder;
+    
+    if (project) {
+      const projectFolders = rootFolder.getFoldersByName(project);
+      if (projectFolders.hasNext()) {
+        targetFolder = projectFolders.next();
+        if (workType) {
+          const typeFolders = targetFolder.getFoldersByName(workType);
+          if (typeFolders.hasNext()) targetFolder = typeFolders.next();
+        }
+      } else if (workType) {
+        const typeFolders = rootFolder.getFoldersByName(workType);
+        if (typeFolders.hasNext()) targetFolder = typeFolders.next();
+      }
+    }
+
+    const files = targetFolder.getFiles();
+    const result = [];
+    while (files.hasNext()) {
+      const f = files.next();
+      const name = f.getName();
+      if (!workType || name.toLowerCase().includes(workType.toLowerCase())) {
+        result.push({ id: f.getId(), name: name });
+      }
+    }
+    return result;
+  } catch (e) { return { error: e.toString() }; }
 }
 
 function doPost(e) {
@@ -170,7 +204,7 @@ function listFilesInFolder(folderId) {
   } catch (e) { return []; }
 }
 
-function processFolderById(folderId) {
+function processFolderById(folderId, templateId) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000);
@@ -182,18 +216,44 @@ function processFolderById(folderId) {
       if (!(f.getDescription() || "").includes("PAT_CHECKED")) toProcess.push(f);
     }
     if (toProcess.length === 0) return { success: true, count: 0 };
-    return { success: true, ...processFileList(toProcess, folder.getName()) };
+    
+    let checklist = null;
+    if (templateId) {
+      checklist = getChecklistFromTemplate(templateId);
+    }
+    
+    return { success: true, ...processFileList(toProcess, folder.getName(), checklist) };
   } catch (e) { return { error: e.toString() }; } finally { lock.releaseLock(); }
 }
 
-function processFileList(files, siteName) {
+function getChecklistFromTemplate(templateId) {
+  try {
+    const file = DriveApp.getFileById(templateId);
+    const mime = file.getMimeType();
+    
+    if (mime === MimeType.GOOGLE_SHEETS) {
+      const ss = SpreadsheetApp.openById(templateId);
+      const sheet = ss.getSheets()[0];
+      const data = sheet.getDataRange().getValues();
+      return data.map(row => row[0])
+                 .filter(val => val && !["Item", "Category", "Task", "Description"].includes(val))
+                 .join(", ");
+    } else {
+      return file.getBlob().getDataAsString();
+    }
+  } catch (e) {
+    return null;
+  }
+}
+
+function processFileList(files, siteName, checklist) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
   let pass = 0, fail = 0;
   const results = [];
   for (let f of files) {
     try {
-      const ai = analyzeAI(f);
+      const ai = analyzeAI(f, checklist);
       if (!ai || ai.status === "ERROR") continue;
       const status = ai.status.toUpperCase();
       sheet.appendRow([new Date(), f.getName(), ai.sheetReference, status, ai.reason, f.getUrl(), f.getId(), siteName]);
@@ -208,9 +268,10 @@ function processFileList(files, siteName) {
   return { total: files.length, pass: pass, fail: fail, details: results };
 }
 
-function analyzeAI(file) {
+function analyzeAI(file, customChecklist) {
   const b64 = Utilities.base64Encode(file.getBlob().getBytes());
-  const checklist = "2.3(M16), 2.3(M17), 2.3(M19-A1), 2.3(M19-A2), 2.3(M20.1-Ant1), 2.3(M20.2-Ant1), 2.3(M20.1-Ant2), 2.3(M20.2-Ant2), 2.3(M20.1-Ant3), 2.3(M20.2-Ant3), 2.3(M20.1-Ant4), 2.3(M20.2-Ant4), 2.3(M22-GND BAR), 2.3(M22-MST GND), 2.3(M24-GND DCDU), 2.3(M24-GND DCDU (2)), 2.3(M22-GND-RRU), 2.3(M24-RRU view S 1st), 2.3(M24-RRU view S 2nd), 2.3(M24-RRU view S 3th), 2.3(M24-RRU view S 4th), 2.3(M24-Add card 1), 2.3(M24-add card 2), 2.3(M26-DCDU socket), 2.3(M24-DC-RRU 1st), 2.3(M25 RRU1-Clamp-RET), 2.3(M24-DC-RRU 2nd), 2.3(M25 RRU2-clamp-RET), 2.3(M24-DC-AAU 2nd), 2.3(M25 AAU2-Clamp-RET), 2.3(M24-DC-RRU 4th), 2.3(M25 RRU4-Clamp-RET), 2.3(M23-inlet-outlet), 2.3(M23-inlet-outlet (2)), 2.3(M27)Ladder, 2.3(M27)-J-Loop, 2.3(M30-Krone 1-2, 2.3(M30-GPS), 2.3(M32-rec C1-3), 2.3(M30 C1), 2.3(M30 C2), 2.3(M32) BreakerC1-3, 2.3(M32)DCDU, 2.3(M32) LED-load, Notch CPRI, No.POE+Clean (1), Remote Site, 2.4-BOQ, dismantle";
+  const defaultChecklist = "2.3(M16), 2.3(M17), 2.3(M19-A1), 2.3(M19-A2), 2.3(M20.1-Ant1), 2.3(M20.2-Ant1), 2.3(M20.1-Ant2), 2.3(M20.2-Ant2), 2.3(M20.1-Ant3), 2.3(M20.2-Ant3), 2.3(M20.1-Ant4), 2.3(M20.2-Ant4), 2.3(M22-GND BAR), 2.3(M22-MST GND), 2.3(M24-GND DCDU), 2.3(M24-GND DCDU (2)), 2.3(M22-GND-RRU), 2.3(M24-RRU view S 1st), 2.3(M24-RRU view S 2nd), 2.3(M24-RRU view S 3th), 2.3(M24-RRU view S 4th), 2.3(M24-Add card 1), 2.3(M24-add card 2), 2.3(M26-DCDU socket), 2.3(M24-DC-RRU 1st), 2.3(M25 RRU1-Clamp-RET), 2.3(M24-DC-RRU 2nd), 2.3(M25 RRU2-clamp-RET), 2.3(M24-DC-AAU 2nd), 2.3(M25 AAU2-Clamp-RET), 2.3(M24-DC-RRU 4th), 2.3(M25 RRU4-Clamp-RET), 2.3(M23-inlet-outlet), 2.3(M23-inlet-outlet (2)), 2.3(M27)Ladder, 2.3(M27)-J-Loop, 2.3(M30-Krone 1-2, 2.3(M30-GPS), 2.3(M32-rec C1-3), 2.3(M30 C1), 2.3(M30 C2), 2.3(M32) BreakerC1-3, 2.3(M32)DCDU, 2.3(M32) LED-load, Notch CPRI, No.POE+Clean (1), Remote Site, 2.4-BOQ, dismantle";
+  const checklist = customChecklist || defaultChecklist;
   const promptText = `Analyze site photo. MATCH ONE: [${checklist}]. JSON: {"sheetReference": "Item", "status": "PASS/FAIL", "reason": "Thai"}`;
   const payload = { "model": "meta-llama/llama-4-scout-17b-16e-instruct", "messages": [{ "role": "user", "content": [{ "type": "text", "text": promptText }, { "type": "image_url", "image_url": { "url": `data:image/jpeg;base64,${b64}` } }] }], "response_format": { "type": "json_object" } };
   for (let i = 0; i < GROQ_KEYS.length; i++) {
@@ -301,6 +362,8 @@ function generatePAT(folderId, siteName) {
   try {
     const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
     const siteFolder = DriveApp.getFolderById(folderId);
+    
+    // ค้นหา IDs ทั้งหมดใน Folder และ Folder ย่อย
     const fileIdsInFolder = [];
     const collectIds = (folder) => {
       const files = folder.getFiles();
@@ -310,28 +373,48 @@ function generatePAT(folderId, siteName) {
     };
     collectIds(siteFolder);
 
+    // ใช้ Set เพื่อการค้นหาที่เร็วขึ้น (O(1))
+    const idSet = new Set(fileIdsInFolder);
     const data = sheet.getDataRange().getValues();
-    const filtered = data.filter(row => fileIdsInFolder.indexOf(String(row[6])) !== -1 || String(row[7]) === siteName);
-    if (filtered.length === 0) return { error: "No audit results found" };
     
-    const newSS = SpreadsheetApp.openById(DriveApp.getFileById(PAT_TEMPLATE_ID).makeCopy(siteName, getOrCreateSubFolder(siteFolder, "TEMPATE")).getId());
+    // กรองข้อมูลเฉพาะที่เกี่ยวข้องกับ Site หรือ Folder นี้
+    const filtered = data.filter(row => idSet.has(String(row[6])) || String(row[7]) === siteName);
+    if (filtered.length === 0) return { error: "No audit results found for this site." };
+    
+    // สร้างสำเนาไฟล์ Template
+    const templateFile = DriveApp.getFileById(PAT_TEMPLATE_ID);
+    const destinationFolder = getOrCreateSubFolder(siteFolder, "TEMPATE");
+    const newFile = templateFile.makeCopy(`PAT_${siteName}_${new Date().getTime()}`, destinationFolder);
+    const newSS = SpreadsheetApp.openById(newFile.getId());
     const targetSheet = newSS.getSheets()[0];
-    targetSheet.appendRow(["Date", "Filename", "Category", "Status", "Reason", "Photo"]);
     
-    // Limits images to prevent timeout
+    // ตั้งค่าหัวตาราง (ถ้า Template ยังไม่มี)
+    if (targetSheet.getLastRow() === 0) {
+      targetSheet.appendRow(["Date", "Filename", "Category", "Status", "Reason", "Photo"]);
+    }
+    
+    // จำกัดจำนวนรูปเพื่อป้องกัน Timeout (50 รูป)
     const maxImages = 50;
-    filtered.slice(0, maxImages).forEach((row) => {
+    const processData = filtered.slice(0, maxImages);
+    
+    processData.forEach((row) => {
       const rowIndex = targetSheet.getLastRow() + 1;
       targetSheet.appendRow([row[0], row[1], row[2], row[3], row[4]]);
       try {
         const fileId = row[6];
         if (fileId) {
-          const img = targetSheet.insertImage(DriveApp.getFileById(fileId).getBlob(), 6, rowIndex); 
+          const fileBlob = DriveApp.getFileById(fileId).getBlob();
+          const img = targetSheet.insertImage(fileBlob, 6, rowIndex); 
           img.setWidth(img.getWidth() * (150 / img.getHeight())).setHeight(150);
           targetSheet.setRowHeight(rowIndex, 160);
         }
-      } catch (e) {}
+      } catch (e) {
+        targetSheet.getRange(rowIndex, 6).setValue("Image Error: " + e.toString());
+      }
     });
+    
     return { success: true, url: newSS.getUrl() };
-  } catch (e) { return { error: "Backend Error: " + e.toString() }; }
+  } catch (e) { 
+    return { error: "Backend Error: " + e.toString() }; 
+  }
 }
