@@ -19,6 +19,12 @@ const ALLOWED_USERS = [
   "adisak.chanmao@teloneer.com",
   "boonchot.boriwut@teloneer.com",
   "apichart.kampuang@teloneer.com",
+  "nattawoot.suwan@teloneer.com",
+  "payon.sapphat@teloneer.com",
+  "palagon.prommueangma@teloneer.com",
+  "thossapol.chaloemrit@teloneer.com",
+  "Auttaseth.klomthaisong@teloneer.com",
+  "nammon.manakiat@teloneer.com",
   "pakpoom.t@teloneer.com"
 ];
 
