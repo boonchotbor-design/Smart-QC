@@ -415,12 +415,27 @@ function generatePAT(folderId, siteName) {
     const sheet = ss.getSheetByName(SHEET_NAME);
     if (!sheet) return { error: "Main results sheet not found" };
     
+    // Step 1: Collect all file IDs inside the site folder (recursively)
+    const siteFolder = DriveApp.getFolderById(folderId);
+    const fileIdsInFolder = [];
+    const collectIds = (folder) => {
+      const files = folder.getFiles();
+      while (files.hasNext()) fileIdsInFolder.push(files.next().getId());
+      const subs = folder.getFolders();
+      while (subs.hasNext()) collectIds(subs.next());
+    };
+    collectIds(siteFolder);
+
     const data = sheet.getDataRange().getValues();
-    const filtered = data.filter(row => String(row[1]).includes(siteName) || String(row[2]).includes(siteName));
+    // Step 2: Filter spreadsheet by matching file IDs (row[6] is Fid)
+    // Fallback to name match for compatibility
+    const filtered = data.filter(row => {
+      const fid = String(row[6]);
+      return fileIdsInFolder.indexOf(fid) !== -1 || String(row[1]).includes(siteName) || String(row[7]).includes(siteName);
+    });
     
     if (filtered.length === 0) return { error: "No audit results found for site: " + siteName };
     
-    const siteFolder = DriveApp.getFolderById(folderId);
     const tempateFolder = getOrCreateSubFolder(siteFolder, "TEMPATE");
     const template = DriveApp.getFileById(PAT_TEMPLATE_ID);
     
@@ -428,7 +443,7 @@ function generatePAT(folderId, siteName) {
     const newSS = SpreadsheetApp.openById(newFile.getId());
     const targetSheet = newSS.getSheets()[0];
     
-    // Header for the appended data
+    // Header
     targetSheet.appendRow(["Date", "Filename", "Category", "Status", "Reason", "Photo"]);
     
     filtered.forEach((row, index) => {
@@ -440,14 +455,11 @@ function generatePAT(folderId, siteName) {
         const fileId = row[6]; // Fid
         if (fileId) {
           const imgBlob = DriveApp.getFileById(fileId).getBlob();
-          const img = targetSheet.insertImage(imgBlob, 6, rowIndex); // Column F
-          
-          // Resize image
+          const img = targetSheet.insertImage(imgBlob, 6, rowIndex); 
           const originalWidth = img.getWidth();
           const originalHeight = img.getHeight();
           const factor = 150 / originalHeight; 
           img.setWidth(originalWidth * factor).setHeight(150);
-          
           targetSheet.setRowHeight(rowIndex, 160);
         }
       } catch (e) {
