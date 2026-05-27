@@ -361,12 +361,25 @@ function PATGenerateView({ theme }) {
   const [loading, setLoading] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [result, setResult] = useState(null);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     setLoading(true);
     fetch(`${BASE_URL}?action=listFolders&root=1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7`)
       .then(r => r.json()).then(json => { setFolders(json.folders || []); setLoading(false); });
   }, []);
+
+  const handleGenerate = async () => {
+    if (!selectedFolder) return;
+    setLoading(true); setProgress(10);
+    const timer = setInterval(() => setProgress(p => p < 95 ? p + 2 : p), 1000);
+    try {
+      const res = await fetch(`${BASE_URL}?action=generatePAT&folderId=${selectedFolder.id}&siteName=${encodeURIComponent(selectedFolder.name)}`);
+      const json = await res.json();
+      clearInterval(timer); setProgress(100);
+      setResult(json);
+    } catch (e) { clearInterval(timer); setProgress(0); } finally { setLoading(false); }
+  };
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', background: theme === 'dark' ? '#1e293b' : 'white', padding: 40, borderRadius: 20, textAlign: 'center', border: `1px solid ${theme === 'dark' ? '#334155' : '#e5e7eb'}`, boxShadow: '0 10px 15px rgba(0,0,0,0.1)' }}>
@@ -378,21 +391,31 @@ function PATGenerateView({ theme }) {
       ) : (
         <div>
           <h3 style={{color: '#3b82f6'}}>{selectedFolder.name}</h3>
-          {result ? (
-            <button className="auth-button" style={{ background: '#10b981', marginTop: 30 }} onClick={() => window.open(result.url, '_blank')}>Download PAT</button>
+          
+          {loading ? (
+            <div style={{marginTop: 30}}>
+              <div style={{width: '100%', height: 12, background: theme === 'dark' ? '#334155' : '#e2e8f0', borderRadius: 10, overflow: 'hidden', marginBottom: 10}}>
+                <div style={{width: `${progress}%`, height: '100%', background: '#3b82f6', transition: 'width 0.5s'}}></div>
+              </div>
+              <div style={{fontWeight: 'bold', color: '#3b82f6', fontSize: 20}}>{progress}% Generating...</div>
+            </div>
+          ) : result ? (
+            <div style={{marginTop: 30}}>
+              <button className="auth-button" style={{ background: '#10b981', width: '100%', height: 55, fontWeight: 'bold' }} onClick={() => window.open(result.url, '_blank')}>Download PAT Report</button>
+              <button className="auth-button" style={{ marginTop: 15, background: 'none', border: 'none', color: '#94a3af' }} onClick={() => {setSelectedFolder(null); setResult(null); setProgress(0);}}>Start New Report</button>
+            </div>
           ) : (
-            <button className="auth-button" style={{ background: '#3b82f6', marginTop: 30 }} onClick={() => {
-              setLoading(true);
-              fetch(`${BASE_URL}?action=generatePAT&folderId=${selectedFolder.id}&siteName=${encodeURIComponent(selectedFolder.name)}`)
-                .then(r => r.json()).then(json => { setResult(json); setLoading(false); });
-            }}>{loading ? <Loader2 className="animate-spin" /> : "Generate Excel"}</button>
+            <div style={{marginTop: 30}}>
+              <button className="auth-button" style={{ background: '#3b82f6', width: '100%', height: 55, fontWeight: 'bold' }} onClick={handleGenerate}>Generate Excel</button>
+              <button className="auth-button" style={{ marginTop: 15, background: 'none', border: 'none', color: '#94a3af' }} onClick={() => setSelectedFolder(null)}>Back</button>
+            </div>
           )}
-          <button className="auth-button" style={{ marginTop: 15, background: 'none', border: 'none', color: '#94a3af' }} onClick={() => setSelectedFolder(null)}>Back</button>
         </div>
       )}
     </div>
   );
 }
+
 
 function NavItem({ icon, label, active, onClick, theme }) {
   const activeBg = theme === 'dark' ? '#3b82f6' : '#eff6ff';

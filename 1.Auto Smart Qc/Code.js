@@ -1,8 +1,8 @@
 // =========================================================================
-// === AI SMART QC BOT - V.126 (ULTRA STABLE & THEME FIX) ===
+// === AI SMART QC BOT - V.128 (PRECISION PAT GENERATION) ===
 // =========================================================================
 
-const VERSION = "V.126 (ULTRA)"; 
+const VERSION = "V.128 (PRECISION)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c";
@@ -285,24 +285,19 @@ function generatePAT(folderId, siteName) {
     if (filtered.length === 0) return { error: "No PASS audit results found for this site." };
 
     const destinationFolder = getOrCreateSubFolder(siteFolder, "TEMPATE");
-    const newFile = DriveApp.getFileById(PAT_TEMPLATE_ID).makeCopy(`PAT_${siteName}_${new Date().getTime()}`, destinationFolder);
-    const newSS = SpreadsheetApp.openById(newFile.getId());
-
-    // 1. Update Global Site Info (Assuming it's on the first sheet or specific names)
-    const infoSheets = ["PATC", "SOW"];
-    infoSheets.forEach(name => {
-      const s = newSS.getSheetByName(name);
-      if (s) {
-        fillPlaceholder(s, "Site name :", siteName);
-        fillPlaceholder(s, "Site code :", siteName);
-      }
+    const newSS = SpreadsheetApp.openById(DriveApp.getFileById(PAT_TEMPLATE_ID).makeCopy(`PAT_${siteName}_${new Date().getTime()}`, destinationFolder).getId());
+    
+    // 1. Update Global Site Info (Site Name & Site Code)
+    newSS.getSheets().forEach(s => {
+      fillPlaceholder(s, "Site name :", siteName);
+      fillPlaceholder(s, "Site code :", siteName);
     });
 
     // 2. Group images by Sheet Reference
     const grouped = filtered.reduce((acc, row) => {
       const cat = String(row[2]);
       if (!acc[cat]) acc[cat] = [];
-      acc[cat].push({ name: row[1], id: row[6] });
+      acc[cat].push({ id: row[6] });
       return acc;
     }, {});
 
@@ -311,72 +306,58 @@ function generatePAT(folderId, siteName) {
       const targetSheet = newSS.getSheetByName(cat);
       if (!targetSheet) return;
 
-      // Update Site info on this sheet too
-      fillPlaceholder(targetSheet, "Site name :", siteName);
-      fillPlaceholder(targetSheet, "Site code :", siteName);
-
       const photos = grouped[cat];
-
-      // We look for "Before" or "After" frames or use a grid
-      // Based on screenshot: usually 2 columns, multiple rows
-      // Let's find common frame patterns or insert in a logical grid
-      let photoIndex = 0;
-      const rows = [4, 25, 46, 67]; // Approximate row starts for boxes based on height
-      const cols = [2, 10];         // Approximate column starts for boxes
-
-      for (let r of rows) {
-        for (let c of cols) {
-          if (photoIndex >= photos.length) break;
+      const locations = findImageLocations(targetSheet);
+      
+      photos.forEach((photo, idx) => {
+        if (idx < locations.length) {
           try {
-            const blob = DriveApp.getFileById(photos[photoIndex].id).getBlob();
-            // Insert and Fit into a box (roughly 8 columns wide, 18 rows high)
-            insertImageWithFit(targetSheet, blob, c, r, 7, 18); 
+            const blob = DriveApp.getFileById(photo.id).getBlob();
+            const loc = locations[idx];
+            insertImageInBox(targetSheet, blob, loc.col, loc.row, loc.width, loc.height);
           } catch (e) {}
-          photoIndex++;
         }
-      }
+      });
     });
 
     return { success: true, url: newSS.getUrl() };
-  } catch (e) { return { error: "PAT Generation Error: " + e.toString() }; }
+  } catch (e) { return { error: "Backend Error: " + e.toString() }; }
 }
 
-function fillPlaceholder(sheet, text, value) {
+function findImageLocations(sheet) {
   const data = sheet.getDataRange().getValues();
-  for (let r = 0; r < Math.min(data.length, 10); r++) { // Look in top 10 rows
+  const locations = [];
+  // Scan for "Before :" or "After :" tags
+  for (let r = 0; r < data.length; r++) {
     for (let c = 0; c < data[r].length; c++) {
-      if (String(data[r][c]).includes(text)) {
-        sheet.getRange(r + 1, c + 2).setValue(value); // Set value in next column
-        return;
+      const cellText = String(data[r][c]);
+      if (cellText.includes("Before :") || cellText.includes("After :")) {
+        // Assume box is above the text (typical PAT template)
+        locations.push({ col: c + 1, row: r - 15, width: 8, height: 16 }); // Box estimation
       }
     }
   }
+  return locations;
 }
 
-function insertImageWithFit(sheet, blob, col, row, widthInCols, heightInRows) {
+function insertImageInBox(sheet, blob, col, row, wCols, hRows) {
   try {
-    const img = sheet.insertImage(blob, col, row);
-
-    // Calculate box size in pixels
-    let boxWidth = 0;
-    for (let i = 0; i < widthInCols; i++) boxWidth += sheet.getColumnWidth(col + i);
-
-    let boxHeight = 0;
-    for (let i = 0; i < heightInRows; i++) boxHeight += sheet.getRowHeight(row + i);
-
-    // Original dimensions
-    const origW = img.getWidth();
-    const origH = img.getHeight();
-
-    // Scaling to fit (with 5px padding)
-    const scale = Math.min((boxWidth - 10) / origW, (boxHeight - 10) / origH);
-
-    img.setWidth(origW * scale);
-    img.setHeight(origH * scale);
-
-    // Center it a bit
-    img.setAnchorCellXOffset((boxWidth - (origW * scale)) / 2);
-    img.setAnchorCellYOffset((boxHeight - (origH * scale)) / 2);
+    const img = sheet.insertImage(blob, col, Math.max(1, row));
+    let pixelWidth = 0; for (let i=0; i<wCols; i++) pixelWidth += sheet.getColumnWidth(col+i);
+    let pixelHeight = 0; for (let i=0; i<hRows; i++) pixelHeight += sheet.getRowHeight(Math.max(1, row+i));
+    
+    const ratio = Math.min((pixelWidth - 10) / img.getWidth(), (pixelHeight - 10) / img.getHeight());
+    img.setWidth(img.getWidth() * ratio).setHeight(img.getHeight() * ratio);
+    img.setAnchorCellXOffset((pixelWidth - img.getWidth()) / 2);
+    img.setAnchorCellYOffset((pixelHeight - img.getHeight()) / 2);
   } catch (e) {}
 }
 
+function fillPlaceholder(sheet, text, value) {
+  const data = sheet.getRange(1, 1, 10, 20).getValues(); // Check top-left corner
+  for (let r=0; r<data.length; r++) {
+    for (let c=0; c<data[r].length; c++) {
+      if (String(data[r][c]).includes(text)) { sheet.getRange(r+1, c+2).setValue(value); return; }
+    }
+  }
+}
