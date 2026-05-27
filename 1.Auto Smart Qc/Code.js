@@ -1,8 +1,8 @@
 // =========================================================================
-// === AI SMART QC BOT - V.131 (FINAL PRODUCTION - SMART TEMPLATE) ===
+// === AI SMART QC BOT - V.132 (ULTIMATE RELIABILITY - PAT GEN) ===
 // =========================================================================
 
-const VERSION = "V.131 (SMART-MATCH)"; 
+const VERSION = "V.132 (ULTIMATE)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c";
@@ -33,19 +33,13 @@ function doGet(e) {
   const action = (params.action || "").toLowerCase();
   try {
     if (action === "getdata") return jsonResponse(getDashboardData(params.site || "All Sites"));
-    if (action === "checkpassword") return jsonResponse(checkPassword(params.email, params.password));
-    if (action === "listfolders") return jsonResponse({ folders: listSubFolders(params.root || FOLDER_ID), rootName: "Drive" });
+    if (action === "checkpassword") return (params.password === "QC-ADMIN-2024") ? jsonResponse({success:true}) : jsonResponse({error:"รหัสไม่ถูกต้อง"});
+    if (action === "listfolders") return jsonResponse({ folders: listSubFolders(params.root || FOLDER_ID) });
     if (action === "listfiles") return jsonResponse(listFilesInFolder(params.folderId));
     if (action === "processfolder") return jsonResponse(processFolderById(params.folderId, params.templateId));
-    if (action === "createsitefolder") {
-      const folderName = `${params.project}_${params.type}_${params.site}`;
-      const folder = getOrCreateSubFolder(DriveApp.getFolderById(FOLDER_ID), folderName);
-      return jsonResponse({ success: true, id: folder.getId(), url: folder.getUrl(), name: folderName });
-    }
     if (action === "generatepat") return jsonResponse(generatePAT(params.folderId, params.siteName));
-    if (action === "listtemplates") return jsonResponse(listTemplates(params.project, params.type));
     return jsonResponse({ status: "READY", version: VERSION });
-  } catch (err) { return jsonResponse({ error: "Server Error: " + err.toString() }); }
+  } catch (err) { return jsonResponse({ error: err.toString() }); }
 }
 
 function processFolderById(folderId, templateId) {
@@ -113,23 +107,47 @@ function analyzeAI(file, customChecklist) {
 
 function generatePAT(folderId, siteName) {
   try {
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+    const ssDb = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ssDb.getSheetByName(SHEET_NAME);
     const siteFolder = DriveApp.getFolderById(folderId);
-    const logs = [`Starting PAT for: ${siteName}`];
+    const logs = [`[V.132] Starting PAT for: ${siteName}`];
     
-    // Auto Select Template
+    const fileIdsInFolder = [];
+    const getFilesRecursively = (fld) => {
+      const files = fld.getFiles();
+      while (files.hasNext()) fileIdsInFolder.push(files.next().getId());
+      const subs = fld.getFolders();
+      while (subs.hasNext()) {
+        const sub = subs.next();
+        if (sub.getName() !== "TEMPATE") {
+           const subFiles = sub.getFiles();
+           while (subFiles.hasNext()) fileIdsInFolder.push(subFiles.next().getId());
+        }
+      }
+    };
+    getFilesRecursively(siteFolder);
+    const idSet = new Set(fileIdsInFolder);
+    logs.push(`Found ${fileIdsInFolder.length} files in folder structure.`);
+
+    const data = sheet.getDataRange().getValues();
+    const filtered = data.filter(row => {
+      const fileId = String(row[6]);
+      const status = String(row[3]);
+      const siteInRow = String(row[7]);
+      return (idSet.has(fileId) || siteInRow === siteName) && status.includes("PASS");
+    });
+
+    logs.push(`Matched ${filtered.length} PASS records in database.`);
+    if (filtered.length === 0) return { success: false, error: "ไม่พบข้อมูล PASS ในฐานข้อมูล", logs: logs };
+
     let tid = TEMPLATES.DEFAULT;
     const sn = siteName.toUpperCase();
     if (sn.includes("HAE") || sn.includes("MBB")) tid = TEMPLATES.HAE_MBB;
     else if (sn.includes("HAT") || sn.includes("SSR")) tid = TEMPLATES.HAT_SSR;
-    logs.push(`Template selected: ${tid === TEMPLATES.HAE_MBB ? "HAE_MBB" : tid === TEMPLATES.HAT_SSR ? "HAT_SSR" : "DEFAULT"}`);
-
-    const data = sheet.getDataRange().getValues();
-    const filtered = data.filter(row => String(row[7]) === siteName && String(row[3]).includes("PASS"));
-    if (filtered.length === 0) return { error: "No PASS records for this site.", logs: logs };
+    logs.push(`Template: ${tid === TEMPLATES.HAE_MBB ? "HAE_MBB" : tid === TEMPLATES.HAT_SSR ? "HAT_SSR" : "DEFAULT"}`);
 
     const dest = getOrCreateSubFolder(siteFolder, "TEMPATE");
-    const newSS = SpreadsheetApp.openById(DriveApp.getFileById(tid).makeCopy(`PAT_${siteName}`, dest).getId());
+    const newSS = SpreadsheetApp.openById(DriveApp.getFileById(tid).makeCopy(`PAT_${siteName}_${new Date().getTime()}`, dest).getId());
     
     newSS.getSheets().forEach(s => { fillPlaceholder(s, "Site name :", siteName); fillPlaceholder(s, "Site code :", siteName); });
 
@@ -145,11 +163,20 @@ function generatePAT(folderId, siteName) {
       if (!targetSheet) { logs.push(`⚠️ Missing sheet for: ${cat}`); return; }
       const locs = findImageLocations(targetSheet);
       const photos = grouped[cat];
-      const insert = (pid, loc) => { try { insertImageInBox(targetSheet, DriveApp.getFileById(pid).getBlob(), loc.col, loc.row, loc.width, loc.height); return true; } catch(e){return false;} };
+      let c = 0;
       
-      let c=0;
-      photos.filter(p=>p.type==="before").forEach((p,i)=>{ if(i<locs.filter(l=>l.type==="before").length) if(insert(p.id, locs.filter(l=>l.type==="before")[i])) c++; });
-      photos.filter(p=>p.type==="after").forEach((p,i)=>{ if(i<locs.filter(l=>l.type==="after").length) if(insert(p.id, locs.filter(l=>l.type==="after")[i])) c++; });
+      photos.forEach(p => {
+        const type = p.type === "before" ? "before" : (p.type === "after" ? "after" : null);
+        let targetLoc = type ? locs.find(l => l.type === type && !l.used) : locs.find(l => !l.used);
+
+        if (targetLoc) {
+          try {
+            insertImageInBox(targetSheet, DriveApp.getFileById(p.id).getBlob(), targetLoc.col, targetLoc.row, targetLoc.width, targetLoc.height);
+            targetLoc.used = true;
+            c++;
+          } catch(e) {}
+        }
+      });
       logs.push(`✅ ${cat}: Inserted ${c} images`);
     });
     return { success: true, url: newSS.getUrl(), logs: logs };
@@ -178,7 +205,7 @@ function findImageLocations(sheet) {
   const regex = /(Before|After)\s*:/i;
   for (let r=0; r<data.length; r++) for (let c=0; c<data[r].length; c++) {
     const match = String(data[r][c]).match(regex);
-    if (match) locs.push({ col: c+1, row: r-15, width: 8, height: 16, type: match[1].toLowerCase() });
+    if (match) locs.push({ col: c+1, row: r-15, width: 8, height: 16, type: match[1].toLowerCase(), used: false });
   }
   return locs;
 }
@@ -198,10 +225,8 @@ function fillPlaceholder(s, t, v) {
 
 function jsonResponse(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 function getOrCreateSubFolder(p, n) { const f = p.getFoldersByName(n); return f.hasNext() ? f.next() : p.createFolder(n); }
-function checkPassword(e, p) { return (p === "QC-ADMIN-2024") ? { success: true } : { error: "รหัสผ่านไม่ถูกต้อง" }; }
 function listSubFolders(id) { const subs = DriveApp.getFolderById(id).getFolders(); const res = []; while(subs.hasNext()){ const f = subs.next(); res.push({ id: f.getId(), name: f.getName(), url: f.getUrl(), date: f.getLastUpdated().toISOString() }); } return res.sort((a,b)=>new Date(b.date)-new Date(a.date)); }
 function listFilesInFolder(id) { const files = DriveApp.getFolderById(id).getFiles(); const res = []; while(files.hasNext()){ const f = files.next(); if(!(f.getDescription()||"").includes("PAT_CHECKED")) res.push({ id: f.getId(), name: f.getName(), size: (f.getSize()/1024).toFixed(0)+" KB" }); } return res; }
-function sendDualSummary(s, p, f, items) { let txt = `สรุปผล AI (${s})\n✅ ผ่าน: ${p}\n❌ ไม่ผ่าน: ${f}`; items.forEach((it,i)=> txt+=`\n${i+1}.📄 ${it.name}`); callTGRaw("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: txt }); }
+function callTGRaw(m, p) { return UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${m}`, { method: "post", contentType: "application/json", payload: JSON.stringify(p), muteHttpExceptions: true }); }
+function sendDualSummary(s, p, f, items) { let txt = `📊 สรุปผล AI (${s})\n✅ ผ่าน: ${p}\n❌ ไม่ผ่าน: ${f}`; items.forEach((it,i)=> txt+=`\n${i+1}.📄 ${it.name}`); callTGRaw("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: txt }); }
 function sendDualFailNotify(n, c, r, u, fid) { const blob = DriveApp.getFileById(fid).getBlob(); const kb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไม่อนุมัติ", callback_data: "rej|" + fid }]] }; callTGRaw("sendPhoto", { chat_id: TELEGRAM_TARGET_ID, photo: blob, caption: `🚨 พบงานไม่ผ่าน\n📄 ไฟล์: ${n}\n📌 หมวด: ${c}\n❌ สาเหตุ: ${r}`, reply_markup: JSON.stringify(kb) }); }
-function callTGRaw(m, p) { return UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${m}`, { method: "post", payload: p, muteHttpExceptions: true }); }
-function listTemplates() { return []; } 
