@@ -30,6 +30,7 @@ function DashboardApp() {
   const [authStep, setAuthStep] = useState(1);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -41,7 +42,7 @@ function DashboardApp() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn'); setIsLoggedIn(false); setAuthStep(1); setEmail(""); setPassword("");
+    localStorage.removeItem('isLoggedIn'); setIsLoggedIn(false); setAuthStep(1); setEmail(""); setPassword(""); setShowPassword(false);
   };
 
   const fetchData = async (site = "All Sites") => {
@@ -78,7 +79,26 @@ function DashboardApp() {
           {error && <div style={{color: '#f87171', marginBottom: 15}}>{error}</div>}
           <form onSubmit={handleLogin}>
             <input className="auth-input" style={{background: '#0f172a', border: '1px solid #334155', color: 'white', marginBottom: 15}} type="text" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            {authStep === 2 && <input className="auth-input" style={{background: '#0f172a', border: '1px solid #334155', color: 'white', marginBottom: 15}} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus />}
+            {authStep === 2 && (
+              <div style={{ position: 'relative', marginBottom: 15 }}>
+                <input 
+                  className="auth-input" 
+                  style={{background: '#0f172a', border: '1px solid #334155', color: 'white', marginBottom: 0, paddingRight: 50}} 
+                  type={showPassword ? "text" : "password"} 
+                  placeholder="Password" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  required 
+                  autoFocus 
+                />
+                <div 
+                  onClick={() => setShowPassword(!showPassword)} 
+                  style={{ position: 'absolute', right: 15, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#94a3af', display: 'flex', alignItems: 'center' }}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </div>
+              </div>
+            )}
             <button type="submit" className="auth-button" style={{background: '#3b82f6'}} disabled={loading}>{loading ? <Loader2 className="animate-spin" /> : "Continue"}</button>
           </form>
         </div>
