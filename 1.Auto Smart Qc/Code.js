@@ -349,20 +349,22 @@ function generatePAT(folderId, siteName) {
 
     // 3. Process each category sheet
     Object.keys(grouped).forEach(cat => {
-      let targetSheet = newSS.getSheetByName(cat);
+      let targetSheet = findTargetSheetSmart(newSS, cat);
+      
       if (!targetSheet) {
-        const lowerCat = cat.toLowerCase();
-        targetSheet = newSS.getSheets().find(s => s.getName().toLowerCase().trim() === lowerCat);
+        logs.push(`⚠️ CRITICAL: Sheet not found for category: "${cat}". Attempting fallback...`);
+        // Fallback: try to find any sheet that contains the category name in its cells
+        targetSheet = findSheetByContent(newSS, cat);
       }
       
       if (!targetSheet) {
-        logs.push(`⚠️ Sheet NOT FOUND for category: "${cat}"`);
+        logs.push(`❌ FAILED: Could not find a place for "${cat}" in the template.`);
         return;
       }
 
       const photos = grouped[cat];
       const locations = findImageLocations(targetSheet);
-      logs.push(`Processing "${cat}": Photos=${photos.length}, Template Slots=${locations.length}`);
+      logs.push(`Processing "${cat}" -> Sheet "${targetSheet.getName()}": Photos=${photos.length}, Slots=${locations.length}`);
       
       const beforePhotos = photos.filter(p => p.type === "before");
       const afterPhotos = photos.filter(p => p.type === "after");
@@ -388,11 +390,51 @@ function generatePAT(folderId, siteName) {
       const remainingLocs = [...beforeLocs.slice(usedBefore), ...afterLocs.slice(usedAfter)];
       
       otherPhotos.forEach((p, i) => { if (i < remainingLocs.length && insert(p.id, remainingLocs[i])) count++; });
-      logs.push(`Successfully inserted ${count} images into "${cat}"`);
+      logs.push(`✅ SUCCESS: Inserted ${count} images into "${targetSheet.getName()}"`);
     });
 
     return { success: true, url: newSS.getUrl(), logs: logs };
   } catch (e) { return { error: "Generate Error: " + e.toString() }; }
+}
+
+function findTargetSheetSmart(ss, catName) {
+  const sheets = ss.getSheets();
+  const cleanCat = catName.toUpperCase().replace(/\s/g, "");
+  
+  // 1. Direct match (case insensitive, no spaces)
+  let found = sheets.find(s => s.getName().toUpperCase().replace(/\s/g, "") === cleanCat);
+  if (found) return found;
+  
+  // 2. Fuzzy match: Check if sheet name is IN the category or vice versa
+  // e.g., Cat: "2.3(M16)" -> Sheet: "M16"
+  found = sheets.find(s => {
+    const sName = s.getName().toUpperCase();
+    return cleanCat.includes(sName) || sName.includes(cleanCat);
+  });
+  if (found) return found;
+
+  // 3. Extract part in brackets if exists: 2.3(M16) -> M16
+  const match = catName.match(/\((.*?)\)/);
+  if (match) {
+    const inner = match[1].toUpperCase();
+    found = sheets.find(s => s.getName().toUpperCase().includes(inner));
+  }
+  
+  return found;
+}
+
+function findSheetByContent(ss, text) {
+  const sheets = ss.getSheets();
+  const cleanText = text.toUpperCase();
+  for (let s of sheets) {
+    const data = s.getRange(1, 1, 20, 10).getValues(); // Scan top-left area
+    for (let r=0; r<data.length; r++) {
+      for (let c=0; c<data[r].length; c++) {
+        if (String(data[r][c]).toUpperCase().includes(cleanText)) return s;
+      }
+    }
+  }
+  return null;
 }
 
 function findImageLocations(sheet) {
