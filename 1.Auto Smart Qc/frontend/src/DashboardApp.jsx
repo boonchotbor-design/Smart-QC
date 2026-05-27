@@ -219,11 +219,44 @@ function BatchProcessView({ theme }) {
   };
 
   const handleProcess = async () => {
-    setProcessing(true); setStep(6); setProgress(10);
-    const timer = setInterval(() => setProgress(p => p < 90 ? p + 5 : p), 1500);
-    const res = await fetch(`${BASE_URL}?action=processFolder&folderId=${selectedFolder.id}&templateId=${selectedTemplate?.id || ""}`);
-    const json = await res.json();
-    clearInterval(timer); setProgress(100); setResult(json); setProcessing(false);
+    setProcessing(true); setStep(6); setProgress(0);
+    let cumulativeResult = { total: 0, pass: 0, fail: 0, details: [] };
+    let hasMore = true;
+    
+    while (hasMore) {
+      setProgress(10);
+      const timer = setInterval(() => setProgress(p => p < 95 ? p + 5 : p), 2000);
+      
+      try {
+        const res = await fetch(`${BASE_URL}?action=processFolder&folderId=${selectedFolder.id}&templateId=${selectedTemplate?.id || ""}`);
+        const json = await res.json();
+        clearInterval(timer);
+        
+        if (json.error) {
+          setResult({ ...cumulativeResult, error: json.error });
+          hasMore = false;
+        } else {
+          cumulativeResult.total += (json.total || 0);
+          cumulativeResult.pass += (json.pass || 0);
+          cumulativeResult.fail += (json.fail || 0);
+          cumulativeResult.details = [...(json.details || []), ...cumulativeResult.details];
+          
+          setResult(cumulativeResult);
+          hasMore = json.hasMore;
+          if (hasMore) {
+            setProgress(0); // Reset for next batch loop
+            await new Promise(r => setTimeout(r, 1000)); // Short pause
+          } else {
+            setProgress(100);
+          }
+        }
+      } catch (e) {
+        clearInterval(timer);
+        setResult({ ...cumulativeResult, error: "Batch Process Connection Error" });
+        hasMore = false;
+      }
+    }
+    setProcessing(false);
   };
 
   return (

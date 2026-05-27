@@ -146,14 +146,29 @@ function processFolderById(folderId, templateId) {
     const folder = DriveApp.getFolderById(folderId);
     const files = folder.getFiles();
     const toProcess = [];
+    const BATCH_LIMIT = 40; // Set safe limit per execution
+    
+    let totalUnprocessed = 0;
     while (files.hasNext()) {
       const f = files.next();
-      if (!(f.getDescription() || "").includes("PAT_CHECKED")) toProcess.push(f);
+      if (!(f.getDescription() || "").includes("PAT_CHECKED")) {
+        totalUnprocessed++;
+        if (toProcess.length < BATCH_LIMIT) toProcess.push(f);
+      }
     }
-    if (toProcess.length === 0) return { success: true, count: 0 };
+    
+    if (toProcess.length === 0) return { success: true, count: 0, hasMore: false };
+    
     let checklist = null;
     if (templateId) checklist = getChecklistFromTemplate(templateId);
-    return { success: true, ...processFileList(toProcess, folder.getName(), checklist) };
+    
+    const result = processFileList(toProcess, folder.getName(), checklist);
+    return { 
+      success: true, 
+      ...result, 
+      hasMore: totalUnprocessed > BATCH_LIMIT,
+      remainingCount: totalUnprocessed - toProcess.length
+    };
   } catch (e) { return { error: e.toString() }; } finally { lock.releaseLock(); }
 }
 
