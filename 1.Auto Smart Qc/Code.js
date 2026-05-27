@@ -2,7 +2,7 @@
 // === AI SMART QC BOT - V.128 (PRECISION PAT GENERATION) ===
 // =========================================================================
 
-const VERSION = "V.128 (PRECISION)"; 
+const VERSION = "V.129 (AUTO-BATCH)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c";
