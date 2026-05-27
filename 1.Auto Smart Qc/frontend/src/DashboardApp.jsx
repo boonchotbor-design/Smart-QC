@@ -401,7 +401,20 @@ function PATGenerateView({ theme }) {
             </div>
           ) : result ? (
             <div style={{marginTop: 30}}>
-              <button className="auth-button" style={{ background: '#10b981', width: '100%', height: 55, fontWeight: 'bold' }} onClick={() => window.open(result.url, '_blank')}>Download PAT Report</button>
+              {result.url && <button className="auth-button" style={{ background: '#10b981', width: '100%', height: 55, fontWeight: 'bold' }} onClick={() => window.open(result.url, '_blank')}>Download PAT Report</button>}
+              {result.error && <div style={{ color: '#ef4444', marginBottom: 20 }}>{result.error}</div>}
+              
+              {result.logs && result.logs.length > 0 && (
+                <div style={{ marginTop: 25, textAlign: 'left', background: theme === 'dark' ? '#0f172a' : '#f1f5f9', padding: 15, borderRadius: 10, fontSize: 13, border: `1px solid ${theme === 'dark' ? '#334155' : '#e2e8f0'}` }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: 10, color: theme === 'dark' ? '#94a3af' : '#475569' }}>System Logs:</div>
+                  {result.logs.map((log, i) => (
+                    <div key={i} style={{ marginBottom: 4, color: log.includes('Error') || log.includes('not found') ? '#f87171' : (theme === 'dark' ? '#cbd5e1' : '#1e293b') }}>
+                      • {log}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
               <button className="auth-button" style={{ marginTop: 15, background: 'none', border: 'none', color: '#94a3af' }} onClick={() => {setSelectedFolder(null); setResult(null); setProgress(0);}}>Start New Report</button>
             </div>
           ) : (

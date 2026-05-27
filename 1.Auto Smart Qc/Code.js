@@ -180,10 +180,11 @@ function processFileList(files, siteName, checklist) {
       const ai = analyzeAI(f, checklist);
       if (!ai || ai.status === "ERROR") continue;
       const status = ai.status.toUpperCase();
-      sheet.appendRow([new Date(), f.getName(), ai.sheetReference, status, ai.reason, f.getUrl(), f.getId(), siteName]);
+      const imageType = ai.imageType || "unknown";
+      sheet.appendRow([new Date(), f.getName(), ai.sheetReference, status, ai.reason, f.getUrl(), f.getId(), siteName, imageType]);
       const destFolder = getOrCreateSubFolder(getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), siteName), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference);
       f.moveTo(destFolder);
-      f.setDescription(`PAT_CHECKED: ${status} | ${f.getDescription() || ""}`);
+      f.setDescription(`PAT_CHECKED: ${status} | TYPE: ${imageType} | ${f.getDescription() || ""}`);
       results.push({ name: f.getName(), status: status, reason: ai.reason, category: ai.sheetReference });
       if (status === "PASS") pass++; else { fail++; sendDualFailNotify(f.getName(), ai.sheetReference, ai.reason, f.getUrl(), f.getId()); }
     } catch (e) {}
@@ -196,7 +197,10 @@ function analyzeAI(file, customChecklist) {
   const b64 = Utilities.base64Encode(file.getBlob().getBytes());
   const defaultChecklist = "2.3(M16), 2.3(M17), 2.3(M19-A1), 2.3(M19-A2), 2.3(M20.1-Ant1), 2.3(M20.2-Ant1), 2.3(M20.1-Ant2), 2.3(M20.2-Ant2), 2.3(M20.1-Ant3), 2.3(M20.2-Ant3), 2.3(M20.1-Ant4), 2.3(M20.2-Ant4), 2.3(M22-GND BAR), 2.3(M22-MST GND), 2.3(M24-GND DCDU), 2.3(M24-GND DCDU (2)), 2.3(M22-GND-RRU), 2.3(M24-RRU view S 1st), 2.3(M24-RRU view S 2nd), 2.3(M24-RRU view S 3th), 2.3(M24-RRU view S 4th), 2.3(M24-Add card 1), 2.3(M24-add card 2), 2.3(M26-DCDU socket), 2.3(M24-DC-RRU 1st), 2.3(M25 RRU1-Clamp-RET), 2.3(M24-DC-RRU 2nd), 2.3(M25 RRU2-clamp-RET), 2.3(M24-DC-AAU 2nd), 2.3(M25 AAU2-Clamp-RET), 2.3(M24-DC-RRU 4th), 2.3(M25 RRU4-Clamp-RET), 2.3(M23-inlet-outlet), 2.3(M23-inlet-outlet (2)), 2.3(M27)Ladder, 2.3(M27)-J-Loop, 2.3(M30-Krone 1-2, 2.3(M30-GPS), 2.3(M32-rec C1-3), 2.3(M30 C1), 2.3(M30 C2), 2.3(M32) BreakerC1-3, 2.3(M32)DCDU, 2.3(M32) LED-load, Notch CPRI, No.POE+Clean (1), Remote Site, 2.4-BOQ, dismantle";
   const checklist = customChecklist || defaultChecklist;
-  const promptText = `Analyze site photo. MATCH ONE: [${checklist}]. JSON: {"sheetReference": "Item", "status": "PASS/FAIL", "reason": "Thai"}`;
+  const promptText = `Analyze site photo. 
+  1. Match one item from checklist: [${checklist}]. 
+  2. Detect watermark text for image type: Look for "Bf" or "Before" (set imageType to "before") or "Af" or "After" (set imageType to "after").
+  Return JSON: {"sheetReference": "Item", "status": "PASS/FAIL", "reason": "Thai explanation", "imageType": "before/after/unknown"}`;
   const payload = { "model": "meta-llama/llama-4-scout-17b-16e-instruct", "messages": [{ "role": "user", "content": [{ "type": "text", "text": promptText }, { "type": "image_url", "image_url": { "url": `data:image/jpeg;base64,${b64}` } }] }], "response_format": { "type": "json_object" } };
   for (let i = 0; i < GROQ_KEYS.length; i++) {
     try {
@@ -297,43 +301,73 @@ function generatePAT(folderId, siteName) {
     const grouped = filtered.reduce((acc, row) => {
       const cat = String(row[2]);
       if (!acc[cat]) acc[cat] = [];
-      acc[cat].push({ id: row[6] });
+      acc[cat].push({ id: row[6], type: String(row[8] || "").toLowerCase() });
       return acc;
     }, {});
 
+    const logs = [];
     // 3. Process each category sheet
     Object.keys(grouped).forEach(cat => {
-      const targetSheet = newSS.getSheetByName(cat);
-      if (!targetSheet) return;
+      // Case-insensitive sheet matching
+      let targetSheet = newSS.getSheetByName(cat);
+      if (!targetSheet) {
+        const lowerCat = cat.toLowerCase();
+        targetSheet = newSS.getSheets().find(s => s.getName().toLowerCase() === lowerCat);
+      }
+      
+      if (!targetSheet) {
+        logs.push(`Sheet not found for category: ${cat}`);
+        return;
+      }
 
       const photos = grouped[cat];
       const locations = findImageLocations(targetSheet);
+      logs.push(`Category ${cat}: Found ${photos.length} photos and ${locations.length} locations`);
       
-      photos.forEach((photo, idx) => {
-        if (idx < locations.length) {
-          try {
-            const blob = DriveApp.getFileById(photo.id).getBlob();
-            const loc = locations[idx];
-            insertImageInBox(targetSheet, blob, loc.col, loc.row, loc.width, loc.height);
-          } catch (e) {}
-        }
-      });
+      const beforePhotos = photos.filter(p => p.type === "before");
+      const afterPhotos = photos.filter(p => p.type === "after");
+      const otherPhotos = photos.filter(p => p.type !== "before" && p.type !== "after");
+      
+      const beforeLocs = locations.filter(l => l.type === "before");
+      const afterLocs = locations.filter(l => l.type === "after");
+
+      // Helper to insert photo
+      const insert = (pid, loc) => {
+        try {
+          const blob = DriveApp.getFileById(pid).getBlob();
+          insertImageInBox(targetSheet, blob, loc.col, loc.row, loc.width, loc.height);
+        } catch (e) { logs.push(`Error inserting ${pid}: ${e.toString()}`); }
+      };
+
+      // 1. Place 'Before' photos
+      beforePhotos.forEach((p, i) => { if (i < beforeLocs.length) insert(p.id, beforeLocs[i]); });
+      // 2. Place 'After' photos
+      afterPhotos.forEach((p, i) => { if (i < afterLocs.length) insert(p.id, afterLocs[i]); });
+      
+      // 3. Fallback for photos without clear type (use remaining slots)
+      const usedBefore = Math.min(beforePhotos.length, beforeLocs.length);
+      const usedAfter = Math.min(afterPhotos.length, afterLocs.length);
+      const remainingLocs = [...beforeLocs.slice(usedBefore), ...afterLocs.slice(usedAfter)];
+      
+      otherPhotos.forEach((p, i) => { if (i < remainingLocs.length) insert(p.id, remainingLocs[i]); });
     });
 
-    return { success: true, url: newSS.getUrl() };
+    return { success: true, url: newSS.getUrl(), logs: logs };
   } catch (e) { return { error: "Backend Error: " + e.toString() }; }
 }
 
 function findImageLocations(sheet) {
   const data = sheet.getDataRange().getValues();
   const locations = [];
-  // Scan for "Before :" or "After :" tags
+  // Scan for "Before" or "After" tags (case-insensitive, flexible space)
+  const regex = /(Before|After)\s*:/i;
   for (let r = 0; r < data.length; r++) {
     for (let c = 0; c < data[r].length; c++) {
       const cellText = String(data[r][c]);
-      if (cellText.includes("Before :") || cellText.includes("After :")) {
+      const match = cellText.match(regex);
+      if (match) {
         // Assume box is above the text (typical PAT template)
-        locations.push({ col: c + 1, row: r - 15, width: 8, height: 16 }); // Box estimation
+        locations.push({ col: c + 1, row: r - 15, width: 8, height: 16, type: match[1].toLowerCase() }); // Box estimation
       }
     }
   }
