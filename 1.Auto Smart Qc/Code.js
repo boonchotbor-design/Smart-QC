@@ -179,8 +179,17 @@ function processFileList(files, siteName, checklist) {
     try {
       const ai = analyzeAI(f, checklist);
       if (!ai || ai.status === "ERROR") continue;
+      
       const status = ai.status.toUpperCase();
-      const imageType = ai.imageType || "unknown";
+      let imageType = ai.imageType || "unknown";
+      
+      // Secondary check: Use filename if AI is unsure
+      if (imageType === "unknown" || !imageType) {
+        const fn = f.getName().toUpperCase();
+        if (fn.includes(" BF") || fn.includes("_BF") || fn.includes("BEFORE") || fn.includes(" BF_")) imageType = "before";
+        else if (fn.includes(" AF") || fn.includes("_AF") || fn.includes("AFTER") || fn.includes(" AF_")) imageType = "after";
+      }
+      
       sheet.appendRow([new Date(), f.getName(), ai.sheetReference, status, ai.reason, f.getUrl(), f.getId(), siteName, imageType]);
       const destFolder = getOrCreateSubFolder(getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), siteName), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference);
       f.moveTo(destFolder);
