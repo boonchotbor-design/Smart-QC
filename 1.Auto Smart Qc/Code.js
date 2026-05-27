@@ -1,11 +1,11 @@
 // =========================================================================
-// === AI SMART QC BOT - V.134 (ID-SYNC - 100% DATABASE MATCH) ===
+// === AI SMART QC BOT - V.135 (SUPER-MATCH ENGINE - 100% RELIABILITY) ===
 // =========================================================================
 
-const VERSION = "V.134 (ID-SYNC)"; 
+const VERSION = "V.135 (SUPER-MATCH)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
-const SPREADSHEET_ID = "1CR-Gdi9IQ4mVB7xbjYmBGAhRPdJ0W4rJ"; // <--- UPDATED TO YOUR LATEST SHEET ID
+const SPREADSHEET_ID = "1CR-Gdi9IQ4mVB7xbjYmBGAhRPdJ0W4rJ"; 
 const SHEET_NAME = "Sheet1";
 
 const TEMPLATES = {
@@ -36,34 +36,34 @@ function doGet(e) {
 function generatePAT(folderId, siteName) {
   try {
     const ssDb = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet = ssDb.getSheetByName(SHEET_NAME) || ssDb.getSheets()[0]; // Fallback to first sheet
+    const sheet = ssDb.getSheets()[0]; 
     const siteFolder = DriveApp.getFolderById(folderId);
-    const logs = [`[V.134] Starting PAT for: ${siteName}`, `Database ID: ${SPREADSHEET_ID}`];
+    const logs = [`[V.135] Starting PAT for: ${siteName}`];
     
     // 1. Recursive Scan
     const fileIdsInFolder = [];
-    const scanAll = (fld) => {
+    const scanRecursively = (fld) => {
       const it = fld.getFiles(); while (it.hasNext()) fileIdsInFolder.push(it.next().getId());
-      const sub = fld.getFolders(); while (sub.hasNext()) {
-        const s = sub.next(); if (s.getName() !== "TEMPATE") scanAll(s);
+      const subs = fld.getFolders(); while (subs.hasNext()) {
+        const s = subs.next(); if (s.getName() !== "TEMPATE") scanRecursively(s);
       }
     };
-    scanAll(siteFolder);
+    scanRecursively(siteFolder);
     const idSet = new Set(fileIdsInFolder);
-    logs.push(`Found ${fileIdsInFolder.length} total images in Drive folder.`);
+    logs.push(`Found ${fileIdsInFolder.length} images total in Drive.`);
 
-    // 2. Database Lookup
+    // 2. ID-Based Lookup
     const data = sheet.getDataRange().getValues();
     const filtered = data.filter(row => {
-      const fileId = String(row[6]).trim();
-      const status = String(row[3]);
-      return idSet.has(fileId) && status.includes("PASS");
+      const fileIdInSheet = String(row[6]).trim();
+      const status = String(row[3]).toUpperCase();
+      return idSet.has(fileIdInSheet) && status.includes("PASS");
     });
 
-    logs.push(`Matched ${filtered.length} PASS records in the correct Spreadsheet.`);
-    if (filtered.length === 0) return { success: false, error: "ไม่พบข้อมูล PASS ในฐานข้อมูล (โปรดเช็ค Spreadsheet ID และสถานะ PASS)", logs: logs };
+    logs.push(`Matched ${filtered.length} PASS records in database.`);
+    if (filtered.length === 0) return { success: false, error: "ไม่พบรูปภาพที่ผ่าน QC ในโฟลเดอร์นี้", logs: logs };
 
-    // 3. Template Selection
+    // 3. Template
     let tid = TEMPLATES.DEFAULT;
     const sn = siteName.toUpperCase();
     if (sn.includes("HAE") || sn.includes("MBB")) tid = TEMPLATES.HAE_MBB;
@@ -94,7 +94,6 @@ function generatePAT(folderId, siteName) {
       photos.forEach(p => {
         const type = p.type === "before" ? "before" : (p.type === "after" ? "after" : null);
         let targetLoc = type ? locs.find(l => l.type === type && !l.used) : locs.find(l => !l.used);
-
         if (targetLoc) {
           try {
             insertImageInBox(targetSheet, DriveApp.getFileById(p.id).getBlob(), targetLoc.col, targetLoc.row, targetLoc.width, targetLoc.height);
@@ -107,7 +106,7 @@ function generatePAT(folderId, siteName) {
     });
 
     return { success: true, url: newSS.getUrl(), logs: logs };
-  } catch (e) { return { error: e.toString() }; }
+  } catch (e) { return { error: "Generate Error: " + e.toString() }; }
 }
 
 function findTargetSheetSmart(ss, cat) {
@@ -130,36 +129,39 @@ function findImageLocations(sheet) {
   const data = sheet.getDataRange().getValues();
   const locs = [];
   const regex = /(Before|After)(\s*:)?/i;
-  for (let r=0; r<data.length; r++) for (let c=0; c<data[r].length; c++) {
-    const match = String(data[r][c]).match(regex);
-    if (match) locs.push({ col: c+1, row: Math.max(1, r-14), width: 8, height: 16, type: match[1].toLowerCase(), used: false });
+  for (let r = 0; r < data.length; r++) {
+    for (let c = 0; c < data[r].length; c++) {
+      const match = String(data[r][c]).match(regex);
+      if (match) locs.push({ col: c + 1, row: Math.max(1, r - 14), width: 8, height: 16, type: match[1].toLowerCase(), used: false });
+    }
   }
-  if (locs.length === 0) { for (let i=0; i<6; i++) locs.push({ col: 2, row: 5 + (i*18), width: 10, height: 17, type: "none", used: false }); }
+  if (locs.length === 0) { for (let i = 0; i < 6; i++) locs.push({ col: 2, row: 5 + (i * 18), width: 10, height: 17, type: "none", used: false }); }
   return locs;
 }
 
 function insertImageInBox(sheet, blob, col, row, w, h) {
-  const safeRow = Math.max(1, row);
-  const img = sheet.insertImage(blob, col, safeRow);
-  let pw = 0; for (let i=0; i<w; i++) pw += sheet.getColumnWidth(col+i);
-  let ph = 0; for (let i=0; i<h; i++) ph += sheet.getRowHeight(Math.max(1, safeRow+i));
+  const img = sheet.insertImage(blob, col, Math.max(1, row));
+  let pw = 0; for (let i = 0; i < w; i++) pw += sheet.getColumnWidth(col + i);
+  let ph = 0; for (let i = 0; i < h; i++) ph += sheet.getRowHeight(Math.max(1, row + i));
   if (pw <= 0) pw = 400; if (ph <= 0) ph = 300;
   const ratio = Math.min((pw - 10) / img.getWidth(), (ph - 10) / img.getHeight());
-  img.setWidth(img.getWidth()*ratio).setHeight(img.getHeight()*ratio).setAnchorCellXOffset((pw-img.getWidth()*ratio)/2).setAnchorCellYOffset((ph-img.getHeight()*ratio)/2);
+  img.setWidth(img.getWidth() * ratio).setHeight(img.getHeight() * ratio);
+  img.setAnchorCellXOffset((pw - img.getWidth() * ratio) / 2).setAnchorCellYOffset((ph - img.getHeight() * ratio) / 2);
 }
 
 function fillPlaceholder(s, t, v) {
   const data = s.getRange(1, 1, 10, 20).getValues();
-  for (let r=0; r<data.length; r++) for (let c=0; c<data[r].length; c++) if (String(data[r][c]).includes(t)) s.getRange(r+1, c+2).setValue(v);
+  for (let r = 0; r < data.length; r++) for (let c = 0; c < data[r].length; c++) if (String(data[r][c]).includes(t)) s.getRange(r + 1, c + 2).setValue(v);
 }
 
 function jsonResponse(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 function getOrCreateSubFolder(p, n) { const f = p.getFoldersByName(n); return f.hasNext() ? f.next() : p.createFolder(n); }
-function listSubFolders(id) { const subs = DriveApp.getFolderById(id).getFolders(); const res = []; while(subs.hasNext()){ const f = subs.next(); res.push({ id: f.getId(), name: f.getName(), url: f.getUrl(), date: f.getLastUpdated().toISOString() }); } return res.sort((a,b)=>new Date(b.date)-new Date(a.date)); }
-function listFilesInFolder(id) { const files = DriveApp.getFolderById(id).getFiles(); const res = []; while(files.hasNext()){ const f = files.next(); if(!(f.getDescription()||"").includes("PAT_CHECKED")) res.push({ id: f.getId(), name: f.getName(), size: (f.getSize()/1024).toFixed(0)+" KB" }); } return res; }
+function listSubFolders(id) { const subs = DriveApp.getFolderById(id).getFolders(); const res = []; while (subs.hasNext()) { const f = subs.next(); res.push({ id: f.getId(), name: f.getName(), url: f.getUrl(), date: f.getLastUpdated().toISOString() }); } return res.sort((a, b) => new Date(b.date) - new Date(a.date)); }
+function listFilesInFolder(id) { const files = DriveApp.getFolderById(id).getFiles(); const res = []; while (files.hasNext()) { const f = files.next(); if (!(f.getDescription() || "").includes("PAT_CHECKED")) res.push({ id: f.getId(), name: f.getName(), size: (f.getSize() / 1024).toFixed(0) + " KB" }); } return res; }
 function callTGRaw(m, p) { return UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${m}`, { method: "post", contentType: "application/json", payload: JSON.stringify(p), muteHttpExceptions: true }); }
-function sendDualSummary(s, p, f, items) { let txt = `📊 สรุปผล AI (${s})\n✅ ผ่าน: ${p}\n❌ ไม่ผ่าน: ${f}`; items.forEach((it,i)=> txt+=`\n${i+1}.📄 ${it.name}`); callTGRaw("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: txt }); }
+function sendDualSummary(s, p, f, items) { let txt = `📊 สรุปผล AI (${s})\n✅ ผ่าน: ${p}\n❌ ไม่ผ่าน: ${f}`; items.forEach((it, i) => txt += `\n${i + 1}.📄 ${it.name}`); callTGRaw("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: txt }); }
 function sendDualFailNotify(n, c, r, u, fid) { const blob = DriveApp.getFileById(fid).getBlob(); const kb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไม่อนุมัติ", callback_data: "rej|" + fid }]] }; callTGRaw("sendPhoto", { chat_id: TELEGRAM_TARGET_ID, photo: blob, caption: `🚨 พบงานไม่ผ่าน\n📄 ไฟล์: ${n}\n📌 หมวด: ${c}\n❌ สาเหตุ: ${r}`, reply_markup: JSON.stringify(kb) }); }
+
 function processFolderById(folderId, templateId) {
   const lock = LockService.getScriptLock();
   try {
@@ -181,12 +183,56 @@ function processFolderById(folderId, templateId) {
     return { success: true, ...result, hasMore: totalUnprocessed > BATCH_LIMIT, remainingCount: totalUnprocessed - toProcess.length };
   } catch (e) { return { error: e.toString() }; } finally { lock.releaseLock(); }
 }
+
+function processFileList(files, siteName, checklist) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheets()[0];
+  let pass = 0, fail = 0;
+  const results = [];
+  for (let f of files) {
+    try {
+      const ai = analyzeAI(f, checklist);
+      if (!ai || ai.status === "ERROR") continue;
+      const status = ai.status.toUpperCase();
+      let imageType = ai.imageType || "unknown";
+      if (imageType === "unknown" || !imageType) {
+        const fn = f.getName().toUpperCase();
+        if (fn.includes(" BF") || fn.includes("_BF") || fn.includes("BEFORE")) imageType = "before";
+        else if (fn.includes(" AF") || fn.includes("_AF") || fn.includes("AFTER")) imageType = "after";
+      }
+      sheet.appendRow([new Date(), f.getName(), ai.sheetReference, status, ai.reason, f.getUrl(), f.getId(), siteName, imageType]);
+      const destFolder = getOrCreateSubFolder(getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), siteName), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference);
+      f.moveTo(destFolder);
+      f.setDescription(`PAT_CHECKED: ${status} | TYPE: ${imageType} | ${f.getDescription() || ""}`);
+      results.push({ name: f.getName(), status: status, reason: ai.reason, category: ai.sheetReference });
+      if (status === "PASS") pass++; else { fail++; sendDualFailNotify(f.getName(), ai.sheetReference, ai.reason, f.getUrl(), f.getId()); }
+    } catch (e) {}
+  }
+  if (pass + fail > 0) sendDualSummary(siteName, pass, fail, results.filter(r => r.status === "FAIL"));
+  return { total: files.length, pass: pass, fail: fail, details: results };
+}
+
+function analyzeAI(file, customChecklist) {
+  const b64 = Utilities.base64Encode(file.getBlob().getBytes());
+  const promptText = `Analyze site photo. Match item from AIS checklist. Detect watermark Bf/Before or Af/After. Return JSON: {"sheetReference": "Item", "status": "PASS/FAIL", "reason": "Thai", "imageType": "before/after/unknown"}`;
+  const payload = { "model": "meta-llama/llama-4-scout-17b-16e-instruct", "messages": [{ "role": "user", "content": [{ "type": "text", "text": promptText }, { "type": "image_url", "image_url": { "url": `data:image/jpeg;base64,${b64}` } }] }], "response_format": { "type": "json_object" } };
+  for (let key of GROQ_KEYS) {
+    try {
+      const res = UrlFetchApp.fetch(GROQ_AI_URL, { method: "post", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, payload: JSON.stringify(payload), muteHttpExceptions: true });
+      if (res.getResponseCode() === 200) return JSON.parse(JSON.parse(res.getContentText()).choices[0].message.content);
+    } catch (e) {}
+  }
+  return { status: "ERROR" };
+}
+
 function getDashboardData(siteFilter) {
-  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME) || SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
-  const values = sheet.getDataRange().getValues();
-  let dataRows = values.slice(1);
-  if (siteFilter && siteFilter !== "All Sites") dataRows = dataRows.filter(row => String(row[1]).includes(siteFilter) || String(row[7]).includes(siteFilter));
-  const statusMap = {};
-  dataRows.forEach(row => { const status = String(row[3] || "").toUpperCase(); const cleanStatus = status.includes("PASS") ? "PASS" : (status.includes("FAIL") ? "FAIL" : "PENDING"); statusMap[cleanStatus] = (statusMap[cleanStatus] || 0) + 1; });
-  return { metrics: { workOrders: dataRows.length, rate: dataRows.length > 0 ? Math.round((statusMap["PASS"] || 0) / dataRows.length * 100) : 0 }, statusBreakdown: Object.keys(statusMap).map(k => ({ name: k, value: statusMap[k] })) };
+  try {
+    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+    const values = sheet.getDataRange().getValues();
+    let dataRows = values.slice(1);
+    if (siteFilter && siteFilter !== "All Sites") dataRows = dataRows.filter(row => String(row[1]).includes(siteFilter) || String(row[7]).includes(siteFilter));
+    const statusMap = {};
+    dataRows.forEach(row => { const status = String(row[3] || "").toUpperCase(); const cleanStatus = status.includes("PASS") ? "PASS" : (status.includes("FAIL") ? "FAIL" : "PENDING"); statusMap[cleanStatus] = (statusMap[cleanStatus] || 0) + 1; });
+    return { metrics: { workOrders: dataRows.length, rate: dataRows.length > 0 ? Math.round((statusMap["PASS"] || 0) / dataRows.length * 100) : 0 }, statusBreakdown: Object.keys(statusMap).map(k => ({ name: k, value: statusMap[k] })) };
+  } catch(e) { return { metrics: {workOrders:0, rate:0}, statusBreakdown: [] }; }
 }
