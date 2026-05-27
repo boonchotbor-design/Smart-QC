@@ -297,6 +297,8 @@ function generatePAT(folderId, siteName) {
   try {
     const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
     const siteFolder = DriveApp.getFolderById(folderId);
+    const logs = [`Starting PAT for Site: ${siteName}`, `Folder ID: ${folderId}`];
+    
     const fileIdsInFolder = [];
     const collectIds = (folder) => {
       const files = folder.getFiles();
@@ -305,17 +307,31 @@ function generatePAT(folderId, siteName) {
       while (subs.hasNext()) collectIds(subs.next());
     };
     collectIds(siteFolder);
+    logs.push(`Found ${fileIdsInFolder.length} files in Drive folder tree`);
 
     const idSet = new Set(fileIdsInFolder);
     const data = sheet.getDataRange().getValues();
-    const filtered = data.filter(row => (idSet.has(String(row[6])) || String(row[7]) === siteName) && String(row[3]).includes("PASS"));
+    // Filter PASS results that match either File ID or Site Name
+    const filtered = data.filter(row => {
+      const idMatch = idSet.has(String(row[6]));
+      const siteMatch = String(row[7]) === siteName;
+      const isPass = String(row[3]).includes("PASS");
+      return (idMatch || siteMatch) && isPass;
+    });
 
-    if (filtered.length === 0) return { error: "No PASS audit results found for this site." };
+    logs.push(`Found ${filtered.length} matching PASS records in Spreadsheet`);
+    if (filtered.length === 0) {
+      return { success: false, error: "No PASS records found. Check if images are audited and marked PASS.", logs: logs };
+    }
 
     const destinationFolder = getOrCreateSubFolder(siteFolder, "TEMPATE");
-    const newSS = SpreadsheetApp.openById(DriveApp.getFileById(PAT_TEMPLATE_ID).makeCopy(`PAT_${siteName}_${new Date().getTime()}`, destinationFolder).getId());
+    const templateFile = DriveApp.getFileById(PAT_TEMPLATE_ID);
+    const newSSFile = templateFile.makeCopy(`PAT_${siteName}_${new Date().getTime()}`, destinationFolder);
+    const newSS = SpreadsheetApp.openById(newSSFile.getId());
     
-    // 1. Update Global Site Info (Site Name & Site Code)
+    logs.push(`Created report copy: ${newSS.getName()}`);
+
+    // 1. Update Global Site Info
     newSS.getSheets().forEach(s => {
       fillPlaceholder(s, "Site name :", siteName);
       fillPlaceholder(s, "Site code :", siteName);
@@ -323,30 +339,30 @@ function generatePAT(folderId, siteName) {
 
     // 2. Group images by Sheet Reference
     const grouped = filtered.reduce((acc, row) => {
-      const cat = String(row[2]);
+      const cat = String(row[2]).trim();
       if (!acc[cat]) acc[cat] = [];
       acc[cat].push({ id: row[6], type: String(row[8] || "").toLowerCase() });
       return acc;
     }, {});
 
-    const logs = [];
+    logs.push(`Categories to process: ${Object.keys(grouped).join(", ")}`);
+
     // 3. Process each category sheet
     Object.keys(grouped).forEach(cat => {
-      // Case-insensitive sheet matching
       let targetSheet = newSS.getSheetByName(cat);
       if (!targetSheet) {
         const lowerCat = cat.toLowerCase();
-        targetSheet = newSS.getSheets().find(s => s.getName().toLowerCase() === lowerCat);
+        targetSheet = newSS.getSheets().find(s => s.getName().toLowerCase().trim() === lowerCat);
       }
       
       if (!targetSheet) {
-        logs.push(`Sheet not found for category: ${cat}`);
+        logs.push(`⚠️ Sheet NOT FOUND for category: "${cat}"`);
         return;
       }
 
       const photos = grouped[cat];
       const locations = findImageLocations(targetSheet);
-      logs.push(`Category ${cat}: Found ${photos.length} photos and ${locations.length} locations`);
+      logs.push(`Processing "${cat}": Photos=${photos.length}, Template Slots=${locations.length}`);
       
       const beforePhotos = photos.filter(p => p.type === "before");
       const afterPhotos = photos.filter(p => p.type === "after");
@@ -355,29 +371,28 @@ function generatePAT(folderId, siteName) {
       const beforeLocs = locations.filter(l => l.type === "before");
       const afterLocs = locations.filter(l => l.type === "after");
 
-      // Helper to insert photo
       const insert = (pid, loc) => {
         try {
           const blob = DriveApp.getFileById(pid).getBlob();
           insertImageInBox(targetSheet, blob, loc.col, loc.row, loc.width, loc.height);
-        } catch (e) { logs.push(`Error inserting ${pid}: ${e.toString()}`); }
+          return true;
+        } catch (e) { logs.push(`Error inserting photo ${pid}: ${e.message}`); return false; }
       };
 
-      // 1. Place 'Before' photos
-      beforePhotos.forEach((p, i) => { if (i < beforeLocs.length) insert(p.id, beforeLocs[i]); });
-      // 2. Place 'After' photos
-      afterPhotos.forEach((p, i) => { if (i < afterLocs.length) insert(p.id, afterLocs[i]); });
+      let count = 0;
+      beforePhotos.forEach((p, i) => { if (i < beforeLocs.length && insert(p.id, beforeLocs[i])) count++; });
+      afterPhotos.forEach((p, i) => { if (i < afterLocs.length && insert(p.id, afterLocs[i])) count++; });
       
-      // 3. Fallback for photos without clear type (use remaining slots)
       const usedBefore = Math.min(beforePhotos.length, beforeLocs.length);
       const usedAfter = Math.min(afterPhotos.length, afterLocs.length);
       const remainingLocs = [...beforeLocs.slice(usedBefore), ...afterLocs.slice(usedAfter)];
       
-      otherPhotos.forEach((p, i) => { if (i < remainingLocs.length) insert(p.id, remainingLocs[i]); });
+      otherPhotos.forEach((p, i) => { if (i < remainingLocs.length && insert(p.id, remainingLocs[i])) count++; });
+      logs.push(`Successfully inserted ${count} images into "${cat}"`);
     });
 
     return { success: true, url: newSS.getUrl(), logs: logs };
-  } catch (e) { return { error: "Backend Error: " + e.toString() }; }
+  } catch (e) { return { error: "Generate Error: " + e.toString() }; }
 }
 
 function findImageLocations(sheet) {
