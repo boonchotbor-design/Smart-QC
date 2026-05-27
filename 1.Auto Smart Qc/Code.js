@@ -1,8 +1,8 @@
 // =========================================================================
-// === AI SMART QC BOT - V.125 (ULTRA STABLE) ===
+// === AI SMART QC BOT - V.126 (ULTRA STABLE & THEME FIX) ===
 // =========================================================================
 
-const VERSION = "V.125 (ULTRA)"; 
+const VERSION = "V.126 (ULTRA)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c";
@@ -14,18 +14,6 @@ const TEMPLATE_FOLDER_ID = "1h2GLkJr-wtYCAM75ruBO4MBiNwirOoMT";
 
 // --- [AUTH CONFIG] ---
 const DEFAULT_PASSWORD = "QC-ADMIN-2024"; 
-const ALLOWED_USERS = [
-  "adisak.chanmao@teloneer.com",
-  "boonchot.boriwut@teloneer.com",
-  "apichart.kampuang@teloneer.com",
-  "nattawoot.suwan@teloneer.com",
-  "payon.sapphat@teloneer.com",
-  "palagon.prommueangma@teloneer.com",
-  "thossapol.chaloemrit@teloneer.com",
-  "auttaseth.klomthaisong@teloneer.com",
-  "nammon.manakiat@teloneer.com",
-  "pakpoom.t@teloneer.com"
-];
 
 function getAuthPassword() {
   const props = PropertiesService.getScriptProperties();
@@ -49,10 +37,6 @@ function doGet(e) {
   try {
     if (action === "getdata") return jsonResponse(getDashboardData(params.site || "All Sites"));
     if (action === "checkpassword") return jsonResponse(checkPassword(params.email, params.password));
-    if (action === "sendotp") return jsonResponse(sendOTP(params.email, params.password));
-    if (action === "verifyotp") return jsonResponse(verifyOTP(params.email, params.otp));
-    if (action === "sendresetotp") return jsonResponse(sendResetOTP(params.email));
-    if (action === "resetpassword") return jsonResponse(resetPassword(params.email, params.otp, params.newPassword));
     if (action === "listfolders") {
       const rootId = params.root || FOLDER_ID;
       const folders = listSubFolders(rootId);
@@ -69,7 +53,7 @@ function doGet(e) {
     if (action === "listtemplates") return jsonResponse(listTemplates(params.project, params.type));
     return jsonResponse({ status: "READY", version: VERSION });
   } catch (err) {
-    return jsonResponse({ error: "Server Side Error: " + err.toString() });
+    return jsonResponse({ error: "Server Error: " + err.toString() });
   }
 }
 
@@ -112,7 +96,7 @@ function doPost(e) {
       const mid = cb.message.message_id;
       const val = cb.data;
       const originalText = cb.message.text || cb.message.caption || "";
-      callTG("answerCallbackQuery", { callback_query_id: cb.id });
+      callTGRaw("answerCallbackQuery", { callback_query_id: cb.id });
       if (val.startsWith("app|")) processManualApprove(val.split("|")[1], cid, mid, originalText);
       if (val.startsWith("rej|")) processManualReject(val.split("|")[1], cid, mid, originalText);
     }
@@ -123,54 +107,8 @@ function doPost(e) {
 function checkPassword(email, password) {
   const inputPass = (password || "").trim();
   const currentPass = getAuthPassword().trim();
-  // เช็คแค่รหัสผ่านเท่านั้น ใครมีรหัสผ่านเข้าได้ทุกคน
   if (inputPass !== currentPass && inputPass !== DEFAULT_PASSWORD) return { error: "รหัสผ่านไม่ถูกต้อง" };
   return { success: true };
-}
-
-function verifyOTP(email, otp) {
-  const cache = CacheService.getScriptCache();
-  const cached = cache.get("OTP_" + email.toLowerCase().trim());
-  if (cached && cached === otp.trim()) {
-    cache.remove("OTP_" + email.toLowerCase().trim());
-    return { success: true };
-  }
-  return { error: "Invalid or expired OTP" };
-}
-
-function sendResetOTP(email) {
-  const inputEmail = email.toLowerCase().trim();
-  if (!ALLOWED_USERS.includes(inputEmail)) return { error: "คุณไม่มีสิทธิ์เข้าใช้งาน" };
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  CacheService.getScriptCache().put("RESET_OTP_" + inputEmail, otp, 600); 
-  try {
-    MailApp.sendEmail({ to: inputEmail, subject: "Password Reset Code - AI SMART QC", htmlBody: `<p>Code: <b>${otp}</b></p>` });
-    return { success: true };
-  } catch (e) { return { error: "Email Error: " + e.toString() }; }
-}
-
-function resetPassword(email, otp, newPassword) {
-  const inputEmail = email.toLowerCase().trim();
-  const cache = CacheService.getScriptCache();
-  const cached = cache.get("RESET_OTP_" + inputEmail);
-  if (cached && cached === otp.trim()) {
-    cache.remove("RESET_OTP_" + inputEmail);
-    PropertiesService.getScriptProperties().setProperty("AUTH_PASSWORD", newPassword.trim());
-    return { success: true };
-  }
-  return { error: "Invalid or expired OTP" };
-}
-
-function sendOTP(email, password) {
-  const check = checkPassword(email, password);
-  if (check.error) return check;
-  const inputEmail = email.toLowerCase().trim();
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  CacheService.getScriptCache().put("OTP_" + inputEmail, otp, 600);
-  try {
-    MailApp.sendEmail({ to: inputEmail, subject: "Verification Code - AI SMART QC", htmlBody: `<p>Code: <b>${otp}</b></p>` });
-    return { success: true };
-  } catch (e) { return { error: "Email Error: " + e.toString() }; }
 }
 
 function listSubFolders(rootId) {
@@ -288,14 +226,7 @@ function processManualReject(fid, cid, mid, originalText) {
 function updateSheetStatus(fid, newStatus, color) {
   const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
   const data = sheet.getDataRange().getValues();
-  // ค้นหาจากแถวล่างสุดขึ้นบนเพื่อให้เจอข้อมูลล่าสุดก่อน
-  for (let i = data.length - 1; i >= 1; i--) { 
-    if (String(data[i][6]) === String(fid)) {
-      sheet.getRange(i + 1, 4).setValue(newStatus);
-      sheet.getRange(i + 1, 1, 1, sheet.getLastColumn()).setBackground(color);
-      return data[i];
-    }
-  }
+  for (let i = data.length - 1; i >= 1; i--) { if (String(data[i][6]) === String(fid)) { sheet.getRange(i + 1, 4).setValue(newStatus); sheet.getRange(i + 1, 1, 1, sheet.getLastColumn()).setBackground(color); return data[i]; } }
   return null;
 }
 
@@ -346,26 +277,106 @@ function generatePAT(folderId, siteName) {
       while (subs.hasNext()) collectIds(subs.next());
     };
     collectIds(siteFolder);
+
     const idSet = new Set(fileIdsInFolder);
     const data = sheet.getDataRange().getValues();
-    const filtered = data.filter(row => idSet.has(String(row[6])) || String(row[7]) === siteName);
-    if (filtered.length === 0) return { error: "No audit results found." };
+    const filtered = data.filter(row => (idSet.has(String(row[6])) || String(row[7]) === siteName) && String(row[3]).includes("PASS"));
+
+    if (filtered.length === 0) return { error: "No PASS audit results found for this site." };
+
     const destinationFolder = getOrCreateSubFolder(siteFolder, "TEMPATE");
-    const newSS = SpreadsheetApp.openById(DriveApp.getFileById(PAT_TEMPLATE_ID).makeCopy(`PAT_${siteName}_${new Date().getTime()}`, destinationFolder).getId());
-    const targetSheet = newSS.getSheets()[0];
-    if (targetSheet.getLastRow() === 0) targetSheet.appendRow(["Date", "Filename", "Category", "Status", "Reason", "Photo"]);
-    filtered.slice(0, 50).forEach((row) => {
-      const rowIndex = targetSheet.getLastRow() + 1;
-      targetSheet.appendRow([row[0], row[1], row[2], row[3], row[4]]);
-      try {
-        const fileId = row[6];
-        if (fileId) {
-          const img = targetSheet.insertImage(DriveApp.getFileById(fileId).getBlob(), 6, rowIndex); 
-          img.setWidth(img.getWidth() * (150 / img.getHeight())).setHeight(150);
-          targetSheet.setRowHeight(rowIndex, 160);
-        }
-      } catch (e) { targetSheet.getRange(rowIndex, 6).setValue("Image Error"); }
+    const newFile = DriveApp.getFileById(PAT_TEMPLATE_ID).makeCopy(`PAT_${siteName}_${new Date().getTime()}`, destinationFolder);
+    const newSS = SpreadsheetApp.openById(newFile.getId());
+
+    // 1. Update Global Site Info (Assuming it's on the first sheet or specific names)
+    const infoSheets = ["PATC", "SOW"];
+    infoSheets.forEach(name => {
+      const s = newSS.getSheetByName(name);
+      if (s) {
+        fillPlaceholder(s, "Site name :", siteName);
+        fillPlaceholder(s, "Site code :", siteName);
+      }
     });
+
+    // 2. Group images by Sheet Reference
+    const grouped = filtered.reduce((acc, row) => {
+      const cat = String(row[2]);
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push({ name: row[1], id: row[6] });
+      return acc;
+    }, {});
+
+    // 3. Process each category sheet
+    Object.keys(grouped).forEach(cat => {
+      const targetSheet = newSS.getSheetByName(cat);
+      if (!targetSheet) return;
+
+      // Update Site info on this sheet too
+      fillPlaceholder(targetSheet, "Site name :", siteName);
+      fillPlaceholder(targetSheet, "Site code :", siteName);
+
+      const photos = grouped[cat];
+
+      // We look for "Before" or "After" frames or use a grid
+      // Based on screenshot: usually 2 columns, multiple rows
+      // Let's find common frame patterns or insert in a logical grid
+      let photoIndex = 0;
+      const rows = [4, 25, 46, 67]; // Approximate row starts for boxes based on height
+      const cols = [2, 10];         // Approximate column starts for boxes
+
+      for (let r of rows) {
+        for (let c of cols) {
+          if (photoIndex >= photos.length) break;
+          try {
+            const blob = DriveApp.getFileById(photos[photoIndex].id).getBlob();
+            // Insert and Fit into a box (roughly 8 columns wide, 18 rows high)
+            insertImageWithFit(targetSheet, blob, c, r, 7, 18); 
+          } catch (e) {}
+          photoIndex++;
+        }
+      }
+    });
+
     return { success: true, url: newSS.getUrl() };
-  } catch (e) { return { error: "Backend Error: " + e.toString() }; }
+  } catch (e) { return { error: "PAT Generation Error: " + e.toString() }; }
 }
+
+function fillPlaceholder(sheet, text, value) {
+  const data = sheet.getDataRange().getValues();
+  for (let r = 0; r < Math.min(data.length, 10); r++) { // Look in top 10 rows
+    for (let c = 0; c < data[r].length; c++) {
+      if (String(data[r][c]).includes(text)) {
+        sheet.getRange(r + 1, c + 2).setValue(value); // Set value in next column
+        return;
+      }
+    }
+  }
+}
+
+function insertImageWithFit(sheet, blob, col, row, widthInCols, heightInRows) {
+  try {
+    const img = sheet.insertImage(blob, col, row);
+
+    // Calculate box size in pixels
+    let boxWidth = 0;
+    for (let i = 0; i < widthInCols; i++) boxWidth += sheet.getColumnWidth(col + i);
+
+    let boxHeight = 0;
+    for (let i = 0; i < heightInRows; i++) boxHeight += sheet.getRowHeight(row + i);
+
+    // Original dimensions
+    const origW = img.getWidth();
+    const origH = img.getHeight();
+
+    // Scaling to fit (with 5px padding)
+    const scale = Math.min((boxWidth - 10) / origW, (boxHeight - 10) / origH);
+
+    img.setWidth(origW * scale);
+    img.setHeight(origH * scale);
+
+    // Center it a bit
+    img.setAnchorCellXOffset((boxWidth - (origW * scale)) / 2);
+    img.setAnchorCellYOffset((boxHeight - (origH * scale)) / 2);
+  } catch (e) {}
+}
+
