@@ -31,6 +31,7 @@ function searchByDuidOnly(duid) {
     var found = false;
     var totalItemsCount = 0;
     var targetDuid = duid.toString().replace(/\s+/g, ' ').trim().toLowerCase();
+    var currentStatus = "Pending";
 
     targetSheets.forEach(function(sName) {
       var sheet = ss.getSheetByName(sName);
@@ -51,20 +52,22 @@ function searchByDuidOnly(duid) {
         ownerW: Math.max(headerRow.indexOf("OWNER WAREHOUSE"), headerRow.indexOf("OWNER WAREHOUSE ")),
         ownerR: Math.max(headerRow.indexOf("OWNER RECEIVER"), headerRow.indexOf("OWNER RECEIVER ")),
         locW: headerRow.indexOf("LOCATION WAREHOUSE"),
-        locR: headerRow.indexOf("LOCATION RECEIVER")
+        locR: headerRow.indexOf("LOCATION RECEIVER"),
+        status: headerRow.indexOf("STATUS")
       };
 
       if (idx.duid === -1) return;
       
       var customer = sName.indexOf("TRUE") > -1 ? "TRUE" : "AIS"; 
       
-      // วนลูปหาข้อมูล (ใช้ Reverse Loop หรือ Filter อาจจะเร็วขึ้นในบางกรณี แต่หัวใจคือลดจำนวน Sheet)
       for (var i = 1; i < data.length; i++) {
         var rawSheetDuid = String(data[i][idx.duid] || "");
-        if (rawSheetDuid.length < 5) continue; // Skip empty/short values fast
+        if (rawSheetDuid.length < 5) continue; 
         
         var sheetDuid = rawSheetDuid.replace(/\s+/g, ' ').trim().toLowerCase();
         if (sheetDuid === targetDuid) {
+          if (idx.status > -1 && data[i][idx.status]) currentStatus = String(data[i][idx.status]);
+          
           var tType = (idx.transType > -1 ? String(data[i][idx.transType] || "").trim() : "").toUpperCase();
           var bNo = (idx.billNo > -1 ? String(data[i][idx.billNo] || "").trim() : "-");
           var groupKey = tType + "|" + bNo + "|" + sName; 
@@ -105,14 +108,14 @@ function searchByDuidOnly(duid) {
       };
     }
 
-    var formattedText = formatDuidResponse(groups, totalItemsCount);
-    return { success: true, groups: groups, totalItems: totalItemsCount, formattedText: formattedText };
+    var formattedText = formatDuidResponse(groups, totalItemsCount, currentStatus);
+    return { success: true, groups: groups, totalItems: totalItemsCount, status: currentStatus, formattedText: formattedText };
   } catch (e) {
     return { success: false, message: "❌ (V.6.5.4) ระบบขัดข้อง: " + e.toString() };
   }
 }
 
-function formatDuidResponse(groups, totalItems) {
+function formatDuidResponse(groups, totalItems, status) {
   var order = ["IN", "OUT", "STR/IN", "STR/OUT", "DISMANTLE", "RETURN"];
   var keys = Object.keys(groups).sort(function(a, b) {
     var gA = groups[a].header, gB = groups[b].header;
@@ -133,6 +136,7 @@ function formatDuidResponse(groups, totalItems) {
     var h = g.header;
     var text = "📊 ข้อมูล DUID: " + h.duid + "\n";
     text += "━━━━━━━━━━━━━━━\n";
+    text += "📌 สถานะ: " + (status || "Pending") + "\n";
     text += "👤 ลูกค้า: " + h.customer + "\n";
     text += "🛠 งาน: " + h.transType + "\n";
     text += "bill No : " + h.billNo + "\n";
@@ -144,7 +148,6 @@ function formatDuidResponse(groups, totalItems) {
     text += "📍 Loc Receiver: " + h.locReceiver + "\n";
     text += "━━━━━━━━━━━━━━━\n";
     
-    // แสดงจำนวนรวมเฉพาะกลุ่มแรกเท่านั้น
     if (index === 0) {
       text += "📦 รายการสินค้า (" + totalItems + " รายการ):\n";
     }
@@ -214,35 +217,111 @@ function saveMainData(header, items) {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var customer = (header.customer || "AIS").toString().trim().toUpperCase();
     var sheet = ss.getSheetByName("INOUT_HW_" + customer) || ss.getSheets()[0];
+    
+    // Check if DUID is already Closed
+    if (isDuidClosed(header.duid, customer)) {
+      return { success: false, message: "❌ DUID: " + header.duid + " มีสถานะเป็น 'Closed' แล้ว ไม่สามารถเพิ่มหรือแก้ไขข้อมูลได้" };
+    }
+
     var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
     
     // Structure: DUID(A), Region(B), JobType(C), ItemType(D), Date(E), BillNo(F), Model(G), Code(H), Desc(I), Qty(J), SN(K), OwnerW(L), OwnerR(M), LocW(N), LocR(O)
+    // Add columns up to V (Index 21)
     var allRows = items.map(function(item, index) { 
-      return [ 
-        header.duid, 
-        header.region, 
-        header.type, 
-        item.type, 
-        dateStr, 
-        header.billNo, 
-        item.model, 
-        item.code, 
-        item.desc, 
-        item.qty, 
-        item.sn, 
-        header.ownerWarehouse, 
-        header.ownerReceiver, 
-        header.locationWarehouse || "", 
-        header.locationReceiver || "", 
-        "", "", "" 
-      ]; 
+      var row = new Array(22).fill("");
+      row[0] = header.duid;
+      row[1] = header.region;
+      row[2] = header.type;
+      row[3] = item.type;
+      row[4] = dateStr;
+      row[5] = header.billNo;
+      row[6] = item.model;
+      row[7] = item.code;
+      row[8] = item.desc;
+      row[9] = item.qty;
+      row[10] = item.sn;
+      row[11] = header.ownerWarehouse;
+      row[12] = header.ownerReceiver;
+      row[13] = header.locationWarehouse || "";
+      row[14] = header.locationReceiver || "";
+      // Column V (Index 21) will be updated by updateDuidStatus
+      return row;
     });
     
     var lastRow = sheet.getLastRow();
-    if (allRows.length > 0) sheet.getRange(lastRow + 1, 1, allRows.length, 18).setValues(allRows);
+    if (allRows.length > 0) sheet.getRange(lastRow + 1, 1, allRows.length, 22).setValues(allRows);
     SpreadsheetApp.flush();
+    
+    // Update status for all rows of this DUID
+    updateDuidStatus(header.duid, customer);
+    
     return { success: true };
   } catch (e) { return { success: false, message: e.toString() }; }
+}
+
+function isDuidClosed(duid, customer) {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName("INOUT_HW_" + customer);
+    if (!sheet) return false;
+    var data = sheet.getDataRange().getValues();
+    if (data.length < 2) return false;
+    var header = data[0].map(h => String(h || "").trim().toUpperCase());
+    var dCol = header.indexOf("DUID");
+    var sCol = header.indexOf("STATUS");
+    if (sCol === -1) sCol = 21; // Default to Col V
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][dCol]).trim() === duid && String(data[i][sCol]).trim().toUpperCase() === "CLOSED") return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+function updateDuidStatus(duid, customer) {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName("INOUT_HW_" + customer);
+    if (!sheet) return;
+    var data = sheet.getDataRange().getValues();
+    if (data.length < 2) return;
+    var header = data[0].map(h => String(h || "").trim().toUpperCase());
+    var idx = {
+      duid: header.indexOf("DUID"),
+      type: Math.max(header.indexOf("IN/OUT"), 2), // Col C
+      qty: Math.max(header.indexOf("QTY"), header.indexOf("SUM OF REQ.QTY"), 9), // Col J
+      status: header.indexOf("STATUS")
+    };
+    if (idx.status === -1) {
+      idx.status = 21; // Col V
+      sheet.getRange(1, 22).setValue("STATUS");
+    }
+    
+    var totalIn = 0, totalOut = 0, matchingRows = [];
+    var targetDuid = String(duid || "").trim();
+    if (!targetDuid) return;
+
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][idx.duid]).trim() === targetDuid) {
+        matchingRows.push(i + 1);
+        var type = String(data[i][idx.type]).toUpperCase();
+        var qty = Number(data[i][idx.qty]) || 0;
+        if (type.indexOf("IN") > -1 || type === "RETURN" || type === "DISMANTLE") totalIn += qty;
+        else if (type.indexOf("OUT") > -1) totalOut += qty;
+      }
+    }
+    
+    var status = "Pending";
+    if (totalIn > 0 && totalOut === 0) status = "On Process";
+    else if (totalIn > 0 && totalIn === totalOut) status = "Closed";
+    else if (totalIn === 0 && totalOut > 0) status = "Pending"; // Or error
+
+    if (matchingRows.length > 0) {
+      var statusValues = matchingRows.map(() => [status]);
+      matchingRows.forEach((row, index) => {
+        sheet.getRange(row, idx.status + 1).setValue(status);
+      });
+    }
+  } catch (e) { Logger.log("Error updating status: " + e.toString()); }
 }
 
 function uploadPhotoOnly(h, base64, pNum) { 
@@ -364,10 +443,11 @@ function searchByBillNo(billNo, customer) {
       ownerW: Math.max(header.indexOf("OWNER WAREHOUSE"), header.indexOf("OWNER WAREHOUSE ")),
       ownerR: Math.max(header.indexOf("OWNER RECEIVER"), header.indexOf("OWNER RECEIVER ")),
       locW: header.indexOf("LOCATION WAREHOUSE"),
-      locR: header.indexOf("LOCATION RECEIVER")
+      locR: header.indexOf("LOCATION RECEIVER"),
+      status: header.indexOf("STATUS")
     };
     
-    var results = { duid: "", region: "", ownerWarehouse: "", ownerReceiver: "", locationWarehouse: "", locationReceiver: "", items: [] }; 
+    var results = { duid: "", region: "", status: "", ownerWarehouse: "", ownerReceiver: "", locationWarehouse: "", locationReceiver: "", items: [] }; 
     var found = false;
     
     for (var i = 1; i < data.length; i++) { 
@@ -375,6 +455,7 @@ function searchByBillNo(billNo, customer) {
         if (!found) { 
           results.duid = idx.duid > -1 ? data[i][idx.duid] : ""; 
           results.region = idx.region > -1 ? data[i][idx.region] : ""; 
+          results.status = idx.status > -1 ? data[i][idx.status] : ""; 
           results.ownerWarehouse = idx.ownerW > -1 ? data[i][idx.ownerW] : ""; 
           results.ownerReceiver = idx.ownerR > -1 ? data[i][idx.ownerR] : ""; 
           results.locationWarehouse = idx.locW > -1 ? data[i][idx.locW] : ""; 

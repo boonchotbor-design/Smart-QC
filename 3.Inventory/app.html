@@ -46,6 +46,7 @@
         <div class="col-12"><label class="small fw-bold">Bill No. *</label><div class="input-group input-group-sm"><input type="text" id="billNo" class="form-control form-control-sm" placeholder="เลขที่บิล"><button class="btn btn-outline-primary" type="button" onclick="triggerNativeScanner('billNo')">📷 Scan</button></div></div>
         <div class="col-12 mt-2"><button class="btn btn-primary w-100 btn-sm py-2 shadow-sm" onclick="searchBill()">🔍 ค้นหาข้อมูลเดิมจาก Bill No.</button></div>
         <div class="col-12 mt-2"><label class="small fw-bold text-danger">DUID (Mandatory) *</label><input type="text" id="duid" class="form-control form-control-sm border-danger" list="duidList" oninput="onDuidInput()" placeholder="ค้นหาหรือกรอก DUID"></div>
+        <div id="statusBadge" class="col-12 mt-2 d-none"><div class="alert alert-info py-1 px-2 mb-0 small fw-bold text-center" id="statusText">สถานะ: -</div></div>
         <div class="col-6 mt-2"><label class="small fw-bold">คลัง Owner *</label><input type="text" id="ownerWarehouse" class="form-control form-control-sm" list="warehouseList"></div>
         <div class="col-6 mt-2"><label class="small fw-bold">ผู้รับ Owner *</label><input type="text" id="ownerReceiver" class="form-control form-control-sm" list="receiverList"></div>
         <div class="col-6 mt-2"><label class="small fw-bold">Location warehouse</label><input type="text" id="locationWarehouse" class="form-control form-control-sm" placeholder="Location ต้นทาง"></div>
@@ -105,7 +106,50 @@
         document.getElementById('receiverList').innerHTML = rs.map(v => `<option value="${v}">`).join(''); 
       }).getOwnerData();
     }
-    function onDuidInput() { var val = document.getElementById('duid').value.toLowerCase(); var f = projectData.find(i => i.duid.toLowerCase() === val); if (f) document.getElementById('region').value = f.region || "ER"; }
+    
+    function onDuidInput() { 
+      var val = document.getElementById('duid').value.trim(); 
+      var valLower = val.toLowerCase();
+      var f = projectData.find(i => i.duid.toLowerCase() === valLower); 
+      if (f) document.getElementById('region').value = f.region || "ER"; 
+      
+      if (val.length > 5) {
+        google.script.run.withSuccessHandler(res => {
+          if (res.success && res.status) {
+            updateStatusBadge(res.status);
+          } else {
+            document.getElementById('statusBadge').classList.add('d-none');
+            document.getElementById('btnSubmit').disabled = false;
+          }
+        }).searchByDuidOnly(val);
+      } else {
+        document.getElementById('statusBadge').classList.add('d-none');
+        document.getElementById('btnSubmit').disabled = false;
+      }
+    }
+
+    function updateStatusBadge(status) {
+      const badge = document.getElementById('statusBadge');
+      const text = document.getElementById('statusText');
+      const btn = document.getElementById('btnSubmit');
+      
+      badge.classList.remove('d-none');
+      text.innerText = "สถานะ DUID: " + status;
+      
+      if (status.toUpperCase() === 'CLOSED') {
+        text.className = "alert alert-danger py-1 px-2 mb-0 small fw-bold text-center";
+        btn.disabled = true;
+        btn.innerText = "❌ DUID นี้ถูกปิดสถานะแล้ว (CLOSED)";
+      } else if (status.toUpperCase() === 'ON PROCESS') {
+        text.className = "alert alert-warning py-1 px-2 mb-0 small fw-bold text-center";
+        btn.disabled = false;
+        btn.innerText = "🚀 บันทึกข้อมูล (SAVE)";
+      } else {
+        text.className = "alert alert-info py-1 px-2 mb-0 small fw-bold text-center";
+        btn.disabled = false;
+        btn.innerText = "🚀 บันทึกข้อมูล (SAVE)";
+      }
+    }
 
     function addItemRow() { 
       rowCount++; 
@@ -202,7 +246,43 @@
     }
 
     function updateProgress(percent, text) { document.getElementById('loader').style.display = 'flex'; document.getElementById('loaderText').innerText = text; let bar = document.getElementById('progressBar'); if (percent !== null) { bar.parentElement.parentElement.style.display = 'block'; bar.style.width = percent + '%'; } else { bar.parentElement.parentElement.style.display = 'none'; } }
-    function searchBill() { var b = document.getElementById('billNo').value; if (!b) return alert("ระบุ Bill No."); updateProgress(null, "ค้นหาข้อมูลเดิม..."); google.script.run.withSuccessHandler(res => { document.getElementById('loader').style.display = 'none'; if (res.success) { document.getElementById('duid').value = res.data.duid; document.getElementById('region').value = res.data.region; document.getElementById('ownerWarehouse').value = res.data.ownerWarehouse || ""; document.getElementById('ownerReceiver').value = res.data.ownerReceiver || ""; document.getElementById('locationWarehouse').value = res.data.locationWarehouse || ""; document.getElementById('locationReceiver').value = res.data.locationReceiver || ""; document.getElementById('itemList').innerHTML = ""; rowCount = 0; res.data.items.forEach((item, index) => { addItemRow(); let id = rowCount; setTimeout(() => { if (document.getElementById('model_' + id)) { document.getElementById('model_' + id).value = item.model; onModelChange(id); document.getElementById('code_' + id).value = item.code; onCodeChange(id); document.getElementById('qty_' + id).value = item.qty; document.getElementById('sn_' + id).value = item.sn; } }, 100 * (index + 1)); }); alert("✅ ดึงข้อมูลสำเร็จ!"); } else alert("ไม่พบข้อมูล"); }).searchByBillNo(b, document.getElementById('customer').value); }
+    function searchBill() { 
+      var b = document.getElementById('billNo').value; 
+      if (!b) return alert("ระบุ Bill No."); 
+      updateProgress(null, "ค้นหาข้อมูลเดิม..."); 
+      google.script.run.withSuccessHandler(res => { 
+        document.getElementById('loader').style.display = 'none'; 
+        if (res.success) { 
+          document.getElementById('duid').value = res.data.duid; 
+          document.getElementById('region').value = res.data.region; 
+          document.getElementById('ownerWarehouse').value = res.data.ownerWarehouse || ""; 
+          document.getElementById('ownerReceiver').value = res.data.ownerReceiver || ""; 
+          document.getElementById('locationWarehouse').value = res.data.locationWarehouse || ""; 
+          document.getElementById('locationReceiver').value = res.data.locationReceiver || ""; 
+          
+          if (res.data.status) updateStatusBadge(res.data.status);
+          else document.getElementById('statusBadge').classList.add('d-none');
+
+          document.getElementById('itemList').innerHTML = ""; 
+          rowCount = 0; 
+          res.data.items.forEach((item, index) => { 
+            addItemRow(); 
+            let id = rowCount; 
+            setTimeout(() => { 
+              if (document.getElementById('model_' + id)) { 
+                document.getElementById('model_' + id).value = item.model; 
+                onModelChange(id); 
+                document.getElementById('code_' + id).value = item.code; 
+                onCodeChange(id); 
+                document.getElementById('qty_' + id).value = item.qty; 
+                document.getElementById('sn_' + id).value = item.sn; 
+              } 
+            }, 100 * (index + 1)); 
+          }); 
+          alert("✅ ดึงข้อมูลสำเร็จ!"); 
+        } else alert("ไม่พบข้อมูล"); 
+      }).searchByBillNo(b, document.getElementById('customer').value); 
+    }
     function triggerNativeScanner(t, id) { scanTarget = t; scanRowId = id || null; document.getElementById('cameraTrigger').click(); }
     function processImageScan(input) { if (!input.files || input.files.length === 0) return; updateProgress(null, "สแกน..."); const html5QrCode = new Html5Qrcode("cameraTrigger"); html5QrCode.scanFile(input.files[0], true).then(text => { document.getElementById('loader').style.display = 'none'; if (scanTarget === 'billNo') document.getElementById('billNo').value = text; else if (scanTarget === 'sn') document.getElementById('sn_' + scanRowId).value = text; }).catch(err => { document.getElementById('loader').style.display = 'none'; alert("❌ อ่านไม่ได้: ลองถ่ายใหม่ครับ"); }); }
     window.onload = function() { loadBOM(); loadProjectData(); addItemRow(); };
