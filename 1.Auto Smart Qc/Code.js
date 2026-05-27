@@ -1,15 +1,15 @@
 // =========================================================================
-// === AI SMART QC BOT - V.128 (PRECISION PAT GENERATION) ===
+// === AI SMART QC BOT - V.130 (AUTO-MATCH TEMPLATE ENGINE) ===
 // =========================================================================
 
-const VERSION = "V.129 (AUTO-BATCH)"; 
+const VERSION = "V.130 (AUTO-MATCH)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c";
 const SHEET_NAME = "Sheet1";
 
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwlhZ_vy7_gZ8gQOvnY0PIu_1O_VVEuOFLtvXIORtT76F1bX4fSd4Frj6tUkY3-pd2YAg/exec";
-const PAT_TEMPLATE_ID = "1Pxdkd0Nxn-HzObefgkzcNFlCTDHrrVkj";
+const PAT_TEMPLATE_ID = "1Pxdkd0Nxn-HzObefgkzcNFlCTDHrrVkj"; // Default Template
 const TEMPLATE_FOLDER_ID = "1h2GLkJr-wtYCAM75ruBO4MBiNwirOoMT";
 
 // --- [AUTH CONFIG] ---
@@ -299,6 +299,21 @@ function generatePAT(folderId, siteName) {
     const siteFolder = DriveApp.getFolderById(folderId);
     const logs = [`Starting PAT for Site: ${siteName}`, `Folder ID: ${folderId}`];
     
+    // Auto-detect best template based on folder name (e.g. HAE_MBB_...)
+    let activeTemplateId = PAT_TEMPLATE_ID;
+    const templates = DriveApp.getFolderById(TEMPLATE_FOLDER_ID).getFiles();
+    while (templates.hasNext()) {
+      const t = templates.next();
+      const tName = t.getName().toUpperCase();
+      const sName = siteName.toUpperCase();
+      // Look for HAE, MBB etc inside filename
+      if (sName.split("_").some(part => tName.includes(part)) && t.getMimeType() === MimeType.GOOGLE_SHEETS) {
+        activeTemplateId = t.getId();
+        logs.push(`Auto-matched Template: ${t.getName()}`);
+        break;
+      }
+    }
+
     const fileIdsInFolder = [];
     const collectIds = (folder) => {
       const files = folder.getFiles();
@@ -311,33 +326,21 @@ function generatePAT(folderId, siteName) {
 
     const idSet = new Set(fileIdsInFolder);
     const data = sheet.getDataRange().getValues();
-    // Filter PASS results that match either File ID or Site Name
-    const filtered = data.filter(row => {
-      const idMatch = idSet.has(String(row[6]));
-      const siteMatch = String(row[7]) === siteName;
-      const isPass = String(row[3]).includes("PASS");
-      return (idMatch || siteMatch) && isPass;
-    });
+    const filtered = data.filter(row => (idSet.has(String(row[6])) || String(row[7]) === siteName) && String(row[3]).includes("PASS"));
 
     logs.push(`Found ${filtered.length} matching PASS records in Spreadsheet`);
-    if (filtered.length === 0) {
-      return { success: false, error: "No PASS records found. Check if images are audited and marked PASS.", logs: logs };
-    }
+    if (filtered.length === 0) return { success: false, error: "No PASS records found.", logs: logs };
 
     const destinationFolder = getOrCreateSubFolder(siteFolder, "TEMPATE");
-    const templateFile = DriveApp.getFileById(PAT_TEMPLATE_ID);
-    const newSSFile = templateFile.makeCopy(`PAT_${siteName}_${new Date().getTime()}`, destinationFolder);
-    const newSS = SpreadsheetApp.openById(newSSFile.getId());
+    const newSS = SpreadsheetApp.openById(DriveApp.getFileById(activeTemplateId).makeCopy(`PAT_${siteName}_${new Date().getTime()}`, destinationFolder).getId());
     
     logs.push(`Created report copy: ${newSS.getName()}`);
 
-    // 1. Update Global Site Info
     newSS.getSheets().forEach(s => {
       fillPlaceholder(s, "Site name :", siteName);
       fillPlaceholder(s, "Site code :", siteName);
     });
 
-    // 2. Group images by Sheet Reference
     const grouped = filtered.reduce((acc, row) => {
       const cat = String(row[2]).trim();
       if (!acc[cat]) acc[cat] = [];
@@ -345,26 +348,18 @@ function generatePAT(folderId, siteName) {
       return acc;
     }, {});
 
-    logs.push(`Categories to process: ${Object.keys(grouped).join(", ")}`);
-
-    // 3. Process each category sheet
     Object.keys(grouped).forEach(cat => {
       let targetSheet = findTargetSheetSmart(newSS, cat);
+      if (!targetSheet) targetSheet = findSheetByContent(newSS, cat);
       
       if (!targetSheet) {
-        logs.push(`⚠️ CRITICAL: Sheet not found for category: "${cat}". Attempting fallback...`);
-        // Fallback: try to find any sheet that contains the category name in its cells
-        targetSheet = findSheetByContent(newSS, cat);
-      }
-      
-      if (!targetSheet) {
-        logs.push(`❌ FAILED: Could not find a place for "${cat}" in the template.`);
+        logs.push(`⚠️ Sheet NOT FOUND for category: "${cat}"`);
         return;
       }
 
       const photos = grouped[cat];
       const locations = findImageLocations(targetSheet);
-      logs.push(`Processing "${cat}" -> Sheet "${targetSheet.getName()}": Photos=${photos.length}, Slots=${locations.length}`);
+      logs.push(`Processing "${cat}" -> "${targetSheet.getName()}": Photos=${photos.length}, Slots=${locations.length}`);
       
       const beforePhotos = photos.filter(p => p.type === "before");
       const afterPhotos = photos.filter(p => p.type === "after");
@@ -400,26 +395,18 @@ function generatePAT(folderId, siteName) {
 function findTargetSheetSmart(ss, catName) {
   const sheets = ss.getSheets();
   const cleanCat = catName.toUpperCase().replace(/\s/g, "");
-  
-  // 1. Direct match (case insensitive, no spaces)
   let found = sheets.find(s => s.getName().toUpperCase().replace(/\s/g, "") === cleanCat);
   if (found) return found;
-  
-  // 2. Fuzzy match: Check if sheet name is IN the category or vice versa
-  // e.g., Cat: "2.3(M16)" -> Sheet: "M16"
   found = sheets.find(s => {
     const sName = s.getName().toUpperCase();
     return cleanCat.includes(sName) || sName.includes(cleanCat);
   });
   if (found) return found;
-
-  // 3. Extract part in brackets if exists: 2.3(M16) -> M16
   const match = catName.match(/\((.*?)\)/);
   if (match) {
     const inner = match[1].toUpperCase();
     found = sheets.find(s => s.getName().toUpperCase().includes(inner));
   }
-  
   return found;
 }
 
@@ -427,7 +414,7 @@ function findSheetByContent(ss, text) {
   const sheets = ss.getSheets();
   const cleanText = text.toUpperCase();
   for (let s of sheets) {
-    const data = s.getRange(1, 1, 20, 10).getValues(); // Scan top-left area
+    const data = s.getRange(1, 1, 20, 10).getValues();
     for (let r=0; r<data.length; r++) {
       for (let c=0; c<data[r].length; c++) {
         if (String(data[r][c]).toUpperCase().includes(cleanText)) return s;
@@ -440,15 +427,13 @@ function findSheetByContent(ss, text) {
 function findImageLocations(sheet) {
   const data = sheet.getDataRange().getValues();
   const locations = [];
-  // Scan for "Before" or "After" tags (case-insensitive, flexible space)
   const regex = /(Before|After)\s*:/i;
   for (let r = 0; r < data.length; r++) {
     for (let c = 0; c < data[r].length; c++) {
       const cellText = String(data[r][c]);
       const match = cellText.match(regex);
       if (match) {
-        // Assume box is above the text (typical PAT template)
-        locations.push({ col: c + 1, row: r - 15, width: 8, height: 16, type: match[1].toLowerCase() }); // Box estimation
+        locations.push({ col: c + 1, row: r - 15, width: 8, height: 16, type: match[1].toLowerCase() });
       }
     }
   }
@@ -460,7 +445,6 @@ function insertImageInBox(sheet, blob, col, row, wCols, hRows) {
     const img = sheet.insertImage(blob, col, Math.max(1, row));
     let pixelWidth = 0; for (let i=0; i<wCols; i++) pixelWidth += sheet.getColumnWidth(col+i);
     let pixelHeight = 0; for (let i=0; i<hRows; i++) pixelHeight += sheet.getRowHeight(Math.max(1, row+i));
-    
     const ratio = Math.min((pixelWidth - 10) / img.getWidth(), (pixelHeight - 10) / img.getHeight());
     img.setWidth(img.getWidth() * ratio).setHeight(img.getHeight() * ratio);
     img.setAnchorCellXOffset((pixelWidth - img.getWidth()) / 2);
@@ -469,7 +453,7 @@ function insertImageInBox(sheet, blob, col, row, wCols, hRows) {
 }
 
 function fillPlaceholder(sheet, text, value) {
-  const data = sheet.getRange(1, 1, 10, 20).getValues(); // Check top-left corner
+  const data = sheet.getRange(1, 1, 10, 20).getValues();
   for (let r=0; r<data.length; r++) {
     for (let c=0; c<data[r].length; c++) {
       if (String(data[r][c]).includes(text)) { sheet.getRange(r+1, c+2).setValue(value); return; }
