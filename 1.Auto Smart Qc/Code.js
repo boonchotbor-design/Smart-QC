@@ -5,8 +5,8 @@
 const VERSION = "V.135 (SUPER-MATCH)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
-const SPREADSHEET_ID = "1CR-Gdi9IQ4mVB7xbjYmBGAhRPdJ0W4rJ".trim(); 
-const SHEET_NAME = "Sheet1";
+const SPREADSHEET_ID = "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c".trim(); 
+const SHEET_NAME = "sheet1";
 
 function getSpreadsheet() {
   try {
