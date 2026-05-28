@@ -150,7 +150,7 @@ function DashboardApp() {
             >
               <LogOut size={20} /> <span style={{fontSize: '16px', fontWeight: 'bold'}}>Log Out</span>
             </button>
-            <div style={{ textAlign: 'center', marginTop: 15, fontSize: 10, color: '#94a3af', opacity: 0.6 }}>v5.5.0 - Automation Pro</div>
+            <div style={{ textAlign: 'center', marginTop: 15, fontSize: 10, color: '#94a3af', opacity: 0.6 }}>V.137 (STABLE) - Automation Pro</div>
           </div>
         </aside>
 
@@ -410,7 +410,7 @@ function BatchProcessView({ theme }) {
                   <div style={{ width: `${progress}%`, height: '100%', background: '#3b82f6', transition: 'width 0.5s' }} />
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 'bold', color: '#3b82f6' }}>{progress}%</div>
-                <div style={{ marginTop: 60, fontSize: 12, color: '#94a3af' }}>Powered by TLN AI Automation v5.0</div>
+                <div style={{ marginTop: 60, fontSize: 12, color: '#94a3af' }}>Powered by TLN AI Automation V.137</div>
               </div>
             ) : (
               <div className="process-card" style={{background: 'white', color: '#1e293b', padding: 40, borderRadius: 25, textAlign: 'center', maxWidth: 850, margin: '0 auto', boxShadow: '0 20px 25px rgba(0,0,0,0.1)'}}>
@@ -538,4 +538,6 @@ function MetricCard({ title, value, icon, theme, subtitle, currentTheme }) {
   const iconColor = theme === 'blue' ? '#3b82f6' : '#f97316';
   const bgColor = currentTheme === 'dark' ? '#0f172a' : '#f8fafc';
   return <div style={{ background: currentTheme === 'dark' ? '#1e293b' : 'white', padding: 30, borderRadius: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: `1px solid ${currentTheme === 'dark' ? '#334155' : '#e5e7eb'}` }}><div><div style={{ fontSize: 14, color: '#94a3af', marginBottom: 5 }}>{title}</div><div style={{ fontSize: 36, fontWeight: 'bold' }}>{value}</div><div style={{fontSize: 12, color: '#64748b'}}>{subtitle}</div></div><div style={{ background: bgColor, padding: 15, borderRadius: 15 }}>{React.cloneElement(icon, { size: 30, color: iconColor })}</div></div>;
+}
+>;
 }

@@ -1,8 +1,8 @@
 // =========================================================================
-// === AI SMART QC BOT - V.135 (SUPER-MATCH ENGINE - 100% RELIABILITY) ===
+// === AI SMART QC BOT - V.137 (SUPER-MATCH ENGINE - 100% RELIABILITY) ===
 // =========================================================================
 
-const VERSION = "V.135 (SUPER-MATCH)"; 
+const VERSION = "V.137 (STABLE)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c".trim(); 
@@ -122,7 +122,7 @@ function generatePAT(folderId, siteName) {
     const ssDb = getSpreadsheet();
     const sheet = ssDb.getSheetByName(SHEET_NAME); 
     const siteFolder = DriveApp.getFolderById(folderId);
-    const logs = [`[V.135] Starting PAT for: ${siteName}`];
+    const logs = [`[V.137] Starting PAT for: ${siteName}`];
     
     // 1. Recursive Scan
     const fileIdsInFolder = [];
@@ -261,6 +261,7 @@ function processFolderById(folderId, templateId) {
   const lock = LockService.getScriptLock();
   try {
     const hasLock = lock.tryLock(10000); 
+    if (!hasLock) return { error: "⚠️ ระบบกำลังประมวลผลโฟลเดอร์อื่นอยู่ กรุณารอสักครู่ (System Busy)" };
     const folder = DriveApp.getFolderById(folderId);
     const files = folder.getFiles();
     const toProcess = [];
@@ -308,8 +309,16 @@ function processFileList(files, siteName, checklist) {
       const ai = analyzeAI(f, checklist);
       
       if (!ai || ai.status === "ERROR") {
-        results.push({ name: f.getName(), status: "FAIL", reason: "AI วิเคราะห์ไม่ได้: " + (ai?.reason || "Unknown Error") });
+        const errorMsg = ai?.reason || "AI connection failed";
+        results.push({ name: f.getName(), status: "ERROR", reason: "AI วิเคราะห์ไม่ได้: " + errorMsg });
         fail++;
+        
+        // Mark as checked to prevent loop
+        f.setDescription(`PAT_CHECKED: ERROR | REASON: ${errorMsg} | ${f.getDescription() || ""}`);
+        try {
+          const systemErrorFolder = getOrCreateSubFolder(getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), siteName), "FAIL_SYSTEM_ERROR");
+          f.moveTo(systemErrorFolder);
+        } catch(e) { console.warn("Move failed for error file: " + f.getName()); }
         continue;
       }
       
