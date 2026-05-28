@@ -259,42 +259,61 @@ function BatchProcessView({ theme }) {
     }
   };
 
+  // AUTO-REFRESH FILE COUNT IN STEP 5
+  useEffect(() => {
+    let interval;
+    if (step === 5 && selectedFolder) {
+      interval = setInterval(() => {
+        if (!loading && !processing) fetchFiles(selectedFolder.id);
+      }, 5000); // Check every 5 seconds
+    }
+    return () => clearInterval(interval);
+  }, [step, selectedFolder, loading, processing]);
+
   const handleProcess = async () => {
     setProcessing(true); setStep(6); setProgress(0);
     let cumulativeResult = { total: 0, pass: 0, fail: 0, details: [] };
     let hasMore = true;
+    let totalFilesToProcess = files.length; // Initial estimate
+    let processedSoFar = 0;
     
     while (hasMore) {
-      setProgress(10);
-      const timer = setInterval(() => setProgress(p => p < 95 ? p + 5 : p), 2000);
-      
       try {
         const res = await fetch(`${BASE_URL}?action=processFolder&folderId=${selectedFolder.id}&templateId=${selectedTemplate?.id || ""}`);
         const json = await res.json();
-        clearInterval(timer);
         
         if (json.error) {
           setResult({ ...cumulativeResult, error: json.error });
           hasMore = false;
         } else {
-          cumulativeResult.total += (json.total || 0);
+          // Sync total from server if it's different
+          if (json.totalUnprocessed !== undefined) {
+            totalFilesToProcess = processedSoFar + json.totalUnprocessed;
+          }
+
+          cumulativeResult.total += (json.processedInBatch || json.total || 0);
           cumulativeResult.pass += (json.pass || 0);
           cumulativeResult.fail += (json.fail || 0);
           cumulativeResult.details = [...(json.details || []), ...cumulativeResult.details];
           cumulativeResult.message = json.message;
           
+          processedSoFar = cumulativeResult.total;
+          const currentProgress = totalFilesToProcess > 0 
+            ? Math.round((processedSoFar / totalFilesToProcess) * 100) 
+            : 100;
+            
+          setProgress(Math.min(currentProgress, 99)); // Keep at 99 until truly done
           setResult({ ...cumulativeResult });
+          
           hasMore = json.hasMore;
           if (hasMore) {
-            setProgress(0); // Reset for next batch loop
-            await new Promise(r => setTimeout(r, 1000)); // Short pause
+            await new Promise(r => setTimeout(r, 500)); // Short pause for UI
           } else {
             setProgress(100);
           }
         }
       } catch (e) {
-        clearInterval(timer);
-        setResult({ ...cumulativeResult, error: "Batch Process Connection Error" });
+        setResult({ ...cumulativeResult, error: "Connection Error: " + e.toString() });
         hasMore = false;
       }
     }

@@ -15,11 +15,12 @@ function getSpreadsheet() {
     "1CR-Gdi9IQ4mVB7xbjYmBGAhRPdJ0W4rJ"              // Old version mentioned in Test.gs
   ];
   
+  let lastError = "";
   for (let id of candidates) {
     try {
       const ss = SpreadsheetApp.openById(id.trim());
       if (ss) return ss;
-    } catch (e) {}
+    } catch (e) { lastError = e.toString(); }
   }
   
   // Last resort: search by name
@@ -31,33 +32,43 @@ function getSpreadsheet() {
     }
   } catch (e) {}
   
-  throw new Error("❌ ไม่พบไฟล์ Spreadsheet 'Control Panel' หรือไม่มีสิทธิ์เข้าถึง (ID: " + SPREADSHEET_ID + ")");
+  throw new Error("❌ ไม่พบไฟล์ Spreadsheet 'Control Panel' หรือไม่มีสิทธิ์เข้าถึง\n- อีเมลที่ใช้รัน: " + Session.getActiveUser().getEmail() + "\n- Error: " + lastError);
 }
 
 function getSheetSmart(ss, name) {
   const sheet = ss.getSheetByName(name);
   if (sheet) return sheet;
-  
-  // Case-insensitive search
   const lowerName = name.toLowerCase();
   const found = ss.getSheets().find(s => s.getName().toLowerCase() === lowerName);
-  if (found) return found;
-  
-  // Fallback to first visible sheet
-  return ss.getSheets()[0];
+  return found || ss.getSheets()[0];
 }
 
 // ฟังก์ชันสำหรับกดทดสอบในหน้า Google Apps Script Editor
 function checkSetup() {
+  console.log("🔍 ตรวจสอบสิทธิ์อีเมล: " + Session.getActiveUser().getEmail());
   try {
     const ss = getSpreadsheet();
     const sheet = getSheetSmart(ss, SHEET_NAME);
-    console.log("✅ เชื่อมต่อสำเร็จ!");
-    console.log("📄 ชื่อไฟล์: " + ss.getName());
-    console.log("📊 ชื่อชีท: " + sheet.getName());
-    console.log("🔢 จำนวนข้อมูล: " + sheet.getLastRow() + " แถว");
+    console.log("✅ เชื่อมต่อไฟล์สำเร็จ: " + ss.getName());
+    console.log("📊 พบชีท: " + sheet.getName() + " (มีข้อมูล " + sheet.getLastRow() + " แถว)");
   } catch (e) {
     console.error(e.toString());
+  }
+}
+
+// ฟังก์ชันทดสอบ AI
+function testAI() {
+  console.log("🤖 เริ่มทดสอบ AI (Llama 3.2 Vision)...");
+  try {
+    const folder = DriveApp.getFolderById(FOLDER_ID);
+    const files = folder.getFiles();
+    if (!files.hasNext()) throw new Error("ไม่พบรูปในโฟลเดอร์สำหรับทดสอบ");
+    const testFile = files.next();
+    console.log("📸 ทดสอบรูป: " + testFile.getName());
+    const result = analyzeAI(testFile, "");
+    console.log("✅ AI ตอบกลับ: " + JSON.stringify(result));
+  } catch (e) {
+    console.error("❌ AI Error: " + e.toString());
   }
 }
 
@@ -253,20 +264,21 @@ function processFolderById(folderId, templateId) {
     const folder = DriveApp.getFolderById(folderId);
     const files = folder.getFiles();
     const toProcess = [];
-    const BATCH_LIMIT = 40; 
+    const BATCH_LIMIT = 20; // Reduced batch size for smoother progress updates
     let totalUnprocessed = 0;
     let totalInFolder = 0;
     
+    const allFiles = [];
     while (files.hasNext()) {
       const f = files.next();
       totalInFolder++;
       if (!(f.getDescription() || "").includes("PAT_CHECKED")) {
         totalUnprocessed++;
-        if (toProcess.length < BATCH_LIMIT) toProcess.push(f);
+        allFiles.push(f);
       }
     }
     
-    if (toProcess.length === 0) {
+    if (allFiles.length === 0) {
       return { 
         success: true, 
         total: 0, 
@@ -274,8 +286,15 @@ function processFolderById(folderId, templateId) {
         fail: 0, 
         details: [], 
         hasMore: false, 
+        totalUnprocessed: 0,
+        totalInFolder: totalInFolder,
         message: totalInFolder > 0 ? "ตรวจครบทุกรูปแล้วครับ" : "ไม่พบรูปภาพในโฟลเดอร์นี้" 
       };
+    }
+    
+    // Take first batch
+    for (let i = 0; i < Math.min(allFiles.length, BATCH_LIMIT); i++) {
+      toProcess.push(allFiles[i]);
     }
     
     const result = processFileList(toProcess, folder.getName(), null);
@@ -283,7 +302,9 @@ function processFolderById(folderId, templateId) {
       success: true, 
       ...result, 
       hasMore: totalUnprocessed > BATCH_LIMIT, 
-      remainingCount: totalUnprocessed - toProcess.length,
+      totalUnprocessed: totalUnprocessed,
+      totalInFolder: totalInFolder,
+      processedInBatch: toProcess.length,
       message: `กำลังตรวจ... (เหลืออีก ${totalUnprocessed - toProcess.length} รูป)`
     };
   } catch (e) { return { error: e.toString() }; } finally { lock.releaseLock(); }
