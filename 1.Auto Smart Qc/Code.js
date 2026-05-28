@@ -312,30 +312,75 @@ function processFolderById(folderId, templateId) {
 
 function processFileList(files, siteName, checklist) {
   const ss = getSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME);
+  const sheet = getSheetSmart(ss, SHEET_NAME);
   let pass = 0, fail = 0;
   const results = [];
+  
   for (let f of files) {
     try {
+      console.log("📸 Analyzing: " + f.getName());
       const ai = analyzeAI(f, checklist);
-      if (!ai || ai.status === "ERROR") continue;
+      
+      if (!ai || ai.status === "ERROR") {
+        results.push({ name: f.getName(), status: "FAIL", reason: "AI วิเคราะห์ไม่ได้: " + (ai?.reason || "Unknown Error") });
+        fail++;
+        continue;
+      }
+      
       const status = ai.status.toUpperCase();
       let imageType = ai.imageType || "unknown";
+      
+      // Auto-detect type if AI missed it
       if (imageType === "unknown" || !imageType) {
         const fn = f.getName().toUpperCase();
         if (fn.includes(" BF") || fn.includes("_BF") || fn.includes("BEFORE")) imageType = "before";
         else if (fn.includes(" AF") || fn.includes("_AF") || fn.includes("AFTER")) imageType = "after";
       }
+      
+      // บันทึกลง Sheet
       sheet.appendRow([new Date(), f.getName(), ai.sheetReference, status, ai.reason, f.getUrl(), f.getId(), siteName, imageType]);
-      const destFolder = getOrCreateSubFolder(getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), siteName), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference);
-      f.moveTo(destFolder);
-      f.setDescription(`PAT_CHECKED: ${status} | TYPE: ${imageType} | ${f.getDescription() || ""}`);
+      
+      // ย้ายไฟล์ไปโฟลเดอร์ ARCHIVE
+      try {
+        const destFolder = getOrCreateSubFolder(getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), siteName), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference);
+        f.moveTo(destFolder);
+        f.setDescription(`PAT_CHECKED: ${status} | TYPE: ${imageType} | ${f.getDescription() || ""}`);
+      } catch (moveErr) {
+        console.warn("Could not move file: " + f.getName());
+      }
+      
       results.push({ name: f.getName(), status: status, reason: ai.reason, category: ai.sheetReference });
-      if (status === "PASS") pass++; else { fail++; sendDualFailNotify(f.getName(), ai.sheetReference, ai.reason, f.getUrl(), f.getId()); }
-    } catch (e) {}
+      if (status === "PASS") pass++; 
+      else { 
+        fail++; 
+        sendDualFailNotify(f.getName(), ai.sheetReference, ai.reason, f.getUrl(), f.getId()); 
+      }
+      
+    } catch (e) {
+      results.push({ name: f.getName(), status: "ERROR", reason: "ระบบขัดข้อง: " + e.toString() });
+      fail++;
+    }
   }
-  if (pass + fail > 0) sendDualSummary(siteName, pass, fail, results.filter(r => r.status === "FAIL"));
+  
+  if (pass + fail > 0) sendDualSummary(siteName, pass, fail, results.filter(r => r.status === "FAIL" || r.status === "ERROR"));
   return { total: files.length, pass: pass, fail: fail, details: results };
+}
+
+// ฟังก์ชันสำหรับทดสอบรันตรวจรูปเดียว (เพื่อ Recheck)
+function testProcessOne() {
+  console.log("🧪 เริ่มการทดสอบตรวจรูปเดียว...");
+  try {
+    const folder = DriveApp.getFolderById(FOLDER_ID);
+    const files = folder.getFiles();
+    if (!files.hasNext()) throw new Error("ไม่พบรูปในโฟลเดอร์");
+    
+    const file = files.next();
+    console.log("📸 ทดสอบไฟล์: " + file.getName());
+    const result = processFileList([file], "TEST_SITE", "");
+    console.log("📊 ผลการทดสอบ: " + JSON.stringify(result, null, 2));
+  } catch (e) {
+    console.error("❌ " + e.toString());
+  }
 }
 
 function analyzeAI(file, customChecklist) {
