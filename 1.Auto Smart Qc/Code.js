@@ -5,8 +5,17 @@
 const VERSION = "V.135 (SUPER-MATCH)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
-const SPREADSHEET_ID = "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c"; 
+const SPREADSHEET_ID = "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c".trim(); 
 const SHEET_NAME = "Sheet1";
+
+function getSpreadsheet() {
+  try {
+    console.log("Opening Spreadsheet: " + SPREADSHEET_ID);
+    return SpreadsheetApp.openById(SPREADSHEET_ID);
+  } catch (e) {
+    throw new Error("Spreadsheet Error: " + e.toString() + " (ID: " + SPREADSHEET_ID + ")");
+  }
+}
 
 const TEMPLATES = {
   "HAE_MBB": "1f6v_5CNJyeaYk4ButvO7eXGqm47pnNQ_mjen8fOlVzI",
@@ -55,7 +64,7 @@ function listTemplates(type, project) {
 
 function generatePAT(folderId, siteName) {
   try {
-    const ssDb = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const ssDb = getSpreadsheet();
     const sheet = ssDb.getSheetByName(SHEET_NAME); 
     const siteFolder = DriveApp.getFolderById(folderId);
     const logs = [`[V.135] Starting PAT for: ${siteName}`];
@@ -237,7 +246,7 @@ function processFolderById(folderId, templateId) {
 }
 
 function processFileList(files, siteName, checklist) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAME);
   let pass = 0, fail = 0;
   const results = [];
@@ -309,7 +318,7 @@ function analyzeAI(file, customChecklist) {
 
 function getDashboardData(siteFilter) {
   try {
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+    const sheet = getSpreadsheet().getSheetByName(SHEET_NAME);
     const values = sheet.getDataRange().getValues();
     let dataRows = values.slice(1);
     if (siteFilter && siteFilter !== "All Sites") dataRows = dataRows.filter(row => String(row[1]).includes(siteFilter) || String(row[7]).includes(siteFilter));
