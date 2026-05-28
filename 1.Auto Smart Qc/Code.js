@@ -38,7 +38,7 @@ function doGet(e) {
 function createSiteFolder(project, type, site) {
   try {
     const root = DriveApp.getFolderById(FOLDER_ID);
-    const folderName = `${project}_${site}_${type}`;
+    const folderName = `${project}_${type}_${site}`;
     const folder = root.createFolder(folderName);
     return { id: folder.getId(), name: folder.getName(), url: folder.getUrl() };
   } catch (e) { return { error: e.toString() }; }
