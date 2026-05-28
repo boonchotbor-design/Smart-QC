@@ -5,7 +5,7 @@
 const VERSION = "V.135 (SUPER-MATCH)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
-const SPREADSHEET_ID = "1CR-Gdi9IQ4mVB7xbjYmBGAhRPdJ0W4rJ"; 
+const SPREADSHEET_ID = "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c"; 
 const SHEET_NAME = "Sheet1";
 
 const TEMPLATES = {
@@ -56,7 +56,7 @@ function listTemplates(type, project) {
 function generatePAT(folderId, siteName) {
   try {
     const ssDb = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet = ssDb.getSheets()[0]; 
+    const sheet = ssDb.getSheetByName(SHEET_NAME); 
     const siteFolder = DriveApp.getFolderById(folderId);
     const logs = [`[V.135] Starting PAT for: ${siteName}`];
     
@@ -206,7 +206,7 @@ function processFolderById(folderId, templateId) {
 
 function processFileList(files, siteName, checklist) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheets()[0];
+  const sheet = ss.getSheetByName(SHEET_NAME);
   let pass = 0, fail = 0;
   const results = [];
   for (let f of files) {
@@ -247,7 +247,7 @@ function analyzeAI(file, customChecklist) {
 
 function getDashboardData(siteFilter) {
   try {
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
     const values = sheet.getDataRange().getValues();
     let dataRows = values.slice(1);
     if (siteFilter && siteFilter !== "All Sites") dataRows = dataRows.filter(row => String(row[1]).includes(siteFilter) || String(row[7]).includes(siteFilter));
