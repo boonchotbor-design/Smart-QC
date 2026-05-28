@@ -198,7 +198,7 @@ function processFolderById(folderId, templateId) {
         if (toProcess.length < BATCH_LIMIT) toProcess.push(f);
       }
     }
-    if (toProcess.length === 0) return { success: true, count: 0, hasMore: false };
+    if (toProcess.length === 0) return { success: true, total: 0, pass: 0, fail: 0, details: [], hasMore: false };
     const result = processFileList(toProcess, folder.getName(), null);
     return { success: true, ...result, hasMore: totalUnprocessed > BATCH_LIMIT, remainingCount: totalUnprocessed - toProcess.length };
   } catch (e) { return { error: e.toString() }; } finally { lock.releaseLock(); }
@@ -235,14 +235,36 @@ function processFileList(files, siteName, checklist) {
 function analyzeAI(file, customChecklist) {
   const b64 = Utilities.base64Encode(file.getBlob().getBytes());
   const promptText = `Analyze site photo. Match item from AIS checklist. Detect watermark Bf/Before or Af/After. Return JSON: {"sheetReference": "Item", "status": "PASS/FAIL", "reason": "Thai", "imageType": "before/after/unknown"}`;
-  const payload = { "model": "meta-llama/llama-4-scout-17b-16e-instruct", "messages": [{ "role": "user", "content": [{ "type": "text", "text": promptText }, { "type": "image_url", "image_url": { "url": `data:image/jpeg;base64,${b64}` } }] }], "response_format": { "type": "json_object" } };
+  const payload = { 
+    "model": "llama-3.2-11b-vision-preview", 
+    "messages": [{ 
+      "role": "user", 
+      "content": [
+        { "type": "text", "text": promptText }, 
+        { "type": "image_url", "image_url": { "url": `data:image/jpeg;base64,${b64}` } }
+      ] 
+    }], 
+    "response_format": { "type": "json_object" } 
+  };
+  
   for (let key of GROQ_KEYS) {
     try {
-      const res = UrlFetchApp.fetch(GROQ_AI_URL, { method: "post", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, payload: JSON.stringify(payload), muteHttpExceptions: true });
-      if (res.getResponseCode() === 200) return JSON.parse(JSON.parse(res.getContentText()).choices[0].message.content);
+      const res = UrlFetchApp.fetch(GROQ_AI_URL, { 
+        method: "post", 
+        headers: { 
+          Authorization: "Bearer " + key, 
+          "Content-Type": "application/json" 
+        }, 
+        payload: JSON.stringify(payload), 
+        muteHttpExceptions: true 
+      });
+      if (res.getResponseCode() === 200) {
+        const json = JSON.parse(res.getContentText());
+        return JSON.parse(json.choices[0].message.content);
+      }
     } catch (e) {}
   }
-  return { status: "ERROR" };
+  return { status: "ERROR", reason: "AI connection failed" };
 }
 
 function getDashboardData(siteFilter) {
