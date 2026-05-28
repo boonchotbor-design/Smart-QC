@@ -260,18 +260,16 @@ function sendDualFailNotify(n, c, r, u, fid) { const blob = DriveApp.getFileById
 function processFolderById(folderId, templateId) {
   const lock = LockService.getScriptLock();
   try {
-    lock.waitLock(30000);
+    const hasLock = lock.tryLock(10000); 
     const folder = DriveApp.getFolderById(folderId);
     const files = folder.getFiles();
     const toProcess = [];
-    const BATCH_LIMIT = 20; // Reduced batch size for smoother progress updates
+    const BATCH_LIMIT = 10; 
     let totalUnprocessed = 0;
-    let totalInFolder = 0;
     
     const allFiles = [];
     while (files.hasNext()) {
       const f = files.next();
-      totalInFolder++;
       if (!(f.getDescription() || "").includes("PAT_CHECKED")) {
         totalUnprocessed++;
         allFiles.push(f);
@@ -279,20 +277,9 @@ function processFolderById(folderId, templateId) {
     }
     
     if (allFiles.length === 0) {
-      return { 
-        success: true, 
-        total: 0, 
-        pass: 0, 
-        fail: 0, 
-        details: [], 
-        hasMore: false, 
-        totalUnprocessed: 0,
-        totalInFolder: totalInFolder,
-        message: totalInFolder > 0 ? "ตรวจครบทุกรูปแล้วครับ" : "ไม่พบรูปภาพในโฟลเดอร์นี้" 
-      };
+      return { success: true, total: 0, pass: 0, fail: 0, details: [], hasMore: false, totalUnprocessed: 0, message: "ตรวจครบทุกรูปแล้วครับ" };
     }
     
-    // Take first batch
     for (let i = 0; i < Math.min(allFiles.length, BATCH_LIMIT); i++) {
       toProcess.push(allFiles[i]);
     }
@@ -303,11 +290,10 @@ function processFolderById(folderId, templateId) {
       ...result, 
       hasMore: totalUnprocessed > BATCH_LIMIT, 
       totalUnprocessed: totalUnprocessed,
-      totalInFolder: totalInFolder,
       processedInBatch: toProcess.length,
       message: `กำลังตรวจ... (เหลืออีก ${totalUnprocessed - toProcess.length} รูป)`
     };
-  } catch (e) { return { error: e.toString() }; } finally { lock.releaseLock(); }
+  } catch (e) { return { error: e.toString() }; } finally { try { lock.releaseLock(); } catch(e) {} }
 }
 
 function processFileList(files, siteName, checklist) {
@@ -330,17 +316,14 @@ function processFileList(files, siteName, checklist) {
       const status = ai.status.toUpperCase();
       let imageType = ai.imageType || "unknown";
       
-      // Auto-detect type if AI missed it
       if (imageType === "unknown" || !imageType) {
         const fn = f.getName().toUpperCase();
         if (fn.includes(" BF") || fn.includes("_BF") || fn.includes("BEFORE")) imageType = "before";
         else if (fn.includes(" AF") || fn.includes("_AF") || fn.includes("AFTER")) imageType = "after";
       }
       
-      // บันทึกลง Sheet
       sheet.appendRow([new Date(), f.getName(), ai.sheetReference, status, ai.reason, f.getUrl(), f.getId(), siteName, imageType]);
       
-      // ย้ายไฟล์ไปโฟลเดอร์ ARCHIVE
       try {
         const destFolder = getOrCreateSubFolder(getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), siteName), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference);
         f.moveTo(destFolder);
@@ -366,18 +349,26 @@ function processFileList(files, siteName, checklist) {
   return { total: files.length, pass: pass, fail: fail, details: results };
 }
 
-// ฟังก์ชันสำหรับทดสอบรันตรวจรูปเดียว (เพื่อ Recheck)
 function testProcessOne() {
-  console.log("🧪 เริ่มการทดสอบตรวจรูปเดียว...");
+  const targetFolderId = "1F3vRFhXEl5gKWK5At19J4EzafqZHJ2Mi"; 
+  
+  console.log("🧪 เริ่มการทดสอบตรวจรูปจากโฟลเดอร์: " + targetFolderId);
   try {
-    const folder = DriveApp.getFolderById(FOLDER_ID);
+    const folder = DriveApp.getFolderById(targetFolderId);
     const files = folder.getFiles();
-    if (!files.hasNext()) throw new Error("ไม่พบรูปในโฟลเดอร์");
+    let found = false;
     
-    const file = files.next();
-    console.log("📸 ทดสอบไฟล์: " + file.getName());
-    const result = processFileList([file], "TEST_SITE", "");
-    console.log("📊 ผลการทดสอบ: " + JSON.stringify(result, null, 2));
+    while (files.hasNext()) {
+      const file = files.next();
+      if (!(file.getDescription() || "").includes("PAT_CHECKED")) {
+        console.log("📸 พบไฟล์สำหรับทดสอบ: " + file.getName());
+        const result = processFileList([file], "RECHECK_TEST", "");
+        console.log("📊 ผลการวิเคราะห์ AI: " + JSON.stringify(result, null, 2));
+        found = true;
+        break; 
+      }
+    }
+    if (!found) console.log("ℹ️ ไม่พบไฟล์ที่ยังไม่ได้ตรวจในโฟลเดอร์นี้");
   } catch (e) {
     console.error("❌ " + e.toString());
   }
