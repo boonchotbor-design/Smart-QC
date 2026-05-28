@@ -49,8 +49,8 @@ function listTemplates(type, project) {
     const key = `${project}_${type}`;
     const id = TEMPLATES[key] || TEMPLATES.DEFAULT;
     const file = DriveApp.getFileById(id);
-    return [{ id: id, name: file.getName() }];
-  } catch (e) { return [{ id: TEMPLATES.DEFAULT, name: "Default Template" }]; }
+    return [{ id: id, name: file.getName(), key: key }];
+  } catch (e) { return [{ id: TEMPLATES.DEFAULT, name: "Default Template", key: "DEFAULT" }]; }
 }
 
 function generatePAT(folderId, siteName) {
@@ -177,7 +177,18 @@ function fillPlaceholder(s, t, v) {
 function jsonResponse(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 function getOrCreateSubFolder(p, n) { const f = p.getFoldersByName(n); return f.hasNext() ? f.next() : p.createFolder(n); }
 function listSubFolders(id) { const subs = DriveApp.getFolderById(id).getFolders(); const res = []; while (subs.hasNext()) { const f = subs.next(); res.push({ id: f.getId(), name: f.getName(), url: f.getUrl(), date: f.getLastUpdated().toISOString() }); } return res.sort((a, b) => new Date(b.date) - new Date(a.date)); }
-function listFilesInFolder(id) { const files = DriveApp.getFolderById(id).getFiles(); const res = []; while (files.hasNext()) { const f = files.next(); if (!(f.getDescription() || "").includes("PAT_CHECKED")) res.push({ id: f.getId(), name: f.getName(), size: (f.getSize() / 1024).toFixed(0) + " KB" }); } return res; }
+function listFilesInFolder(id) { 
+  try {
+    const folder = DriveApp.getFolderById(id);
+    const files = folder.getFiles(); 
+    const res = []; 
+    while (files.hasNext()) { 
+      const f = files.next(); 
+      if (!(f.getDescription() || "").includes("PAT_CHECKED")) res.push({ id: f.getId(), name: f.getName(), size: (f.getSize() / 1024).toFixed(0) + " KB" }); 
+    } 
+    return { folderName: folder.getName(), files: res, totalInFolder: DriveApp.getFolderById(id).getFiles().hasNext() ? "Has Files" : "Empty" }; 
+  } catch (e) { return { error: e.toString() }; }
+}
 function callTGRaw(m, p) { return UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${m}`, { method: "post", contentType: "application/json", payload: JSON.stringify(p), muteHttpExceptions: true }); }
 function sendDualSummary(s, p, f, items) { let txt = `📊 สรุปผล AI (${s})\n✅ ผ่าน: ${p}\n❌ ไม่ผ่าน: ${f}`; items.forEach((it, i) => txt += `\n${i + 1}.📄 ${it.name}`); callTGRaw("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: txt }); }
 function sendDualFailNotify(n, c, r, u, fid) { const blob = DriveApp.getFileById(fid).getBlob(); const kb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไม่อนุมัติ", callback_data: "rej|" + fid }]] }; callTGRaw("sendPhoto", { chat_id: TELEGRAM_TARGET_ID, photo: blob, caption: `🚨 พบงานไม่ผ่าน\n📄 ไฟล์: ${n}\n📌 หมวด: ${c}\n❌ สาเหตุ: ${r}`, reply_markup: JSON.stringify(kb) }); }

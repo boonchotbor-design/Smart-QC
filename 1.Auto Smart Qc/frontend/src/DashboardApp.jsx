@@ -225,9 +225,24 @@ function BatchProcessView({ theme }) {
 
   const fetchFiles = async (folderId) => {
     setLoading(true);
-    const res = await fetch(`${BASE_URL}?action=listFiles&folderId=${folderId}`);
-    const json = await res.json();
-    setFiles(json || []); setLoading(false);
+    try {
+      const res = await fetch(`${BASE_URL}?action=listFiles&folderId=${folderId}`);
+      const json = await res.json();
+      if (json.files) {
+        setFiles(json.files);
+        if (json.totalInFolder === "Empty") {
+           // Maybe show alert?
+        }
+      } else if (Array.isArray(json)) {
+        setFiles(json);
+      } else {
+        setFiles([]);
+      }
+    } catch (e) {
+      setFiles([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreate = async () => {
@@ -340,13 +355,13 @@ function BatchProcessView({ theme }) {
             <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 40 }}>
               <span style={{ background: '#10b98133', color: '#10b981', padding: '4px 12px', borderRadius: 8, fontSize: 13, fontWeight: 'bold' }}>{selectedProject || "Admin"}</span>
               <span style={{ background: '#3b82f633', color: '#3b82f6', padding: '4px 12px', borderRadius: 8, fontSize: 13, fontWeight: 'bold' }}>{selectedFolder?.name || "No Folder"}/</span>
-              <span style={{ color: '#94a3af', fontSize: 13, padding: '4px 0' }}>{files.length} files detected</span>
+              <span style={{ color: '#94a3af', fontSize: 13, padding: '4px 0' }}>{files.length} files detected {selectedFolder?.totalInFolder && `(Folder Status: ${selectedFolder.totalInFolder})`}</span>
             </div>
             
             {selectedFolder ? (
               <div style={{ padding: '40px', background: 'rgba(255,255,255,0.02)', borderRadius: 25, border: '1px dashed #334155', maxWidth: 700, margin: '0 auto 40px' }}>
                 <div style={{ color: 'white', fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>{selectedFolder.name}</div>
-                <div style={{ color: '#3b82f6', fontSize: 14, marginBottom: 30 }}>Auto-selected Template: <b>{selectedTemplate?.name || "Default"}</b></div>
+                <div style={{ color: '#3b82f6', fontSize: 14, marginBottom: 30 }}>Auto-selected Template: <b>{selectedTemplate?.key || "Default"}</b> ({selectedTemplate?.name || "Default Template"})</div>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 15, marginBottom: 20 }}>
                   <button className="auth-button" style={{ background: '#10b981', width: 250, fontSize: 16 }} onClick={() => selectedFolder?.url ? window.open(selectedFolder.url, '_blank') : alert("ไม่พบ URL ของโฟลเดอร์ กรุณาลองใหม่อีกครั้ง")}><Folder size={18} /> Open Folder to Upload</button>
                   <button onClick={() => fetchFiles(selectedFolder.id)} style={{ background: 'transparent', border: '1px solid #3b82f6', color: '#3b82f6', padding: '10px 25px', borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
