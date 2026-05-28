@@ -207,7 +207,7 @@ function BatchProcessView({ theme }) {
   const TYPES = ["MBB", "POWER", "SOLACELL", "SMALL DC", "IPRAN", "SSR"];
 
   // AUTO-SELECT TEMPLATE AND SKIP STEP 4
-  const fetchTemplates = async (type, project = selectedProject) => {
+  const fetchTemplates = async (type, project = selectedProject, folder = selectedFolder) => {
     setLoading(true);
     try {
       const res = await fetch(`${BASE_URL}?action=listTemplates&type=${encodeURIComponent(type)}&project=${encodeURIComponent(project)}`);
@@ -216,7 +216,7 @@ function BatchProcessView({ theme }) {
       if (json && json.length > 0) {
         setSelectedTemplate(json[0]); // Auto-pick first template
         setStep(5); // Skip directly to Ready to Process
-        if (selectedFolder) fetchFiles(selectedFolder.id);
+        if (folder) fetchFiles(folder.id);
       } else {
         setStep(5); // Skip even if no template found
       }
@@ -232,10 +232,16 @@ function BatchProcessView({ theme }) {
 
   const handleCreate = async () => {
     setLoading(true);
-    const res = await fetch(`${BASE_URL}?action=createSiteFolder&project=${selectedProject}&type=${selectedType}&site=${siteName}`);
-    const json = await res.json();
-    setSelectedFolder(json);
-    await fetchTemplates(selectedType);
+    try {
+      const res = await fetch(`${BASE_URL}?action=createSiteFolder&project=${selectedProject}&type=${selectedType}&site=${siteName}`);
+      const json = await res.json();
+      setSelectedFolder(json);
+      await fetchTemplates(selectedType, selectedProject, json);
+    } catch (e) {
+      setStep(5);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleProcess = async () => {
@@ -341,7 +347,7 @@ function BatchProcessView({ theme }) {
                 <div style={{ color: 'white', fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>{selectedFolder.name}</div>
                 <div style={{ color: '#3b82f6', fontSize: 14, marginBottom: 30 }}>Auto-selected Template: <b>{selectedTemplate?.name || "Default"}</b></div>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 15, marginBottom: 20 }}>
-                  <button className="auth-button" style={{ background: '#10b981', width: 250, fontSize: 16 }} onClick={() => window.open(selectedFolder?.url, '_blank')}><Folder size={18} /> Open Folder to Upload</button>
+                  <button className="auth-button" style={{ background: '#10b981', width: 250, fontSize: 16 }} onClick={() => selectedFolder?.url ? window.open(selectedFolder.url, '_blank') : alert("ไม่พบ URL ของโฟลเดอร์ กรุณาลองใหม่อีกครั้ง")}><Folder size={18} /> Open Folder to Upload</button>
                   <button onClick={() => fetchFiles(selectedFolder.id)} style={{ background: 'transparent', border: '1px solid #3b82f6', color: '#3b82f6', padding: '10px 25px', borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
                       <RefreshCw size={18} className={loading ? "animate-spin" : ""} /> Check Files
                   </button>
