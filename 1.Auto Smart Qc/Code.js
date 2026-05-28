@@ -191,16 +191,37 @@ function processFolderById(folderId, templateId) {
     const toProcess = [];
     const BATCH_LIMIT = 40; 
     let totalUnprocessed = 0;
+    let totalInFolder = 0;
+    
     while (files.hasNext()) {
       const f = files.next();
+      totalInFolder++;
       if (!(f.getDescription() || "").includes("PAT_CHECKED")) {
         totalUnprocessed++;
         if (toProcess.length < BATCH_LIMIT) toProcess.push(f);
       }
     }
-    if (toProcess.length === 0) return { success: true, total: 0, pass: 0, fail: 0, details: [], hasMore: false };
+    
+    if (toProcess.length === 0) {
+      return { 
+        success: true, 
+        total: 0, 
+        pass: 0, 
+        fail: 0, 
+        details: [], 
+        hasMore: false, 
+        message: totalInFolder > 0 ? "ตรวจครบทุกรูปแล้วครับ" : "ไม่พบรูปภาพในโฟลเดอร์นี้" 
+      };
+    }
+    
     const result = processFileList(toProcess, folder.getName(), null);
-    return { success: true, ...result, hasMore: totalUnprocessed > BATCH_LIMIT, remainingCount: totalUnprocessed - toProcess.length };
+    return { 
+      success: true, 
+      ...result, 
+      hasMore: totalUnprocessed > BATCH_LIMIT, 
+      remainingCount: totalUnprocessed - toProcess.length,
+      message: `กำลังตรวจ... (เหลืออีก ${totalUnprocessed - toProcess.length} รูป)`
+    };
   } catch (e) { return { error: e.toString() }; } finally { lock.releaseLock(); }
 }
 
@@ -258,11 +279,19 @@ function analyzeAI(file, customChecklist) {
         payload: JSON.stringify(payload), 
         muteHttpExceptions: true 
       });
-      if (res.getResponseCode() === 200) {
-        const json = JSON.parse(res.getContentText());
-        return JSON.parse(json.choices[0].message.content);
+      
+      const resCode = res.getResponseCode();
+      if (resCode === 200) {
+        let content = JSON.parse(res.getContentText()).choices[0].message.content;
+        // Clean markdown if present
+        content = content.replace(/```json/g, "").replace(/```/g, "").trim();
+        return JSON.parse(content);
+      } else {
+        console.error("Groq Error: " + res.getContentText());
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("AI Attempt failed: " + e.toString());
+    }
   }
   return { status: "ERROR", reason: "AI connection failed" };
 }

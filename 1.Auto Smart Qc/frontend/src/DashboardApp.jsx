@@ -266,8 +266,9 @@ function BatchProcessView({ theme }) {
           cumulativeResult.pass += (json.pass || 0);
           cumulativeResult.fail += (json.fail || 0);
           cumulativeResult.details = [...(json.details || []), ...cumulativeResult.details];
+          cumulativeResult.message = json.message;
           
-          setResult(cumulativeResult);
+          setResult({ ...cumulativeResult });
           hasMore = json.hasMore;
           if (hasMore) {
             setProgress(0); // Reset for next batch loop
@@ -379,9 +380,12 @@ function BatchProcessView({ theme }) {
               </div>
             ) : (
               <div className="process-card" style={{background: 'white', color: '#1e293b', padding: 40, borderRadius: 25, textAlign: 'center', maxWidth: 850, margin: '0 auto', boxShadow: '0 20px 25px rgba(0,0,0,0.1)'}}>
-                <div style={{background: '#10b981', width: 60, height: 60, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px'}}><CheckCircle2 size={35} color="white" /></div>
-                <h2 style={{color: '#10b981', fontSize: 28, fontWeight: 'bold'}}>Process Completed!</h2>
-                <div style={{color: '#64748b', marginBottom: 30}}>{selectedFolder?.name}</div>
+                <div style={{background: result?.error ? '#ef4444' : '#10b981', width: 60, height: 60, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px'}}>{result?.error ? <div style={{color:'white', fontSize: 30, fontWeight:'bold'}}>!</div> : <CheckCircle2 size={35} color="white" />}</div>
+                <h2 style={{color: result?.error ? '#ef4444' : '#10b981', fontSize: 28, fontWeight: 'bold'}}>{result?.error ? "Process Error" : "Process Completed!"}</h2>
+                <div style={{color: '#64748b', marginBottom: 10}}>{selectedFolder?.name}</div>
+                {result?.message && <div style={{color: '#3b82f6', marginBottom: 20, fontWeight: 'bold'}}>{result.message}</div>}
+                {result?.error && <div style={{color: '#ef4444', marginBottom: 20, background: '#fee2e2', padding: 10, borderRadius: 10}}>{result.error}</div>}
+                
                 <div style={{display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 35}}>
                   <div style={{flex: 1, background: '#f8fafc', padding: 20, borderRadius: 15, border: '1px solid #e2e8f0'}}>
                     <div style={{fontSize: 24, fontWeight: 'bold', color: '#3b82f6'}}>{result?.total}</div><div style={{fontSize: 12, color: '#64748b'}}>Total</div>
