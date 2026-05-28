@@ -10,10 +10,25 @@ const SHEET_NAME = "Sheet1";
 
 function getSpreadsheet() {
   try {
-    console.log("Opening Spreadsheet: " + SPREADSHEET_ID);
     return SpreadsheetApp.openById(SPREADSHEET_ID);
   } catch (e) {
-    throw new Error("Spreadsheet Error: " + e.toString() + " (ID: " + SPREADSHEET_ID + ")");
+    throw new Error("ระบบไม่สามารถเปิดไฟล์ Spreadsheet ได้ กรุณาตรวจสอบว่าคุณได้แชร์ไฟล์ให้ Email ที่ใช้รัน Script หรือยัง? (ID: " + SPREADSHEET_ID + ")");
+  }
+}
+
+// ฟังก์ชันสำหรับกดทดสอบในหน้า Google Apps Script Editor
+function checkSetup() {
+  try {
+    const ss = getSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAME);
+    if (!sheet) {
+      console.log("❌ พบไฟล์ Spreadsheet แต่ไม่พบชีทที่ชื่อ: " + SHEET_NAME);
+    } else {
+      console.log("✅ เชื่อมต่อสำเร็จ! พบชีท: " + SHEET_NAME);
+      console.log("📊 จำนวนข้อมูลปัจจุบัน: " + sheet.getLastRow() + " แถว");
+    }
+  } catch (e) {
+    console.error("❌ " + e.toString());
   }
 }
 
