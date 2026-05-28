@@ -9,26 +9,55 @@ const SPREADSHEET_ID = "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c".trim();
 const SHEET_NAME = "Sheet1";
 
 function getSpreadsheet() {
-  try {
-    return SpreadsheetApp.openById(SPREADSHEET_ID);
-  } catch (e) {
-    throw new Error("ระบบไม่สามารถเปิดไฟล์ Spreadsheet ได้ กรุณาตรวจสอบว่าคุณได้แชร์ไฟล์ให้ Email ที่ใช้รัน Script หรือยัง? (ID: " + SPREADSHEET_ID + ")");
+  const candidates = [
+    "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c", // Visually verified from URL
+    "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c", // User's manually typed version
+    "1CR-Gdi9IQ4mVB7xbjYmBGAhRPdJ0W4rJ"              // Old version mentioned in Test.gs
+  ];
+  
+  for (let id of candidates) {
+    try {
+      const ss = SpreadsheetApp.openById(id.trim());
+      if (ss) return ss;
+    } catch (e) {}
   }
+  
+  // Last resort: search by name
+  try {
+    const files = DriveApp.getFilesByName("Control Panel");
+    while (files.hasNext()) {
+      const file = files.next();
+      if (file.getMimeType() === MimeType.GOOGLE_SHEETS) return SpreadsheetApp.open(file);
+    }
+  } catch (e) {}
+  
+  throw new Error("❌ ไม่พบไฟล์ Spreadsheet 'Control Panel' หรือไม่มีสิทธิ์เข้าถึง (ID: " + SPREADSHEET_ID + ")");
+}
+
+function getSheetSmart(ss, name) {
+  const sheet = ss.getSheetByName(name);
+  if (sheet) return sheet;
+  
+  // Case-insensitive search
+  const lowerName = name.toLowerCase();
+  const found = ss.getSheets().find(s => s.getName().toLowerCase() === lowerName);
+  if (found) return found;
+  
+  // Fallback to first visible sheet
+  return ss.getSheets()[0];
 }
 
 // ฟังก์ชันสำหรับกดทดสอบในหน้า Google Apps Script Editor
 function checkSetup() {
   try {
     const ss = getSpreadsheet();
-    const sheet = ss.getSheetByName(SHEET_NAME);
-    if (!sheet) {
-      console.log("❌ พบไฟล์ Spreadsheet แต่ไม่พบชีทที่ชื่อ: " + SHEET_NAME);
-    } else {
-      console.log("✅ เชื่อมต่อสำเร็จ! พบชีท: " + SHEET_NAME);
-      console.log("📊 จำนวนข้อมูลปัจจุบัน: " + sheet.getLastRow() + " แถว");
-    }
+    const sheet = getSheetSmart(ss, SHEET_NAME);
+    console.log("✅ เชื่อมต่อสำเร็จ!");
+    console.log("📄 ชื่อไฟล์: " + ss.getName());
+    console.log("📊 ชื่อชีท: " + sheet.getName());
+    console.log("🔢 จำนวนข้อมูล: " + sheet.getLastRow() + " แถว");
   } catch (e) {
-    console.error("❌ " + e.toString());
+    console.error(e.toString());
   }
 }
 
