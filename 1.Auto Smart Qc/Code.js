@@ -362,7 +362,8 @@ function analyzeAI(file, customChecklist) {
 
 function getDashboardData(siteFilter) {
   try {
-    const sheet = getSpreadsheet().getSheetByName(SHEET_NAME);
+    const ss = getSpreadsheet();
+    const sheet = getSheetSmart(ss, SHEET_NAME);
     const values = sheet.getDataRange().getValues();
     let dataRows = values.slice(1);
     if (siteFilter && siteFilter !== "All Sites") dataRows = dataRows.filter(row => String(row[1]).includes(siteFilter) || String(row[7]).includes(siteFilter));
