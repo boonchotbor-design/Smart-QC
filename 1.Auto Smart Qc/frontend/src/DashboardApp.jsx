@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import './styles/App.css';
 
+const VERSION = "V.138 (STABLE)"; 
 const BASE_URL = "https://script.google.com/macros/s/AKfycbwlhZ_vy7_gZ8gQOvnY0PIu_1O_VVEuOFLtvXIORtT76F1bX4fSd4Frj6tUkY3-pd2YAg/exec";
 const COLORS = ['#3b82f6', '#10b981', '#ef4444', '#f97316', '#9333ea', '#6b7280'];
 
@@ -150,7 +151,7 @@ function DashboardApp() {
             >
               <LogOut size={20} /> <span style={{fontSize: '16px', fontWeight: 'bold'}}>Log Out</span>
             </button>
-            <div style={{ textAlign: 'center', marginTop: 15, fontSize: 10, color: '#94a3af', opacity: 0.6 }}>V.137 (STABLE) - Automation Pro</div>
+            <div style={{ textAlign: 'center', marginTop: 15, fontSize: 10, color: '#94a3af', opacity: 0.6 }}>{VERSION} - Automation Pro</div>
           </div>
         </aside>
 
@@ -200,11 +201,62 @@ function BatchProcessView({ theme }) {
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
 
   const PROJECTS = ["HAE", "TME", "TMT", "HAT", "HTB", "HSN", "TMB", "HNN"];
   const TYPES = ["MBB", "POWER", "SOLACELL", "SMALL DC", "IPRAN", "SSR"];
+
+  const handleUpload = async (e) => {
+    const filesToUpload = e.target.files || e.dataTransfer.files;
+    if (!filesToUpload || filesToUpload.length === 0) return;
+    
+    setUploading(true);
+    setUploadProgress({ current: 0, total: filesToUpload.length });
+    
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const file = filesToUpload[i];
+      const reader = new FileReader();
+      
+      const uploadPromise = new Promise((resolve, reject) => {
+        reader.onload = async (event) => {
+          try {
+            const base64Data = event.target.result.split(',')[1];
+            const mimeType = file.type;
+            
+            const res = await fetch(BASE_URL, {
+              method: 'POST',
+              body: JSON.stringify({
+                action: "uploadfile",
+                folderId: selectedFolder.id,
+                fileName: file.name,
+                mimeType: mimeType,
+                base64Data: base64Data
+              })
+            });
+            const json = await res.json();
+            resolve(json);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      
+      try {
+        await uploadPromise;
+        setUploadProgress(prev => ({ ...prev, current: i + 1 }));
+      } catch (err) {
+        console.error("Upload failed for " + file.name, err);
+      }
+    }
+    
+    setUploading(false);
+    fetchFiles(selectedFolder.id); // Refresh file list
+  };
 
   // AUTO-SELECT TEMPLATE AND SKIP STEP 4
   const fetchTemplates = async (type, project = selectedProject, folder = selectedFolder) => {
@@ -378,15 +430,41 @@ function BatchProcessView({ theme }) {
             </div>
             
             {selectedFolder ? (
-              <div style={{ padding: '40px', background: 'rgba(255,255,255,0.02)', borderRadius: 25, border: '1px dashed #334155', maxWidth: 700, margin: '0 auto 40px' }}>
-                <div style={{ color: 'white', fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>{selectedFolder.name}</div>
-                <div style={{ color: '#3b82f6', fontSize: 14, marginBottom: 30 }}>Auto-selected Template: <b>{selectedTemplate?.key || "Default"}</b> ({selectedTemplate?.name || "Default Template"})</div>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 15, marginBottom: 20 }}>
-                  <button className="auth-button" style={{ background: '#10b981', width: 250, fontSize: 16 }} onClick={() => selectedFolder?.url ? window.open(selectedFolder.url, '_blank') : alert("ไม่พบ URL ของโฟลเดอร์ กรุณาลองใหม่อีกครั้ง")}><Folder size={18} /> Open Folder to Upload</button>
-                  <button onClick={() => fetchFiles(selectedFolder.id)} style={{ background: 'transparent', border: '1px solid #3b82f6', color: '#3b82f6', padding: '10px 25px', borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <RefreshCw size={18} className={loading ? "animate-spin" : ""} /> Check Files
-                  </button>
-                </div>
+              <div 
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = 'rgba(59, 130, 246, 0.05)'; }}
+                onDragLeave={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#334155'; e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+                onDrop={(e) => { 
+                  e.preventDefault(); 
+                  e.currentTarget.style.borderColor = '#334155';
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                  handleUpload(e);
+                }}
+                style={{ padding: '40px', background: 'rgba(255,255,255,0.02)', borderRadius: 25, border: '2px dashed #334155', maxWidth: 700, margin: '0 auto 40px', transition: 'all 0.3s' }}
+              >
+                {uploading ? (
+                  <div style={{ padding: '20px 0' }}>
+                    <Loader2 size={48} className="animate-spin" style={{ margin: '0 auto 20px', color: '#3b82f6' }} />
+                    <div style={{ fontSize: 20, fontWeight: 'bold', color: '#3b82f6', marginBottom: 10 }}>Uploading Images...</div>
+                    <div style={{ fontSize: 16, color: '#94a3af' }}>Processing {uploadProgress.current} of {uploadProgress.total} files</div>
+                    <div style={{ width: '100%', maxWidth: 300, height: 6, background: '#334155', borderRadius: 10, margin: '20px auto 0', overflow: 'hidden' }}>
+                      <div style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%`, height: '100%', background: '#3b82f6', transition: 'width 0.3s' }} />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ color: 'white', fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>{selectedFolder.name}</div>
+                    <div style={{ color: '#3b82f6', fontSize: 14, marginBottom: 30 }}>Auto-selected Template: <b>{selectedTemplate?.key || "Default"}</b> ({selectedTemplate?.name || "Default Template"})</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 15, marginBottom: 20 }}>
+                      <input type="file" id="fileInput" multiple accept="image/*" style={{ display: 'none' }} onChange={handleUpload} />
+                      <button className="auth-button" style={{ background: '#3b82f6', width: 220, fontSize: 16 }} onClick={() => document.getElementById('fileInput').click()}><FileInput size={18} /> Select Local Files</button>
+                      <button className="auth-button" style={{ background: '#10b981', width: 220, fontSize: 16 }} onClick={() => selectedFolder?.url ? window.open(selectedFolder.url, '_blank') : alert("ไม่พบ URL ของโฟลเดอร์ กรุณาลองใหม่อีกครั้ง")}><Folder size={18} /> Open Drive Folder</button>
+                      <button onClick={() => fetchFiles(selectedFolder.id)} style={{ background: 'transparent', border: '1px solid #3b82f6', color: '#3b82f6', padding: '10px 25px', borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <RefreshCw size={18} className={loading ? "animate-spin" : ""} /> Check Files
+                      </button>
+                    </div>
+                    <div style={{ fontSize: 13, color: '#94a3af', marginTop: 10 }}>💡 Tip: You can drag and drop multiple images here to upload</div>
+                  </>
+                )}
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 15, maxHeight: 400, overflowY: 'auto' }}>

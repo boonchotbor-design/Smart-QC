@@ -1,17 +1,18 @@
-# AI PAT Inspector (V.119)
+# AI PAT Inspector (V.138)
 
 ระบบตรวจสอบงานติดตั้ง Site AIS อัตโนมัติด้วย AI (Groq Vision) ผ่าน LINE และ Telegram
 
-## คุณสมบัติเด่น (V.119)
-- **Detailed Feedback:** เพิ่มระบบวิเคราะห์รูปภาพเชิงลึกและแจ้งเตือนข้อผิดพลาดที่ชัดเจน
-- **Duplicate Fix:** ปรับปรุงตรรกะป้องกันการส่งงานซ้ำซ้อน
-- **High Reliability:** ปรับปรุงระบบ Lock และ Cache เพื่อป้องกัน Bot ค้าง
-- **Fast Response:** เข้าถึง Database (Google Sheets) ได้รวดเร็วขึ้นผ่าน ID โดยตรง
-- **Responsive Logic:** ระบบตอบกลับอัตโนมัติ (Auto-Reply) และคำสั่งเช็คสถานะ (`/status`)
-- **AI Analytics:** วิเคราะห์รูปภาพงานติดตั้งอัตโนมัติด้วย Llama 3.2 Vision (Groq API)
-- **Dual Platform:** รองรับทั้ง LINE Bot และ Telegram Bot
-- **Admin Control:** ระบบ Admin Manual Approve/Reject ผ่านแชท
+## คุณสมบัติเด่น (V.138)
+- **Telegram Webhook Handling:** เพิ่มระบบจัดการ Callback Query สำหรับการ Approve/Reject ผ่าน Telegram โดยตรง
+- **Manual Control:** Admin สามารถตรวจสอบและกดยืนยันผล (Approve) หรือปฏิเสธ (Reject) ผ่านแชทได้ทันที
+- **V.138 Super-Match Engine:** ปรับปรุงความแม่นยำในการเลือก Template และการวางรูปภาพใน PAT Report
+- **Detailed Feedback:** ระบบวิเคราะห์รูปภาพเชิงลึกพร้อมเหตุผลภาษาไทยที่ชัดเจน
+- **Duplicate Fix:** ตรรกะป้องกันการตรวจซ้ำซ้อนด้วย `PAT_CHECKED` description
+- **High Reliability:** ระบบ Lock และ Cache ป้องกันการทำงานชนกันใน Batch ใหญ่
+- **Fast Response:** เข้าถึง Database ผ่าน ID โดยตรงและระบบ API ที่รวดเร็วขึ้น
+- **AI Analytics:** ใช้ Llama 3.2 Vision (90B) สำหรับความแม่นยำสูงสุด
 
 ## โครงสร้างไฟล์
-- `Code.js`: ตรรกะหลักของระบบ (เวอร์ชัน V.104)
-- `appsscript.json`: การตั้งค่า Google Apps Script และ Advanced Services
+- `Code.js`: ตรรกะหลักของระบบ (เวอร์ชัน V.138)
+- `DashboardApp.jsx`: หน้าจอ Dashboard และระบบควบคุม Batch Process (V.138)
+- `Test.gs`: ชุดทดสอบระบบ Template และสิทธิ์การเข้าถึง (V.138)
