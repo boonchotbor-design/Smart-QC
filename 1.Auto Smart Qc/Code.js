@@ -265,7 +265,7 @@ function processFolderById(folderId, templateId) {
     const folder = DriveApp.getFolderById(folderId);
     const files = folder.getFiles();
     const toProcess = [];
-    const BATCH_LIMIT = 10; 
+    const BATCH_LIMIT = 30; 
     let totalUnprocessed = 0;
     
     const allFiles = [];
@@ -286,13 +286,19 @@ function processFolderById(folderId, templateId) {
     }
     
     const result = processFileList(toProcess, folder.getName(), null);
+    
+    // Send Telegram summary ONLY if it's the final batch
+    if (totalUnprocessed <= BATCH_LIMIT && (result.pass + result.fail > 0)) {
+      sendDualSummary(folder.getName(), result.pass, result.fail, result.details.filter(r => r.status === "FAIL" || r.status === "ERROR"));
+    }
+
     return { 
       success: true, 
       ...result, 
       hasMore: totalUnprocessed > BATCH_LIMIT, 
       totalUnprocessed: totalUnprocessed,
       processedInBatch: toProcess.length,
-      message: `กำลังตรวจ... (เหลืออีก ${totalUnprocessed - toProcess.length} รูป)`
+      message: totalUnprocessed > BATCH_LIMIT ? `กำลังตรวจ... (เหลืออีก ${totalUnprocessed - toProcess.length} รูป)` : "ตรวจครบทุกรูปแล้วครับ"
     };
   } catch (e) { return { error: e.toString() }; } finally { try { lock.releaseLock(); } catch(e) {} }
 }
@@ -354,15 +360,15 @@ function processFileList(files, siteName, checklist) {
     }
   }
   
-  if (pass + fail > 0) sendDualSummary(siteName, pass, fail, results.filter(r => r.status === "FAIL" || r.status === "ERROR"));
   return { total: files.length, pass: pass, fail: fail, details: results };
 }
 
 function testProcessOne() {
-  const targetFolderId = "1F3vRFhXEl5gKWK5At19J4EzafqZHJ2Mi"; 
+  const targetFolderId = FOLDER_ID; 
   
   console.log("🧪 เริ่มการทดสอบตรวจรูปจากโฟลเดอร์: " + targetFolderId);
   try {
+    if (!targetFolderId) throw new Error("FOLDER_ID is not defined.");
     const folder = DriveApp.getFolderById(targetFolderId);
     const files = folder.getFiles();
     let found = false;
@@ -371,23 +377,44 @@ function testProcessOne() {
       const file = files.next();
       if (!(file.getDescription() || "").includes("PAT_CHECKED")) {
         console.log("📸 พบไฟล์สำหรับทดสอบ: " + file.getName());
-        const result = processFileList([file], "RECHECK_TEST", "");
+        const result = processFileList([file], "RECHECK_TEST", "General Site Standards");
         console.log("📊 ผลการวิเคราะห์ AI: " + JSON.stringify(result, null, 2));
         found = true;
         break; 
       }
     }
-    if (!found) console.log("ℹ️ ไม่พบไฟล์ที่ยังไม่ได้ตรวจในโฟลเดอร์นี้");
+    if (!found) console.log("ℹ️ ไม่พบไฟล์ที่ยังไม่ได้ตรวจในโฟลเดอร์นี้ (ทุกรูปมีคำว่า PAT_CHECKED แล้ว)");
   } catch (e) {
     console.error("❌ " + e.toString());
   }
 }
 
 function analyzeAI(file, customChecklist) {
+  if (!file || typeof file.getBlob !== 'function') {
+    return { status: "ERROR", reason: "Invalid file object passed to analyzeAI. Do not run this function directly from the editor." };
+  }
   const b64 = Utilities.base64Encode(file.getBlob().getBytes());
-  const promptText = `Analyze site photo. Match item from AIS checklist. Detect watermark Bf/Before or Af/After. Return JSON: {"sheetReference": "Item", "status": "PASS/FAIL", "reason": "Thai", "imageType": "before/after/unknown"}`;
+  const promptText = `
+Role: Senior Telecom Site Quality Inspector.
+Task: Analyze site photo for AIS standard compliance.
+Watermark Check: Detect Bf/Before or Af/After.
+Checklist Context: [${customChecklist || "General Site Standards"}]
+Quality Requirements: 
+- Cables must be neatly arranged. No mess, no loose wires.
+- Work must look professional. 
+- If work is "untidy" (ไม่เรียบร้อย), "messy", or "poor quality", you MUST set status to "FAIL".
+- Even if the item is present, if it looks messy, fail it.
+
+Return JSON only: 
+{
+  "sheetReference": "Best matching checklist item ID",
+  "status": "PASS" or "FAIL",
+  "reason": "Explanation in Thai. If PASS, describe what is verified. If FAIL, state the specific quality issue.",
+  "imageType": "before", "after", or "unknown"
+}`;
+
   const payload = { 
-    "model": "llama-3.2-11b-vision-preview", 
+    "model": "llama-3.2-90b-vision-preview", 
     "messages": [{ 
       "role": "user", 
       "content": [
