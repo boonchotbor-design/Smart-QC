@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.6.6.1)
+# 📦 Inventory Smart System (V.6.6.2)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI) and Telegram Bot with AI OCR capabilities.
 
@@ -34,6 +34,13 @@ Project Context: A Google Apps Script application for managing hardware inventor
 ### 🐞 Bug Fixing
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
+
+## 🐞 Bug Fixes & Stability (V.6.6.2)
+- **Robust Error Handling:** Added failure handlers and console logging to all `google.script.run` calls in `app.html` to prevent silent failures and identify "not responding" issues.
+- **Diagnostic Endpoint:** Added a diagnostic endpoint (`/`) to `index.js` to verify environment variables and system health.
+- **Improved index.js:** Added better try-catch blocks and checks for missing configuration in `index.js`.
+- **Top-Row Logic:** Refined `saveMainData` in `code.gs` with better checks for empty records.
+- **Version Sync:** Updated version to V.6.6.2 across `code.gs`, `app.html`, and `index.js`.
 
 ## 🐞 Bug Fixes & Stability (V.6.6.1)
 - **Top-Row Recording:** Modified `saveMainData` to insert new records at row 2 (immediately below the header) instead of appending to the bottom. This improves usability for sheets with 2000+ rows.

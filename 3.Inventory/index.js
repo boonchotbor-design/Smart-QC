@@ -16,10 +16,29 @@ const client = new messagingApi.MessagingApiClient({
 
 const app = express();
 
-app.get('/', (req, res) => res.send('Inventory Smart System Bridge is alive! v6.6.1'));
+app.get('/', (req, res) => {
+  const diagnostic = {
+    status: 'Alive',
+    version: 'v6.6.2',
+    env: {
+      hasGasUrl: !!process.env.GAS_WEB_APP_URL,
+      hasLineToken: !!process.env.LINE_CHANNEL_ACCESS_TOKEN,
+      hasTelegramToken: !!process.env.TELEGRAM_BOT_TOKEN,
+      hasTelegramDest: !!process.env.TELEGRAM_DESTINATION_ID
+    }
+  };
+  res.json(diagnostic);
+});
 
 // Webhook สำหรับรับข้อความจาก LINE (Selective Response Mode)
-app.post('/webhook', middleware(config), (req, res) => {
+app.post('/webhook', (req, res, next) => {
+  // ตรวจสอบ config ก่อนรัน middleware
+  if (!config.channelAccessToken || !config.channelSecret) {
+    console.error('Missing LINE config');
+    return res.status(200).send('LINE not configured');
+  }
+  next();
+}, middleware(config), (req, res) => {
   if (!req.body.events || !Array.isArray(req.body.events)) {
     return res.status(200).send('OK');
   }
@@ -27,41 +46,47 @@ app.post('/webhook', middleware(config), (req, res) => {
   Promise.all(req.body.events.map(handleEvent))
     .then((result) => res.json(result))
     .catch((err) => {
-      console.error('Webhook Error:', err);
+      console.error('Webhook Error:', err.message);
       res.status(500).end();
     });
 });
 
 // Webhook สำหรับรับข้อความจาก Telegram
 app.post('/telegram-webhook', express.json(), async (req, res) => {
-  const { message } = req.body;
-  if (!message || !message.text || !message.chat) return res.status(200).send('OK');
+  try {
+    const { message } = req.body;
+    if (!message || !message.text || !message.chat) return res.status(200).send('OK');
 
-  const chatId = message.chat.id;
-  const userMessage = message.text.trim();
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const gasUrl = process.env.GAS_WEB_APP_URL || GAS_WEB_APP_URL;
+    const chatId = message.chat.id;
+    const userMessage = message.text.trim();
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const gasUrl = process.env.GAS_WEB_APP_URL || GAS_WEB_APP_URL;
 
-  console.log(`Telegram Request: ChatID=${chatId}, Msg=${userMessage}`);
+    if (!botToken) {
+      console.error('Missing TELEGRAM_BOT_TOKEN');
+      return res.status(200).send('OK');
+    }
 
-  if (userMessage.toLowerCase() === '/start') {
-    try {
+    if (userMessage.toLowerCase() === '/start') {
       await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         chat_id: chatId,
-        text: "👋 ยินดีต้อนรับสู่ Inventory Smart Bot (V.6.6.1)\n\nกรุณาส่ง DUID ที่ต้องการค้นหาข้อมูลได้เลยครับ"
-      });
-    } catch (e) { console.error('Failed to send /start reply:', e.message); }
-    return res.status(200).send('OK');
-  }
+        text: "👋 ยินดีต้อนรับสู่ Inventory Smart Bot (V.6.6.2)\n\nกรุณาส่ง DUID ที่ต้องการค้นหาข้อมูลได้เลยครับ"
+      }).catch(e => console.error('Telegram start error:', e.message));
+      return res.status(200).send('OK');
+    }
 
-  if (userMessage.length < 5 && !userMessage.startsWith('/')) return res.status(200).send('OK');
+    if (userMessage.length < 5 && !userMessage.startsWith('/')) return res.status(200).send('OK');
 
-  try {
+    if (!gasUrl) {
+      console.error('Missing GAS_WEB_APP_URL');
+      return res.status(200).send('OK');
+    }
+
     const response = await axios.get(`${gasUrl}?duid=${encodeURIComponent(userMessage)}&format=text`, { timeout: 20000 });
     let replyText = response.data;
 
-    if (typeof replyText === 'string' && replyText.includes('❌')) {
-      console.log(`Telegram DUID Search: No match found for "${userMessage}". Staying silent.`);
+    if (typeof replyText === 'string' && (replyText.includes('❌') || replyText.includes('<!DOCTYPE html>'))) {
+      console.log(`Telegram DUID Search: Invalid response for "${userMessage}". Staying silent.`);
       return res.status(200).send('OK');
     }
 
@@ -71,71 +96,73 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
       chat_id: chatId,
       text: replyText
     });
-  } catch (err) { console.error('Telegram Processing Error:', err.message); }
+  } catch (err) { 
+    console.error('Telegram Webhook Error:', err.message); 
+  }
   res.status(200).send('OK');
 });
 
 // Endpoint สำหรับรับแจ้งเตือนเมื่อมีการบันทึกข้อมูล (Save Notification)
 app.post('/notify', express.json(), async (req, res) => {
-  const { header, items } = req.body;
-  if (!header) return res.status(400).send('Missing header');
+  try {
+    const { header, items } = req.body;
+    if (!header) return res.status(400).send('Missing header');
 
-  const dateStr = new Date().toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const dateStr = new Date().toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Bangkok' });
 
-  let messageText = `📦 รายงาน Inventory (V.6.6.1)\n` +
-                    `━━━━━━━━━━━━━━━\n` +
-                    `👤 ลูกค้า: ${header.customer || "-"}\n` +
-                    `🛠 งาน: ${header.type || "-"}\n` +
-                    `📍 Region: ${header.region || "-"}\n` +
-                    `🆔 DUID: ${header.duid || "-"}\n` +
-                    `🏢 คลัง: ${header.ownerWarehouse || "-"}\n` +
-                    `👷 ผู้รับ: ${header.ownerReceiver || "-"}\n` +
-                    `📍 Loc Warehouse: ${header.locationWarehouse || "-"}\n` +
-                    `📍 Loc Receiver: ${header.locationReceiver || "-"}\n` +
-                    `━━━━━━━━━━━━━━━\n` +
-                    `📦 รายการสินค้า (${items ? items.length : 0} รายการ):\n`;
+    let messageText = `📦 รายงาน Inventory (V.6.6.2)\n` +
+                      `━━━━━━━━━━━━━━━\n` +
+                      `👤 ลูกค้า: ${header.customer || "-"}\n` +
+                      `🛠 งาน: ${header.type || "-"}\n` +
+                      `📍 Region: ${header.region || "-"}\n` +
+                      `🆔 DUID: ${header.duid || "-"}\n` +
+                      `🏢 คลัง: ${header.ownerWarehouse || "-"}\n` +
+                      `👷 ผู้รับ: ${header.ownerReceiver || "-"}\n` +
+                      `📍 Loc Warehouse: ${header.locationWarehouse || "-"}\n` +
+                      `📍 Loc Receiver: ${header.locationReceiver || "-"}\n` +
+                      `━━━━━━━━━━━━━━━\n` +
+                      `📦 รายการสินค้า (${items ? items.length : 0} รายการ):\n`;
 
-  if (items && items.length > 0) {
-    items.forEach((item, index) => {
-      messageText += `🔹 รายการที่ ${index + 1}:\n` +
-                     `• Type: ${item.type || "-"}\n` +
-                     `• Pick up Date: ${dateStr}\n` +
-                     `• Bill No: ${header.billNo || "-"}\n` +
-                     `• Model: ${item.model || "-"}\n` +
-                     `• Item Code: ${item.code || "-"}\n` +
-                     `• Item Description: ${item.desc || "-"}\n` +
-                     `• Sum of Req.Qty: ${item.qty || "0"}\n` +
-                     `• Serial: ${item.sn || "NA"}\n`;
-      if (index < items.length - 1) messageText += `----------- \n`;
-    });
-  }
+    if (items && items.length > 0) {
+      items.forEach((item, index) => {
+        messageText += `🔹 รายการที่ ${index + 1}:\n` +
+                       `• Type: ${item.type || "-"}\n` +
+                       `• Pick up Date: ${dateStr}\n` +
+                       `• Bill No: ${header.billNo || "-"}\n` +
+                       `• Model: ${item.model || "-"}\n` +
+                       `• Item Code: ${item.code || "-"}\n` +
+                       `• Item Description: ${item.desc || "-"}\n` +
+                       `• Sum of Req.Qty: ${item.qty || "0"}\n` +
+                       `• Serial: ${item.sn || "NA"}\n`;
+        if (index < items.length - 1) messageText += `----------- \n`;
+      });
+    }
 
-  messageText += `━━━━━━━━━━━━━━━\n` +
-                 `✅ บันทึกสำเร็จ!`;
+    messageText += `━━━━━━━━━━━━━━━\n` +
+                   `✅ บันทึกสำเร็จ!`;
 
-  // 1. ส่งไป LINE
-  const lineDestId = process.env.LINE_DESTINATION_ID || 'Cb4baf5e474773f54f2b6538e4cd4d9ac';
-  if (config.channelAccessToken) {
-    client.pushMessage({
-      to: lineDestId,
-      messages: [{ type: 'text', text: messageText }]
-    }).catch(err => console.error('LINE Push Error:', err.message));
-  }
+    // 1. ส่งไป LINE
+    const lineDestId = process.env.LINE_DESTINATION_ID || 'Cb4baf5e474773f54f2b6538e4cd4d9ac';
+    if (config.channelAccessToken) {
+      client.pushMessage({
+        to: lineDestId,
+        messages: [{ type: 'text', text: messageText }]
+      }).catch(err => console.error('LINE Push Error:', err.message));
+    }
 
-  // 2. ส่งไป Telegram
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '7378939928';
+    // 2. ส่งไป Telegram
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '7378939928';
 
-  if (botToken && telegramDestId) {
-    try {
+    if (botToken && telegramDestId) {
       await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         chat_id: telegramDestId,
         text: messageText
-      });
-      console.log('Telegram Notification Sent');
-    } catch (err) { console.error('Telegram Push Error:', err.message); }
+      }).catch(err => console.error('Telegram Push Error:', err.message));
+    }
+  } catch (err) {
+    console.error('Notify Error:', err.message);
   }
-
   res.send('OK');
 });
 

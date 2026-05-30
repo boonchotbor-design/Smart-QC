@@ -1,6 +1,6 @@
 /*
- * 🚀 Inventory Smart System - V.6.6.1
- * Includes: Top-Row Recording (New records at top) & Header Mapping Integrity
+ * 🚀 Inventory Smart System - V.6.6.2
+ * Includes: Robust Saving with Top-Row Recording & Enhanced Error Handling
  */
 
 var SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -15,7 +15,7 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
   }
   return HtmlService.createTemplateFromFile('app').evaluate()
-      .setTitle('Inventory Smart App V.6.6.1')
+      .setTitle('Inventory Smart App V.6.6.2')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -24,7 +24,7 @@ function saveMainData(header, items) {
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000); 
-    if (!header || !items) return { success: false, message: "❌ ข้อมูลไม่สมบูรณ์" };
+    if (!header || !items || items.length === 0) return { success: false, message: "❌ ข้อมูลไม่สมบูรณ์" };
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var customer = (header.customer || "AIS").toString().trim().toUpperCase();
     var sheetName = "INOUT_HW_" + customer; 
@@ -56,12 +56,14 @@ function saveMainData(header, items) {
     });
     
     // บันทึกที่แถวบนสุด (ต่อจาก Header ในแถวที่ 1)
-    sheet.insertRowsAfter(1, allRows.length);
-    sheet.getRange(2, 1, allRows.length, 22).setValues(allRows);
+    if (allRows.length > 0) {
+      sheet.insertRowsAfter(1, allRows.length);
+      sheet.getRange(2, 1, allRows.length, 22).setValues(allRows);
+    }
     
     SpreadsheetApp.flush(); 
     updateDuidStatus(cleanDuid, customer);
-    return { success: true, debug: "✅ บันทึกสำเร็จ (V.6.6.1)\n📍 Sheet: " + sheetName + "\n🔢 บันทึกที่แถว: 2 (บนสุด)" };
+    return { success: true, debug: "✅ บันทึกสำเร็จ (V.6.6.2)\n📍 Sheet: " + sheetName + "\n🔢 บันทึกที่แถว: 2 (บนสุด)" };
   } catch (e) { return { success: false, message: "❌ ระบบขัดข้อง: " + e.toString() }; } finally { lock.releaseLock(); }
 }
 
