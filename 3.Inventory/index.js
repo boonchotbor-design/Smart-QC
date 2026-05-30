@@ -98,14 +98,38 @@ app.post('/notify', express.json(), async (req, res) => {
   const { header, items } = req.body;
   if (!header) return res.status(400).send('Missing header');
 
-  const messageText = `✅ บันทึกสำเร็จ (V.6.5.4)\n` +
-                      `━━━━━━━━━━━━━━━\n` +
-                      `🛠 งาน: ${header.type}\n` +
-                      `🆔 DUID: ${header.duid}\n` +
-                      `📦 รายการสินค้า: ${items ? items.length : 0} รายการ\n` +
-                      `━━━━━━━━━━━━━━━\n` +
-                      `📍 คลัง: ${header.ownerWarehouse || "-"}\n` +
-                      `👷 ผู้รับ: ${header.ownerReceiver || "-"}`;
+  const dateStr = new Date().toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  
+  let messageText = `📦 รายงาน Inventory (V.6.4.8)\n` +
+                    `━━━━━━━━━━━━━━━\n` +
+                    `👤 ลูกค้า: ${header.customer || "-"}\n` +
+                    `🛠 งาน: ${header.type || "-"}\n` +
+                    `📍 Region: ${header.region || "-"}\n` +
+                    `🆔 DUID: ${header.duid || "-"}\n` +
+                    `🏢 คลัง: ${header.ownerWarehouse || "-"}\n` +
+                    `👷 ผู้รับ: ${header.ownerReceiver || "-"}\n` +
+                    `📍 Loc Warehouse: ${header.locationWarehouse || "-"}\n` +
+                    `📍 Loc Receiver: ${header.locationReceiver || "-"}\n` +
+                    `━━━━━━━━━━━━━━━\n` +
+                    `📦 รายการสินค้า (${items ? items.length : 0} รายการ):\n`;
+
+  if (items && items.length > 0) {
+    items.forEach((item, index) => {
+      messageText += `🔹 รายการที่ ${index + 1}:\n` +
+                     `• Type: ${item.type || "-"}\n` +
+                     `• Pick up Date: ${dateStr}\n` +
+                     `• Bill No: ${header.billNo || "-"}\n` +
+                     `• Model: ${item.model || "-"}\n` +
+                     `• Item Code: ${item.code || "-"}\n` +
+                     `• Item Description: ${item.desc || "-"}\n` +
+                     `• Sum of Req.Qty: ${item.qty || "0"}\n` +
+                     `• Serial: ${item.sn || "NA"}\n`;
+      if (index < items.length - 1) messageText += `----------- \n`;
+    });
+  }
+
+  messageText += `━━━━━━━━━━━━━━━\n` +
+                 `✅ บันทึกสำเร็จ!`;
   
   // 1. ส่งไป LINE
   const lineDestId = process.env.LINE_DESTINATION_ID || 'Cb4baf5e474773f54f2b6538e4cd4d9ac';
@@ -116,7 +140,7 @@ app.post('/notify', express.json(), async (req, res) => {
 
   // 2. ส่งไป Telegram
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '7378939928'; // ใช้ ID จากรูปภาพที่ส่งมาล่าสุด
+  const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '7378939928'; 
 
   if (botToken && telegramDestId) {
     try {

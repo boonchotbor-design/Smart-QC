@@ -1,6 +1,6 @@
 /*
- * 🚀 Inventory Smart System - V.6.5.4
- * Includes: Ultimate Robust DUID Search (All Sheets)
+ * 🚀 Inventory Smart System - V.6.5.5
+ * Includes: Absolute Integrity Save, Row Tracking, and Detailed Feedback
  */
 
 var SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -8,320 +8,153 @@ var ROOT_FOLDER_ID = '1IKefCE5rhBAoyM0uQBTLvEkPlRUm6lD_';
 var NODE_JS_WEBHOOK_URL = 'https://vipcode-ai-inspector-yhfn.vercel.app/notify'; 
 
 function doGet(e) {
+  if (!e || !e.parameter) return HtmlService.createHtmlOutput("Please access via Web App URL");
   if (e.parameter.duid) {
     var result = searchByDuidOnly(e.parameter.duid);
     if (e.parameter.format === "text") {
-      return ContentService.createTextOutput(result.formattedText || result.message || "❌ V.6.5.4: Not found");
+      return ContentService.createTextOutput(result.formattedText || result.message || "❌ V.6.5.5: Not found");
     }
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-      .setTitle('Inventory Smart App V.6.5.4')
+      .setTitle('Inventory Smart App V.6.5.5')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-function searchByDuidOnly(duid) {
-  if (!duid) return { success: false, message: "❌ (V.6.5.4) กรุณาระบุ DUID" };
-  try {
-    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var targetSheets = ["INOUT_HW_AIS", "INOUT_HW_TRUE"]; // เฉพาะเจาะจงเพื่อความเร็ว
-    var groups = {}; 
-    var found = false;
-    var totalItemsCount = 0;
-    var targetDuid = duid.toString().replace(/\s+/g, ' ').trim().toLowerCase();
-    var currentStatus = "Pending";
-
-    targetSheets.forEach(function(sName) {
-      var sheet = ss.getSheetByName(sName);
-      if (!sheet) return;
-      
-      var data = sheet.getDataRange().getValues();
-      if (data.length < 2) return;
-      
-      var headerRow = data[0].map(function(h) { return String(h || "").trim().toUpperCase(); });
-      var idx = {
-        duid: headerRow.indexOf("DUID"), 
-        region: Math.max(headerRow.indexOf("REGION"), headerRow.indexOf("INTERNAL PROJECT")),
-        transType: headerRow.indexOf("IN/OUT"),
-        billNo: Math.max(headerRow.indexOf("BILL NO"), headerRow.indexOf("BILL NO.")),
-        model: headerRow.indexOf("MODEL"),
-        sn: Math.max(headerRow.indexOf("SN"), headerRow.indexOf("SERIAL")),
-        qty: Math.max(headerRow.indexOf("QTY"), headerRow.indexOf("SUM OF REQ.QTY"), headerRow.indexOf("SUM OF REQ. QTY")),
-        ownerW: Math.max(headerRow.indexOf("OWNER WAREHOUSE"), headerRow.indexOf("OWNER WAREHOUSE ")),
-        ownerR: Math.max(headerRow.indexOf("OWNER RECEIVER"), headerRow.indexOf("OWNER RECEIVER ")),
-        locW: headerRow.indexOf("LOCATION WAREHOUSE"),
-        locR: headerRow.indexOf("LOCATION RECEIVER"),
-        status: headerRow.indexOf("STATUS")
-      };
-
-      if (idx.duid === -1) return;
-      
-      var customer = sName.indexOf("TRUE") > -1 ? "TRUE" : "AIS"; 
-      
-      for (var i = 1; i < data.length; i++) {
-        var rawSheetDuid = String(data[i][idx.duid] || "");
-        if (rawSheetDuid.length < 5) continue; 
-        
-        var sheetDuid = rawSheetDuid.replace(/\s+/g, ' ').trim().toLowerCase();
-        if (sheetDuid === targetDuid) {
-          if (idx.status > -1 && data[i][idx.status]) currentStatus = String(data[i][idx.status]);
-          
-          var tType = (idx.transType > -1 ? String(data[i][idx.transType] || "").trim() : "").toUpperCase();
-          var bNo = (idx.billNo > -1 ? String(data[i][idx.billNo] || "").trim() : "-");
-          var groupKey = tType + "|" + bNo + "|" + sName; 
-          
-          if (!groups[groupKey]) {
-            groups[groupKey] = {
-              header: {
-                customer: customer,
-                transType: tType,
-                billNo: bNo,
-                region: (idx.region > -1 ? data[i][idx.region] : "-") || "-",
-                duid: data[i][idx.duid] || rawSheetDuid,
-                ownerWarehouse: (idx.ownerW > -1 ? data[i][idx.ownerW] : "-") || "-",
-                ownerReceiver: (idx.ownerR > -1 ? data[i][idx.ownerR] : "-") || "-",
-                locWarehouse: (idx.locW > -1 ? data[i][idx.locW] : "-") || "-",
-                locReceiver: (idx.locR > -1 ? data[i][idx.locR] : "-") || "-"
-              },
-              items: []
-            };
-          }
-          if (idx.model > -1) {
-            groups[groupKey].items.push({
-              model: data[i][idx.model] || "NA",
-              sn: (idx.sn > -1 ? data[i][idx.sn] : "NA") || "NA",
-              qty: (idx.qty > -1 ? data[i][idx.qty] : 0) || 0
-            });
-            totalItemsCount++;
-          }
-          found = true;
-        }
-      }
-    });
-
-    if (!found) {
-      return { 
-        success: false, 
-        message: "❌ (V.6.5.4) ไม่พบข้อมูลเคลื่อนไหวสำหรับ DUID: \"" + duid + "\"\nกรุณาตรวจสอบว่าข้อมูลอยู่ในคอลัมน์ B หรือไม่ครับ" 
-      };
-    }
-
-    var formattedText = formatDuidResponse(groups, totalItemsCount, currentStatus);
-    return { success: true, groups: groups, totalItems: totalItemsCount, status: currentStatus, formattedText: formattedText };
-  } catch (e) {
-    return { success: false, message: "❌ (V.6.5.4) ระบบขัดข้อง: " + e.toString() };
-  }
-}
-
-function formatDuidResponse(groups, totalItems, status) {
-  var order = ["IN", "OUT", "STR/IN", "STR/OUT", "DISMANTLE", "RETURN"];
-  var keys = Object.keys(groups).sort(function(a, b) {
-    var gA = groups[a].header, gB = groups[b].header;
-    var idxA = order.indexOf(gA.transType);
-    var idxB = order.indexOf(gB.transType);
-    if (idxA === -1) idxA = 99;
-    if (idxB === -1) idxB = 99;
-    if (idxA !== idxB) return idxA - idxB;
-    return String(gA.billNo || "").localeCompare(String(gB.billNo || ""));
-  });
-
-  var sections = [];
-  var globalItemCount = 0;
-  var timestamp = Utilities.formatDate(new Date(), "GMT+7", "HH:mm:ss");
-
-  keys.forEach(function(key, index) {
-    var g = groups[key];
-    var h = g.header;
-    var text = "📊 ข้อมูล DUID: " + h.duid + "\n";
-    text += "━━━━━━━━━━━━━━━\n";
-    text += "📌 สถานะ: " + (status || "Pending") + "\n";
-    text += "👤 ลูกค้า: " + h.customer + "\n";
-    text += "🛠 งาน: " + h.transType + "\n";
-    text += "bill No : " + h.billNo + "\n";
-    text += "📍 Region: " + h.region + "\n";
-    text += "🆔 DUID: " + h.duid + "\n";
-    text += "🏢 คลัง: " + h.ownerWarehouse + "\n";
-    text += "👷 ผู้รับ: " + h.ownerReceiver + "\n";
-    text += "📍 Loc Warehouse: " + h.locWarehouse + "\n";
-    text += "📍 Loc Receiver: " + h.locReceiver + "\n";
-    text += "━━━━━━━━━━━━━━━\n";
-    
-    if (index === 0) {
-      text += "📦 รายการสินค้า (" + totalItems + " รายการ):\n";
-    }
-
-    g.items.forEach(function(item) {
-      globalItemCount++;
-      text += "🔹 " + globalItemCount + ": " + (item.model || "NA") + "\n";
-      text += "   (SN: " + (item.sn || "NA") + ", Qty: " + (item.qty || 0) + ")\n";
-    });
-    sections.push(text);
-  });
-
-  var fullText = sections.join("\n====================================================================\n\n");
-  fullText += "\n━━━━━━━━━━━━━━━\n";
-  fullText += "🔍 ค้นหาเมื่อ: " + timestamp;
-  return fullText;
-}
-
-function getBOMData(customer) {
-  try {
-    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var masterResults = [], historyResults = [];
-    var masterSheetName = customer === "AIS" ? "BOM AIS" : "BOM TRUE";
-    var masterSheet = ss.getSheetByName(masterSheetName);
-    if (masterSheet) {
-      var data = masterSheet.getDataRange().getValues();
-      if (data.length > 1) {
-        var h = data[0].map(v => String(v || "").trim().toUpperCase());
-        var idx = { model: h.indexOf("MODEL"), code: h.indexOf("CODE"), type: h.indexOf("TYPE"), desc: h.indexOf("DESCRIPTION") };
-        // Fallback for BOM sheets which might have fixed structure
-        if (idx.model === -1) idx.model = 1; if (idx.code === -1) idx.code = 2; if (idx.type === -1) idx.type = 0; if (idx.desc === -1) idx.desc = 3;
-        
-        for (var i = 1; i < data.length; i++) {
-          var model = String(data[i][idx.model] || "").trim(), code = String(data[i][idx.code] || "").trim();
-          if (model || code) masterResults.push({ type: String(data[i][idx.type] || "OTHER").trim(), model: model, code: code, desc: String(data[i][idx.desc] || "").trim(), source: "MASTER" });
-        }
-      }
-    }
-    var historySheets = [customer === "AIS" ? "data AIS" : "data TRUE", "INOUT_HW_" + customer];
-    historySheets.forEach(function(sName) {
-      var sheet = ss.getSheetByName(sName);
-      if (!sheet) return;
-      var data = sheet.getDataRange().getValues();
-      if (data.length > 1) {
-        var h = data[0].map(v => String(v || "").trim().toUpperCase());
-        var idx = { model: h.indexOf("MODEL"), code: h.indexOf("CODE"), type: h.indexOf("TYPE"), desc: h.indexOf("DESCRIPTION") };
-        if (idx.model === -1) return;
-        
-        for (var i = 1; i < data.length; i++) {
-          var model = String(data[i][idx.model] || "").trim(), code = String(data[i][idx.code] || "").trim();
-          if (model || code) historyResults.push({ type: String(data[i][idx.type] || "OTHER").trim(), model: model, code: code, desc: String(data[i][idx.desc] || "").trim(), source: "HISTORY" });
-        }
-      }
-    });
-    var combined = masterResults.concat(historyResults), seen = {};
-    return combined.filter(function(item) {
-      var key = (item.type + "|" + item.model + "|" + item.code + "|" + item.desc).toLowerCase();
-      if (seen[key]) return false;
-      seen[key] = true;
-      return true;
-    });
-  } catch (e) { return []; }
-}
-
 function saveMainData(header, items) {
+  var lock = LockService.getScriptLock();
   try {
+    lock.waitLock(30000); 
+    
+    Logger.log("--- SAVE PROCESS START ---");
+    if (!header || !items) return { success: false, message: "❌ ข้อมูลไม่สมบูรณ์ (Header/Items null)" };
+
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var customer = (header.customer || "AIS").toString().trim().toUpperCase();
-    var sheet = ss.getSheetByName("INOUT_HW_" + customer) || ss.getSheets()[0];
+    var sheetName = "INOUT_HW_" + customer; 
+    var sheet = ss.getSheetByName(sheetName);
     
-    // Check if DUID is already Closed
-    if (isDuidClosed(header.duid, customer)) {
-      return { success: false, message: "❌ DUID: " + header.duid + " มีสถานะเป็น 'Closed' แล้ว ไม่สามารถเพิ่มหรือแก้ไขข้อมูลได้" };
+    if (!sheet) return { success: false, message: "❌ ไม่พบหน้า Sheet ชื่อ '" + sheetName + "'" };
+
+    // 1. จัดการข้อมูลให้สะอาด
+    var cleanDuid = String(header.duid || "").trim();
+    var cleanBill = String(header.billNo || "").trim();
+
+    // 2. ตรวจสอบสถานะ Closed
+    if (isDuidClosed(cleanDuid, customer)) {
+      return { success: false, message: "❌ DUID: " + cleanDuid + " มีสถานะเป็น 'Closed' แล้ว ไม่สามารถบันทึกได้" };
     }
 
     var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
-    
-    // Structure: DUID(A), Region(B), JobType(C), ItemType(D), Date(E), BillNo(F), Model(G), Code(H), Desc(I), Qty(J), SN(K), OwnerW(L), OwnerR(M), LocW(N), LocR(O)
-    // Add columns up to V (Index 21)
-    var allRows = items.map(function(item, index) { 
+    var allRows = items.map(function(item) { 
       var row = new Array(22).fill("");
-      row[0] = header.duid;
-      row[1] = header.region;
-      row[2] = header.type;
-      row[3] = item.type;
+      row[0] = cleanDuid; 
+      row[1] = String(header.region || "").trim();
+      row[2] = String(header.type || "").trim(); // IN / OUT
+      row[3] = String(item.type || "").trim();
       row[4] = dateStr;
-      row[5] = header.billNo;
-      row[6] = item.model;
-      row[7] = item.code;
-      row[8] = item.desc;
-      row[9] = item.qty;
-      row[10] = item.sn;
-      row[11] = header.ownerWarehouse;
-      row[12] = header.ownerReceiver;
-      row[13] = header.locationWarehouse || "";
-      row[14] = header.locationReceiver || "";
-      // Column V (Index 21) will be updated by updateDuidStatus
+      row[5] = cleanBill;
+      row[6] = String(item.model || "").trim();
+      row[7] = String(item.code || "").trim();
+      row[8] = String(item.desc || "").trim();
+      row[9] = Number(item.qty) || 0;
+      row[10] = String(item.sn || "").trim();
+      row[11] = String(header.ownerWarehouse || "").trim();
+      row[12] = String(header.ownerReceiver || "").trim();
+      row[13] = String(header.locationWarehouse || "").trim();
+      row[14] = String(header.locationReceiver || "").trim();
       return row;
     });
     
-    var lastRow = sheet.getLastRow();
-    if (allRows.length > 0) sheet.getRange(lastRow + 1, 1, allRows.length, 22).setValues(allRows);
-    SpreadsheetApp.flush();
-    
-    // Update status for all rows of this DUID
-    updateDuidStatus(header.duid, customer);
-    
-    return { success: true };
-  } catch (e) { return { success: false, message: e.toString() }; }
+    // 3. บันทึกข้อมูล
+    var rowBefore = sheet.getLastRow();
+    if (allRows.length > 0) {
+      sheet.getRange(rowBefore + 1, 1, allRows.length, 22).setValues(allRows);
+      SpreadsheetApp.flush(); // บังคับเขียนลงไฟล์ทันที
+      
+      var rowAfter = sheet.getLastRow();
+      if (rowAfter === rowBefore) {
+        // กรณีพิเศษ: getLastRow ทำงานพลาด ลองใช้ appendRow เป็นตัวสำรอง
+        allRows.forEach(function(r) { sheet.appendRow(r); });
+        SpreadsheetApp.flush();
+        rowAfter = sheet.getLastRow();
+      }
+      
+      // อัปเดตสถานะ DUID
+      updateDuidStatus(cleanDuid, customer);
+      
+      Logger.log("✅ Save Success: " + sheetName + " at row " + (rowBefore + 1));
+      return { 
+        success: true, 
+        debug: "✅ บันทึกสำเร็จ!\n📍 Sheet: " + sheetName + "\n🔢 แถวที่: " + (rowBefore + 1) + " ถึง " + rowAfter + "\n📄 Bill: " + cleanBill
+      };
+    } else {
+      return { success: false, message: "❌ ไม่มีรายการสินค้าให้บันทึก" };
+    }
+
+  } catch (e) { 
+    Logger.log("❌ CRITICAL ERROR: " + e.toString());
+    return { success: false, message: "❌ ระบบขัดข้อง: " + e.toString() }; 
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function isDuidClosed(duid, customer) {
   try {
+    if (!duid) return false;
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet = ss.getSheetByName("INOUT_HW_" + customer);
+    var sheetName = "INOUT_HW_" + customer;
+    var sheet = ss.getSheetByName(sheetName);
     if (!sheet) return false;
     var data = sheet.getDataRange().getValues();
     if (data.length < 2) return false;
-    var header = data[0].map(h => String(h || "").trim().toUpperCase());
-    var dCol = header.indexOf("DUID");
-    var sCol = header.indexOf("STATUS");
-    if (sCol === -1) sCol = 21; // Default to Col V
+    var headerRow = data[0].map(h => String(h || "").trim().toUpperCase());
+    var dCol = headerRow.indexOf("DUID"), sCol = headerRow.indexOf("STATUS");
+    if (sCol === -1) sCol = 21; 
+    
+    var targetDuid = String(duid || "").trim().toLowerCase();
     for (var i = 1; i < data.length; i++) {
-      if (String(data[i][dCol]).trim() === duid && String(data[i][sCol]).trim().toUpperCase() === "CLOSED") return true;
+      var sheetDuid = String(data[i][dCol] || "").trim().toLowerCase();
+      if (sheetDuid === targetDuid && String(data[i][sCol]).trim().toUpperCase() === "CLOSED") return true;
     }
-  } catch (e) {}
+  } catch (e) { Logger.log("isDuidClosed Error: " + e.toString()); }
   return false;
 }
 
 function updateDuidStatus(duid, customer) {
   try {
+    if (!duid) return;
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet = ss.getSheetByName("INOUT_HW_" + customer);
+    var sheetName = "INOUT_HW_" + customer;
+    var sheet = ss.getSheetByName(sheetName);
     if (!sheet) return;
     var data = sheet.getDataRange().getValues();
     if (data.length < 2) return;
-    var header = data[0].map(h => String(h || "").trim().toUpperCase());
-    var idx = {
-      duid: header.indexOf("DUID"),
-      type: Math.max(header.indexOf("IN/OUT"), 2), // Col C
-      qty: Math.max(header.indexOf("QTY"), header.indexOf("SUM OF REQ.QTY"), 9), // Col J
-      status: header.indexOf("STATUS")
-    };
-    if (idx.status === -1) {
-      idx.status = 21; // Col V
-      sheet.getRange(1, 22).setValue("STATUS");
-    }
+    var headerRow = data[0].map(h => String(h || "").trim().toUpperCase());
+    var idx = { duid: headerRow.indexOf("DUID"), type: Math.max(headerRow.indexOf("IN/OUT"), 2), qty: Math.max(headerRow.indexOf("QTY"), 9), status: headerRow.indexOf("STATUS") };
+    if (idx.status === -1) { idx.status = 21; sheet.getRange(1, 22).setValue("STATUS"); }
     
-    var totalIn = 0, totalOut = 0, matchingRows = [];
-    var targetDuid = String(duid || "").trim();
-    if (!targetDuid) return;
-
+    var totalIn = 0, totalOut = 0, matchingRows = [], targetDuid = String(duid || "").trim();
     for (var i = 1; i < data.length; i++) {
       if (String(data[i][idx.duid]).trim() === targetDuid) {
         matchingRows.push(i + 1);
-        var type = String(data[i][idx.type]).toUpperCase();
-        var qty = Number(data[i][idx.qty]) || 0;
+        var type = String(data[i][idx.type]).toUpperCase(), qty = Number(data[i][idx.qty]) || 0;
         if (type.indexOf("IN") > -1 || type === "RETURN" || type === "DISMANTLE") totalIn += qty;
         else if (type.indexOf("OUT") > -1) totalOut += qty;
       }
     }
-    
     var status = "Pending";
     if (totalIn > 0 && totalOut === 0) status = "On Process";
     else if (totalIn > 0 && totalIn === totalOut) status = "Closed";
-    else if (totalIn === 0 && totalOut > 0) status = "Pending"; // Or error
-
     if (matchingRows.length > 0) {
-      var statusValues = matchingRows.map(() => [status]);
-      matchingRows.forEach((row, index) => {
-        sheet.getRange(row, idx.status + 1).setValue(status);
-      });
+      var statusData = sheet.getRange(1, idx.status + 1, data.length, 1).getValues();
+      matchingRows.forEach(r => { if (statusData[r-1]) statusData[r-1][0] = status; });
+      sheet.getRange(1, idx.status + 1, data.length, 1).setValues(statusData);
     }
-  } catch (e) { Logger.log("Error updating status: " + e.toString()); }
+  } catch (e) { Logger.log("updateDuidStatus Error: " + e.toString()); }
 }
 
 function uploadPhotoOnly(h, base64, pNum) { 
@@ -350,34 +183,10 @@ function getProjectData() {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID); 
     var sheet = ss.getSheetByName("data");
     if (!sheet) return [];
-    
     var data = sheet.getDataRange().getValues();
-    if (data.length < 2) return [];
-    
-    var header = data[0].map(h => String(h || "").trim().toUpperCase());
-    var duidCol = header.indexOf("DUID"); // Should be 0 (Col A)
-    var regionCol = Math.max(header.indexOf("REGION"), header.indexOf("INTERNAL PROJECT")); // Should be 2 (Col C)
-    
-    if (duidCol === -1) duidCol = 0;
-    if (regionCol === -1) regionCol = 2;
-
     var results = [];
-    for (var i = 1; i < data.length; i++) {
-      var duid = String(data[i][duidCol] || "").trim();
-      if (duid) {
-        results.push({ 
-          duid: duid, 
-          region: String(data[i][regionCol] || "").trim() 
-        });
-      }
-    }
-    
-    var seen = {};
-    return results.filter(function(item) { 
-      if (!item.duid || seen[item.duid]) return false; 
-      seen[item.duid] = true; 
-      return true; 
-    });
+    for (var i = 1; i < data.length; i++) { if (data[i][0]) results.push({ duid: String(data[i][0]).trim(), region: String(data[i][2]).trim() }); }
+    var seen = {}; return results.filter(i => { if (!i.duid || seen[i.duid]) return false; seen[i.duid] = true; return true; });
   } catch(e) { return []; } 
 }
 
@@ -385,106 +194,99 @@ function getOwnerData() {
   try { 
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID); 
     var ws=[], rs=[]; 
-    
-    // 1. Get from 'data' sheet (Master)
-    var masterSheet = ss.getSheetByName("data");
-    if (masterSheet) {
-      var d = masterSheet.getDataRange().getValues();
-      if (d.length > 1) {
-        var h = d[0].map(v => String(v || "").trim().toUpperCase());
-        var wCol = h.indexOf("OWNER WAREHOUSE");
-        var rCol = h.indexOf("OWNER RECEIVER");
-        if (wCol === -1) wCol = 3; // Col D
-        if (rCol === -1) rCol = 4; // Col E
-        for (var i = 1; i < d.length; i++) {
-          if (d[i][wCol]) ws.push(String(d[i][wCol]));
-          if (d[i][rCol]) rs.push(String(d[i][rCol]));
-        }
-      }
-    }
-
-    // 2. Get from transaction sheets (History)
     ss.getSheets().forEach(function(s){ 
-      var sName = s.getName();
-      if(sName.indexOf("INOUT") > -1){ 
+      if(s.getName().indexOf("INOUT") > -1 || s.getName() === "data"){ 
         var d = s.getDataRange().getValues(); 
         if (d.length < 2) return;
-        var header = d[0].map(h => String(h || "").trim().toUpperCase());
-        var wCol = Math.max(header.indexOf("OWNER WAREHOUSE"), header.indexOf("OWNER WAREHOUSE "));
-        var rCol = Math.max(header.indexOf("OWNER RECEIVER"), header.indexOf("OWNER RECEIVER "));
-        
-        for(var i=1; i<d.length; i++){ 
-          if(wCol > -1 && d[i][wCol]) ws.push(String(d[i][wCol])); 
-          if(rCol > -1 && d[i][rCol]) rs.push(String(d[i][rCol])); 
-        } 
+        var h = d[0].map(v => String(v || "").trim().toUpperCase());
+        var wCol = Math.max(h.indexOf("OWNER WAREHOUSE"), h.indexOf("OWNER WAREHOUSE ")), rCol = Math.max(h.indexOf("OWNER RECEIVER"), h.indexOf("OWNER RECEIVER "));
+        for(var i=1; i<d.length; i++){ if(wCol > -1 && d[i][wCol]) ws.push(String(d[i][wCol])); if(rCol > -1 && d[i][rCol]) rs.push(String(d[i][rCol])); } 
       } 
     }); 
     return { warehouses: [...new Set(ws)].sort(), receivers: [...new Set(rs)].sort() }; 
   } catch(e){return {warehouses:[],receivers:[]};} 
 }
+
 function searchByBillNo(billNo, customer) {
   try {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID); 
     var sheet = ss.getSheetByName("INOUT_HW_" + customer) || ss.getSheets()[0]; 
     var data = sheet.getDataRange().getValues(); 
-    if (data.length < 2) return { success: false };
-    
     var header = data[0].map(h => String(h || "").trim().toUpperCase());
-    var idx = {
-      duid: header.indexOf("DUID"),
-      region: Math.max(header.indexOf("REGION"), header.indexOf("INTERNAL PROJECT")),
-      billNo: header.indexOf("BILL NO"),
-      type: header.indexOf("TYPE"),
-      model: header.indexOf("MODEL"),
-      code: header.indexOf("CODE"),
-      desc: header.indexOf("DESCRIPTION"),
-      qty: header.indexOf("QTY"),
-      sn: header.indexOf("SN"),
-      ownerW: Math.max(header.indexOf("OWNER WAREHOUSE"), header.indexOf("OWNER WAREHOUSE ")),
-      ownerR: Math.max(header.indexOf("OWNER RECEIVER"), header.indexOf("OWNER RECEIVER ")),
-      locW: header.indexOf("LOCATION WAREHOUSE"),
-      locR: header.indexOf("LOCATION RECEIVER"),
-      status: header.indexOf("STATUS")
-    };
-    
-    var results = { duid: "", region: "", status: "", ownerWarehouse: "", ownerReceiver: "", locationWarehouse: "", locationReceiver: "", items: [] }; 
-    var found = false;
-    
+    var idx = { duid: header.indexOf("DUID"), region: 1, billNo: header.indexOf("BILL NO"), type: header.indexOf("TYPE"), model: header.indexOf("MODEL"), code: header.indexOf("CODE"), desc: header.indexOf("DESCRIPTION"), qty: header.indexOf("QTY"), sn: header.indexOf("SN"), ownerW: header.indexOf("OWNER WAREHOUSE"), ownerR: header.indexOf("OWNER RECEIVER"), locW: header.indexOf("LOCATION WAREHOUSE"), locR: header.indexOf("LOCATION RECEIVER"), status: header.indexOf("STATUS") };
+    var results = { duid: "", region: "", items: [] }, found = false;
     for (var i = 1; i < data.length; i++) { 
-      if (idx.billNo > -1 && data[i][idx.billNo] == billNo) { 
-        if (!found) { 
-          results.duid = idx.duid > -1 ? data[i][idx.duid] : ""; 
-          results.region = idx.region > -1 ? data[i][idx.region] : ""; 
-          results.status = idx.status > -1 ? data[i][idx.status] : ""; 
-          results.ownerWarehouse = idx.ownerW > -1 ? data[i][idx.ownerW] : ""; 
-          results.ownerReceiver = idx.ownerR > -1 ? data[i][idx.ownerR] : ""; 
-          results.locationWarehouse = idx.locW > -1 ? data[i][idx.locW] : ""; 
-          results.locationReceiver = idx.locR > -1 ? data[i][idx.locR] : ""; 
-          found = true; 
-        } 
-        results.items.push({ 
-          type: idx.type > -1 ? data[i][idx.type] : "", 
-          model: idx.model > -1 ? data[i][idx.model] : "", 
-          code: idx.code > -1 ? data[i][idx.code] : "", 
-          desc: idx.desc > -1 ? data[i][idx.desc] : "", 
-          qty: idx.qty > -1 ? data[i][idx.qty] : 0, 
-          sn: idx.sn > -1 ? data[i][idx.sn] : "" 
-        }); 
+      if (data[i][idx.billNo] == billNo) { 
+        if (!found) { results.duid = data[i][idx.duid]; results.region = data[i][idx.region]; results.status = data[i][idx.status]; results.ownerWarehouse = data[i][idx.ownerW]; results.ownerReceiver = data[i][idx.ownerR]; results.locationWarehouse = data[i][idx.locW]; results.locationReceiver = data[i][idx.locR]; found = true; } 
+        results.items.push({ type: data[i][idx.type], model: data[i][idx.model], code: data[i][idx.code], desc: data[i][idx.desc], qty: data[i][idx.qty], sn: data[i][idx.sn] }); 
       } 
     }
     return found ? { success: true, data: results } : { success: false };
-  } catch (e) { return { success: false, error: e.toString() }; }
+  } catch (e) { return { success: false }; }
 }
 
-function testSearch() {
-  var testDuid = "RGPPP_2025 Coverage Expansion Ph1_New Site_Remote-BBU_ER"; 
-  var result = searchByDuidOnly(testDuid);
-  if (result.success) { Logger.log("✅ ค้นพบข้อมูล!"); Logger.log("\n--- ข้อความที่จะส่งไปที่ Bot ---\n"); Logger.log(result.formattedText); } 
-  else { Logger.log("❌ ไม่พบข้อมูล: " + result.message); }
+function searchByDuidOnly(duid) {
+  if (!duid) return { success: false, message: "❌ กรุณาระบุ DUID" };
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var targetSheets = ["INOUT_HW_AIS", "INOUT_HW_TRUE"]; 
+    var groups = {}; 
+    var found = false;
+    var totalItemsCount = 0;
+    var targetDuid = duid.toString().replace(/\s+/g, ' ').trim().toLowerCase();
+    var currentStatus = "Pending";
+
+    targetSheets.forEach(function(sName) {
+      var sheet = ss.getSheetByName(sName);
+      if (!sheet) return;
+      var data = sheet.getDataRange().getValues();
+      if (data.length < 2) return;
+      var headerRow = data[0].map(h => String(h || "").trim().toUpperCase());
+      var idx = { duid: headerRow.indexOf("DUID"), region: 1, transType: headerRow.indexOf("IN/OUT"), billNo: headerRow.indexOf("BILL NO"), model: headerRow.indexOf("MODEL"), sn: headerRow.indexOf("SN"), qty: headerRow.indexOf("QTY"), ownerW: headerRow.indexOf("OWNER WAREHOUSE"), ownerR: headerRow.indexOf("OWNER RECEIVER"), locW: headerRow.indexOf("LOCATION WAREHOUSE"), locR: headerRow.indexOf("LOCATION RECEIVER"), status: headerRow.indexOf("STATUS") };
+      
+      for (var i = 1; i < data.length; i++) {
+        var sheetDuid = String(data[i][idx.duid] || "").replace(/\s+/g, ' ').trim().toLowerCase();
+        if (sheetDuid === targetDuid) {
+          if (idx.status > -1 && data[i][idx.status]) currentStatus = String(data[i][idx.status]);
+          var tType = String(data[i][idx.transType] || "").toUpperCase();
+          var bNo = String(data[i][idx.billNo] || "-");
+          var groupKey = tType + "|" + bNo + "|" + sName; 
+          if (!groups[groupKey]) {
+            groups[groupKey] = {
+              header: {
+                customer: sName.indexOf("TRUE") > -1 ? "TRUE" : "AIS",
+                transType: tType, billNo: bNo, region: data[i][idx.region] || "-",
+                duid: data[i][idx.duid], ownerWarehouse: data[i][idx.ownerW] || "-",
+                ownerReceiver: data[i][idx.ownerR] || "-", locWarehouse: data[i][idx.locW] || "-", locReceiver: data[i][idx.locR] || "-"
+              },
+              items: []
+            };
+          }
+          groups[groupKey].items.push({ model: data[i][idx.model] || "NA", sn: data[i][idx.sn] || "NA", qty: data[i][idx.qty] || 0 });
+          totalItemsCount++; found = true;
+        }
+      }
+    });
+    if (!found) return { success: false, message: "❌ ไม่พบข้อมูลสำหรับ DUID: " + duid };
+    return { success: true, formattedText: formatDuidResponse(groups, totalItemsCount, currentStatus) };
+  } catch (e) { return { success: false, message: "❌ ระบบขัดข้อง: " + e.toString() }; }
 }
 
-function testDuidList() {
-  var data = getProjectData();
-  Logger.log("📊 จำนวน DUID ที่พบทั้งหมด: " + data.length + " รายการ");
-  if (data.length > 0) { Logger.log("ตัวอย่าง DUID 5 รายการแรก:"); data.slice(0, 5).forEach(i => Logger.log("- " + i.duid + " (" + i.region + ")")); }
+function formatDuidResponse(groups, totalItems, status) {
+  var order = ["IN", "OUT", "STR/IN", "STR/OUT", "DISMANTLE", "RETURN"];
+  var keys = Object.keys(groups).sort(function(a, b) {
+    var gA = groups[a].header, gB = groups[b].header;
+    var idxA = order.indexOf(gA.transType), idxB = order.indexOf(gB.transType);
+    if (idxA !== idxB) return idxA - idxB;
+    return String(gA.billNo).localeCompare(String(gB.billNo));
+  });
+  var sections = [], globalItemCount = 0, timestamp = Utilities.formatDate(new Date(), "GMT+7", "HH:mm:ss");
+  keys.forEach(function(key, index) {
+    var g = groups[key], h = g.header;
+    var text = "📊 ข้อมูล DUID: " + h.duid + "\n━━━━━━━━━━━━━━━\n📌 สถานะ: " + (status || "Pending") + "\n👤 ลูกค้า: " + h.customer + "\n🛠 งาน: " + h.transType + "\nbill No : " + h.billNo + "\n📍 Region: " + h.region + "\n🆔 DUID: " + h.duid + "\n🏢 คลัง: " + h.ownerWarehouse + "\n👷 ผู้รับ: " + h.ownerReceiver + "\n📍 Loc Warehouse: " + h.locWarehouse + "\n📍 Loc Receiver: " + h.locReceiver + "\n━━━━━━━━━━━━━━━\n";
+    if (index === 0) text += "📦 รายการสินค้า (" + totalItems + " รายการ):\n";
+    g.items.forEach(function(item) { globalItemCount++; text += "🔹 " + globalItemCount + ": " + item.model + "\n   (SN: " + item.sn + ", Qty: " + item.qty + ")\n"; });
+    sections.push(text);
+  });
+  return sections.join("\n====================\n") + "\n━━━━━━━━━━━━━━━\n🔍 ค้นหาเมื่อ: " + timestamp;
 }
