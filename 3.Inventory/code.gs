@@ -328,3 +328,41 @@ function updateDuidStatus(duid, customer) { try { if (!duid) return; var ss = Sp
 function uploadPhotoOnly(h, b, p) { try { var root = DriveApp.getFolderById(ROOT_FOLDER_ID); var regF = getOrCreateSubFolder(root, h.region), duidF = getOrCreateSubFolder(regF, h.duid), typeF = getOrCreateSubFolder(duidF, h.type.replace("/", "_")); var blob = Utilities.newBlob(Utilities.base64Decode(b.split(',')[1]), "image/jpeg", h.duid + "_" + p + ".jpg"); typeF.createFile(blob); return { success: true, folderUrl: duidF.getUrl() }; } catch (e) { return { success: false, error: e.toString() }; } }
 function getOrCreateSubFolder(p, n) { var it = p.getFoldersByName(n); while (it.hasNext()) { var f = it.next(); if (!f.isTrashed()) return f; } return p.createFolder(n); }
 function notifyOnly(h, i) { var payload = { header: h, items: i }, opt = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true }; UrlFetchApp.fetch(NODE_JS_WEBHOOK_URL, opt); return { success: true }; }
+
+/**
+ * 🧪 ฟังก์ชันสำหรับทดสอบระบบ (รันจาก GAS Editor ได้เลย)
+ * ทดสอบ: Notify LINE/Telegram, Search Bill, Search DUID
+ */
+function runGasSystemTests() {
+  var VERCEL_URL = 'https://vipcode-ai-inspector-yhfn.vercel.app'; // 🚩 ตรวจสอบ URL ของคุณ
+  
+  var mockData = {
+    header: { customer: "AIS", type: "IN", region: "ER", duid: "TEST-DUID-999", billNo: "TEST-BILL-001", ownerWarehouse: "TEST_WH", ownerReceiver: "TEST_RC" },
+    items: [{ type: "AISG", model: "AISG 3m", code: "4070193", desc: "Test Item", qty: 1, sn: "TEST-SN-001" }]
+  };
+
+  Logger.log("🚀 เริ่มการทดสอบระบบ (GAS Version)...");
+
+  // 1. ทดสอบแจ้งเตือนการบันทึก (/notify) -> ส่งไปทั้ง LINE & Telegram
+  try {
+    var opt1 = { method: 'post', contentType: 'application/json', payload: JSON.stringify(mockData), muteHttpExceptions: true };
+    var res1 = UrlFetchApp.fetch(VERCEL_URL + '/notify', opt1);
+    Logger.log("1️⃣  ผลการทดสอบแจ้งเตือน: " + res1.getContentText());
+  } catch (e) { Logger.log("❌ Error 1: " + e); }
+
+  // 2. ทดสอบค้นหา DUID ผ่าน Telegram Webhook
+  try {
+    var duidPayload = { message: { chat: { id: 7378939928 }, text: "SHSSM_2025 Coverage Expansion Ph1_New Site_Remote-BBU_ER" } };
+    var opt2 = { method: 'post', contentType: 'application/json', payload: JSON.stringify(duidPayload), muteHttpExceptions: true };
+    var res2 = UrlFetchApp.fetch(VERCEL_URL + '/telegram-webhook', opt2);
+    Logger.log("2️⃣  ผลการทดสอบค้นหา DUID: " + res2.getContentText());
+  } catch (e) { Logger.log("❌ Error 2: " + e); }
+
+  // 3. ทดสอบค้นหา Bill No ผ่าน Web App
+  try {
+    var billResult = searchByBillNo("TEST-BILL-001", "AIS");
+    Logger.log("3️⃣  ผลการทดสอบค้นหา Bill (Internal): " + JSON.stringify(billResult));
+  } catch (e) { Logger.log("❌ Error 3: " + e); }
+  
+  Logger.log("🏁 จบการทดสอบ ตรวจสอบผลลัพธ์ใน Telegram/LINE");
+}
