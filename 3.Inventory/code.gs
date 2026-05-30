@@ -3,7 +3,7 @@
  * Includes: OCR Support, Telegram Image Handling & Enhanced Notifications
  */
 
-var SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
+var SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ'; // ตรวจสอบว่า ID นี้ถูกต้องสำหรับ Sheet ของคุณ
 var ROOT_FOLDER_ID = '1IKefCE5rhBAoyM0uQBTLvEkPlRUm6lD_'; 
 var NODE_JS_WEBHOOK_URL = 'https://vipcode-ai-inspector-yhfn.vercel.app/notify'; 
 
