@@ -27,7 +27,10 @@
   <div class="container-fluid">
     <div class="header-banner shadow d-flex justify-content-between align-items-center">
       <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.6.3</h5>
-      <button class="btn btn-sm btn-light fw-bold" onclick="onCustomerChange()">🔄 SYNC</button>
+      <div>
+        <button class="btn btn-sm btn-warning fw-bold me-1" onclick="checkHealth()">Verify</button>
+        <button class="btn btn-sm btn-light fw-bold" onclick="onCustomerChange()">🔄 SYNC</button>
+      </div>
     </div>
 
     <div class="mb-3">
@@ -288,7 +291,23 @@
       }).searchByBillNo(b, document.getElementById('customer').value); 
     }
     function triggerNativeScanner(t, id) { scanTarget = t; scanRowId = id || null; document.getElementById('cameraTrigger').click(); }
-    function processImageScan(input) { if (!input.files || input.files.length === 0) return; updateProgress(null, "สแกน..."); const html5QrCode = new Html5Qrcode("cameraTrigger"); html5QrCode.scanFile(input.files[0], true).then(text => { document.getElementById('loader').style.display = 'none'; if (scanTarget === 'billNo') document.getElementById('billNo').value = text; else if (scanTarget === 'sn') document.getElementById('sn_' + scanRowId).value = text; }).catch(err => { document.getElementById('loader').style.display = 'none'; alert("❌ อ่านไม่ได้: ลองถ่ายใหม่ครับ"); }); }
+
+    function checkHealth() {
+      updateProgress(null, "Checking GAS Connection...");
+      google.script.run
+        .withSuccessHandler(d => {
+          document.getElementById('loader').style.display = 'none';
+          alert("✅ GAS Connection: OK\n📦 BOM Items: " + bomData.length + "\n🆔 Project Items: " + projectData.length + "\n\n💡 If items are 0, check your Spreadsheet ID and Sheet names.");
+        })
+        .withFailureHandler(err => {
+          document.getElementById('loader').style.display = 'none';
+          alert("❌ GAS Connection Failed: " + err.message);
+        })
+        .getBOMData(document.getElementById('customer').value);
+    }
+
+    function processImageScan(input) {
+ if (!input.files || input.files.length === 0) return; updateProgress(null, "สแกน..."); const html5QrCode = new Html5Qrcode("cameraTrigger"); html5QrCode.scanFile(input.files[0], true).then(text => { document.getElementById('loader').style.display = 'none'; if (scanTarget === 'billNo') document.getElementById('billNo').value = text; else if (scanTarget === 'sn') document.getElementById('sn_' + scanRowId).value = text; }).catch(err => { document.getElementById('loader').style.display = 'none'; alert("❌ อ่านไม่ได้: ลองถ่ายใหม่ครับ"); }); }
     window.onload = function() { loadBOM(); loadProjectData(); addItemRow(); };
   </script>
 </body>
