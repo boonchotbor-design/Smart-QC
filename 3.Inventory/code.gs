@@ -143,6 +143,8 @@ function searchByDuidOnly(duid) {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var targetSheets = ["INOUT_HW_AIS", "INOUT_HW_TRUE"];
     var groups = {}, found = false, totalItemsCount = 0, targetDuid = duid.toString().trim().toLowerCase(), currentStatus = "Pending";
+    
+    // 1. ค้นหาในประวัติ Transaction
     targetSheets.forEach(function(sName) {
       var sheet = ss.getSheetByName(sName);
       if (!sheet) return;
@@ -163,6 +165,23 @@ function searchByDuidOnly(duid) {
         }
       }
     });
+
+    // 2. ถ้าไม่พบในประวัติ ให้ค้นหาใน Sheet 'data' (Master)
+    if (!found) {
+      var masterSheet = ss.getSheetByName("data");
+      if (masterSheet) {
+        var masterData = masterSheet.getDataRange().getValues();
+        for (var i = 1; i < masterData.length; i++) {
+          if (String(masterData[i][0]).trim().toLowerCase() === targetDuid) {
+            return { 
+              success: true, 
+              formattedText: "📊 ข้อมูล DUID: " + masterData[i][0] + "\n━━━━━━━━━━━━━━━\n📍 สถานะ: ไม่มีการเคลื่อนไหว\n📍 Region: " + (masterData[i][2] || "-") + "\n━━━━━━━━━━━━━━━\n⚠️ ยังไม่มีประวัติการเบิก-รับสินค้าในระบบ" 
+            };
+          }
+        }
+      }
+    }
+
     if (!found) return { success: false, message: "❌ ไม่พบข้อมูล DUID: " + duid };
     return { success: true, formattedText: formatDuidResponse(groups, totalItemsCount, currentStatus) };
   } catch (e) { return { success: false, message: "❌ ระบบขัดข้อง: " + e.toString() }; }
