@@ -109,32 +109,57 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
 
     if (!botToken) return res.status(200).send('OK');
 
+    // 1. จัดการรูปภาพ (OCR)
     if (message.photo) {
+      console.log(`Telegram OCR: Received photo message from chat ${chatId}`);
       try {
-        const photo = message.photo[message.photo.length - 1];
-        const fileRes = await axios.get(`https://api.telegram.org/bot${botToken}/getFile?file_id=${photo.file_id}`);
-        const imageUrl = `https://api.telegram.org/file/bot${botToken}/${fileRes.data.result.file_path}`;
+        const photo = message.photo[message.photo.length - 1]; // เลือกความละเอียดสูงสุด
+        const fileId = photo.file_id;
+        
+        // รับ File Path จาก Telegram
+        const fileRes = await axios.get(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`);
+        const filePath = fileRes.data.result.file_path;
+        const imageUrl = `https://api.telegram.org/file/bot${botToken}/${filePath}`;
+        
+        console.log(`Telegram OCR: Downloading image from ${imageUrl}`);
+        // ดาวน์โหลดรูปภาพ
         const imgRes = await axios.get(imageUrl, { responseType: 'arraybuffer' });
         const base64 = Buffer.from(imgRes.data, 'binary').toString('base64');
         
+        // ส่งไป GAS เพื่อ OCR
         await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { chat_id: chatId, text: "🔍 กำลังประมวลผลรูปภาพด้วย AI OCR..." });
-        const ocrRes = await axios.post(gasUrl, { action: "ocr", base64: base64 });
         
-        if (ocrRes.data.success && ocrRes.data.data.items.length > 0) {
-          const { header, items } = ocrRes.data.data;
+        console.log(`Telegram OCR: Sending to GAS at ${gasUrl}`);
+        const ocrRes = await axios.post(gasUrl, { action: "ocr", base64: base64 });
+        const ocrData = ocrRes.data;
+        
+        console.log(`Telegram OCR: GAS Response success=${ocrData.success}`);
+        if (ocrData.success && ocrData.data.items.length > 0) {
+          const { header, items } = ocrData.data;
+          console.log(`Telegram OCR: Parsed DUID=${header.duid}, Items=${items.length}`);
+          
+          // บันทึกลง Spreadsheet โดยอัตโนมัติ
           const saveRes = await axios.post(gasUrl, { action: "save", header: header, items: items });
           
           if (saveRes.data.success) {
-            await sendNotification(header, items); // เรียกใช้ฟังก์ชันส่งแจ้งเตือนโดยตรง
+            console.log(`Telegram OCR: Save successful, sending notification...`);
+            // แจ้งเตือนเข้ากลุ่ม (Notify)
+            await sendNotification(header, items);
+            
             await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
               chat_id: chatId,
               text: `✅ ตรวจพบข้อมูลและบันทึกเรียบร้อย (V.6.6.3)!\n\n🆔 DUID: ${header.duid}\n📄 Bill: ${header.billNo}\n📍 Region: ${header.region}\n📦 รายการ: ${items.length} รายการ`
             });
           } else {
+            console.error(`Telegram OCR: Save failed: ${saveRes.data.message}`);
             throw new Error(saveRes.data.message || "Save failed");
           }
         } else {
-          await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { chat_id: chatId, text: `❌ ไม่สามารถอ่านข้อมูลที่จำเป็นจากรูปภาพได้ หรือไม่มีรายการสินค้า\n(กรุณาถ่ายรูปใบ Picking List ให้ชัดเจน)` });
+          console.warn(`Telegram OCR: No items found or success=false. Success=${ocrData.success}, Items=${ocrData.data ? ocrData.data.items.length : 'N/A'}`);
+          await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            chat_id: chatId,
+            text: `❌ ไม่สามารถอ่านข้อมูลที่จำเป็นจากรูปภาพได้ หรือไม่มีรายการสินค้า\n(กรุณาถ่ายรูปใบ Picking List ให้ชัดเจน หรือตรวจสอบว่า DUID/Bill No มีอยู่ในภาพ)`
+          });
         }
       } catch (err) {
         console.error('OCR Process Error:', err.message);
