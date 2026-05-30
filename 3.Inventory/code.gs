@@ -293,15 +293,29 @@ function formatDuidResponse(groups, totalItems, status) {
     if (idxA !== idxB) return idxA - idxB;
     return String(gA.billNo).localeCompare(String(gB.billNo));
   });
-  var sections = [], globalItemCount = 0, timestamp = Utilities.formatDate(new Date(), "GMT+7", "HH:mm:ss");
-  keys.forEach(function(key, index) {
+  var sections = [], timestamp = Utilities.formatDate(new Date(), "GMT+7", "HH:mm:ss");
+  keys.forEach(function(key) {
     var g = groups[key], h = g.header;
-    var text = "📊 ข้อมูล DUID: " + h.duid + "\n━━━━━━━━━━━━━━━\n📌 สถานะ: " + (status || "Pending") + "\n👤 ลูกค้า: " + h.customer + "\n🛠 งาน: " + h.transType + "\nbill No : " + h.billNo + "\n📍 Region: " + h.region + "\n🆔 DUID: " + h.duid + "\n🏢 คลัง: " + h.ownerWarehouse + "\n👷 ผู้รับ: " + h.ownerReceiver + "\n📍 Loc Warehouse: " + h.locWarehouse + "\n📍 Loc Receiver: " + h.locReceiver + "\n━━━━━━━━━━━━━━━\n";
-    if (index === 0) text += "📦 รายการสินค้า (" + totalItems + " รายการ):\n";
-    g.items.forEach(function(item) { globalItemCount++; text += "🔹 " + globalItemCount + ": " + item.model + "\n   (SN: " + item.sn + ", Qty: " + item.qty + ")\n"; });
+    var text = "📊 ข้อมูล DUID: " + h.duid + "\n" +
+               "━━━━━━━━━━━━━━━\n" +
+               "👤 ลูกค้า: " + h.customer + "\n" +
+               "🛠 งาน: " + h.transType + "\n" +
+               "bill No : " + (h.billNo === "-" ? "" : h.billNo) + "\n" +
+               "📍 Region: " + (h.region || "-") + "\n" +
+               "🆔 DUID: " + h.duid + "\n" +
+               "🏢 คลัง: " + (h.ownerWarehouse || "-") + "\n" +
+               "👷 ผู้รับ: " + (h.ownerReceiver || "-") + "\n" +
+               "📍 Loc Warehouse: " + (h.locWarehouse || "-") + "\n" +
+               "📍 Loc Receiver: " + (h.locReceiver || "-") + "\n" +
+               "━━━━━━━━━━━━━━━\n" +
+               "📦 รายการสินค้า (" + g.items.length + " รายการ):\n";
+    
+    g.items.forEach(function(item, i) { 
+      text += "🔹 " + (i + 1) + ": " + item.model + "\n   (SN: " + (item.sn || "NA") + ", Qty: " + (item.qty || 0) + ")\n"; 
+    });
     sections.push(text);
   });
-  return sections.join("\n====================\n") + "\n━━━━━━━━━━━━━━━\n🔍 ค้นหาเมื่อ: " + timestamp;
+  return sections.join("\n====================================================================\n") + "\n━━━━━━━━━━━━━━━\n🔍 ค้นหาเมื่อ: " + timestamp;
 }
 
 function getBOMData(customer) { try { var ss = SpreadsheetApp.openById(SPREADSHEET_ID); var res = []; var s = ss.getSheetByName(customer === "AIS" ? "BOM AIS" : "BOM TRUE"); if (s) { var lastRow = s.getLastRow(); if (lastRow < 2) return []; var d = s.getRange(2, 1, lastRow - 1, 4).getValues(); for (var i = 0; i < d.length; i++) { if (d[i][1]) res.push({ type: String(d[i][0]), model: String(d[i][1]), code: String(d[i][2]), desc: String(d[i][3]) }); } } return res; } catch (e) { return []; } }
