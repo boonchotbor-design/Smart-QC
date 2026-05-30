@@ -220,8 +220,37 @@ function searchByDuidOnly(duid) {
       if (!sheet) return;
       var data = sheet.getDataRange().getValues();
       if (data.length < 2) return;
+      
       var headerRow = data[0].map(h => String(h || "").trim().toUpperCase());
-      var idx = { duid: 1, region: 2, transType: 3, billNo: 6, model: 7, sn: 11, qty: 10, ownerW: 12, ownerR: 13, locW: 14, locR: 15, status: 21 };
+      var idx = {
+        duid: headerRow.indexOf("DUID"),
+        region: headerRow.indexOf("REGION"),
+        transType: Math.max(headerRow.indexOf("IN/OUT"), headerRow.indexOf("WORK TYPE")),
+        billNo: Math.max(headerRow.indexOf("BILL NO."), headerRow.indexOf("BILL NO")),
+        model: headerRow.indexOf("MODEL"),
+        sn: Math.max(headerRow.indexOf("SERIAL"), headerRow.indexOf("SN")),
+        qty: Math.max(headerRow.indexOf("SUM OF REQ.QTY"), headerRow.indexOf("QTY")),
+        ownerW: headerRow.indexOf("OWNER WAREHOUSE"),
+        ownerR: headerRow.indexOf("OWNER RECEIVER"),
+        locW: headerRow.indexOf("LOCATION WAREHOUSE"),
+        locR: headerRow.indexOf("LOCATION RECEIVER"),
+        status: headerRow.indexOf("STATUS")
+      };
+      
+      // Fallback for standard indexes if headers not matched
+      if (idx.duid === -1) idx.duid = 1;
+      if (idx.region === -1) idx.region = 2;
+      if (idx.transType === -1) idx.transType = 3;
+      if (idx.billNo === -1) idx.billNo = 6;
+      if (idx.model === -1) idx.model = 7;
+      if (idx.qty === -1) idx.qty = 10;
+      if (idx.sn === -1) idx.sn = 11;
+      if (idx.ownerW === -1) idx.ownerW = 12;
+      if (idx.ownerR === -1) idx.ownerR = 13;
+      if (idx.locW === -1) idx.locW = 14;
+      if (idx.locR === -1) idx.locR = 15;
+      if (idx.status === -1) idx.status = 21;
+
       for (var i = 1; i < data.length; i++) {
         var sheetDuid = String(data[i][idx.duid] || "").trim().toLowerCase();
         if (sheetDuid === targetDuid) {

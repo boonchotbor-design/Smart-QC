@@ -138,12 +138,10 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
       const response = await axios.get(`${gasUrl}?duid=${encodeURIComponent(userMessage)}&format=text`, { timeout: 20000 });
       let replyText = response.data;
 
-      if (typeof replyText === 'string' && (replyText.includes('❌') || replyText.includes('<!DOCTYPE html>'))) {
-        console.log(`Telegram DUID Search: Invalid response for "${userMessage}". Staying silent.`);
+      if (!replyText || (typeof replyText === 'string' && replyText.includes('<!DOCTYPE html>'))) {
+        console.log(`Telegram DUID Search: Empty or HTML response for "${userMessage}". Staying silent.`);
         return res.status(200).send('OK');
       }
-
-      if (!replyText) return res.status(200).send('OK');
 
       await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         chat_id: chatId,
