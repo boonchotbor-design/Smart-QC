@@ -22,19 +22,45 @@ function doGet(e) {
 
 function doPost(e) {
   try {
+    if (!e || !e.postData || !e.postData.contents) {
+      logToSheet("ERROR", "Empty POST data");
+      return ContentService.createTextOutput(JSON.stringify({ success: false, message: "Empty POST data" })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
     var data = JSON.parse(e.postData.contents);
+    logToSheet("RECEIVE", "Action: " + data.action);
+    
     if (data.action === "ocr") {
       var result = processOCR(data.base64);
+      logToSheet("OCR_RESULT", "Success: " + result.success + (result.error ? ", Error: " + result.error : ""));
       return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
     }
     if (data.action === "save") {
       var result = saveMainData(data.header, data.items);
+      logToSheet("SAVE_RESULT", "Success: " + result.success);
       return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
     }
     return ContentService.createTextOutput(JSON.stringify({ success: false, message: "Invalid action" })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
+    logToSheet("CRASH", err.toString());
     return ContentService.createTextOutput(JSON.stringify({ success: false, message: err.toString() })).setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+/**
+ * 📝 บันทึก Log ลงในหน้า Sheet "DEBUG_LOGS" เพื่อให้คุณเห็นว่าเกิดอะไรขึ้น
+ */
+function logToSheet(type, message) {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName("DEBUG_LOGS");
+    if (!sheet) {
+      sheet = ss.insertSheet("DEBUG_LOGS");
+      sheet.appendRow(["Timestamp", "Type", "Message"]);
+    }
+    sheet.insertRowAfter(1);
+    sheet.getRange(2, 1, 1, 3).setValues([[new Date(), type, message]]);
+  } catch (e) {}
 }
 
 function processOCR(base64) {
