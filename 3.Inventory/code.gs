@@ -57,13 +57,14 @@ function parsePickingList(text) {
   var header = { type: "OUT", customer: "AIS", region: "-", duid: "-", billNo: "-" };
   var items = [];
   
-  var billMatch = text.match(/(?:Bill No|เลขที่บิล|Bill)\s*[:.\s]*([A-Z0-9-]+)/i);
+  // ปรับปรุง Regex ให้รองรับช่องว่างและอักขระพิเศษใน DUID และ Bill No
+  var billMatch = text.match(/(?:Bill No|เลขที่บิล|Bill)\s*[:.\s]*([A-Z0-9 _\/-]+)/i);
   if (billMatch) header.billNo = billMatch[1].trim();
   
-  var duidMatch = text.match(/(?:DUID|Job ID)\s*[:.\s]*([A-Z0-9-]+)/i);
+  var duidMatch = text.match(/(?:DUID|Job ID|Job)\s*[:.\s]*([A-Z0-9 _\/-]+)/i);
   if (duidMatch) header.duid = duidMatch[1].trim();
 
-  var regionMatch = text.match(/(?:Region|ภาค)\s*[:.\s]*(\S+)/i);
+  var regionMatch = text.match(/(?:Region|ภาค)\s*[:.\s]*([A-Z0-9]+)/i);
   if (regionMatch) header.region = regionMatch[1].trim();
 
   var lines = text.split('\n');
@@ -72,7 +73,8 @@ function parsePickingList(text) {
     if (parts.length >= 3) {
       var qtyStr = parts[parts.length - 1].replace(/,/g, '');
       var qty = Number(qtyStr);
-      if (!isNaN(qty) && qty > 0 && parts[0].length > 5) {
+      // ตรวจสอบความถูกต้องของรายการสินค้า (Model มักจะมีความยาว)
+      if (!isNaN(qty) && qty > 0 && parts[0].length >= 3) {
         items.push({
           type: "OUT",
           model: parts[0],
