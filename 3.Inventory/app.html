@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>Inventory Smart App V.6.6.3</title>
+  <title>Inventory Smart App V.6.6.5</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -26,7 +26,7 @@
 
   <div class="container-fluid">
     <div class="header-banner shadow d-flex justify-content-between align-items-center">
-      <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.6.3</h5>
+      <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.6.5</h5>
       <div>
         <button class="btn btn-sm btn-warning fw-bold me-1" onclick="checkHealth()">Verify</button>
         <button class="btn btn-sm btn-light fw-bold" onclick="onCustomerChange()">🔄 SYNC</button>
@@ -62,6 +62,7 @@
     <button class="btn btn-primary w-100 py-3 fw-bold mb-5 shadow-lg" onclick="submitAll()" id="btnSubmit">🚀 บันทึกข้อมูล (SAVE)</button>
     
     <datalist id="duidList"></datalist>
+    <datalist id="siteList"></datalist>
     <datalist id="warehouseList"></datalist>
     <datalist id="receiverList"></datalist>
   </div>
@@ -110,7 +111,7 @@
       google.script.run
         .withSuccessHandler(d => { 
           projectData = d || []; 
-          document.getElementById('duidList').innerHTML = [...new Set(projectData.map(i => i.duid))].sort().map(v => `<option value="${v}">`).join(''); 
+          document.getElementById('duidList').innerHTML = projectData.map(v => `<option value="${v.duid}">${v.site}</option>`).join('');
         })
         .withFailureHandler(err => console.error("loadProjectData error:", err))
         .getProjectData();
@@ -136,7 +137,9 @@
       var val = document.getElementById('duid').value.trim(); 
       var valLower = val.toLowerCase();
       var f = projectData.find(i => i.duid.toLowerCase() === valLower); 
-      if (f) document.getElementById('region').value = f.region || "ER"; 
+      if (f) {
+        document.getElementById('region').value = f.region || "ER"; 
+      }
     }
 
     function addItemRow() { 

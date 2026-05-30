@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.6.6.3)
+# 📦 Inventory Smart System (V.6.6.5)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI) and Telegram Bot with AI OCR capabilities.
 
@@ -8,7 +8,7 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - **Integration:** Telegram Bot API, Google Drive OCR
 - **Storage:** Google Sheets
 
-## 🚀 Telegram Bot Setup (V.6.6.3)
+## 🚀 Telegram Bot Setup (V.6.6.5)
 - **Webhook:** ต้องตั้งค่าให้ชี้มาที่ Vercel เท่านั้น: `https://[YOUR_VERCEL_URL]/telegram-webhook`
 - **GAS Permissions:** ใน Google Apps Script ต้อง Deploy เป็น Web App โดยตั้งค่า **"Who has access" เป็น "Anyone"** (สำคัญมาก)
 - **Services:** ต้องเปิดใช้งาน **Drive API** ในส่วนของ Services ของ GAS Project
@@ -35,6 +35,13 @@ Project Context: A Google Apps Script application for managing hardware inventor
 ### 🐞 Bug Fixing
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
+
+## 🐞 Bug Fixes & Stability (V.6.6.5)
+- **Column Alignment Fix:** Corrected column mapping to match: A=No, B=DUID, C=Region, D=IN/OUT, E=Type, F=Date, G=Bill, H=Model, I=Code, J=Desc, K=Qty, L=SN, M=WH_O, N=RC_O, O=WH_L, P=RC_L, V=STATUS (Index 21).
+- **Auto-Increment 'No':** Implemented logic to automatically number rows (1, 2, 3...) for each recorded DUID submission in Column A.
+- **Site Name Selection:** Added a dedicated 'Site Name' field in the UI with bi-directional sync (Selecting Site auto-fills DUID/Region, and vice versa).
+- **Robust Header Detection:** Improved `getProjectData` in `code.gs` to handle various header aliases for DUID, Site, and Region (case-insensitive).
+- **Version Sync:** Updated version to V.6.6.5 across all components.
 
 ## 🐞 Bug Fixes & Stability (V.6.6.3)
 - **AI OCR Integration:** Restored `parsePickingList` and implemented `processOCR` in `code.gs` using Google Drive API.
