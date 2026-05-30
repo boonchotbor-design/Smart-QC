@@ -7,7 +7,7 @@ const config = {
   channelSecret: (process.env.LINE_CHANNEL_SECRET || '').trim(),
 };
 
-const GAS_WEB_APP_URL = (process.env.GAS_WEB_APP_URL || '').trim();
+const GAS_WEB_APP_URL = (process.env.GAS_WEB_APP_URL || 'https://script.google.com/macros/s/AKfycbwoTnwaExeObR_54tVajXxz7j2rAsQlyIWN3rbaGfTXxf9-HZ8oAMs4_gKOhrFx7b6b/exec').trim();
 
 const client = new messagingApi.MessagingApiClient({
   channelAccessToken: config.channelAccessToken

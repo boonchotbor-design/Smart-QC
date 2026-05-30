@@ -382,3 +382,30 @@ function runGasSystemTests() {
   
   Logger.log("🏁 จบการทดสอบ ตรวจสอบผลลัพธ์ใน Telegram/LINE");
 }
+
+/**
+ * 🧪 ทดสอบระบบ OCR ภายใน GAS (รันจาก Editor)
+ * เพื่อเช็คว่าเปิดใช้งาน Drive API หรือยัง และ Regex อ่านได้ไหม
+ */
+function testOcrEngine() {
+  // Mock Base64 (รูปภาพ 1x1 สีขาว)
+  var mockBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
+  
+  Logger.log("🔍 กำลังทดสอบ Drive API OCR...");
+  try {
+    var result = processOCR(mockBase64);
+    Logger.log("✅ Drive API Status: " + (result.success ? "พร้อมใช้งาน" : "มีปัญหา"));
+    if (!result.success) Logger.log("❌ Error: " + result.error);
+    
+    // ทดสอบ Regex ด้วยข้อความจำลอง
+    var mockText = "Bill No: T0826-TEST-001\nDUID: SHSSM_TEST_SITE_2025\nRegion: ER\nBBU5900 1\nUBBPg2 2";
+    var parsed = parsePickingList(mockText);
+    Logger.log("📝 ผลการ Parsing จำลอง:");
+    Logger.log("🆔 DUID: " + parsed.header.duid);
+    Logger.log("📄 Bill: " + parsed.header.billNo);
+    Logger.log("📦 รายการ: " + parsed.items.length + " รายการ");
+  } catch (e) {
+    Logger.log("❌ CRITICAL ERROR: " + e.toString());
+    Logger.log("💡 คำแนะนำ: ตรวจสอบว่าในเมนู Services (+) ทางซ้ายมือ ได้เพิ่ม 'Drive API' หรือยัง");
+  }
+}
