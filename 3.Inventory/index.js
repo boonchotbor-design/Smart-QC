@@ -132,7 +132,7 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
         const ocrRes = await axios.post(gasUrl, { action: "ocr", base64: base64 });
         const ocrData = ocrRes.data;
         
-        if (ocrData.success && ocrData.data.items.length > 0) {
+        if (ocrRes.data.success && ocrData.data.items.length > 0) {
           const { header, items } = ocrData.data;
           
           // บันทึกลง Spreadsheet โดยอัตโนมัติ
@@ -148,9 +148,11 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
             throw new Error(saveRes.data.message || "Save failed");
           }
         } else {
+          // แจ้งเตือนพร้อมส่งข้อความที่อ่านได้กลับไปเพื่อ Debug
+          let rawText = (ocrData.data && ocrData.data.text) ? ocrData.data.text : "ไม่พบข้อความ";
           await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
             chat_id: chatId,
-            text: `❌ ไม่สามารถอ่านข้อมูลที่จำเป็นจากรูปภาพได้\n(โปรดตรวจสอบว่ามี DUID และเลขที่บิลในภาพ หรือถ่ายใหม่ให้ชัดเจนขึ้น)`
+            text: `❌ ไม่สามารถแยกข้อมูลสินค้าได้\n\n🔍 ข้อความที่ AI อ่านได้ (บางส่วน):\n${rawText.substring(0, 500)}...\n\n💡 คำแนะนำ: ตรวจสอบว่ารูปถ่ายชัดเจน และมี DUID/เลขที่บิล อยู่ในบรรทัดที่ AI อ่านได้`
           });
         }
       } catch (err) {

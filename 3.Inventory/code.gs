@@ -57,32 +57,48 @@ function parsePickingList(text) {
   var header = { type: "OUT", customer: "AIS", region: "-", duid: "-", billNo: "-" };
   var items = [];
   
-  // ปรับปรุง Regex ให้รองรับช่องว่างและอักขระพิเศษใน DUID และ Bill No
-  var billMatch = text.match(/(?:Bill No|เลขที่บิล|Bill)\s*[:.\s]*([A-Z0-9 _\/-]+)/i);
+  // 1. ค้นหา Bill No (รองรับหลายรูปแบบ)
+  var billMatch = text.match(/(?:Bill No|เลขที่บิล|Bill|Ref No|Order No|INV)[:.\s]*([A-Z0-9 _\/-]+)/i);
   if (billMatch) header.billNo = billMatch[1].trim();
   
-  var duidMatch = text.match(/(?:DUID|Job ID|Job)\s*[:.\s]*([A-Z0-9 _\/-]+)/i);
+  // 2. ค้นหา DUID (รองรับรูปแบบยาวที่มีช่องว่างและอักขระพิเศษ)
+  var duidMatch = text.match(/(?:DUID|Job ID|Job|Site ID|Project|Site)[:.\s]*([A-Z0-9 _\/.(){}-]{5,})/i);
   if (duidMatch) header.duid = duidMatch[1].trim();
 
-  var regionMatch = text.match(/(?:Region|ภาค)\s*[:.\s]*([A-Z0-9]+)/i);
+  // 3. ค้นหา Region
+  var regionMatch = text.match(/(?:Region|ภาค|Area)[:.\s]*([A-Z0-9]{2,5})/i);
   if (regionMatch) header.region = regionMatch[1].trim();
 
+  // 4. ค้นหา รายการสินค้า (Flexible Parsing)
   var lines = text.split('\n');
   lines.forEach(function(line) {
-    var parts = line.trim().split(/\s+/);
-    if (parts.length >= 3) {
-      var qtyStr = parts[parts.length - 1].replace(/,/g, '');
-      var qty = Number(qtyStr);
-      // ตรวจสอบความถูกต้องของรายการสินค้า (Model มักจะมีความยาว)
-      if (!isNaN(qty) && qty > 0 && parts[0].length >= 3) {
-        items.push({
-          type: "OUT",
-          model: parts[0],
-          code: parts[1] || "NA",
-          desc: parts.slice(2, parts.length - 1).join(" ") || "NA",
-          qty: qty,
-          sn: "NA"
-        });
+    line = line.trim();
+    if (line.length < 10) return; // ข้ามบรรทัดสั้นเกินไป
+    
+    // ตรวจสอบว่าบรรทัดนี้ลงท้ายด้วยตัวเลข (Quantity) หรือไม่
+    var parts = line.split(/\s+/);
+    if (parts.length >= 2) {
+      var lastPart = parts[parts.length - 1].replace(/,/g, '');
+      var qty = parseInt(lastPart);
+      
+      // ถ้าตัวสุดท้ายเป็นตัวเลข และบรรทัดนี้ไม่ใช่ Header
+      if (!isNaN(qty) && qty > 0 && !line.match(/(?:Date|Bill|DUID|Tel|Total|Page)/i)) {
+        // Model คือส่วนแรกของบรรทัด
+        var model = parts[0];
+        // Description คือส่วนที่เหลือ ยกเว้นตัวสุดท้าย
+        var desc = parts.slice(1, parts.length - 1).join(" ") || "NA";
+        
+        // กรองเอาเฉพาะบรรทัดที่น่าจะเป็นสินค้าจริง (เช่น มีรหัสสินค้าหรือความยาวพอสมควร)
+        if (model.length >= 3) {
+          items.push({
+            type: "OUT",
+            model: model,
+            code: "NA",
+            desc: desc,
+            qty: qty,
+            sn: "NA"
+          });
+        }
       }
     }
   });

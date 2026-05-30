@@ -66,6 +66,12 @@
   <input type="file" id="cameraTrigger" accept="image/*" capture="environment" style="display:none" onchange="processImageScan(this)">
 
   <script>
+    // Global Error Handling
+    window.onerror = function(msg, url, line) {
+      alert("❌ App Crash: " + msg + "\nLine: " + line);
+      return false;
+    };
+
     var rowCount = 0, photoArray = [], bomData = [], projectData = [];
     var scanTarget = null, scanRowId = null;
 
