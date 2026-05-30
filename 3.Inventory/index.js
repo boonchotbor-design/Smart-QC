@@ -32,6 +32,9 @@ app.get('/', (req, res) => {
 // ฟังก์ชันกลางสำหรับส่งแจ้งเตือน (Telegram & LINE)
 async function sendNotification(header, items) {
   try {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '7378939928';
+    const lineDestId = process.env.LINE_DESTINATION_ID || 'Cb4baf5e474773f54f2b6538e4cd4d9ac';
     const dateStr = new Date().toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Bangkok' });
     
     let messageText = `📦 รายงาน Inventory (V.6.6.3)\n` +
@@ -66,7 +69,6 @@ async function sendNotification(header, items) {
                    `✅ บันทึกสำเร็จ!`;
 
     // 1. ส่งไป LINE
-    const lineDestId = process.env.LINE_DESTINATION_ID || 'Cb4baf5e474773f54f2b6538e4cd4d9ac';
     if (config.channelAccessToken) {
       await client.pushMessage({
         to: lineDestId,
@@ -75,9 +77,6 @@ async function sendNotification(header, items) {
     }
 
     // 2. ส่งไป Telegram
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
-    const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '7378939928';
-
     if (botToken && telegramDestId) {
       await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         chat_id: telegramDestId,
