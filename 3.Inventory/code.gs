@@ -1,6 +1,6 @@
 /*
- * 🚀 Inventory Smart System - V.6.6.2
- * Includes: Robust Saving with Top-Row Recording & Enhanced Error Handling
+ * 🚀 Inventory Smart System - V.6.6.3
+ * Includes: OCR Support, Telegram Image Handling & Enhanced Notifications
  */
 
 var SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -15,9 +15,77 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
   }
   return HtmlService.createTemplateFromFile('app').evaluate()
-      .setTitle('Inventory Smart App V.6.6.2')
+      .setTitle('Inventory Smart App V.6.6.3')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    if (data.action === "ocr") {
+      var result = processOCR(data.base64);
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (data.action === "save") {
+      var result = saveMainData(data.header, data.items);
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+    }
+    return ContentService.createTextOutput(JSON.stringify({ success: false, message: "Invalid action" })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, message: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function processOCR(base64) {
+  try {
+    var blob = Utilities.newBlob(Utilities.base64Decode(base64), "image/jpeg", "ocr_temp.jpg");
+    var resource = { title: 'ocr_temp', mimeType: 'image/jpeg' };
+    var file = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: 'en,th' });
+    var doc = DocumentApp.openById(file.id);
+    var text = doc.getBody().getText();
+    Drive.Files.remove(file.id);
+    return { success: true, text: text, data: parsePickingList(text) };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function parsePickingList(text) {
+  if (!text || typeof text !== 'string') return { header: { type: "OUT", customer: "AIS", region: "-", duid: "-", billNo: "-" }, items: [] };
+  
+  var header = { type: "OUT", customer: "AIS", region: "-", duid: "-", billNo: "-" };
+  var items = [];
+  
+  var billMatch = text.match(/(?:Bill No|เลขที่บิล|Bill)\s*[:.\s]*([A-Z0-9-]+)/i);
+  if (billMatch) header.billNo = billMatch[1].trim();
+  
+  var duidMatch = text.match(/(?:DUID|Job ID)\s*[:.\s]*([A-Z0-9-]+)/i);
+  if (duidMatch) header.duid = duidMatch[1].trim();
+
+  var regionMatch = text.match(/(?:Region|ภาค)\s*[:.\s]*(\S+)/i);
+  if (regionMatch) header.region = regionMatch[1].trim();
+
+  var lines = text.split('\n');
+  lines.forEach(function(line) {
+    var parts = line.trim().split(/\s+/);
+    if (parts.length >= 3) {
+      var qtyStr = parts[parts.length - 1].replace(/,/g, '');
+      var qty = Number(qtyStr);
+      if (!isNaN(qty) && qty > 0 && parts[0].length > 5) {
+        items.push({
+          type: "OUT",
+          model: parts[0],
+          code: parts[1] || "NA",
+          desc: parts.slice(2, parts.length - 1).join(" ") || "NA",
+          qty: qty,
+          sn: "NA"
+        });
+      }
+    }
+  });
+
+  return { header: header, items: items };
 }
 
 function saveMainData(header, items) {
@@ -55,7 +123,6 @@ function saveMainData(header, items) {
       return row;
     });
     
-    // บันทึกที่แถวบนสุด (ต่อจาก Header ในแถวที่ 1)
     if (allRows.length > 0) {
       sheet.insertRowsAfter(1, allRows.length);
       sheet.getRange(2, 1, allRows.length, 22).setValues(allRows);
@@ -63,7 +130,7 @@ function saveMainData(header, items) {
     
     SpreadsheetApp.flush(); 
     updateDuidStatus(cleanDuid, customer);
-    return { success: true, debug: "✅ บันทึกสำเร็จ (V.6.6.2)\n📍 Sheet: " + sheetName + "\n🔢 บันทึกที่แถว: 2 (บนสุด)" };
+    return { success: true, debug: "✅ บันทึกสำเร็จ (V.6.6.3)\n📍 Sheet: " + sheetName + "\n🔢 บันทึกที่แถว: 2 (บนสุด)" };
   } catch (e) { return { success: false, message: "❌ ระบบขัดข้อง: " + e.toString() }; } finally { lock.releaseLock(); }
 }
 
@@ -95,7 +162,6 @@ function searchByBillNo(billNo, customer) {
       status: headerRow.indexOf("STATUS")
     };
     
-    // Fallback indexes based on V.6.5.7 standard structure
     if (idx.billNo === -1) idx.billNo = 6;
     if (idx.duid === -1) idx.duid = 1;
     if (idx.region === -1) idx.region = 2;
@@ -149,7 +215,6 @@ function searchByDuidOnly(duid) {
     var targetSheets = ["INOUT_HW_AIS", "INOUT_HW_TRUE"];
     var groups = {}, found = false, totalItemsCount = 0, targetDuid = duid.toString().trim().toLowerCase(), currentStatus = "Pending";
     
-    // 1. ค้นหาในประวัติ Transaction
     targetSheets.forEach(function(sName) {
       var sheet = ss.getSheetByName(sName);
       if (!sheet) return;
@@ -171,7 +236,6 @@ function searchByDuidOnly(duid) {
       }
     });
 
-    // 2. ถ้าไม่พบในประวัติ ให้ค้นหาใน Sheet 'data' (Master)
     if (!found) {
       var masterSheet = ss.getSheetByName("data");
       if (masterSheet) {

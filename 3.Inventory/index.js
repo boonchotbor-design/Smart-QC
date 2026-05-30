@@ -19,7 +19,7 @@ const app = express();
 app.get('/', (req, res) => {
   const diagnostic = {
     status: 'Alive',
-    version: 'v6.6.2',
+    version: 'v6.6.3',
     env: {
       hasGasUrl: !!process.env.GAS_WEB_APP_URL,
       hasLineToken: !!process.env.LINE_CHANNEL_ACCESS_TOKEN,
@@ -55,10 +55,9 @@ app.post('/webhook', (req, res, next) => {
 app.post('/telegram-webhook', express.json(), async (req, res) => {
   try {
     const { message } = req.body;
-    if (!message || !message.text || !message.chat) return res.status(200).send('OK');
+    if (!message || !message.chat) return res.status(200).send('OK');
 
     const chatId = message.chat.id;
-    const userMessage = message.text.trim();
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     const gasUrl = process.env.GAS_WEB_APP_URL || GAS_WEB_APP_URL;
 
@@ -67,35 +66,90 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
       return res.status(200).send('OK');
     }
 
-    if (userMessage.toLowerCase() === '/start') {
+    // 1. จัดการรูปภาพ (OCR)
+    if (message.photo) {
+      try {
+        const photo = message.photo[message.photo.length - 1]; // เลือกความละเอียดสูงสุด
+        const fileId = photo.file_id;
+        
+        // รับ File Path จาก Telegram
+        const fileRes = await axios.get(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`);
+        const filePath = fileRes.data.result.file_path;
+        const imageUrl = `https://api.telegram.org/file/bot${botToken}/${filePath}`;
+        
+        // ดาวน์โหลดรูปภาพ
+        const imgRes = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        const base64 = Buffer.from(imgRes.data, 'binary').toString('base64');
+        
+        // ส่งไป GAS เพื่อ OCR
+        await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { chat_id: chatId, text: "🔍 กำลังประมวลผลรูปภาพด้วย AI OCR..." });
+        
+        const ocrRes = await axios.post(gasUrl, { action: "ocr", base64: base64 });
+        const ocrData = ocrRes.data;
+        
+        if (ocrData.success && ocrData.data.items.length > 0) {
+          const { header, items } = ocrData.data;
+          
+          // บันทึกลง Spreadsheet โดยอัตโนมัติ
+          const saveRes = await axios.post(gasUrl, { action: "save", header: header, items: items });
+          
+          if (saveRes.data.success) {
+            // แจ้งเตือนเข้ากลุ่ม (Notify)
+            await axios.post(`https://vipcode-ai-inspector-yhfn.vercel.app/notify`, { header: header, items: items }).catch(e => console.error('Auto-Notify Error:', e.message));
+            
+            await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              chat_id: chatId,
+              text: `✅ ตรวจพบข้อมูลและบันทึกเรียบร้อย (V.6.6.3)!\n\n🆔 DUID: ${header.duid}\n📄 Bill: ${header.billNo}\n📍 Region: ${header.region}\n📦 รายการ: ${items.length} รายการ`
+            });
+          } else {
+            throw new Error(saveRes.data.message || "Save failed");
+          }
+        } else {
+          await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            chat_id: chatId,
+            text: `❌ ไม่สามารถอ่านข้อมูลที่จำเป็นจากรูปภาพได้ หรือไม่มีรายการสินค้า\n(กรุณาถ่ายรูปใบ Picking List ให้ชัดเจน)`
+          });
+        }
+      } catch (err) {
+        console.error('OCR Process Error:', err.message);
+        await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { chat_id: chatId, text: `❌ เกิดข้อผิดพลาดในการประมวลผล OCR: ${err.message}` });
+      }
+      return res.status(200).send('OK');
+    }
+
+    // 2. จัดการข้อความ (Search)
+    if (message.text) {
+      const userMessage = message.text.trim();
+      if (userMessage.toLowerCase() === '/start') {
+        await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          chat_id: chatId,
+          text: "👋 ยินดีต้อนรับสู่ Inventory Smart Bot (V.6.6.3)\n\n📸 ส่งรูปใบ Picking List เพื่อบันทึกข้อมูลอัตโนมัติ\n🔍 หรือส่ง DUID ที่ต้องการค้นหาข้อมูลได้เลยครับ"
+        }).catch(e => console.error('Telegram start error:', e.message));
+        return res.status(200).send('OK');
+      }
+
+      if (userMessage.length < 5 && !userMessage.startsWith('/')) return res.status(200).send('OK');
+
+      if (!gasUrl) {
+        console.error('Missing GAS_WEB_APP_URL');
+        return res.status(200).send('OK');
+      }
+
+      const response = await axios.get(`${gasUrl}?duid=${encodeURIComponent(userMessage)}&format=text`, { timeout: 20000 });
+      let replyText = response.data;
+
+      if (typeof replyText === 'string' && (replyText.includes('❌') || replyText.includes('<!DOCTYPE html>'))) {
+        console.log(`Telegram DUID Search: Invalid response for "${userMessage}". Staying silent.`);
+        return res.status(200).send('OK');
+      }
+
+      if (!replyText) return res.status(200).send('OK');
+
       await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         chat_id: chatId,
-        text: "👋 ยินดีต้อนรับสู่ Inventory Smart Bot (V.6.6.2)\n\nกรุณาส่ง DUID ที่ต้องการค้นหาข้อมูลได้เลยครับ"
-      }).catch(e => console.error('Telegram start error:', e.message));
-      return res.status(200).send('OK');
+        text: replyText
+      });
     }
-
-    if (userMessage.length < 5 && !userMessage.startsWith('/')) return res.status(200).send('OK');
-
-    if (!gasUrl) {
-      console.error('Missing GAS_WEB_APP_URL');
-      return res.status(200).send('OK');
-    }
-
-    const response = await axios.get(`${gasUrl}?duid=${encodeURIComponent(userMessage)}&format=text`, { timeout: 20000 });
-    let replyText = response.data;
-
-    if (typeof replyText === 'string' && (replyText.includes('❌') || replyText.includes('<!DOCTYPE html>'))) {
-      console.log(`Telegram DUID Search: Invalid response for "${userMessage}". Staying silent.`);
-      return res.status(200).send('OK');
-    }
-
-    if (!replyText) return res.status(200).send('OK');
-
-    await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      chat_id: chatId,
-      text: replyText
-    });
   } catch (err) { 
     console.error('Telegram Webhook Error:', err.message); 
   }
@@ -110,10 +164,11 @@ app.post('/notify', express.json(), async (req, res) => {
 
     const dateStr = new Date().toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Bangkok' });
 
-    let messageText = `📦 รายงาน Inventory (V.6.6.2)\n` +
+    let messageText = `📦 รายงาน Inventory (V.6.6.3)\n` +
                       `━━━━━━━━━━━━━━━\n` +
                       `👤 ลูกค้า: ${header.customer || "-"}\n` +
                       `🛠 งาน: ${header.type || "-"}\n` +
+                      `📄 เลขที่บิล: ${header.billNo || "-"}\n` +
                       `📍 Region: ${header.region || "-"}\n` +
                       `🆔 DUID: ${header.duid || "-"}\n` +
                       `🏢 คลัง: ${header.ownerWarehouse || "-"}\n` +
@@ -128,7 +183,6 @@ app.post('/notify', express.json(), async (req, res) => {
         messageText += `🔹 รายการที่ ${index + 1}:\n` +
                        `• Type: ${item.type || "-"}\n` +
                        `• Pick up Date: ${dateStr}\n` +
-                       `• Bill No: ${header.billNo || "-"}\n` +
                        `• Model: ${item.model || "-"}\n` +
                        `• Item Code: ${item.code || "-"}\n` +
                        `• Item Description: ${item.desc || "-"}\n` +

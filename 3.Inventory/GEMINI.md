@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.6.6.2)
+# 📦 Inventory Smart System (V.6.6.3)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI) and Telegram Bot with AI OCR capabilities.
 
@@ -8,9 +8,10 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - **Integration:** Telegram Bot API, Google Drive OCR
 - **Storage:** Google Sheets
 
-## 🚀 Telegram Bot Setup (V.6.5.4)
+## 🚀 Telegram Bot Setup (V.6.6.3)
 - **Webhook:** ต้องตั้งค่าให้ชี้มาที่ Vercel เท่านั้น: `https://[YOUR_VERCEL_URL]/telegram-webhook`
 - **GAS Permissions:** ใน Google Apps Script ต้อง Deploy เป็น Web App โดยตั้งค่า **"Who has access" เป็น "Anyone"** (สำคัญมาก)
+- **Services:** ต้องเปิดใช้งาน **Drive API** ในส่วนของ Services ของ GAS Project
 - **Environment Variables:** ใน Vercel ต้องมี `TELEGRAM_BOT_TOKEN` และ `GAS_WEB_APP_URL` (ต้องเป็น URL ของ GAS ที่ลงท้ายด้วย `/exec`)
 
 ## 🚀 Workflow
@@ -35,14 +36,13 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
 
-## 🐞 Bug Fixes & Stability (V.6.6.2)
-- **Robust Error Handling:** Added failure handlers and console logging to all `google.script.run` calls in `app.html` to prevent silent failures and identify "not responding" issues.
-- **Diagnostic Endpoint:** Added a diagnostic endpoint (`/`) to `index.js` to verify environment variables and system health.
-- **Improved index.js:** Added better try-catch blocks and checks for missing configuration in `index.js`.
-- **Top-Row Logic:** Refined `saveMainData` in `code.gs` with better checks for empty records.
-- **Version Sync:** Updated version to V.6.6.2 across `code.gs`, `app.html`, and `index.js`.
+## 🐞 Bug Fixes & Stability (V.6.6.3)
+- **AI OCR Integration:** Restored `parsePickingList` and implemented `processOCR` in `code.gs` using Google Drive API.
+- **Telegram Image Handling:** Enabled Telegram Bot to handle Picking List images, perform OCR, and automatically record data to the spreadsheet.
+- **Enhanced Notification:** Refined the Telegram notification template to include Bill No in the header and improved overall formatting with professional dividers.
+- **Version Sync:** Updated version to V.6.6.3 across all components.
 
-## 🐞 Bug Fixes & Stability (V.6.6.1)
+## 🐞 Bug Fixes & Stability (V.6.6.2)
 - **Top-Row Recording:** Modified `saveMainData` to insert new records at row 2 (immediately below the header) instead of appending to the bottom. This improves usability for sheets with 2000+ rows.
 - **Telegram & LINE Restoration:** Restored the missing `/notify` and `/telegram-webhook` endpoints in `index.js`.
 - **Notification Template:** Updated the notification format to match the requested template with detailed item information.
