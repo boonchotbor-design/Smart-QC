@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard | QC Automate Smart QC</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="dashboard-style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body class="dashboard-page">
+
+  <!-- AUTH OVERLAY -->
+  <div id="auth-overlay" class="overlay">
+    <div class="auth-card">
+      <div class="logo">
+        <span class="logo-bracket">[</span>QC<span class="logo-dot">•</span>ADMIN<span class="logo-bracket">]</span>
+      </div>
+      <h2>เข้าสู่ระบบจัดการ</h2>
+      <p>กรุณากรอกรหัสผ่านเพื่อเข้าใช้งาน Dashboard</p>
+      <div class="input-group">
+        <input type="password" id="admin-password" placeholder="รหัสผ่าน" />
+        <button class="btn-primary" onclick="checkAuth()">ยืนยัน</button>
+      </div>
+      <p id="auth-error" class="error-text"></p>
+    </div>
+  </div>
+
+  <header id="navbar">
+    <div class="nav-inner">
+      <div class="logo">
+        <span class="logo-bracket">[</span>QC<span class="logo-dot">•</span>AUTO<span class="logo-bracket">]</span>
+        <span class="logo-label">DASHBOARD</span>
+      </div>
+      <nav>
+        <a href="index.html">หน้าแรก</a>
+        <a href="#" class="active" onclick="showView('overview')">ภาพรวม</a>
+        <a href="#" onclick="showView('qc-wizard')">เริ่มงาน QC-AUTO</a>
+        <a href="#" onclick="showView('process')">ประมวลผล</a>
+        <a href="#" onclick="showView('reports')">รายงาน</a>
+      </nav>
+      <div class="user-info">
+        <span class="status-indicator"></span>
+        <span id="user-email">Admin</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    
+    <!-- VIEW: QC-WIZARD -->
+    <div id="view-qc-wizard" class="view">
+      <div class="header-row">
+        <h1>เริ่มงาน QC-AUTO</h1>
+        <div class="actions">
+          <button class="btn-ghost" onclick="showView('overview')">← กลับหน้าหลัก</button>
+        </div>
+      </div>
+
+      <div class="wizard-container">
+        <!-- Wizard Steps Indicator -->
+        <div class="wizard-steps">
+          <div class="w-step active" id="w-step-1">1<span>ข้อมูล</span></div>
+          <div class="w-step" id="w-step-2">2<span>อัปโหลด</span></div>
+          <div class="w-step" id="w-step-3">3<span>ตรวจผล</span></div>
+          <div class="w-step" id="w-step-4">4<span>รายงาน</span></div>
+        </div>
+
+        <!-- STEP 1: SETUP -->
+        <div id="wizard-step-1" class="wizard-content active">
+          <div class="card">
+            <h3>1. ข้อมูลโปรเจกต์</h3>
+            <div class="form-grid">
+              <div class="control-group">
+                <label>เลือกโปรเจกต์</label>
+                <select id="w-project">
+                  <option value="HAE">HAE</option>
+                  <option value="TME">TME</option>
+                  <option value="TMT">TMT</option>
+                  <option value="HAT">HAT</option>
+                  <option value="HTB">HTB</option>
+                  <option value="HSN">HSN</option>
+                  <option value="TMB">TMB</option>
+                  <option value="HNN">HNN</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <label>ประเภทงาน</label>
+                <select id="w-type">
+                  <option value="MBB">MBB</option>
+                  <option value="POWER">POWER</option>
+                  <option value="SOLACELL">SOLACELL</option>
+                  <option value="SMALL DC">SMALL DC</option>
+                  <option value="IPRAN">IPRAN</option>
+                  <option value="SSR">SSR</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <label>ชื่อ Site</label>
+                <input type="text" id="w-sitename" placeholder="พิมพ์ชื่อ Site เพื่อสร้างโฟลเดอร์" />
+              </div>
+            </div>
+            <div class="wizard-actions">
+              <button class="btn-primary" onclick="wizardCreateFolder()">ถัดไป: สร้างโฟลเดอร์ →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: UPLOAD -->
+        <div id="wizard-step-2" class="wizard-content">
+          <div class="card">
+            <h3>2. อัปโหลดรูปภาพ</h3>
+            <div class="upload-info">
+              <div class="success-badge">✅ สร้างโฟลเดอร์สำเร็จ!</div>
+              <p id="w-folder-name-display" class="folder-name"></p>
+              <p>กรุณากดที่ลิงก์ด้านล่างเพื่ออัปโหลดรูปภาพเข้าไปใน Google Drive</p>
+              <a href="#" id="w-drive-link" target="_blank" class="drive-link-btn">📁 เปิดโฟลเดอร์เพื่ออัปโหลดรูป</a>
+              <div class="note">เมื่ออัปโหลดรูปเสร็จแล้ว ให้กลับมาที่นี่เพื่อทำการตรวจผล</div>
+            </div>
+            <div class="wizard-actions">
+              <button class="btn-ghost" onclick="showStep(1)">← ย้อนกลับ</button>
+              <button class="btn-primary" onclick="wizardCheckUpload()">ฉันอัปโหลดรูปเสร็จแล้ว →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 3: AI SCAN -->
+        <div id="wizard-step-3" class="wizard-content">
+          <div class="card">
+            <h3>3. ตรวจสอบรูปภาพด้วย AI</h3>
+            <div class="scan-status">
+              <div class="progress-bar-container">
+                <div id="w-progress-bar" class="progress-bar"></div>
+              </div>
+              <p id="w-scan-info">พร้อมตรวจรูปภาพจำนวน <span id="w-file-count">0</span> รูป</p>
+              <div id="w-scan-logs" class="process-logs"></div>
+            </div>
+            <div class="wizard-actions">
+              <button id="btn-w-start-scan" class="btn-primary" onclick="wizardStartScan()">🚀 เริ่มตรวจด้วย AI</button>
+              <button id="btn-w-to-step-4" class="btn-primary" style="display:none" onclick="showStep(4)">ดูผลลัพธ์และรายงาน →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 4: RESULT -->
+        <div id="wizard-step-4" class="wizard-content">
+          <div class="card">
+            <h3>4. สรุปผลและรายงาน PAT</h3>
+            <div class="result-summary">
+              <div class="result-grid">
+                <div class="res-card pass">
+                  <div class="res-val" id="w-res-pass">0</div>
+                  <div class="res-label">ผ่าน (PASS)</div>
+                </div>
+                <div class="res-card fail">
+                  <div class="res-val" id="w-res-fail">0</div>
+                  <div class="res-label">ไม่ผ่าน (FAIL)</div>
+                </div>
+              </div>
+              <div class="pat-action">
+                <p>สร้างรายงาน PAT อัตโนมัติ (Google Sheets)</p>
+                <button id="btn-w-gen-pat" class="btn-primary" onclick="wizardGenPAT()">📄 ออกรายงาน PAT</button>
+                <div id="w-pat-link-container" style="margin-top:20px; display:none">
+                  <a href="#" id="w-pat-link" target="_blank" class="btn-outline" style="text-decoration:none">🔗 เปิดรายงาน PAT</a>
+                </div>
+              </div>
+            </div>
+            <div class="cleanup-box">
+              <h3>ทำความสะอาด (Cleanup)</h3>
+              <p>คุณต้องการลบโฟลเดอร์และรูปภาพหลังจากสร้างรายงานเสร็จหรือไม่?</p>
+              <div class="wizard-actions">
+                <button class="btn-ghost" onclick="wizardCleanup(false)">เสร็จสิ้น (เก็บข้อมูลไว้)</button>
+                <button class="btn-danger" onclick="wizardCleanup(true)">เสร็จสิ้น (ลบข้อมูลทันที)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- VIEW: OVERVIEW -->
+    <div id="view-overview" class="view active">
+      <div class="header-row">
+        <h1>ภาพรวมระบบ</h1>
+        <div class="actions">
+          <button class="btn-ghost" onclick="refreshData()">🔄 รีเฟรชข้อมูล</button>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="sc-label">จำนวนงานทั้งหมด</div>
+          <div class="sc-value" id="stat-total">0</div>
+          <div class="sc-footer">รายการ</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">อัตราความสำเร็จ</div>
+          <div class="sc-value" id="stat-rate">0%</div>
+          <div class="sc-footer">เฉลี่ยทุก Site</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">สถานะ PASS</div>
+          <div class="sc-value text-green" id="stat-pass">0</div>
+          <div class="sc-footer">ผ่าน QC</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">สถานะ FAIL</div>
+          <div class="sc-value text-red" id="stat-fail">0</div>
+          <div class="sc-footer">ไม่ผ่าน QC</div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="grid-main">
+          <div class="card">
+            <h3>รายการโปรเจกต์ (Sites)</h3>
+            <div class="folder-list" id="folder-list">
+              <div class="loading">กำลังโหลดข้อมูล...</div>
+            </div>
+          </div>
+        </div>
+        <div class="grid-side">
+          <div class="card">
+            <h3>สรุปตามประเภท</h3>
+            <div id="chart-container">
+              <!-- Simple CSS Chart or list -->
+              <div class="chart-legend" id="status-legend"></div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>การทำงานล่าสุด</h3>
+            <div class="log-list" id="log-list">
+              <div class="log-item empty">ยังไม่มีกิจกรรม</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: PROCESS -->
+    <div id="view-process" class="view">
+      <div class="header-row">
+        <h1>ประมวลผล AI</h1>
+        <div class="actions">
+          <button class="btn-ghost" onclick="showView('overview')">← กลับ</button>
+        </div>
+      </div>
+
+      <div class="process-container">
+        <div class="card selection-card">
+          <div class="site-header">
+            <h2 id="current-site-name">เลือกโฟลเดอร์เพื่อเริ่มต้น</h2>
+            <span class="badge" id="current-site-id">-</span>
+          </div>
+          
+          <div class="process-controls">
+            <div class="control-group">
+              <label>เทมเพลตรายงาน</label>
+              <select id="template-select">
+                <option value="DEFAULT">Default Template</option>
+                <option value="HAE_MBB">HAE MBB Template</option>
+                <option value="HAT_SSR">HAT SSR Template</option>
+              </select>
+            </div>
+            <button id="btn-start-process" class="btn-primary" disabled onclick="startProcessing()">🚀 เริ่มประมวลผล AI</button>
+          </div>
+        </div>
+
+        <div class="process-grid">
+          <div class="card">
+            <h3>รายการไฟล์ในโฟลเดอร์</h3>
+            <div class="file-table-wrapper">
+              <table id="file-table">
+                <thead>
+                  <tr>
+                    <th>ชื่อไฟล์</th>
+                    <th>ขนาด</th>
+                    <th>สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody id="file-list-body">
+                  <tr><td colspan="3" class="empty">กรุณาเลือกโฟลเดอร์จากหน้าภาพรวม</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <div class="card">
+            <h3>สถานะการประมวลผล</h3>
+            <div id="process-status" class="process-status">
+              <div class="progress-bar-container">
+                <div id="progress-bar" class="progress-bar"></div>
+              </div>
+              <div id="process-info">พร้อมสำหรับการประมวลผล</div>
+              <div id="process-logs" class="process-logs"></div>
+            </div>
+            <div class="actions mt-20">
+              <button id="btn-gen-report" class="btn-outline" disabled onclick="generateReport()">📄 ออกรายงาน (PAT)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: REPORTS -->
+    <div id="view-reports" class="view">
+      <h1>คลังรายงาน</h1>
+      <p>รายการรายงานที่ถูกสร้างขึ้นแล้ว</p>
+      <div class="card">
+        <div class="empty-state">
+          <div class="icon">📂</div>
+          <p>ฟีเจอร์นี้กำลังพัฒนา คุณสามารถเข้าดูรายงานได้โดยตรงจากโฟลเดอร์ "TEMPATE" ในแต่ละ Site</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODAL -->
+  <div id="modal-overlay" class="overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">แจ้งเตือน</h3>
+        <button class="close-btn" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="closeModal()">ตกลง</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
