@@ -21,6 +21,20 @@ let wizardData = {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("[QC-AUTO] Initializing Dashboard...");
     try {
+        // Add Enter key listeners for auth fields
+        ['admin-email', 'admin-password'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('keypress', e => { if (e.key === 'Enter') checkAuth(); });
+        });
+        ['reset-email'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('keypress', e => { if (e.key === 'Enter') requestOTP(); });
+        });
+        ['otp-code', 'new-password', 'confirm-password'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('keypress', e => { if (e.key === 'Enter') resetPassword(); });
+        });
+
         // Check if already authenticated (simple session storage)
         if (sessionStorage.getItem('qc_auth') === 'true') {
             const overlay = document.getElementById('auth-overlay');
@@ -36,37 +50,113 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===== AUTHENTICATION =====
+function showAuthMode(mode) {
+    document.getElementById('login-form').style.display = mode === 'login' ? 'block' : 'none';
+    document.getElementById('forgot-form').style.display = mode === 'forgot' ? 'block' : 'none';
+    document.getElementById('otp-form').style.display = mode === 'otp' ? 'block' : 'none';
+    
+    // Clear errors
+    document.getElementById('auth-error').textContent = '';
+    document.getElementById('reset-error').textContent = '';
+    document.getElementById('otp-error').textContent = '';
+}
+
 async function checkAuth() {
-    const passwordInput = document.getElementById('admin-password');
-    const password = passwordInput ? passwordInput.value : "";
+    const email = document.getElementById('admin-email').value.trim();
+    const password = document.getElementById('admin-password').value;
     const errorEl = document.getElementById('auth-error');
     
-    if (!password) {
-        if (errorEl) errorEl.textContent = "กรุณากรอกรหัสผ่าน";
+    if (!email || !password) {
+        errorEl.textContent = "กรุณากรอกอีเมลและรหัสผ่าน";
         return;
     }
 
     try {
-        const response = await fetch(`${SCRIPT_URL}?action=checkpassword&password=${encodeURIComponent(password)}`);
+        const response = await fetch(`${SCRIPT_URL}?action=login&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`);
         const data = await response.json();
         
         if (data.success) {
             sessionStorage.setItem('qc_auth', 'true');
+            sessionStorage.setItem('qc_user', data.email);
             document.getElementById('auth-overlay').classList.remove('active');
+            document.getElementById('user-email').textContent = data.email;
             refreshData();
         } else {
-            if (errorEl) errorEl.textContent = data.error || "รหัสผ่านไม่ถูกต้อง";
+            errorEl.textContent = data.error || "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
         }
     } catch (err) {
-        console.warn("[QC-AUTO] Auth Fetch Error, trying fallback...");
-        // Fallback for demo purposes if SCRIPT_URL is not set or failing
-        if (password === "QC-ADMIN-2024") {
+        errorEl.textContent = "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้";
+    }
+}
+
+async function requestOTP() {
+    const email = document.getElementById('reset-email').value.trim();
+    const infoEl = document.getElementById('reset-info');
+    const errorEl = document.getElementById('reset-error');
+    const btn = document.getElementById('btn-request-otp');
+
+    if (!email) {
+        errorEl.textContent = "กรุณากรอกอีเมล";
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "⏳ กำลังส่ง OTP...";
+    errorEl.textContent = "";
+
+    try {
+        const response = await fetch(`${SCRIPT_URL}?action=requestotp&email=${encodeURIComponent(email)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            sessionStorage.setItem('reset_email', email);
+            infoEl.textContent = data.message;
+            setTimeout(() => { showAuthMode('otp'); }, 1500);
+        } else {
+            errorEl.textContent = data.error;
+            btn.disabled = false;
+            btn.textContent = "ขอรหัส OTP";
+        }
+    } catch (err) {
+        errorEl.textContent = "เกิดข้อผิดพลาดในการขอ OTP";
+        btn.disabled = false;
+        btn.textContent = "ขอรหัส OTP";
+    }
+}
+
+async function resetPassword() {
+    const email = sessionStorage.getItem('reset_email');
+    const otp = document.getElementById('otp-code').value.trim();
+    const newPass = document.getElementById('new-password').value;
+    const confirmPass = document.getElementById('confirm-password').value;
+    const errorEl = document.getElementById('otp-error');
+
+    if (!otp || !newPass || !confirmPass) {
+        errorEl.textContent = "กรุณากรอกข้อมูลให้ครบทุกช่อง";
+        return;
+    }
+
+    if (newPass !== confirmPass) {
+        errorEl.textContent = "รหัสผ่านไม่ตรงกัน";
+        return;
+    }
+
+    try {
+        const response = await fetch(`${SCRIPT_URL}?action=resetpassword&email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}&newPassword=${encodeURIComponent(newPass)}`);
+        const data = await response.json();
+        
+        if (data.success) {
             sessionStorage.setItem('qc_auth', 'true');
+            sessionStorage.setItem('qc_user', email);
             document.getElementById('auth-overlay').classList.remove('active');
+            document.getElementById('user-email').textContent = email;
+            openModal("เปลี่ยนรหัสผ่านสำเร็จ", "คุณได้เปลี่ยนรหัสผ่านและเข้าสู่ระบบเรียบร้อยแล้ว");
             refreshData();
         } else {
-            if (errorEl) errorEl.textContent = "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ หรือรหัสไม่ถูกต้อง";
+            errorEl.textContent = data.error;
         }
+    } catch (err) {
+        errorEl.textContent = "เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน";
     }
 }
 

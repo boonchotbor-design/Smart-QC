@@ -483,3 +483,48 @@ td { padding: 12px; font-size: 14px; border-bottom: 1px solid var(--border); }
   background: #ff1a3c;
   box-shadow: 0 5px 15px rgba(255, 61, 90, 0.3);
 }
+
+/* Auth Stack Styles */
+.input-group-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.input-group-stack input {
+  text-align: left;
+  letter-spacing: normal;
+  font-size: 15px;
+}
+
+.auth-footer {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.auth-footer a {
+  color: var(--text3);
+  font-size: 13px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.auth-footer a:hover {
+  color: var(--accent);
+}
+
+.info-text {
+  color: var(--green);
+  font-size: 13px;
+  margin-top: 15px;
+}
+
+#otp-code {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  text-align: center;
+  letter-spacing: 10px;
+  padding-left: 24px;
+}

@@ -18,17 +18,58 @@
 
   <!-- AUTH OVERLAY -->
   <div id="auth-overlay" class="overlay">
-    <div class="auth-card">
+    <div class="auth-card" id="login-form">
       <div class="logo">
         <span class="logo-bracket">[</span>QC<span class="logo-dot">•</span>ADMIN<span class="logo-bracket">]</span>
       </div>
       <h2>เข้าสู่ระบบจัดการ</h2>
-      <p>กรุณากรอกรหัสผ่านเพื่อเข้าใช้งาน Dashboard</p>
-      <div class="input-group">
+      <p>กรุณากรอกอีเมลและรหัสผ่านเพื่อเข้าใช้งาน</p>
+      <div class="input-group-stack">
+        <input type="email" id="admin-email" placeholder="อีเมล (@teloneer.com)" />
         <input type="password" id="admin-password" placeholder="รหัสผ่าน" />
-        <button class="btn-primary" onclick="checkAuth()">ยืนยัน</button>
+        <button class="btn-primary" onclick="checkAuth()">เข้าสู่ระบบ</button>
+      </div>
+      <div class="auth-footer">
+        <a href="#" onclick="showAuthMode('forgot')">ลืมรหัสผ่าน?</a>
       </div>
       <p id="auth-error" class="error-text"></p>
+    </div>
+
+    <!-- Forgot Password Mode -->
+    <div class="auth-card" id="forgot-form" style="display:none;">
+      <div class="logo">
+        <span class="logo-bracket">[</span>QC<span class="logo-dot">•</span>RESET<span class="logo-bracket">]</span>
+      </div>
+      <h2>ลืมรหัสผ่าน</h2>
+      <p>ระบุอีเมลของคุณเพื่อรับรหัส OTP</p>
+      <div class="input-group-stack">
+        <input type="email" id="reset-email" placeholder="อีเมลที่ลงทะเบียนไว้" />
+        <button class="btn-primary" id="btn-request-otp" onclick="requestOTP()">ขอรหัส OTP</button>
+      </div>
+      <div class="auth-footer">
+        <a href="#" onclick="showAuthMode('login')">← กลับไปหน้า Login</a>
+      </div>
+      <p id="reset-info" class="info-text"></p>
+      <p id="reset-error" class="error-text"></p>
+    </div>
+
+    <!-- OTP & New Password Mode -->
+    <div class="auth-card" id="otp-form" style="display:none;">
+      <div class="logo">
+        <span class="logo-bracket">[</span>QC<span class="logo-dot">•</span>VERIFY<span class="logo-bracket">]</span>
+      </div>
+      <h2>ยืนยันตัวตน</h2>
+      <p>กรอกรหัส OTP 6 หลักที่ได้รับในอีเมล</p>
+      <div class="input-group-stack">
+        <input type="text" id="otp-code" placeholder="รหัส OTP (6 หลัก)" maxlength="6" />
+        <input type="password" id="new-password" placeholder="รหัสผ่านใหม่" />
+        <input type="password" id="confirm-password" placeholder="ยืนยันรหัสผ่านใหม่" />
+        <button class="btn-primary" onclick="resetPassword()">เปลี่ยนรหัสผ่านและเข้าสู่ระบบ</button>
+      </div>
+      <div class="auth-footer">
+        <a href="#" onclick="showAuthMode('forgot')">← ขอรหัสใหม่อีกครั้ง</a>
+      </div>
+      <p id="otp-error" class="error-text"></p>
     </div>
   </div>
 
