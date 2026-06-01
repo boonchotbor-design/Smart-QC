@@ -1,5 +1,5 @@
 /*
- * 🚀 Inventory Smart System - V.6.6.7
+ * 🚀 Inventory Smart System - V.6.6.8
  * Includes: DUID Suffix Region Detection & Master Data Lookup Fallback
  */
 
@@ -15,7 +15,7 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
   }
   return HtmlService.createTemplateFromFile('app').evaluate()
-      .setTitle('Inventory Smart App V.6.6.7')
+      .setTitle('Inventory Smart App V.6.6.8')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -203,7 +203,7 @@ function saveMainData(header, items) {
 
     var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
     
-    // Mapping V.6.6.7: A=No, B=DUID, C=Region, D=IN/OUT, E=Type, F=Date, G=Bill, H=Model, I=Code, J=Desc, K=Qty, L=SN, M=WH_O, N=RC_O, O=WH_L, P=RC_L, V=STATUS
+    // Mapping V.6.6.8: A=No, B=DUID, C=Region, D=IN/OUT, E=Type, F=Date, G=Bill, H=Model, I=Code, J=Desc, K=Qty, L=SN, M=WH_O, N=RC_O, O=WH_L, P=RC_L, V=STATUS
     var allRows = items.map(function(item, index) { 
       var row = new Array(22).fill("");
       row[0] = index + 1; 
@@ -236,7 +236,7 @@ function saveMainData(header, items) {
     return { 
       success: true, 
       header: header, // คืนค่า header กลับไปด้วยเพื่อให้ UI ใช้งานต่อได้ถูกต้อง
-      debug: "✅ บันทึกสำเร็จ (V.6.6.7)\n📍 Sheet: " + sheetName + "\n🔢 บันทึกที่แถว: 2 (บนสุด)\n🆔 DUID: " + cleanDuid + " (Column B)" 
+      debug: "✅ บันทึกสำเร็จ (V.6.6.8)\n📍 Sheet: " + sheetName + "\n🔢 บันทึกที่แถว: 2 (บนสุด)\n🆔 DUID: " + cleanDuid + " (Column B)" 
     };
   } catch (e) { return { success: false, message: "❌ ระบบขัดข้อง: " + e.toString() }; } finally { lock.releaseLock(); }
 }
