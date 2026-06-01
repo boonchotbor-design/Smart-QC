@@ -1,9 +1,9 @@
 /*
- * 🚀 Inventory Smart System - V.6.6.6
- * Includes: DUID Suffix Region Detection & Master Data Lookup
+ * 🚀 Inventory Smart System - V.6.6.7
+ * Includes: DUID Suffix Region Detection & Master Data Lookup Fallback
  */
 
-var SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ'; // ตรวจสอบว่า ID นี้ถูกต้องสำหรับ Sheet ของคุณ
+var SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ'; 
 var ROOT_FOLDER_ID = '1IKefCE5rhBAoyM0uQBTLvEkPlRUm6lD_'; 
 var NODE_JS_WEBHOOK_URL = 'https://project-ju28a.vercel.app/notify'; 
 
@@ -15,7 +15,7 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
   }
   return HtmlService.createTemplateFromFile('app').evaluate()
-      .setTitle('Inventory Smart App V.6.6.5')
+      .setTitle('Inventory Smart App V.6.6.7')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -188,28 +188,41 @@ function saveMainData(header, items) {
     var cleanBill = String(header.billNo || "").trim();
     if (isDuidClosed(cleanDuid, customer)) return { success: false, message: "❌ DUID: " + cleanDuid + " สถานะเป็น 'Closed' แล้ว" };
     
+    // Fallback: ถ้า Region หายไป ให้ลองหาจาก Master Data ก่อนบันทึก
+    if (!header.region || header.region === "-" || header.region === "") {
+      try {
+        var projects = getProjectData();
+        var found = projects.find(function(p) { return p.duid.toLowerCase() === cleanDuid.toLowerCase(); });
+        if (found && found.region && found.region !== "-") {
+          header.region = found.region.toUpperCase();
+        }
+      } catch (e) {
+        logToSheet("ERROR", "Region Fallback Error: " + e.toString());
+      }
+    }
+
     var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
     
-    // Mapping V.6.6.5: A=No, B=DUID, C=Region, D=IN/OUT, E=Type, F=Date, G=Bill, H=Model, I=Code, J=Desc, K=Qty, L=SN, M=WH_O, N=RC_O, O=WH_L, P=RC_L, V=STATUS
+    // Mapping V.6.6.7: A=No, B=DUID, C=Region, D=IN/OUT, E=Type, F=Date, G=Bill, H=Model, I=Code, J=Desc, K=Qty, L=SN, M=WH_O, N=RC_O, O=WH_L, P=RC_L, V=STATUS
     var allRows = items.map(function(item, index) { 
       var row = new Array(22).fill("");
-      row[0] = index + 1; // A: No (เริ่มที่ 1 ทุกครั้งที่บันทึก)
-      row[1] = cleanDuid; // B: DUID
-      row[2] = String(header.region || "").trim(); // C: Region
-      row[3] = String(header.type || "").trim(); // D: IN/OUT
-      row[4] = String(item.type || "").trim(); // E: Type
-      row[5] = dateStr; // F: Pick up Date
-      row[6] = cleanBill; // G: Bill No.
-      row[7] = String(item.model || "").trim(); // H: Model
-      row[8] = String(item.code || "").trim(); // I: Item Code
-      row[9] = String(item.desc || "").trim(); // J: Item Description
-      row[10] = Number(item.qty) || 0; // K: Sum of Req.Qty
-      row[11] = String(item.sn || "").trim(); // L: Serial
-      row[12] = String(header.ownerWarehouse || "").trim(); // M: Owner warehouse
-      row[13] = String(header.ownerReceiver || "").trim(); // N: Owner Receiver
-      row[14] = String(header.locationWarehouse || "").trim(); // O: Location warehouse
-      row[15] = String(header.locationReceiver || "").trim(); // P: Location Receiver
-      row[21] = "Pending"; // V: STATUS (Default)
+      row[0] = index + 1; 
+      row[1] = cleanDuid; 
+      row[2] = String(header.region || "").trim(); 
+      row[3] = String(header.type || "").trim(); 
+      row[4] = String(item.type || "").trim(); 
+      row[5] = dateStr; 
+      row[6] = cleanBill; 
+      row[7] = String(item.model || "").trim(); 
+      row[8] = String(item.code || "").trim(); 
+      row[9] = String(item.desc || "").trim(); 
+      row[10] = Number(item.qty) || 0; 
+      row[11] = String(item.sn || "").trim(); 
+      row[12] = String(header.ownerWarehouse || "").trim(); 
+      row[13] = String(header.ownerReceiver || "").trim(); 
+      row[14] = String(header.locationWarehouse || "").trim(); 
+      row[15] = String(header.locationReceiver || "").trim(); 
+      row[21] = "Pending"; 
       return row;
     });
     
@@ -220,7 +233,11 @@ function saveMainData(header, items) {
     
     SpreadsheetApp.flush(); 
     updateDuidStatus(cleanDuid, customer);
-    return { success: true, debug: "✅ บันทึกสำเร็จ (V.6.6.5)\n📍 Sheet: " + sheetName + "\n🔢 บันทึกที่แถว: 2 (บนสุด)\n🆔 DUID: " + cleanDuid + " (Column B)" };
+    return { 
+      success: true, 
+      header: header, // คืนค่า header กลับไปด้วยเพื่อให้ UI ใช้งานต่อได้ถูกต้อง
+      debug: "✅ บันทึกสำเร็จ (V.6.6.7)\n📍 Sheet: " + sheetName + "\n🔢 บันทึกที่แถว: 2 (บนสุด)\n🆔 DUID: " + cleanDuid + " (Column B)" 
+    };
   } catch (e) { return { success: false, message: "❌ ระบบขัดข้อง: " + e.toString() }; } finally { lock.releaseLock(); }
 }
 

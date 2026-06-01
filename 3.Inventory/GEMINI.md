@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.6.6.6)
+# 📦 Inventory Smart System (V.6.6.8)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI) and Telegram Bot with AI OCR capabilities.
 
@@ -35,6 +35,17 @@ Project Context: A Google Apps Script application for managing hardware inventor
 ### 🐞 Bug Fixing
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
+
+## 🐞 Bug Fixes & Stability (V.6.6.8)
+- **Multi-LINE Bot Support**: The system now supports multiple LINE accounts (TLN-Inventory, TLN-Inventory#2, TLN-Inventory#3). Notifications are sent through all configured bots to ensure delivery.
+- **Dynamic Configuration**: Improved `index.js` to handle an array of LINE credentials, allowing for easier scaling of the notification system.
+- **Version Sync**: Synchronized version to V.6.6.8 across all components.
+
+## 🐞 Bug Fixes & Stability (V.6.6.7)
+- **Region Fallback Engine**: Implemented a robust fallback in `saveMainData`. If Region is missing, the system automatically lookups the Master Data sheet using DUID before saving.
+- **UI-Backend Sync**: Modified the Web App to use the processed header returned from GAS, ensuring that folder creation and notifications always use the most accurate Region detected.
+- **Enhanced Diagnostics**: Added rich environment variable checks and detailed logging to `index.js` for better troubleshooting of LINE/Telegram notifications.
+- **Version Sync**: Synchronized version to V.6.6.7 across all components.
 
 ## 🐞 Bug Fixes & Stability (V.6.6.6)
 - **Enhanced Region Recording**: Fixed issue where Column C (Region) was not being recorded.
