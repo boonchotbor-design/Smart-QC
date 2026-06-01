@@ -97,6 +97,15 @@ function logout() {
     }
 }
 
+function openChangePassword() {
+    const userEmail = sessionStorage.getItem('qc_user');
+    if (userEmail) {
+        document.getElementById('reset-email').value = userEmail;
+        showAuthMode('forgot');
+        document.getElementById('auth-overlay').classList.add('active');
+    }
+}
+
 function togglePassword(inputId) {
     const input = document.getElementById(inputId);
     const btn = input.nextElementSibling;
