@@ -89,6 +89,14 @@ async function checkAuth() {
     }
 }
 
+function logout() {
+    if (confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) {
+        sessionStorage.removeItem('qc_auth');
+        sessionStorage.removeItem('qc_user');
+        window.location.reload();
+    }
+}
+
 async function requestOTP() {
     const email = document.getElementById('reset-email').value.trim();
     const infoEl = document.getElementById('reset-info');
