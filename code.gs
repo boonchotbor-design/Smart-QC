@@ -7,6 +7,7 @@ const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c".trim(); 
 const SHEET_NAME = "Sheet1";
+const DEFAULT_PASSWORD = "QC-ADMIN-2026";
 
 function getSpreadsheet() {
   const candidates = [
@@ -50,16 +51,24 @@ const TEMPLATES = {
 };
 
 const TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"; 
-const TELEGRAM_TARGET_ID = "YOUR_TELEGRAM_TARGET_ID";
-const GROQ_KEYS = ["YOUR_GROQ_KEY_1", "YOUR_GROQ_KEY_2", "YOUR_GROQ_KEY_3", "YOUR_GROQ_KEY_4"];
+const TELEGRAM_TARGET_ID = "-5199951121";
+const GROQ_KEYS = ["YOUR_GROQ_KEY","YOUR_GROQ_KEY","YOUR_GROQ_KEY","YOUR_GROQ_KEY"];
 const GROQ_AI_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 function doGet(e) {
   let params = e?.parameter || {};
   const action = (params.action || "").toLowerCase();
+  
+  // Auto-init User Sheet
+  try { initUserSheet(); } catch(e) { console.error("Init Error: " + e); }
+
   try {
+    if (action === "login") return jsonResponse(handleLogin(params.email, params.password));
+    if (action === "requestotp") return jsonResponse(handleRequestOTP(params.email));
+    if (action === "resetpassword") return jsonResponse(handleResetPassword(params.email, params.otp, params.newPassword));
+    
     if (action === "getdata") return jsonResponse(getDashboardData(params.site || "All Sites"));
-    if (action === "checkpassword") return (params.password === "QC-ADMIN-2024") ? jsonResponse({success:true}) : jsonResponse({error:"รหัสไม่ถูกต้อง"});
+    if (action === "checkpassword") return (params.password === "QC-ADMIN-2024" || (typeof DEFAULT_PASSWORD !== 'undefined' && params.password === DEFAULT_PASSWORD)) ? jsonResponse({success:true}) : jsonResponse({error:"รหัสไม่ถูกต้อง"});
     if (action === "listfolders") return jsonResponse({ folders: listSubFolders(params.root || FOLDER_ID) });
     if (action === "listfiles") return jsonResponse(listFilesInFolder(params.folderId));
     if (action === "processfolder") return jsonResponse(processFolderById(params.folderId, params.templateId));
@@ -68,8 +77,40 @@ function doGet(e) {
     if (action === "createsitefolder") return jsonResponse(createSiteFolder(params.project, params.type, params.site));
     if (action === "listtemplates") return jsonResponse(listTemplates(params.type, params.project));
     if (action === "deletefolder") return jsonResponse(deleteFolderById(params.folderId));
+    if (action === "sendfinalsummary") return jsonResponse(sendFolderSummary(params.folderId, params.pass, params.fail));
     return jsonResponse({ status: "READY", version: VERSION });
   } catch (err) { return jsonResponse({ error: err.toString() }); }
+}
+
+function sendFolderSummary(folderId, passCount, failCount) {
+  try {
+    const folder = DriveApp.getFolderById(folderId);
+    const siteName = folder.getName();
+    
+    // Find all files that were marked as FAIL in this session
+    // Since we don't have a session ID, we'll just look for folders starting with FAIL_
+    // or we can just trust the counts passed from the dashboard.
+    // The user wants a list of rejected files in the summary.
+    
+    // Let's search the spreadsheet for FAIL entries for this site today
+    const ss = getSpreadsheet();
+    const sheet = getSheetSmart(ss, SHEET_NAME);
+    const data = sheet.getDataRange().getValues();
+    const failures = [];
+    
+    // Look back at today's entries for this site
+    const today = new Date().toDateString();
+    data.forEach(row => {
+      if (row[0] instanceof Date && row[0].toDateString() === today && String(row[7]) === siteName && String(row[3]).includes("FAIL")) {
+        failures.push({ name: row[1], category: row[2] });
+      }
+    });
+
+    sendDualSummary(siteName, passCount, failCount, failures);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
 }
 
 function deleteFolderById(folderId) {
@@ -374,7 +415,16 @@ function listFilesInFolder(id) {
   } catch (e) { return { error: e.toString() }; }
 }
 function callTGRaw(m, p) { return UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${m}`, { method: "post", contentType: "application/json", payload: JSON.stringify(p), muteHttpExceptions: true }); }
-function sendDualSummary(s, p, f, items) { let txt = `📊 สรุปผล AI (${s})\n✅ ผ่าน: ${p}\n❌ ไม่ผ่าน: ${f}`; items.forEach((it, i) => txt += `\n${i + 1}.📄 ${it.name}`); callTGRaw("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: txt }); }
+function sendDualSummary(s, p, f, items) { 
+  let txt = `📊 สรุปผล AI (${s})\n✅ ผ่าน: ${p}\n❌ ไม่ผ่าน: ${f}`; 
+  if (items.length > 0) {
+    txt += `\n`;
+    items.forEach((it, i) => {
+      txt += `\n${i + 1}.📄 ไฟล์: ${it.name}\n📌 หมวด: ${it.category || it.reason || "N/A"}`;
+    });
+  }
+  callTGRaw("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: txt }); 
+}
 function sendDualFailNotify(n, c, r, u, fid) { const blob = DriveApp.getFileById(fid).getBlob(); const kb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไม่อนุมัติ", callback_data: "rej|" + fid }]] }; callTGRaw("sendPhoto", { chat_id: TELEGRAM_TARGET_ID, photo: blob, caption: `🚨 พบงานไม่ผ่าน\n📄 ไฟล์: ${n}\n📌 หมวด: ${c}\n❌ สาเหตุ: ${r}`, reply_markup: JSON.stringify(kb) }); }
 
 function processFolderById(folderId, templateId) {
@@ -520,3 +570,104 @@ function recheckFile(fileId, templateId, siteName) {
     return { success: false, error: e.toString() };
   }
 }
+
+/**
+ * Multi-User Auth Handlers
+ */
+function initUserSheet() {
+  const ss = getSpreadsheet();
+  let sheet = ss.getSheetByName("Users");
+  if (!sheet) {
+    sheet = ss.insertSheet("Users");
+    sheet.appendRow(["Email", "Password", "OTP", "OTP_Expiry"]);
+    
+    const initialUsers = [
+      "adisak.chanmao@teloneer.com", "boonchot.boriwut@teloneer.com", "apichart.kampuang@teloneer.com",
+      "payon.sapphat@teloneer.com", "nattawoot.suwan@teloneer.com", "palagon.prommueangma@teloneer.com",
+      "nammon.manakiat@teloneer.com", "Auttaseth.klomthaisong@teloneer.com", "supot.hoonyong@teloneer.com",
+      "khathahat.sitthihong@teloneer.com", "thossapol.chaloemrit@teloneer.com", "Sathitphorn.Intapankaew@teloneer.com"
+    ];
+    
+    initialUsers.forEach(email => {
+      sheet.appendRow([email.toLowerCase().trim(), DEFAULT_PASSWORD, "", ""]);
+    });
+  }
+}
+
+function handleLogin(email, password) {
+  if (!email || !password) return { success: false, error: "กรุณากรอกอีเมลและรหัสผ่าน" };
+  const ss = getSpreadsheet();
+  const sheet = getSheetSmart(ss, "Users");
+  const data = sheet.getDataRange().getValues();
+  
+  const emailLower = email.toLowerCase().trim();
+  const userRow = data.find(row => String(row[0]).toLowerCase() === emailLower && String(row[1]) === password);
+  
+  if (userRow) {
+    return { success: true, email: userRow[0] };
+  }
+  return { success: false, error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" };
+}
+
+function handleRequestOTP(email) {
+  if (!email) return { success: false, error: "กรุณากรอกอีเมล" };
+  const ss = getSpreadsheet();
+  const sheet = getSheetSmart(ss, "Users");
+  const data = sheet.getDataRange().getValues();
+  
+  const emailLower = email.toLowerCase().trim();
+  const rowIndex = data.findIndex(row => String(row[0]).toLowerCase() === emailLower);
+  
+  if (rowIndex === -1) return { success: false, error: "ไม่พบอีเมลนี้ในระบบ" };
+  
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiry = new Date(new Date().getTime() + 10 * 60000); // 10 mins
+  
+  sheet.getRange(rowIndex + 1, 3).setValue(otp);
+  sheet.getRange(rowIndex + 1, 4).setValue(expiry);
+  
+  try {
+    MailApp.sendEmail({
+      to: emailLower,
+      subject: "[QC-AUTO] รหัสยืนยัน (OTP) สำหรับเปลี่ยนรหัสผ่าน",
+      htmlBody: `
+        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #00e5ff;">QC Automate OTP</h2>
+          <p>รหัสยืนยันของคุณคือ:</p>
+          <div style="font-size: 32px; font-weight: bold; color: #333; letter-spacing: 5px; margin: 20px 0;">${otp}</div>
+          <p style="color: #666;">รหัสนี้จะหมดอายุภายใน 10 นาที</p>
+          <hr style="border: none; border-top: 1px solid #eee;">
+          <small style="color: #999;">หากคุณไม่ได้ขอยืนยัน โปรดเพิกเฉยต่ออีเมลนี้</small>
+        </div>
+      `
+    });
+    return { success: true, message: "ส่ง OTP ไปที่เมลของคุณแล้ว" };
+  } catch (e) {
+    return { success: false, error: "ส่งเมลไม่สำเร็จ: " + e.toString() };
+  }
+}
+
+function handleResetPassword(email, otp, newPassword) {
+  if (!email || !otp || !newPassword) return { success: false, error: "กรุณากรอกข้อมูลให้ครบถ้วน" };
+  const ss = getSpreadsheet();
+  const sheet = getSheetSmart(ss, "Users");
+  const data = sheet.getDataRange().getValues();
+  
+  const emailLower = email.toLowerCase().trim();
+  const rowIndex = data.findIndex(row => String(row[0]).toLowerCase() === emailLower);
+  
+  if (rowIndex === -1) return { success: false, error: "ไม่พบอีเมลนี้ในระบบ" };
+  
+  const storedOtp = String(data[rowIndex][2]);
+  const expiry = new Date(data[rowIndex][3]);
+  
+  if (storedOtp !== String(otp)) return { success: false, error: "รหัส OTP ไม่ถูกต้อง" };
+  if (new Date() > expiry) return { success: false, error: "รหัส OTP หมดอายุแล้ว" };
+  
+  sheet.getRange(rowIndex + 1, 2).setValue(newPassword);
+  sheet.getRange(rowIndex + 1, 3).setValue(""); // Clear OTP
+  sheet.getRange(rowIndex + 1, 4).setValue("");
+  
+  return { success: true, message: "เปลี่ยนรหัสผ่านสำเร็จแล้ว" };
+}
+

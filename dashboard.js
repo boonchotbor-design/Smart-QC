@@ -19,56 +19,170 @@ let wizardData = {
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if already authenticated (simple session storage)
-    if (sessionStorage.getItem('qc_auth') === 'true') {
-        document.getElementById('auth-overlay').classList.remove('active');
-        refreshData();
-    } else {
-        document.getElementById('auth-overlay').classList.add('active');
+    console.log("[QC-AUTO] Initializing Dashboard...");
+    try {
+        // Add Enter key listeners for auth fields
+        ['admin-email', 'admin-password'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('keypress', e => { if (e.key === 'Enter') checkAuth(); });
+        });
+        ['reset-email'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('keypress', e => { if (e.key === 'Enter') requestOTP(); });
+        });
+        ['otp-code', 'new-password', 'confirm-password'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('keypress', e => { if (e.key === 'Enter') resetPassword(); });
+        });
+
+        // Check if already authenticated (simple session storage)
+        if (sessionStorage.getItem('qc_auth') === 'true') {
+            const overlay = document.getElementById('auth-overlay');
+            if (overlay) overlay.classList.remove('active');
+            refreshData();
+        } else {
+            const overlay = document.getElementById('auth-overlay');
+            if (overlay) overlay.classList.add('active');
+        }
+    } catch (e) {
+        console.error("[QC-AUTO] Init Error:", e);
     }
 });
 
 // ===== AUTHENTICATION =====
+function showAuthMode(mode) {
+    document.getElementById('login-form').style.display = mode === 'login' ? 'block' : 'none';
+    document.getElementById('forgot-form').style.display = mode === 'forgot' ? 'block' : 'none';
+    document.getElementById('otp-form').style.display = mode === 'otp' ? 'block' : 'none';
+    
+    // Clear errors
+    document.getElementById('auth-error').textContent = '';
+    document.getElementById('reset-error').textContent = '';
+    document.getElementById('otp-error').textContent = '';
+}
+
 async function checkAuth() {
+    const email = document.getElementById('admin-email').value.trim();
     const password = document.getElementById('admin-password').value;
     const errorEl = document.getElementById('auth-error');
     
-    if (!password) {
-        errorEl.textContent = "กรุณากรอกรหัสผ่าน";
+    if (!email || !password) {
+        errorEl.textContent = "กรุณากรอกอีเมลและรหัสผ่าน";
         return;
     }
 
     try {
-        const response = await fetch(`${SCRIPT_URL}?action=checkpassword&password=${encodeURIComponent(password)}`);
+        const response = await fetch(`${SCRIPT_URL}?action=login&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`);
         const data = await response.json();
         
         if (data.success) {
             sessionStorage.setItem('qc_auth', 'true');
+            sessionStorage.setItem('qc_user', data.email);
             document.getElementById('auth-overlay').classList.remove('active');
+            document.getElementById('user-email').textContent = data.email;
             refreshData();
         } else {
-            errorEl.textContent = data.error || "รหัสผ่านไม่ถูกต้อง";
+            errorEl.textContent = data.error || "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
         }
     } catch (err) {
-        // Fallback for demo purposes if SCRIPT_URL is not set
-        if (password === "QC-ADMIN-2024") {
+        errorEl.textContent = "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้";
+    }
+}
+
+async function requestOTP() {
+    const email = document.getElementById('reset-email').value.trim();
+    const infoEl = document.getElementById('reset-info');
+    const errorEl = document.getElementById('reset-error');
+    const btn = document.getElementById('btn-request-otp');
+
+    if (!email) {
+        errorEl.textContent = "กรุณากรอกอีเมล";
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "⏳ กำลังส่ง OTP...";
+    errorEl.textContent = "";
+
+    try {
+        const response = await fetch(`${SCRIPT_URL}?action=requestotp&email=${encodeURIComponent(email)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            sessionStorage.setItem('reset_email', email);
+            infoEl.textContent = data.message;
+            setTimeout(() => { showAuthMode('otp'); }, 1500);
+        } else {
+            errorEl.textContent = data.error;
+            btn.disabled = false;
+            btn.textContent = "ขอรหัส OTP";
+        }
+    } catch (err) {
+        errorEl.textContent = "เกิดข้อผิดพลาดในการขอ OTP";
+        btn.disabled = false;
+        btn.textContent = "ขอรหัส OTP";
+    }
+}
+
+async function resetPassword() {
+    const email = sessionStorage.getItem('reset_email');
+    const otp = document.getElementById('otp-code').value.trim();
+    const newPass = document.getElementById('new-password').value;
+    const confirmPass = document.getElementById('confirm-password').value;
+    const errorEl = document.getElementById('otp-error');
+
+    if (!otp || !newPass || !confirmPass) {
+        errorEl.textContent = "กรุณากรอกข้อมูลให้ครบทุกช่อง";
+        return;
+    }
+
+    if (newPass !== confirmPass) {
+        errorEl.textContent = "รหัสผ่านไม่ตรงกัน";
+        return;
+    }
+
+    try {
+        const response = await fetch(`${SCRIPT_URL}?action=resetpassword&email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}&newPassword=${encodeURIComponent(newPass)}`);
+        const data = await response.json();
+        
+        if (data.success) {
             sessionStorage.setItem('qc_auth', 'true');
+            sessionStorage.setItem('qc_user', email);
             document.getElementById('auth-overlay').classList.remove('active');
+            document.getElementById('user-email').textContent = email;
+            openModal("เปลี่ยนรหัสผ่านสำเร็จ", "คุณได้เปลี่ยนรหัสผ่านและเข้าสู่ระบบเรียบร้อยแล้ว");
             refreshData();
         } else {
-            errorEl.textContent = "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ หรือรหัสไม่ถูกต้อง";
+            errorEl.textContent = data.error;
         }
+    } catch (err) {
+        errorEl.textContent = "เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน";
     }
 }
 
 // ===== VIEW NAVIGATION =====
 function showView(viewId) {
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById(`view-${viewId}`).classList.add('active');
+    console.log("[QC-AUTO] Showing view:", viewId);
     
+    // Hide all views
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    
+    // Show target view
+    const target = document.getElementById(`view-${viewId}`);
+    if (target) {
+        target.classList.add('active');
+    } else {
+        console.error("[QC-AUTO] View not found:", viewId);
+    }
+    
+    // Update nav links
     document.querySelectorAll('nav a').forEach(a => {
-        if (a.getAttribute('onclick') && a.getAttribute('onclick').includes(viewId)) a.classList.add('active');
-        else a.classList.remove('active');
+        const onclickAttr = a.getAttribute('onclick') || "";
+        if (onclickAttr.includes(`'${viewId}'`)) {
+            a.classList.add('active');
+        } else {
+            a.classList.remove('active');
+        }
     });
 
     if (viewId === 'qc-wizard') {
@@ -178,9 +292,16 @@ async function wizardStartScan() {
             
             // Log and count
             data.details.forEach(det => {
+                const time = new Date().toLocaleTimeString();
                 const entry = document.createElement('div');
                 entry.className = `log-entry ${det.status.toLowerCase()}`;
-                entry.textContent = `[${det.status}] ${det.name} - ${det.reason}`;
+                entry.innerHTML = `
+                    <div class="log-header">
+                        <span class="status-tag">${det.status}</span>
+                        <span class="log-time">${time}</span>
+                    </div>
+                    <div class="log-msg"><b>${det.name}</b><br>${det.reason}</div>
+                `;
                 logContainer.prepend(entry);
                 
                 if (det.status === "PASS") wizardData.passCount++;
@@ -193,6 +314,12 @@ async function wizardStartScan() {
         }
         
         info.textContent = `ตรวจเสร็จสิ้น! รวมทั้งสิ้น ${totalProcessed} รูป`;
+        
+        // Trigger final summary to Telegram
+        try {
+            await fetch(`${SCRIPT_URL}?action=sendfinalsummary&folderId=${wizardData.folderId}&pass=${wizardData.passCount}&fail=${wizardData.failCount}`);
+        } catch (e) { console.error("Summary error:", e); }
+
         btn.style.display = 'none';
         document.getElementById('btn-w-to-step-4').style.display = 'inline-block';
         
