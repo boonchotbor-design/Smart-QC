@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.6.7.1)
+# 📦 Inventory Smart System (V.6.7.2)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI) and Telegram Bot with AI OCR capabilities.
 
@@ -8,7 +8,7 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - **Integration:** Telegram Bot API, Google Drive OCR
 - **Storage:** Google Sheets
 
-## 🚀 Telegram Bot Setup (V.6.7.1)
+## 🚀 Telegram Bot Setup (V.6.7.2)
 - **Webhook:** ต้องตั้งค่าให้ชี้มาที่ Vercel เท่านั้น: `https://[YOUR_VERCEL_URL]/telegram-webhook`
 - **GAS Permissions:** ใน Google Apps Script ต้อง Deploy เป็น Web App โดยตั้งค่า **"Who has access" เป็น "Anyone"** (สำคัญมาก)
 - **Services:** ต้องเปิดใช้งาน **Drive API** ในส่วนของ Services ของ GAS Project
@@ -35,6 +35,10 @@ Project Context: A Google Apps Script application for managing hardware inventor
 ### 🐞 Bug Fixing
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
+
+## 🐞 Bug Fixes & Stability (V.6.7.2)
+- **Destination ID Fix**: Corrected the Telegram Destination ID to the user's personal ID `7378939928`.
+- **Version Sync**: Synchronized version to V.6.7.2 across all components.
 
 ## 🐞 Bug Fixes & Stability (V.6.7.1)
 - **Destination ID Update**: Updated the Telegram Destination ID to `8621299992` as requested by the user.

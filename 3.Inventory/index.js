@@ -29,7 +29,7 @@ const app = express();
 app.get('/', (req, res) => {
   const diagnostic = {
     status: 'Alive',
-    version: 'v6.7.1',
+    version: 'v6.7.2',
     env: {
       hasGasUrl: !!process.env.GAS_WEB_APP_URL,
       lineBotsCount: LINE_CONFIGS.length,
@@ -45,7 +45,7 @@ async function sendNotification(header, items) {
   let errors = [];
   try {
     const botToken = process.env.TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN_FALLBACK;
-    const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '8621299992';
+    const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '7378939928';
     
     console.log(`Notification Triggered: DUID=${header.duid}, Region=${header.region}, LineBots=${LINE_CONFIGS.length}`);
 
