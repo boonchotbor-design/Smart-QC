@@ -29,11 +29,12 @@ const app = express();
 app.get('/', (req, res) => {
   const diagnostic = {
     status: 'Alive',
-    version: 'v6.7.2',
+    version: 'v6.7.3',
     env: {
       hasGasUrl: !!process.env.GAS_WEB_APP_URL,
       lineBotsCount: LINE_CONFIGS.length,
-      hasTelegramToken: !!(process.env.TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN_FALLBACK),
+      hasTelegramTokenEnv: !!process.env.TELEGRAM_BOT_TOKEN,
+      telegramTokenUsed: (process.env.TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN_FALLBACK).substring(0, 15) + '...',
       hasTelegramDest: !!process.env.TELEGRAM_DESTINATION_ID
     }
   };
@@ -47,7 +48,7 @@ async function sendNotification(header, items) {
     const botToken = process.env.TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN_FALLBACK;
     const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '7378939928';
     
-    console.log(`Notification Triggered: DUID=${header.duid}, Region=${header.region}, LineBots=${LINE_CONFIGS.length}`);
+    console.log(`Notification Triggered: DUID=${header.duid}, Region=${header.region}, TokenUsed=${botToken.substring(0, 10)}...`);
 
     let messageText = `📊 ข้อมูล DUID: ${header.duid || "-"}\n` +
                       `━━━━━━━━━━━━━━━\n` +
@@ -70,7 +71,7 @@ async function sendNotification(header, items) {
     }
 
     messageText += `━━━━━━━━━━━━━━━\n` +
-                   `✅ บันทึกสำเร็จ (V.6.6.8)!`;
+                   `✅ บันทึกสำเร็จ (V.6.7.3)!`;
 
     // 1. ส่งไป LINE (ทุกตัวที่ตั้งค่าไว้)
     for (const lineBot of LINE_CONFIGS) {
@@ -94,7 +95,11 @@ async function sendNotification(header, items) {
       await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         chat_id: telegramDestId,
         text: messageText
-      }).catch(err => { console.error('Telegram Push Error:', err.message); errors.push('Telegram:' + err.message); });
+      }).catch(err => { 
+        console.error('Telegram Push Error:', err.message); 
+        console.error('Bot Token Used:', botToken.substring(0, 15) + '...');
+        errors.push('Telegram:' + err.message); 
+      });
     }
     
     if (errors.length > 0) throw new Error(errors.join(', '));
