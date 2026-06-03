@@ -22,17 +22,18 @@ const LINE_CONFIGS = [
 ];
 
 const GAS_WEB_APP_URL = (process.env.GAS_WEB_APP_URL || 'https://script.google.com/macros/s/AKfycbwoTnwaExeObR_54tVajXxz7j2rAsQlyIWN3rbaGfTXxf9-HZ8oAMs4_gKOhrFx7b6b/exec').trim();
+const TELEGRAM_BOT_TOKEN_FALLBACK = '8621299992:AAEnMlqf6KKTYp-HLWaaEDEUql-cOAZYwWk';
 
 const app = express();
 
 app.get('/', (req, res) => {
   const diagnostic = {
     status: 'Alive',
-    version: 'v6.6.8',
+    version: 'v6.7.1',
     env: {
       hasGasUrl: !!process.env.GAS_WEB_APP_URL,
       lineBotsCount: LINE_CONFIGS.length,
-      hasTelegramToken: !!process.env.TELEGRAM_BOT_TOKEN,
+      hasTelegramToken: !!(process.env.TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN_FALLBACK),
       hasTelegramDest: !!process.env.TELEGRAM_DESTINATION_ID
     }
   };
@@ -43,8 +44,8 @@ app.get('/', (req, res) => {
 async function sendNotification(header, items) {
   let errors = [];
   try {
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
-    const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '7378939928';
+    const botToken = process.env.TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN_FALLBACK;
+    const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '8621299992';
     
     console.log(`Notification Triggered: DUID=${header.duid}, Region=${header.region}, LineBots=${LINE_CONFIGS.length}`);
 
@@ -124,7 +125,7 @@ app.post('/webhook', (req, res, next) => {
 });
 
 app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) => {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const botToken = process.env.TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN_FALLBACK;
   let currentChatId = null;
 
   try {

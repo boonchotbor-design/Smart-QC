@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.6.6.8)
+# 📦 Inventory Smart System (V.6.7.1)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI) and Telegram Bot with AI OCR capabilities.
 
@@ -8,11 +8,11 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - **Integration:** Telegram Bot API, Google Drive OCR
 - **Storage:** Google Sheets
 
-## 🚀 Telegram Bot Setup (V.6.6.6)
+## 🚀 Telegram Bot Setup (V.6.7.1)
 - **Webhook:** ต้องตั้งค่าให้ชี้มาที่ Vercel เท่านั้น: `https://[YOUR_VERCEL_URL]/telegram-webhook`
 - **GAS Permissions:** ใน Google Apps Script ต้อง Deploy เป็น Web App โดยตั้งค่า **"Who has access" เป็น "Anyone"** (สำคัญมาก)
 - **Services:** ต้องเปิดใช้งาน **Drive API** ในส่วนของ Services ของ GAS Project
-- **Environment Variables:** ใน Vercel ต้องมี `TELEGRAM_BOT_TOKEN` และ `GAS_WEB_APP_URL` (ต้องเป็น URL ของ GAS ที่ลงท้ายด้วย `/exec`)
+- **Environment Variables:** ใน Vercel ต้องมี `TELEGRAM_BOT_TOKEN`, `TELEGRAM_DESTINATION_ID` และ `GAS_WEB_APP_URL`
 
 ## 🚀 Workflow
 1. **Research:** Analyze `code.gs` (logic) and `app.html` (UI) before changes.
@@ -35,6 +35,20 @@ Project Context: A Google Apps Script application for managing hardware inventor
 ### 🐞 Bug Fixing
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
+
+## 🐞 Bug Fixes & Stability (V.6.7.1)
+- **Destination ID Update**: Updated the Telegram Destination ID to `8621299992` as requested by the user.
+- **Version Sync**: Synchronized version to V.6.7.1 across all components.
+
+## 🐞 Bug Fixes & Stability (V.6.7.0)
+- **Emergency Token Update**: Updated the Telegram Bot token to the latest one (`...AZYwWk`) after the previous one was revoked.
+- **Version Sync**: Synchronized version to V.6.7.0 across all components (`code.gs`, `index.js`, `app.html`).
+- **Robustness**: Ensured `index.js` uses the new token as a fallback for immediate fix.
+
+## 🐞 Bug Fixes & Stability (V.6.6.9)
+- **Telegram Token Update**: Updated the Telegram Bot token to the new one provided by the user (`862129...`).
+- **Token Fallback**: Implemented a fallback mechanism for `TELEGRAM_BOT_TOKEN` in `index.js` to ensure the bot works immediately after deployment.
+- **Version Sync**: Synchronized version to V.6.6.9 across all components (`code.gs`, `index.js`, `app.html`).
 
 ## 🐞 Bug Fixes & Stability (V.6.6.8)
 - **Multi-LINE Bot Support**: The system now supports multiple LINE accounts (TLN-Inventory, TLN-Inventory#2, TLN-Inventory#3). Notifications are sent through all configured bots to ensure delivery.
