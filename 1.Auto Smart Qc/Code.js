@@ -158,10 +158,14 @@ function handleManualApprove(fileId, chatId, msgId, adminName) {
         sheet.getRange(i + 1, 4).setValue("PASS (MANUAL)");
         sheet.getRange(i + 1, 5).setValue(`Approved by ${adminName}`);
         
-        // Move file
+        // Move file with nested structure support
         const siteName = data[i][7];
-        const cat = data[i][2];
-        const destFolder = getOrCreateSubFolder(getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), siteName), cat);
+        const fullCat = String(data[i][2]);
+        const siteFolder = getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), siteName);
+        
+        let pathArr = fullCat.split(" > ");
+        const destFolder = getOrCreateNestedFolder(siteFolder, pathArr);
+        
         file.moveTo(destFolder);
         file.setDescription(`MANUAL_PASS: Approved by ${adminName} | ${file.getDescription() || ""}`);
         found = true;
@@ -172,7 +176,7 @@ function handleManualApprove(fileId, chatId, msgId, adminName) {
     if (!found) {
       // Create new record if not found (Manual Entry)
       const folderName = file.getParents().hasNext() ? file.getParents().next().getName() : "Unknown Site";
-      sheet.appendRow([new Date(), file.getName(), "MANUAL_QC", "PASS (MANUAL)", `Approved by ${adminName}`, file.getUrl(), fileId, folderName, "unknown"]);
+      sheet.appendRow([new Date(), file.getName(), "MANUAL_QC", "PASS (MANUAL)", `Approved by ${adminName}`, file.getUrl(), fileId, folderName, "unknown", "MANUAL_QC", "MANUAL_QC", "MANUAL_QC"]);
       
       // Move to archive PASS folder
       const destFolder = getOrCreateSubFolder(getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), folderName), "MANUAL_QC");
@@ -431,13 +435,40 @@ function processFileList(files, siteName, checklist) {
         else if (fn.includes(" AF") || fn.includes("_AF") || fn.includes("AFTER")) imageType = "after";
       }
       
-      sheet.appendRow([new Date(), f.getName(), ai.sheetReference, status, ai.reason, f.getUrl(), f.getId(), siteName, imageType]);
+      // Update Spreadsheet with detailed info
+      // Order: Timestamp, Filename, SheetRef (Full Path), Status, Reason, URL, FileID, SiteName, ImageType, Major, Sub, Detail
+      sheet.appendRow([
+        new Date(), 
+        f.getName(), 
+        ai.sheetReference, 
+        status, 
+        ai.reason, 
+        f.getUrl(), 
+        f.getId(), 
+        siteName, 
+        imageType,
+        ai.majorCategory,
+        ai.subCategory,
+        ai.detail
+      ]);
       
       try {
-        const destFolder = getOrCreateSubFolder(getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), siteName), status === "PASS" ? ai.sheetReference : "FAIL_" + ai.sheetReference);
+        const rootArchive = DriveApp.getFolderById(ARCHIVE_FOLDER_ID);
+        const siteFolder = getOrCreateSubFolder(rootArchive, siteName);
+        
+        let path = [];
+        if (status === "PASS") {
+          path = [ai.majorCategory, ai.subCategory, ai.detail];
+        } else {
+          path = ["FAIL", ai.majorCategory, ai.subCategory, ai.detail];
+        }
+        
+        const destFolder = getOrCreateNestedFolder(siteFolder, path);
         f.moveTo(destFolder);
-        f.setDescription(`PAT_CHECKED: ${status} | TYPE: ${imageType} | ${f.getDescription() || ""}`);
-      } catch (e) {}
+        f.setDescription(`PAT_CHECKED: ${status} | PATH: ${path.join(" > ")} | TYPE: ${imageType} | ${f.getDescription() || ""}`);
+      } catch (e) {
+        console.error("Folder Move Error: " + e.toString());
+      }
       
       results.push({ name: f.getName(), status: status, reason: ai.reason, category: ai.sheetReference });
       if (status === "PASS") pass++; 
@@ -453,12 +484,53 @@ function processFileList(files, siteName, checklist) {
   return { total: files.length, pass: pass, fail: fail, details: results };
 }
 
+function getOrCreateNestedFolder(root, pathArr) {
+  let current = root;
+  for (let folderName of pathArr) {
+    if (!folderName || folderName === "undefined") continue;
+    current = getOrCreateSubFolder(current, folderName);
+  }
+  return current;
+}
+
 function analyzeAI(file, customChecklist) {
   const blob = file.getBlob();
   const b64 = Utilities.base64Encode(blob.getBytes());
   const mimeType = blob.getContentType();
   
-  const promptText = `Analyze site photo for AIS standard compliance. Return JSON only: {"sheetReference":"ID","status":"PASS"|"FAIL","reason":"Thai explanation","imageType":"before"|"after"|"unknown"}. Quality must be high, neat, and professional. Checklist: [${customChecklist || "General Site Standards"}]`;
+  // Construct a more detailed checklist from QC_CONFIG if no custom checklist is provided
+  let detailedChecklist = customChecklist;
+  if (!detailedChecklist) {
+    detailedChecklist = "Identify which category this photo belongs to from the following structure:\n";
+    for (let major in QC_CONFIG) {
+      detailedChecklist += `- ${major}:\n`;
+      for (let sub in QC_CONFIG[major]) {
+        detailedChecklist += `  * ${sub}\n`;
+      }
+    }
+  }
+
+  const promptText = `Analyze site photo for AIS standard compliance. 
+  You MUST identify the photo according to this hierarchy: Major Category > Sub Category > Detail.
+  
+  Return JSON only: 
+  {
+    "majorCategory": "String", 
+    "subCategory": "String", 
+    "detail": "String",
+    "status": "PASS"|"FAIL",
+    "reason": "Thai explanation of why it passed or failed based on technical standards",
+    "imageType": "before"|"after"|"unknown"
+  }
+
+  Standards: 
+  - Wire strip length must be exactly 18mm (if applicable).
+  - Compass must be clear and readable.
+  - Quality must be professional and neat.
+  
+  Available Categories:
+  ${detailedChecklist}`;
+
   const payload = { 
     "model": "llama-3.2-90b-vision-preview", 
     "messages": [{ 
@@ -470,12 +542,18 @@ function analyzeAI(file, customChecklist) {
     }], 
     "response_format": { "type": "json_object" } 
   };
+  
   for (let key of GROQ_KEYS) {
     try {
       const res = UrlFetchApp.fetch(GROQ_AI_URL, { method: "post", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, payload: JSON.stringify(payload), muteHttpExceptions: true });
       if (res.getResponseCode() === 200) {
         let content = JSON.parse(res.getContentText()).choices[0].message.content;
-        return JSON.parse(content.replace(/```json/g, "").replace(/```/g, "").trim());
+        let aiResult = JSON.parse(content.replace(/```json/g, "").replace(/```/g, "").trim());
+        
+        // Map to legacy sheetReference for backward compatibility if needed, 
+        // but we'll use the new fields primarily.
+        aiResult.sheetReference = `${aiResult.majorCategory} > ${aiResult.subCategory} > ${aiResult.detail}`;
+        return aiResult;
       }
     } catch (e) {}
   }
