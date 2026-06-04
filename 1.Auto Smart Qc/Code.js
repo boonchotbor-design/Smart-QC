@@ -277,10 +277,10 @@ const QC_CONFIG = {
 };
 
 // =========================================================================
-// === AI SMART QC BOT - V.140 (SUPER-MATCH ENGINE - 100% RELIABILITY) ===
+// === AI SMART QC BOT - V.141 (SUPER-MATCH ENGINE - 100% RELIABILITY) ===
 // =========================================================================
 
-const VERSION = "V.140 (STABLE)"; 
+const VERSION = "V.141 (STABLE)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c".trim(); 
