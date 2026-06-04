@@ -180,21 +180,21 @@ function doGet(e) {
     if (action === "getdata") return jsonResponse(getDashboardData(params.site || "All Sites"));
     
     if (action === "checkpassword") {
-      const inputEmail = String(params.email || "").toLowerCase().trim();
-      const inputPwd = String(params.password || "").trim();
+      const email = String(params.email || "").toLowerCase().trim();
+      const pwd = String(params.password || "").trim();
       
-      console.log(`[${VERSION}] Login Attempt: ${inputEmail}`);
+      console.log(`[V.151] Login Request: ${email} | PwdLen: ${pwd.length}`);
       
-      const isEmailAuthorized = AUTHORIZED_USERS.some(u => u.toLowerCase().trim() === inputEmail);
-      const isPwdCorrect = (inputPwd === ADMIN_PASSWORD);
+      const isAuth = AUTHORIZED_USERS.some(u => u.toLowerCase().trim() === email);
+      const isPwdMatch = (pwd === ADMIN_PASSWORD);
       
-      if (isPwdCorrect && isEmailAuthorized) {
-        console.log(`[${VERSION}] Login SUCCESS for ${inputEmail}`);
+      if (isPwdMatch && isAuth) {
+        console.log(`[V.151] Login SUCCESS for ${email}`);
         return jsonResponse({success:true});
       } else {
-        console.warn(`[${VERSION}] Login FAILED for ${inputEmail}. EmailAuth: ${isEmailAuthorized}, PwdCorrect: ${isPwdCorrect}`);
-        if (!isEmailAuthorized) return jsonResponse({error: "Email นี้ไม่มีสิทธิ์เข้าถึงระบบ (Unauthorized)"});
-        if (!isPwdCorrect) return jsonResponse({error: "รหัสผ่านไม่ถูกต้อง (Incorrect Password)"});
+        console.warn(`[V.151] Login FAIL: EmailAuth=${isAuth}, PwdMatch=${isPwdMatch}`);
+        if (!isAuth) return jsonResponse({error: "Email นี้ไม่มีสิทธิ์เข้าถึงระบบ"});
+        return jsonResponse({error: "รหัสผ่านไม่ถูกต้อง"});
       }
     }
     
