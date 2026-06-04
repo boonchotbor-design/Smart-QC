@@ -888,3 +888,33 @@ function getDashboardData(siteFilter) {
     return { metrics: { workOrders: dataRows.length, rate: dataRows.length > 0 ? Math.round((statusMap["PASS"] || 0) / dataRows.length * 100) : 0 }, statusBreakdown: Object.keys(statusMap).map(k => ({ name: k, value: statusMap[k] })) };
   } catch(e) { return { metrics: {workOrders:0, rate:0}, statusBreakdown: [] }; }
 }
+
+/**
+ * ฟังก์ชันสำหรับทดสอบการทำงานของ AI และการสร้างโฟลเดอร์ด้วยมือจากหน้า Editor
+ */
+function runManualTest() {
+  console.log("--- เริ่มการทดสอบ SMART QC (Manual Run) " + VERSION + " ---");
+  try {
+    const folder = DriveApp.getFolderById(FOLDER_ID);
+    const files = folder.getFiles();
+    
+    if (!files.hasNext()) {
+      console.warn("❌ ไม่พบไฟล์ในโฟลเดอร์ทดสอบ: " + folder.getName());
+      return;
+    }
+    
+    const testFile = files.next();
+    console.log("📄 เริ่มทดสอบด้วยไฟล์: " + testFile.getName());
+    
+    const result = processFileList([testFile], "TEST_SITE_MANUAL", null);
+    
+    console.log("\n📊 ผลการทดสอบ:");
+    console.log("สถานะ: " + result.details[0].status);
+    console.log("หมวดหมู่ที่ AI เลือก: " + result.details[0].category);
+    console.log("เหตุผล: " + result.details[0].reason);
+    
+    console.log("\n✅ ตรวจสอบใน Google Drive ของคุณว่ามีการสร้างโฟลเดอร์ 3 ชั้นและย้ายไฟล์เข้าไปแล้วหรือไม่");
+  } catch (e) {
+    console.error("❌ เกิดข้อผิดพลาดในการทดสอบ: " + e.toString());
+  }
+}
