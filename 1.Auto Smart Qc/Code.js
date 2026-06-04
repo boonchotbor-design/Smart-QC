@@ -286,10 +286,27 @@ const QC_CONFIG = {
 };
 
 // =========================================================================
-// === 🧠 AI SMART QC ENGINE - V.144 (ULTRA-PRECISION) ===
+// === 🧠 AI SMART QC ENGINE - V.147 (SECURE AUTH) ===
 // =========================================================================
 
-const VERSION = "V.144 (ULTRA-PRECISION)"; 
+const VERSION = "V.147 (SECURE AUTH)"; 
+
+const AUTHORIZED_USERS = [
+  "adisak.chanmao@teloneer.com",
+  "boonchot.boriwut@teloneer.com",
+  "apichart.kampuang@teloneer.com",
+  "payon.sapphat@teloneer.com",
+  "nattawoot.suwan@teloneer.com",
+  "palagon.prommueangma@teloneer.com",
+  "nammon.manakiat@teloneer.com",
+  "auttaseth.klomthaisong@teloneer.com",
+  "supot.hoonyong@teloneer.com",
+  "khathahat.sitthihong@teloneer.com",
+  "thossapol.chaloemrit@teloneer.com",
+  "sathitphorn.intapankaew@teloneer.com"
+];
+
+const ADMIN_PASSWORD = "QC-ADMIN-2026";
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c".trim(); 
