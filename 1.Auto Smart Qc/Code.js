@@ -417,6 +417,10 @@ function processFileList(files, siteName, checklist) {
   const results = [];
   
   for (let f of files) {
+    if (!f) {
+      console.warn("Skipping undefined file in processFileList");
+      continue;
+    }
     try {
       const ai = analyzeAI(f, checklist);
       if (!ai || ai.status === "ERROR") {
@@ -436,20 +440,19 @@ function processFileList(files, siteName, checklist) {
       }
       
       // Update Spreadsheet with detailed info
-      // Order: Timestamp, Filename, SheetRef (Full Path), Status, Reason, URL, FileID, SiteName, ImageType, Major, Sub, Detail
       sheet.appendRow([
         new Date(), 
         f.getName(), 
-        ai.sheetReference, 
+        ai.sheetReference || "Unknown", 
         status, 
         ai.reason, 
         f.getUrl(), 
         f.getId(), 
         siteName, 
         imageType,
-        ai.majorCategory,
-        ai.subCategory,
-        ai.detail
+        ai.majorCategory || "",
+        ai.subCategory || "",
+        ai.detail || ""
       ]);
       
       try {
@@ -458,16 +461,17 @@ function processFileList(files, siteName, checklist) {
         
         let path = [];
         if (status === "PASS") {
-          path = [ai.majorCategory, ai.subCategory, ai.detail];
+          path = [ai.majorCategory || "Uncategorized", ai.subCategory || "General", ai.detail || "Misc"];
         } else {
-          path = ["FAIL", ai.majorCategory, ai.subCategory, ai.detail];
+          path = ["FAIL", ai.majorCategory || "Uncategorized", ai.subCategory || "General", ai.detail || "Misc"];
         }
         
+        // Ensure path is an array before passing to getOrCreateNestedFolder
         const destFolder = getOrCreateNestedFolder(siteFolder, path);
         f.moveTo(destFolder);
         f.setDescription(`PAT_CHECKED: ${status} | PATH: ${path.join(" > ")} | TYPE: ${imageType} | ${f.getDescription() || ""}`);
       } catch (e) {
-        console.error("Folder Move Error: " + e.toString());
+        console.error("Folder Move Error for file " + f.getName() + ": " + e.toString());
       }
       
       results.push({ name: f.getName(), status: status, reason: ai.reason, category: ai.sheetReference });
@@ -477,7 +481,8 @@ function processFileList(files, siteName, checklist) {
         sendDualFailNotify(f.getName(), ai.sheetReference, ai.reason, f.getUrl(), f.getId()); 
       }
     } catch (e) {
-      results.push({ name: f.getName(), status: "ERROR", reason: "ระบบขัดข้อง: " + e.toString() });
+      console.error("Error processing file " + (f ? f.getName() : "unknown") + ": " + e.toString());
+      results.push({ name: f ? f.getName() : "Unknown", status: "ERROR", reason: "ระบบขัดข้อง: " + e.toString() });
       fail++;
     }
   }
