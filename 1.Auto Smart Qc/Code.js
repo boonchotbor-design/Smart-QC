@@ -288,10 +288,10 @@ const QC_CONFIG = {
 };
 
 // =========================================================================
-// === 🧠 AI SMART QC ENGINE - V.148 (PREMIUM STABLE) ===
+// === 🧠 AI SMART QC ENGINE - V.149 (DEBUG AUTH) ===
 // =========================================================================
 
-const VERSION = "V.148 (PREMIUM STABLE)"; 
+const VERSION = "V.149 (DEBUG AUTH)"; 
 
 const AUTHORIZED_USERS = [
   "adisak.chanmao@teloneer.com",
