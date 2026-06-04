@@ -87,8 +87,8 @@ const QC_CONFIG = {
       "Ground cable connect under RRU#2": "RRU#2 Grounding",
       "Jumper/RET/Label/Color mark under RRU#2": "RRU#2 Labeling",
       "RRU#2/AAU Socket Wire strip length is 18mm with scale": "Wire strip 18mm RRU#2",
-      "RRU#2/AAU Socket Left Side view": "Left socket view RRU#2",
-      "RRU#2/AAU Socket Right Side view": "Right socket view RRU#2",
+      "RRU#2/AAU Socket Left Side view": "Left socket RRU#2",
+      "RRU#2/AAU Socket Right Side view": "Right socket RRU#2",
       "Open RRU#2 cover with plug in CPRI and socket DC RRU#2 Sector A": "Internal RRU#2",
       "Stainless cable tie at jumper with pipe": "Cable ties",
       "DCDU socket of RRU Sector A#1, After wire strip at DCDU": "DCDU socket",
@@ -103,7 +103,7 @@ const QC_CONFIG = {
     "Sector C": {
       "ระบุ Sector ที่ติดตั้ง": "Confirming Sector C installation",
       "ระบุคลื่นความถี่ที่ทำการติดตั้ง": "Frequency identification",
-      "Tower Outdoor View": "Tower View",
+      "Tower Outdoor View": "General view of the tower",
       "Antenna/AAU position": "Antenna Position",
       "Antenna Model": "Antenna Model Label",
       "M Tilt": "Tilt check",
@@ -124,8 +124,8 @@ const QC_CONFIG = {
       "Ground cable connect under RRU#2": "RRU#2 Grounding",
       "Jumper/RET/Label/Color mark under RRU#2": "RRU#2 Labeling",
       "RRU#2/AAU Socket Wire strip length is 18mm with scale": "Wire strip 18mm RRU#2",
-      "RRU#2/AAU Socket Left Side view": "Left socket view RRU#2",
-      "RRU#2/AAU Socket Right Side view": "Right socket view RRU#2",
+      "RRU#2/AAU Socket Left Side view": "Left socket RRU#2",
+      "RRU#2/AAU Socket Right Side view": "Right socket RRU#2",
       "Open RRU#2 cover with plug in CPRI and socket DC RRU#2 Sector A": "Internal RRU#2",
       "Stainless cable tie at jumper with pipe": "Cable ties",
       "DCDU socket of RRU Sector A#1, After wire strip at DCDU": "DCDU socket",
@@ -161,8 +161,8 @@ const QC_CONFIG = {
       "Ground cable connect under RRU#2": "RRU#2 Grounding",
       "Jumper/RET/Label/Color mark under RRU#2": "RRU#2 Labeling",
       "RRU#2/AAU Socket Wire strip length is 18mm with scale": "Wire strip 18mm RRU#2",
-      "RRU#2/AAU Socket Left Side view": "Left socket view RRU#2",
-      "RRU#2/AAU Socket Right Side view": "Right socket view RRU#2",
+      "RRU#2/AAU Socket Left Side view": "Left socket RRU#2",
+      "RRU#2/AAU Socket Right Side view": "Right socket RRU#2",
       "Open RRU#2 cover with plug in CPRI and socket DC RRU#2 Sector A": "Internal RRU#2",
       "Stainless cable tie at jumper with pipe": "Cable ties",
       "DCDU socket of RRU Sector A#1, After wire strip at DCDU": "DCDU socket",
@@ -277,10 +277,10 @@ const QC_CONFIG = {
 };
 
 // =========================================================================
-// === AI SMART QC BOT - V.141 (SUPER-MATCH ENGINE - 100% RELIABILITY) ===
+// === AI SMART QC BOT - V.142 (SUPER-ROBUST ENGINE) ===
 // =========================================================================
 
-const VERSION = "V.141 (STABLE)"; 
+const VERSION = "V.142 (SUPER-ROBUST)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c".trim(); 
@@ -288,9 +288,9 @@ const SHEET_NAME = "Sheet1";
 
 function getSpreadsheet() {
   const candidates = [
-    "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c", // Visually verified from URL
-    "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c", // User's manually typed version
-    "1CR-Gdi9IQ4mVB7xbjYmBGAhRPdJ0W4rJ"              // Old version mentioned in Test.gs
+    "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c", 
+    "1xp3EuRlWthalZhlWfToiJaihs4uYKARLEWXxVykmj9c", 
+    "1CR-Gdi9IQ4mVB7xbjYmBGAhRPdJ0W4rJ"              
   ];
   
   let lastError = "";
@@ -301,7 +301,6 @@ function getSpreadsheet() {
     } catch (e) { lastError = e.toString(); }
   }
   
-  // Last resort: search by name
   try {
     const files = DriveApp.getFilesByName("Control Panel");
     while (files.hasNext()) {
@@ -314,9 +313,10 @@ function getSpreadsheet() {
 }
 
 function getSheetSmart(ss, name) {
+  if (!ss) return null;
   const sheet = ss.getSheetByName(name);
   if (sheet) return sheet;
-  const lowerName = name.toLowerCase();
+  const lowerName = String(name || "").toLowerCase();
   const found = ss.getSheets().find(s => s.getName().toLowerCase() === lowerName);
   return found || ss.getSheets()[0];
 }
@@ -334,7 +334,8 @@ const GROQ_AI_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 function doGet(e) {
   let params = e?.parameter || {};
-  const action = (params.action || "").toLowerCase();
+  const action = String(params.action || "").toLowerCase();
+  console.log(`[V.142] GET Action: ${action}`);
   try {
     if (action === "getdata") return jsonResponse(getDashboardData(params.site || "All Sites"));
     if (action === "checkpassword") return (params.password === "QC-ADMIN-2024") ? jsonResponse({success:true}) : jsonResponse({error:"รหัสไม่ถูกต้อง"});
@@ -349,43 +350,42 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  // Guard against manual runs from the script editor
   if (!e || !e.postData || !e.postData.contents) {
-    const errorMsg = "⚠️ doPost called without event data (postData). This is expected when running manually from the editor. To test, use the 'testDoPost' function in Test.gs instead.";
+    const errorMsg = "⚠️ doPost called without event data. Please use 'Test' functions for debugging.";
     console.warn(errorMsg);
     return ContentService.createTextOutput(errorMsg);
   }
 
   try {
     const contents = JSON.parse(e.postData.contents);
+    console.log(`[V.142] POST received`);
     
-    // Handle Dashboard Actions
     if (contents.action === "uploadfile") {
       return jsonResponse(uploadFile(contents.folderId, contents.fileName, contents.mimeType, contents.base64Data));
     }
 
-    // Handle Callback Query (Approve/Reject buttons)
     if (contents.callback_query) {
-      const data = contents.callback_query.data;
+      const data = String(contents.callback_query.data || "");
       const msg = contents.callback_query.message;
       const chatId = msg.chat.id;
       const msgId = msg.message_id;
+      const adminName = contents.callback_query.from.first_name || "Admin";
       
+      console.log(`[V.142] Callback Query Data: ${data}`);
       const parts = data.split("|");
-      const action = parts[0]; // app or rej
+      const action = parts[0]; 
       const fileId = parts[1];
       
       if (action === "app") {
-        handleManualApprove(fileId, chatId, msgId, contents.callback_query.from.first_name);
+        handleManualApprove(fileId, chatId, msgId, adminName);
       } else if (action === "rej") {
-        handleManualReject(fileId, chatId, msgId, contents.callback_query.from.first_name);
+        handleManualReject(fileId, chatId, msgId, adminName);
       }
       return ContentService.createTextOutput("OK");
     }
     
-    // Handle Text Messages
     if (contents.message && contents.message.text) {
-      const text = contents.message.text;
+      const text = String(contents.message.text || "");
       const chatId = contents.message.chat.id;
       if (text === "/status") {
         const stats = getDashboardData("All Sites");
@@ -403,9 +403,6 @@ function doPost(e) {
   return ContentService.createTextOutput("OK");
 }
 
-/**
- * Handle direct file upload from Dashboard
- */
 function uploadFile(folderId, fileName, mimeType, base64Data) {
   try {
     const folder = DriveApp.getFolderById(folderId);
@@ -419,6 +416,7 @@ function uploadFile(folderId, fileName, mimeType, base64Data) {
 }
 
 function handleManualApprove(fileId, chatId, msgId, adminName) {
+  console.log(`[V.142] handleManualApprove started for FileID: ${fileId}`);
   try {
     if (!fileId || fileId === "undefined" || fileId === "null") {
       throw new Error("Invalid File ID received from Telegram");
@@ -429,16 +427,14 @@ function handleManualApprove(fileId, chatId, msgId, adminName) {
     const sheet = getSheetSmart(ss, SHEET_NAME);
     const data = sheet.getDataRange().getValues();
     
-    // Update Sheet
     let found = false;
     for (let i = 1; i < data.length; i++) {
-      if (String(data[i][6]) === fileId) {
+      if (String(data[i][6] || "") === fileId) {
         sheet.getRange(i + 1, 4).setValue("PASS (MANUAL)");
         sheet.getRange(i + 1, 5).setValue(`Approved by ${adminName}`);
         
-        // Move file with nested structure support
-        const siteName = data[i][7];
-        const fullCat = String(data[i][2]);
+        const siteName = String(data[i][7] || "Unknown Site");
+        const fullCat = String(data[i][2] || "MANUAL_QC");
         const siteFolder = getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), siteName);
         
         let pathArr = fullCat.split(" > ");
@@ -447,16 +443,16 @@ function handleManualApprove(fileId, chatId, msgId, adminName) {
         file.moveTo(destFolder);
         file.setDescription(`MANUAL_PASS: Approved by ${adminName} | ${file.getDescription() || ""}`);
         found = true;
+        console.log(`[V.142] Record updated and file moved to: ${fullCat}`);
         break;
       }
     }
     
     if (!found) {
-      // Create new record if not found (Manual Entry)
+      console.log(`[V.142] Record NOT found in sheet. Creating new manual entry.`);
       const folderName = file.getParents().hasNext() ? file.getParents().next().getName() : "Unknown Site";
       sheet.appendRow([new Date(), file.getName(), "MANUAL_QC", "PASS (MANUAL)", `Approved by ${adminName}`, file.getUrl(), fileId, folderName, "unknown", "MANUAL_QC", "MANUAL_QC", "MANUAL_QC"]);
       
-      // Move to archive PASS folder
       const destFolder = getOrCreateSubFolder(getOrCreateSubFolder(DriveApp.getFolderById(ARCHIVE_FOLDER_ID), folderName), "MANUAL_QC");
       file.moveTo(destFolder);
       file.setDescription(`MANUAL_PASS: Approved by ${adminName} (New Record Created)`);
@@ -467,11 +463,12 @@ function handleManualApprove(fileId, chatId, msgId, adminName) {
     callTGRaw("editMessageCaption", {
       chat_id: chatId,
       message_id: msgId,
-      caption: `✅ *APPROVED BY ${adminName.toUpperCase()}*\n📄 ไฟล์: ${file.getName()}\nอนุมัติเรียบร้อยและบันทึกข้อมูลเข้า Spreadsheet แล้ว`,
+      caption: `✅ *APPROVED BY ${String(adminName).toUpperCase()}*\n📄 ไฟล์: ${file.getName()}\nอนุมัติเรียบร้อยและบันทึกข้อมูลเข้า Spreadsheet แล้ว`,
       parse_mode: "Markdown"
     });
     
   } catch (e) {
+    console.error(`[V.142] Manual Approve Error: ${e.toString()}`);
     callTGRaw("sendMessage", { chat_id: chatId, text: "❌ Approve Error: " + e.toString() });
   }
 }
@@ -486,7 +483,7 @@ function handleManualReject(fileId, chatId, msgId, adminName) {
     callTGRaw("editMessageCaption", {
       chat_id: chatId,
       message_id: msgId,
-      caption: `❌ *REJECTED BY ${adminName.toUpperCase()}*\n📄 ไฟล์: ${file.getName()}\nยืนยันไม่ผ่านงานตามที่ AI แจ้ง`,
+      caption: `❌ *REJECTED BY ${String(adminName).toUpperCase()}*\n📄 ไฟล์: ${file.getName()}\nยืนยันไม่ผ่านงานตามที่ AI แจ้ง`,
       parse_mode: "Markdown"
     });
   } catch (e) {
@@ -513,11 +510,12 @@ function listTemplates(type, project) {
 }
 
 function generatePAT(folderId, siteName) {
+  console.log(`[V.142] Starting PAT for: ${siteName}`);
   try {
     const ssDb = getSpreadsheet();
     const sheet = ssDb.getSheetByName(SHEET_NAME); 
     const siteFolder = DriveApp.getFolderById(folderId);
-    const logs = [`[V.140] Starting PAT for: ${siteName}`];
+    const logs = [`[V.142] Starting PAT for: ${siteName}`];
     
     const fileIdsInFolder = [];
     const scanRecursively = (fld) => {
@@ -528,20 +526,18 @@ function generatePAT(folderId, siteName) {
     };
     scanRecursively(siteFolder);
     const idSet = new Set(fileIdsInFolder);
-    logs.push(`Found ${fileIdsInFolder.length} images total in Drive.`);
 
     const data = sheet.getDataRange().getValues();
     const filtered = data.filter(row => {
-      const fileIdInSheet = String(row[6]).trim();
-      const status = String(row[3]).toUpperCase();
+      const fileIdInSheet = String(row[6] || "").trim();
+      const status = String(row[3] || "").toUpperCase();
       return idSet.has(fileIdInSheet) && status.includes("PASS");
     });
 
-    logs.push(`Matched ${filtered.length} PASS records in database.`);
     if (filtered.length === 0) return { success: false, error: "ไม่พบรูปภาพที่ผ่าน QC ในโฟลเดอร์นี้", logs: logs };
 
     let tid = TEMPLATES.DEFAULT;
-    const sn = siteName.toUpperCase();
+    const sn = String(siteName).toUpperCase();
     if (sn.includes("HAE") || sn.includes("MBB")) tid = TEMPLATES.HAE_MBB;
     else if (sn.includes("HAT") || sn.includes("SSR")) tid = TEMPLATES.HAT_SSR;
     
@@ -551,7 +547,7 @@ function generatePAT(folderId, siteName) {
     newSS.getSheets().forEach(s => { fillPlaceholder(s, "Site name :", siteName); fillPlaceholder(s, "Site code :", siteName); });
 
     const grouped = filtered.reduce((acc, row) => {
-      const cat = String(row[2]).trim();
+      const cat = String(row[2] || "Uncategorized").trim();
       if (!acc[cat]) acc[cat] = [];
       acc[cat].push({ id: row[6], type: String(row[8] || "").toLowerCase() });
       return acc;
@@ -559,11 +555,10 @@ function generatePAT(folderId, siteName) {
 
     Object.keys(grouped).forEach(cat => {
       let targetSheet = findTargetSheetSmart(newSS, cat) || findSheetByContent(newSS, cat);
-      if (!targetSheet) { logs.push(`⚠️ Sheet not found for: "${cat}"`); return; }
+      if (!targetSheet) return;
       
       const locs = findImageLocations(targetSheet);
       const photos = grouped[cat];
-      let c = 0;
       
       photos.forEach(p => {
         const type = p.type === "before" ? "before" : (p.type === "after" ? "after" : null);
@@ -572,11 +567,9 @@ function generatePAT(folderId, siteName) {
           try {
             insertImageInBox(targetSheet, DriveApp.getFileById(p.id).getBlob(), targetLoc.col, targetLoc.row, targetLoc.width, targetLoc.height);
             targetLoc.used = true;
-            c++;
           } catch(e) {}
         }
       });
-      logs.push(`✅ ${cat}: Inserted ${c} images`);
     });
 
     return { success: true, url: newSS.getUrl(), logs: logs };
@@ -584,17 +577,17 @@ function generatePAT(folderId, siteName) {
 }
 
 function findTargetSheetSmart(ss, cat) {
-  const clean = cat.toUpperCase().replace(/\s/g, "");
+  const clean = String(cat).toUpperCase().replace(/\s/g, "");
   return ss.getSheets().find(s => {
     const sn = s.getName().toUpperCase().replace(/\s/g, "");
     return sn === clean || sn.includes(clean) || clean.includes(sn);
-  }) || (cat.match(/\((.*?)\)/) ? ss.getSheets().find(s => s.getName().toUpperCase().includes(cat.match(/\((.*?)\)/)[1].toUpperCase())) : null);
+  }) || (String(cat).match(/\((.*?)\)/) ? ss.getSheets().find(s => s.getName().toUpperCase().includes(String(cat).match(/\((.*?)\)/)[1].toUpperCase())) : null);
 }
 
 function findSheetByContent(ss, txt) {
   for (let s of ss.getSheets()) {
     const data = s.getRange(1, 1, 30, 10).getValues();
-    for (let r=0; r<data.length; r++) for (let c=0; c<data[r].length; c++) if (String(data[r][c]).toUpperCase().includes(txt.toUpperCase())) return s;
+    for (let r=0; r<data.length; r++) for (let c=0; c<data[r].length; c++) if (String(data[r][c]).toUpperCase().includes(String(txt).toUpperCase())) return s;
   }
   return null;
 }
@@ -631,6 +624,7 @@ function fillPlaceholder(s, t, v) {
 function jsonResponse(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 function getOrCreateSubFolder(p, n) { const f = p.getFoldersByName(n); return f.hasNext() ? f.next() : p.createFolder(n); }
 function listSubFolders(id) { const subs = DriveApp.getFolderById(id).getFolders(); const res = []; while (subs.hasNext()) { const f = subs.next(); res.push({ id: f.getId(), name: f.getName(), url: f.getUrl(), date: f.getLastUpdated().toISOString() }); } return res.sort((a, b) => new Date(b.date) - new Date(a.date)); }
+
 function listFilesInFolder(id) { 
   try {
     const folder = DriveApp.getFolderById(id);
@@ -643,9 +637,8 @@ function listFilesInFolder(id) {
     return { folderName: folder.getName(), files: res, totalInFolder: DriveApp.getFolderById(id).getFiles().hasNext() ? "Has Files" : "Empty" }; 
   } catch (e) { return { error: e.toString() }; }
 }
+
 function callTGRaw(m, p) { return UrlFetchApp.fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${m}`, { method: "post", contentType: "application/json", payload: JSON.stringify(p), muteHttpExceptions: true }); }
-function sendDualSummary(s, p, f, items) { let txt = `📊 สรุปผล AI (${s})\n✅ ผ่าน: ${p}\n❌ ไม่ผ่าน: ${f}`; items.forEach((it, i) => txt += `\n${i + 1}.📄 ${it.name}`); callTGRaw("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: txt }); }
-function sendDualFailNotify(n, c, r, u, fid) { const blob = DriveApp.getFileById(fid).getBlob(); const kb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + fid }, { text: "❌ ไมือนุมัติ", callback_data: "rej|" + fid }]] }; callTGRaw("sendPhoto", { chat_id: TELEGRAM_TARGET_ID, photo: blob, caption: `🚨 พบงานไม่ผ่าน\n📄 ไฟล์: ${n}\n📌 หมวด: ${c}\n❌ สาเหตุ: ${r}`, reply_markup: JSON.stringify(kb) }); }
 
 function processFolderById(folderId, templateId) {
   const lock = LockService.getScriptLock();
@@ -674,7 +667,9 @@ function processFolderById(folderId, templateId) {
     const result = processFileList(toProcess, folder.getName(), null);
     
     if (totalUnprocessed <= BATCH_LIMIT && (result.pass + result.fail > 0)) {
-      sendDualSummary(folder.getName(), result.pass, result.fail, result.details.filter(r => r.status === "FAIL" || r.status === "ERROR"));
+      let txt = `📊 สรุปผล AI (${folder.getName()})\n✅ ผ่าน: ${result.pass}\n❌ ไม่ผ่าน: ${result.fail}`; 
+      result.details.forEach((it, i) => { if (it.status !== "PASS") txt += `\n${i + 1}.📄 ${it.name}`; });
+      callTGRaw("sendMessage", { chat_id: TELEGRAM_TARGET_ID, text: txt });
     }
 
     return { 
@@ -695,10 +690,7 @@ function processFileList(files, siteName, checklist) {
   const results = [];
   
   for (let f of files) {
-    if (!f || typeof f.getBlob !== 'function') {
-      console.warn("Skipping invalid file object in processFileList");
-      continue;
-    }
+    if (!f || typeof f.getBlob !== 'function') continue;
     try {
       const ai = analyzeAI(f, checklist);
       if (!ai || ai.status === "ERROR") {
@@ -709,21 +701,20 @@ function processFileList(files, siteName, checklist) {
         continue;
       }
       
-      const status = ai.status.toUpperCase();
-      let imageType = ai.imageType || "unknown";
+      const status = String(ai.status || "FAIL").toUpperCase();
+      let imageType = String(ai.imageType || "unknown").toLowerCase();
       if (imageType === "unknown") {
         const fn = f.getName().toUpperCase();
         if (fn.includes(" BF") || fn.includes("_BF") || fn.includes("BEFORE")) imageType = "before";
         else if (fn.includes(" AF") || fn.includes("_AF") || fn.includes("AFTER")) imageType = "after";
       }
       
-      // Update Spreadsheet with detailed info
       sheet.appendRow([
         new Date(), 
         f.getName(), 
         ai.sheetReference || "Unknown", 
         status, 
-        ai.reason, 
+        ai.reason || "", 
         f.getUrl(), 
         f.getId(), 
         siteName, 
@@ -739,27 +730,28 @@ function processFileList(files, siteName, checklist) {
         
         let path = [];
         if (status === "PASS") {
-          path = [ai.majorCategory || "Uncategorized", ai.subCategory || "General", ai.detail || "Misc"];
+          path = [String(ai.majorCategory || "Uncategorized"), String(ai.subCategory || "General"), String(ai.detail || "Misc")];
         } else {
-          path = ["FAIL", ai.majorCategory || "Uncategorized", ai.subCategory || "General", ai.detail || "Misc"];
+          path = ["FAIL", String(ai.majorCategory || "Uncategorized"), String(ai.subCategory || "General"), String(ai.detail || "Misc")];
         }
         
         const destFolder = getOrCreateNestedFolder(siteFolder, path);
         f.moveTo(destFolder);
         f.setDescription(`PAT_CHECKED: ${status} | PATH: ${path.join(" > ")} | TYPE: ${imageType} | ${f.getDescription() || ""}`);
       } catch (e) {
-        console.error("Folder Move Error for file " + f.getName() + ": " + e.toString());
+        console.error("Folder Move Error: " + e.toString());
       }
       
       results.push({ name: f.getName(), status: status, reason: ai.reason, category: ai.sheetReference });
       if (status === "PASS") pass++; 
       else { 
         fail++; 
-        sendDualFailNotify(f.getName(), ai.sheetReference, ai.reason, f.getUrl(), f.getId()); 
+        const blob = DriveApp.getFileById(f.getId()).getBlob(); 
+        const kb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + f.getId() }, { text: "❌ ไมือนุมัติ", callback_data: "rej|" + f.getId() }]] }; 
+        callTGRaw("sendPhoto", { chat_id: TELEGRAM_TARGET_ID, photo: blob, caption: `🚨 พบงานไม่ผ่าน\n📄 ไฟล์: ${f.getName()}\n📌 หมวด: ${ai.sheetReference}\n❌ สาเหตุ: ${ai.reason}`, reply_markup: JSON.stringify(kb) });
       }
     } catch (e) {
-      console.error("Error processing file " + (f ? f.getName() : "unknown") + ": " + e.toString());
-      results.push({ name: f ? f.getName() : "Unknown", status: "ERROR", reason: "ระบบขัดข้อง: " + e.toString() });
+      results.push({ name: f.getName(), status: "ERROR", reason: "ระบบขัดข้อง: " + e.toString() });
       fail++;
     }
   }
@@ -768,18 +760,18 @@ function processFileList(files, siteName, checklist) {
 
 function getOrCreateNestedFolder(root, pathArr) {
   let current = root;
+  if (!pathArr || !Array.isArray(pathArr)) return root;
   for (let folderName of pathArr) {
-    if (!folderName || folderName === "undefined") continue;
-    current = getOrCreateSubFolder(current, folderName);
+    let name = String(folderName || "").trim();
+    if (!name || name === "undefined") continue;
+    current = getOrCreateSubFolder(current, name);
   }
   return current;
 }
 
 function analyzeAI(file, customChecklist) {
   if (!file || typeof file.getBlob !== 'function') {
-    const errorMsg = "⚠️ [analyzeAI] ไม่สามารถทำงานได้เนื่องจากไม่มีข้อมูลไฟล์ (file is undefined). " + 
-                     "กรุณาอย่ากดปุ่ม 'Run' ฟังก์ชัน analyzeAI โดยตรงจากหน้า Editor ครับ " +
-                     "ให้รันผ่านปุ่ม 'Process' บนหน้า Dashboard หรือรันฟังก์ชัน Test แทนครับ";
+    const errorMsg = "⚠️ [analyzeAI] Invalid file object.";
     console.error(errorMsg);
     return { status: "ERROR", reason: errorMsg };
   }
@@ -790,38 +782,15 @@ function analyzeAI(file, customChecklist) {
   
   let detailedChecklist = customChecklist;
   if (!detailedChecklist && typeof QC_CONFIG !== 'undefined') {
-    detailedChecklist = "Identify which category this photo belongs to from the following structure:\n";
+    detailedChecklist = "Identify which category this photo belongs to:\n";
     for (let major in QC_CONFIG) {
-      detailedChecklist += `- ${major}:\n`;
-      for (let sub in QC_CONFIG[major]) {
-        detailedChecklist += `  * ${sub}\n`;
-      }
+      detailedChecklist += `- ${major}\n`;
     }
-  } else if (!detailedChecklist) {
-    detailedChecklist = "General Site Standards (QC_CONFIG missing)";
   }
 
-  const promptText = `Analyze site photo for AIS standard compliance. 
-  You MUST return ONLY a JSON object. NO conversation or markdown blocks.
-  Hierarchy: Major Category > Sub Category > Detail.
-  
-  Return JSON: 
-  {
-    "majorCategory": "String", 
-    "subCategory": "String", 
-    "detail": "String",
-    "status": "PASS"|"FAIL",
-    "reason": "Thai explanation of why it passed or failed based on technical standards",
-    "imageType": "before"|"after"|"unknown"
-  }
-
-  Standards: 
-  - Wire strip length must be exactly 18mm (if applicable).
-  - Compass must be clear and readable.
-  - Quality must be professional and neat.
-  
-  Available Categories:
-  ${detailedChecklist}`;
+  const promptText = `Analyze site photo for AIS standard compliance. Return JSON ONLY. NO MD.
+  Format: {"majorCategory":"String","subCategory":"String","detail":"String","status":"PASS"|"FAIL","reason":"Thai","imageType":"before"|"after"}
+  Available: ${detailedChecklist}`;
 
   const payload = { 
     "model": "llama-3.2-90b-vision-preview", 
@@ -837,43 +806,24 @@ function analyzeAI(file, customChecklist) {
   
   for (let key of GROQ_KEYS) {
     try {
-      const res = UrlFetchApp.fetch(GROQ_AI_URL, { 
-        method: "post", 
-        headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, 
-        payload: JSON.stringify(payload), 
-        muteHttpExceptions: true 
-      });
-
+      const res = UrlFetchApp.fetch(GROQ_AI_URL, { method: "post", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, payload: JSON.stringify(payload), muteHttpExceptions: true });
       if (res.getResponseCode() === 200) {
         let rawContent = JSON.parse(res.getContentText()).choices[0].message.content;
-        let cleanJson = rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
-        
-        let aiResult;
-        try {
-          aiResult = JSON.parse(cleanJson);
-        } catch (e) {
-          const match = cleanJson.match(/\{[\s\S]*\}/);
-          if (match) aiResult = JSON.parse(match[0]);
-          else throw new Error("No valid JSON found in AI response");
-        }
-
+        let aiResult = JSON.parse(rawContent.replace(/```json/g, "").replace(/```/g, "").trim());
         const finalResult = {
-          majorCategory: aiResult.majorCategory || "Uncategorized",
-          subCategory: aiResult.subCategory || "General",
-          detail: aiResult.detail || "Misc",
-          status: (aiResult.status || "FAIL").toUpperCase(),
-          reason: aiResult.reason || "AI returned invalid format",
-          imageType: aiResult.imageType || "unknown"
+          majorCategory: String(aiResult.majorCategory || "Uncategorized"),
+          subCategory: String(aiResult.subCategory || "General"),
+          detail: String(aiResult.detail || "Misc"),
+          status: String(aiResult.status || "FAIL").toUpperCase(),
+          reason: String(aiResult.reason || "AI return error"),
+          imageType: String(aiResult.imageType || "unknown")
         };
-        
         finalResult.sheetReference = `${finalResult.majorCategory} > ${finalResult.subCategory} > ${finalResult.detail}`;
         return finalResult;
       }
-    } catch (e) {
-      console.warn("AI Retry logic for file " + file.getName() + ": " + e.toString());
-    }
+    } catch (e) {}
   }
-  return { status: "ERROR", reason: "AI connection or format error" };
+  return { status: "ERROR", reason: "AI connection error" };
 }
 
 function getDashboardData(siteFilter) {
@@ -889,32 +839,16 @@ function getDashboardData(siteFilter) {
   } catch(e) { return { metrics: {workOrders:0, rate:0}, statusBreakdown: [] }; }
 }
 
-/**
- * ฟังก์ชันสำหรับทดสอบการทำงานของ AI และการสร้างโฟลเดอร์ด้วยมือจากหน้า Editor
- */
 function runManualTest() {
   console.log("--- เริ่มการทดสอบ SMART QC (Manual Run) " + VERSION + " ---");
   try {
     const folder = DriveApp.getFolderById(FOLDER_ID);
     const files = folder.getFiles();
-    
-    if (!files.hasNext()) {
-      console.warn("❌ ไม่พบไฟล์ในโฟลเดอร์ทดสอบ: " + folder.getName());
-      return;
-    }
-    
+    if (!files.hasNext()) { console.warn("❌ ไม่พบไฟล์ในโฟลเดอร์ PHOTO"); return; }
     const testFile = files.next();
     console.log("📄 เริ่มทดสอบด้วยไฟล์: " + testFile.getName());
-    
     const result = processFileList([testFile], "TEST_SITE_MANUAL", null);
-    
-    console.log("\n📊 ผลการทดสอบ:");
-    console.log("สถานะ: " + result.details[0].status);
-    console.log("หมวดหมู่ที่ AI เลือก: " + result.details[0].category);
-    console.log("เหตุผล: " + result.details[0].reason);
-    
-    console.log("\n✅ ตรวจสอบใน Google Drive ของคุณว่ามีการสร้างโฟลเดอร์ 3 ชั้นและย้ายไฟล์เข้าไปแล้วหรือไม่");
-  } catch (e) {
-    console.error("❌ เกิดข้อผิดพลาดในการทดสอบ: " + e.toString());
-  }
+    console.log("\n📊 ผลการทดสอบ: " + result.details[0].status);
+    console.log("หมวดหมู่: " + result.details[0].category);
+  } catch (e) { console.error("❌ Error: " + e.toString()); }
 }
