@@ -1,9 +1,11 @@
 /**
  * =========================================================================
- * 🚀 AI SMART QC BOT - V.144 (ULTRA-PRECISION)
+ * 🚀 AI SMART QC BOT - V.148 (PREMIUM STABLE)
  * =========================================================================
- * ⚠️ คำเตือน: ก่อนวางโค้ดนี้ ใน Apps Script Editor ให้กด Ctrl+A และ Delete 
- * ลบโค้ดเก่าในทุกๆ ไฟล์ออกให้หมดเกลี้ยงก่อนนะครับ!
+ * ⚠️ วิธีติดตั้ง: 
+ * 1. ลบโค้ดเก่าใน Apps Script ออกให้หมดทุกไฟล์ (Ctrl+A -> Delete)
+ * 2. คัดลอกโค้ดนี้ไปวางในไฟล์ชื่อ Code.gs เพียงไฟล์เดียว
+ * 3. กด Save และ Deploy New Version
  * =========================================================================
  */
 
@@ -112,7 +114,7 @@ const QC_CONFIG = {
     "Sector C": {
       "ระบุ Sector ที่ติดตั้ง": "Confirming Sector C installation",
       "ระบุคลื่นความถี่ที่ทำการติดตั้ง": "Frequency identification",
-      "Tower Outdoor View": "General view of the tower",
+      "Tower Outdoor View": "Tower View",
       "Antenna/AAU position": "Antenna Position",
       "Antenna Model": "Antenna Model Label",
       "M Tilt": "Tilt check",
@@ -286,10 +288,10 @@ const QC_CONFIG = {
 };
 
 // =========================================================================
-// === 🧠 AI SMART QC ENGINE - V.147 (SECURE AUTH) ===
+// === 🧠 AI SMART QC ENGINE - V.148 (PREMIUM STABLE) ===
 // =========================================================================
 
-const VERSION = "V.147 (SECURE AUTH)"; 
+const VERSION = "V.148 (PREMIUM STABLE)"; 
 
 const AUTHORIZED_USERS = [
   "adisak.chanmao@teloneer.com",
@@ -363,10 +365,19 @@ const GROQ_AI_URL = "https://api.groq.com/openai/v1/chat/completions";
 function doGet(e) {
   let params = e?.parameter || {};
   const action = String(params.action || "").toLowerCase();
-  console.log(`[V.144] GET Action: ${action}`);
+  console.log(`[${VERSION}] GET Action: ${action}`);
   try {
     if (action === "getdata") return jsonResponse(getDashboardData(params.site || "All Sites"));
-    if (action === "checkpassword") return (params.password === "QC-ADMIN-2024") ? jsonResponse({success:true}) : jsonResponse({error:"รหัสไม่ถูกต้อง"});
+    if (action === "checkpassword") {
+      const email = String(params.email || "").toLowerCase();
+      const pwd = String(params.password || "");
+      const isAuthorized = AUTHORIZED_USERS.some(u => u.toLowerCase() === email);
+      if (pwd === ADMIN_PASSWORD && (isAuthorized || !email)) {
+        return jsonResponse({success:true});
+      } else {
+        return jsonResponse({error: isAuthorized ? "รหัสไม่ถูกต้อง" : "Email นี้ไม่มีสิทธิ์เข้าถึงระบบ"});
+      }
+    }
     if (action === "listfolders") return jsonResponse({ folders: listSubFolders(params.root || FOLDER_ID) });
     if (action === "listfiles") return jsonResponse(listFilesInFolder(params.folderId));
     if (action === "processfolder") return jsonResponse(processFolderById(params.folderId, params.templateId));
@@ -396,7 +407,7 @@ function listTemplates(type, project) {
 }
 
 function doPost(e) {
-  console.log(`[V.144] doPost execution started`);
+  console.log(`[${VERSION}] doPost execution started`);
   if (!e || !e.postData || !e.postData.contents) {
     return ContentService.createTextOutput("⚠️ No Data");
   }
@@ -415,7 +426,7 @@ function doPost(e) {
       const msg = contents.callback_query.message;
       const adminName = contents.callback_query.from.first_name || "Admin";
       
-      console.log(`[V.144] TG Callback: ${dataStr}`);
+      console.log(`[${VERSION}] TG Callback: ${dataStr}`);
       const parts = dataStr.split("|");
       if (parts.length < 2) return ContentService.createTextOutput("Invalid Data Format");
 
@@ -430,7 +441,7 @@ function doPost(e) {
       return ContentService.createTextOutput("OK");
     }
   } catch (err) {
-    console.error("[V.144] doPost Error: " + err.toString());
+    console.error(`[${VERSION}] doPost Error: ` + err.toString());
   }
   return ContentService.createTextOutput("OK");
 }
@@ -448,7 +459,7 @@ function uploadFile(folderId, fileName, mimeType, base64Data) {
 }
 
 function handleManualApprove(fileId, chatId, msgId, adminName) {
-  console.log(`[V.144] ManualApprove: ${fileId}`);
+  console.log(`[${VERSION}] ManualApprove: ${fileId}`);
   try {
     if (!fileId || String(fileId) === "undefined") throw new Error("Invalid ID");
     
@@ -485,7 +496,7 @@ function handleManualApprove(fileId, chatId, msgId, adminName) {
     }
 
     callTGRaw("editMessageCaption", { chat_id: chatId, message_id: msgId, caption: `✅ APPROVED BY ${String(adminName).toUpperCase()}`, parse_mode: "Markdown" });
-  } catch (e) { console.error(`[V.144] Error: ${e}`); }
+  } catch (e) { console.error(`[${VERSION}] Error: ${e}`); }
 }
 
 function handleManualReject(fileId, chatId, msgId, adminName) {
@@ -495,7 +506,7 @@ function handleManualReject(fileId, chatId, msgId, adminName) {
 }
 
 function generatePAT(folderId, siteName) {
-  console.log(`[V.144] Generating PAT: ${siteName}`);
+  console.log(`[${VERSION}] Generating PAT: ${siteName}`);
   try {
     const ssDb = getSpreadsheet();
     const sheet = ssDb.getSheetByName(SHEET_NAME); 
@@ -669,7 +680,6 @@ function processFileList(files, siteName, checklist) {
         const rootArchive = DriveApp.getFolderById(ARCHIVE_FOLDER_ID);
         const siteFolder = getOrCreateSubFolder(rootArchive, siteName);
         
-        // V.144 Fix: Always use 3 levels even for FAIL
         let path = (status === "PASS") ? 
           [String(ai.majorCategory || "Uncategorized"), String(ai.subCategory || "General"), String(ai.detail || "Misc")] : 
           ["FAIL", String(ai.majorCategory || "Uncategorized"), String(ai.subCategory || "General"), String(ai.detail || "Misc")];
@@ -710,7 +720,6 @@ function analyzeAI(file, customChecklist) {
   
   let detailedChecklist = customChecklist;
   if (!detailedChecklist && typeof QC_CONFIG !== 'undefined') {
-    // V.144 Fix: Construct detailed hierarchy string for AI
     detailedChecklist = "Available Hierarchy:\n";
     for (let major in QC_CONFIG) {
       detailedChecklist += `- ${major}:\n`;
@@ -767,15 +776,15 @@ function getDashboardData(siteFilter) {
 }
 
 function runManualTest() {
-  console.log(`[V.144] Starting manual test from Editor...`);
+  console.log(`[${VERSION}] Starting manual test from Editor...`);
   try {
     const folder = DriveApp.getFolderById(FOLDER_ID);
     const files = folder.getFiles();
     if (!files.hasNext()) { console.warn("❌ Folder Empty"); return; }
     const f = files.next();
-    console.log(`[V.144] Testing file: ${f.getName()}`);
-    const result = processFileList([f], "TEST_V144", null);
-    console.log(`[V.144] Result: ${result.details[0].status}`);
-    console.log(`[V.144] Path: ${result.details[0].category}`);
-  } catch (e) { console.error(`[V.144] Test Error: ${e}`); }
+    console.log(`[${VERSION}] Testing file: ${f.getName()}`);
+    const result = processFileList([f], "TEST_V148", null);
+    console.log(`[${VERSION}] Result: ${result.details[0].status}`);
+    console.log(`[${VERSION}] Path: ${result.details[0].category}`);
+  } catch (e) { console.error(`[${VERSION}] Test Error: ${e}`); }
 }
