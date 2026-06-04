@@ -505,7 +505,7 @@ function analyzeAI(file, customChecklist) {
   
   // Construct a more detailed checklist from QC_CONFIG if no custom checklist is provided
   let detailedChecklist = customChecklist;
-  if (!detailedChecklist) {
+  if (!detailedChecklist && typeof QC_CONFIG !== 'undefined') {
     detailedChecklist = "Identify which category this photo belongs to from the following structure:\n";
     for (let major in QC_CONFIG) {
       detailedChecklist += `- ${major}:\n`;
@@ -513,6 +513,8 @@ function analyzeAI(file, customChecklist) {
         detailedChecklist += `  * ${sub}\n`;
       }
     }
+  } else if (!detailedChecklist) {
+    detailedChecklist = "General Site Standards (QC_CONFIG missing)";
   }
 
   const promptText = `Analyze site photo for AIS standard compliance. 
