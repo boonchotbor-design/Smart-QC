@@ -354,8 +354,28 @@ function doGet(e) {
     if (action === "listfiles") return jsonResponse(listFilesInFolder(params.folderId));
     if (action === "processfolder") return jsonResponse(processFolderById(params.folderId, params.templateId));
     if (action === "generatepat") return jsonResponse(generatePAT(params.folderId, params.siteName));
+    if (action === "createsitefolder") return jsonResponse(createSiteFolder(params.project, params.type, params.site));
+    if (action === "listtemplates") return jsonResponse(listTemplates(params.type, params.project));
     return jsonResponse({ status: "READY", version: VERSION });
   } catch (err) { return jsonResponse({ error: err.toString() }); }
+}
+
+function createSiteFolder(project, type, site) {
+  try {
+    const root = DriveApp.getFolderById(FOLDER_ID);
+    const folderName = `${project}_${type}_${site}`;
+    const folder = root.createFolder(folderName);
+    return { id: folder.getId(), name: folder.getName(), url: folder.getUrl() };
+  } catch (e) { return { error: e.toString() }; }
+}
+
+function listTemplates(type, project) {
+  try {
+    const key = `${project}_${type}`;
+    const id = TEMPLATES[key] || TEMPLATES.DEFAULT;
+    const file = DriveApp.getFileById(id);
+    return [{ id: id, name: file.getName(), key: key }];
+  } catch (e) { return [{ id: TEMPLATES.DEFAULT, name: "Default Template", key: "DEFAULT" }]; }
 }
 
 function doPost(e) {
