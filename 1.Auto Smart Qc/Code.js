@@ -777,8 +777,11 @@ function getOrCreateNestedFolder(root, pathArr) {
 
 function analyzeAI(file, customChecklist) {
   if (!file || typeof file.getBlob !== 'function') {
-    console.error("Critical Error: analyzeAI received an invalid file object:", file);
-    return { status: "ERROR", reason: "Invalid file object received" };
+    const errorMsg = "⚠️ [analyzeAI] ไม่สามารถทำงานได้เนื่องจากไม่มีข้อมูลไฟล์ (file is undefined). " + 
+                     "กรุณาอย่ากดปุ่ม 'Run' ฟังก์ชัน analyzeAI โดยตรงจากหน้า Editor ครับ " +
+                     "ให้รันผ่านปุ่ม 'Process' บนหน้า Dashboard หรือรันฟังก์ชัน Test แทนครับ";
+    console.error(errorMsg);
+    return { status: "ERROR", reason: errorMsg };
   }
 
   const blob = file.getBlob();
