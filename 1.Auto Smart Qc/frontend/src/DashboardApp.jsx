@@ -40,11 +40,16 @@ function DashboardApp() {
   const [lang, setLang] = useState('EN');
 
   useEffect(() => {
-    if (localStorage.getItem('isLoggedIn') === 'true') setIsLoggedIn(true);
+    const savedLogin = localStorage.getItem('isLoggedIn');
+    const savedEmail = localStorage.getItem('userEmail');
+    if (savedLogin === 'true') setIsLoggedIn(true);
+    if (savedEmail) setEmail(savedEmail);
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn'); setIsLoggedIn(false); setAuthStep(1); setEmail(""); setPassword(""); setShowPassword(false);
+    localStorage.removeItem('isLoggedIn');
+    // Note: We keep userEmail in localStorage for auto-fill convenience
+    setIsLoggedIn(false); setAuthStep(1); setPassword(""); setShowPassword(false);
   };
 
   const fetchData = async (site = "All Sites") => {
@@ -60,13 +65,20 @@ function DashboardApp() {
 
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
-    if (authStep === 1) setAuthStep(2);
+    if (authStep === 1) {
+      if (email) localStorage.setItem('userEmail', email.toLowerCase().trim());
+      setAuthStep(2);
+    }
     else {
       setLoading(true);
       try {
         const res = await fetch(`${BASE_URL}?action=checkPassword&email=${email}&password=${encodeURIComponent(password)}`);
         const json = await res.json();
-        if (json.success) { localStorage.setItem('isLoggedIn', 'true'); setIsLoggedIn(true); }
+        if (json.success) { 
+          localStorage.setItem('isLoggedIn', 'true'); 
+          localStorage.setItem('userEmail', email.toLowerCase().trim());
+          setIsLoggedIn(true); 
+        }
         else throw new Error(json.error);
       } catch (err) { setError(err.message); } finally { setLoading(false); }
     }
