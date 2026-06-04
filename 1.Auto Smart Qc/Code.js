@@ -516,9 +516,10 @@ function analyzeAI(file, customChecklist) {
   }
 
   const promptText = `Analyze site photo for AIS standard compliance. 
-  You MUST identify the photo according to this hierarchy: Major Category > Sub Category > Detail.
+  You MUST return ONLY a JSON object. NO conversation or markdown blocks.
+  Hierarchy: Major Category > Sub Category > Detail.
   
-  Return JSON only: 
+  Return JSON: 
   {
     "majorCategory": "String", 
     "subCategory": "String", 
@@ -550,19 +551,46 @@ function analyzeAI(file, customChecklist) {
   
   for (let key of GROQ_KEYS) {
     try {
-      const res = UrlFetchApp.fetch(GROQ_AI_URL, { method: "post", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, payload: JSON.stringify(payload), muteHttpExceptions: true });
+      const res = UrlFetchApp.fetch(GROQ_AI_URL, { 
+        method: "post", 
+        headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, 
+        payload: JSON.stringify(payload), 
+        muteHttpExceptions: true 
+      });
+
       if (res.getResponseCode() === 200) {
-        let content = JSON.parse(res.getContentText()).choices[0].message.content;
-        let aiResult = JSON.parse(content.replace(/```json/g, "").replace(/```/g, "").trim());
+        let rawContent = JSON.parse(res.getContentText()).choices[0].message.content;
+        let cleanJson = rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
         
-        // Map to legacy sheetReference for backward compatibility if needed, 
-        // but we'll use the new fields primarily.
-        aiResult.sheetReference = `${aiResult.majorCategory} > ${aiResult.subCategory} > ${aiResult.detail}`;
-        return aiResult;
+        let aiResult;
+        try {
+          aiResult = JSON.parse(cleanJson);
+        } catch (e) {
+          // Attempt to extract JSON if it's buried in text
+          const match = cleanJson.match(/\{[\s\S]*\}/);
+          if (match) aiResult = JSON.parse(match[0]);
+          else throw new Error("No valid JSON found in AI response");
+        }
+
+        // Return with defaults to prevent undefined errors
+        const finalResult = {
+          majorCategory: aiResult.majorCategory || "Uncategorized",
+          subCategory: aiResult.subCategory || "General",
+          detail: aiResult.detail || "Misc",
+          status: (aiResult.status || "FAIL").toUpperCase(),
+          reason: aiResult.reason || "AI returned invalid format",
+          imageType: aiResult.imageType || "unknown"
+        };
+        
+        // Map to legacy sheetReference
+        finalResult.sheetReference = `${finalResult.majorCategory} > ${finalResult.subCategory} > ${finalResult.detail}`;
+        return finalResult;
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn("AI Retry logic for file " + file.getName() + ": " + e.toString());
+    }
   }
-  return { status: "ERROR", reason: "AI connection failed" };
+  return { status: "ERROR", reason: "AI connection or format error" };
 }
 
 function getDashboardData(siteFilter) {
