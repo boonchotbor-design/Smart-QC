@@ -117,7 +117,7 @@ const AUTHORIZED_USERS = [
   "sathitphorn.intapankaew@teloneer.com"
 ];
 
-const ADMIN_PASSWORD = "QC-ADMIN-2026";
+const ADMIN_PASSWORD = "123456";
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c".trim(); 
@@ -183,18 +183,18 @@ function doGet(e) {
       const email = String(params.email || "").toLowerCase().trim();
       const pwd = String(params.password || "").trim();
       
-      console.log(`[V.151] Login Request: ${email} | PwdLen: ${pwd.length}`);
+      console.log(`[${VERSION}] Login Request: ${email} | PwdLen: ${pwd.length}`);
       
       const isAuth = AUTHORIZED_USERS.some(u => u.toLowerCase().trim() === email);
       const isPwdMatch = (pwd === ADMIN_PASSWORD);
       
       if (isPwdMatch && isAuth) {
-        console.log(`[V.151] Login SUCCESS for ${email}`);
+        console.log(`[${VERSION}] Login SUCCESS for ${email}`);
         return jsonResponse({success:true});
       } else {
-        console.warn(`[V.151] Login FAIL: EmailAuth=${isAuth}, PwdMatch=${isPwdMatch}`);
-        if (!isAuth) return jsonResponse({error: "Email นี้ไม่มีสิทธิ์เข้าถึงระบบ"});
-        return jsonResponse({error: "รหัสผ่านไม่ถูกต้อง"});
+        console.warn(`[${VERSION}] Login FAIL: EmailAuth=${isAuth}, PwdMatch=${isPwdMatch}`);
+        if (!isAuth) return jsonResponse({error: "Email '" + email + "' ไม่มีสิทธิ์เข้าถึงระบบ"});
+        return jsonResponse({error: "รหัสผ่านไม่ถูกต้อง (Incorrect Password)"});
       }
     }
     
