@@ -1,6 +1,6 @@
 /**
  * =========================================================================
- * 🚀 AI SMART QC BOT - V.143 (FINAL STABLE VERSION)
+ * 🚀 AI SMART QC BOT - V.144 (ULTRA-PRECISION)
  * =========================================================================
  * ⚠️ คำเตือน: ก่อนวางโค้ดนี้ ใน Apps Script Editor ให้กด Ctrl+A และ Delete 
  * ลบโค้ดเก่าในทุกๆ ไฟล์ออกให้หมดเกลี้ยงก่อนนะครับ!
@@ -286,10 +286,10 @@ const QC_CONFIG = {
 };
 
 // =========================================================================
-// === 🧠 AI SMART QC ENGINE - V.143 (SUPER-ROBUST) ===
+// === 🧠 AI SMART QC ENGINE - V.144 (ULTRA-PRECISION) ===
 // =========================================================================
 
-const VERSION = "V.143 (SUPER-ROBUST)"; 
+const VERSION = "V.144 (ULTRA-PRECISION)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c".trim(); 
@@ -346,7 +346,7 @@ const GROQ_AI_URL = "https://api.groq.com/openai/v1/chat/completions";
 function doGet(e) {
   let params = e?.parameter || {};
   const action = String(params.action || "").toLowerCase();
-  console.log(`[V.143] GET Action: ${action}`);
+  console.log(`[V.144] GET Action: ${action}`);
   try {
     if (action === "getdata") return jsonResponse(getDashboardData(params.site || "All Sites"));
     if (action === "checkpassword") return (params.password === "QC-ADMIN-2024") ? jsonResponse({success:true}) : jsonResponse({error:"รหัสไม่ถูกต้อง"});
@@ -359,7 +359,7 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  console.log(`[V.143] doPost execution started`);
+  console.log(`[V.144] doPost execution started`);
   if (!e || !e.postData || !e.postData.contents) {
     return ContentService.createTextOutput("⚠️ No Data");
   }
@@ -378,7 +378,7 @@ function doPost(e) {
       const msg = contents.callback_query.message;
       const adminName = contents.callback_query.from.first_name || "Admin";
       
-      console.log(`[V.143] TG Callback: ${dataStr}`);
+      console.log(`[V.144] TG Callback: ${dataStr}`);
       const parts = dataStr.split("|");
       if (parts.length < 2) return ContentService.createTextOutput("Invalid Data Format");
 
@@ -393,7 +393,7 @@ function doPost(e) {
       return ContentService.createTextOutput("OK");
     }
   } catch (err) {
-    console.error("[V.143] doPost Error: " + err.toString());
+    console.error("[V.144] doPost Error: " + err.toString());
   }
   return ContentService.createTextOutput("OK");
 }
@@ -411,7 +411,7 @@ function uploadFile(folderId, fileName, mimeType, base64Data) {
 }
 
 function handleManualApprove(fileId, chatId, msgId, adminName) {
-  console.log(`[V.143] ManualApprove: ${fileId}`);
+  console.log(`[V.144] ManualApprove: ${fileId}`);
   try {
     if (!fileId || String(fileId) === "undefined") throw new Error("Invalid ID");
     
@@ -448,7 +448,7 @@ function handleManualApprove(fileId, chatId, msgId, adminName) {
     }
 
     callTGRaw("editMessageCaption", { chat_id: chatId, message_id: msgId, caption: `✅ APPROVED BY ${String(adminName).toUpperCase()}`, parse_mode: "Markdown" });
-  } catch (e) { console.error(`[V.143] Error: ${e}`); }
+  } catch (e) { console.error(`[V.144] Error: ${e}`); }
 }
 
 function handleManualReject(fileId, chatId, msgId, adminName) {
@@ -458,7 +458,7 @@ function handleManualReject(fileId, chatId, msgId, adminName) {
 }
 
 function generatePAT(folderId, siteName) {
-  console.log(`[V.143] Generating PAT: ${siteName}`);
+  console.log(`[V.144] Generating PAT: ${siteName}`);
   try {
     const ssDb = getSpreadsheet();
     const sheet = ssDb.getSheetByName(SHEET_NAME); 
@@ -631,7 +631,12 @@ function processFileList(files, siteName, checklist) {
       try {
         const rootArchive = DriveApp.getFolderById(ARCHIVE_FOLDER_ID);
         const siteFolder = getOrCreateSubFolder(rootArchive, siteName);
-        let path = (status === "PASS") ? [String(ai.majorCategory || "Uncategorized"), String(ai.subCategory || "General"), String(ai.detail || "Misc")] : ["FAIL", String(ai.majorCategory || "Uncategorized"), String(ai.subCategory || "General")];
+        
+        // V.144 Fix: Always use 3 levels even for FAIL
+        let path = (status === "PASS") ? 
+          [String(ai.majorCategory || "Uncategorized"), String(ai.subCategory || "General"), String(ai.detail || "Misc")] : 
+          ["FAIL", String(ai.majorCategory || "Uncategorized"), String(ai.subCategory || "General"), String(ai.detail || "Misc")];
+          
         f.moveTo(getOrCreateNestedFolder(siteFolder, path));
         f.setDescription(`PAT_CHECKED: ${status} | TYPE: ${imageType}`);
       } catch (e) {}
@@ -642,7 +647,7 @@ function processFileList(files, siteName, checklist) {
         fail++; 
         const blob = DriveApp.getFileById(f.getId()).getBlob(); 
         const kb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + f.getId() }, { text: "❌ ไมือนุมัติ", callback_data: "rej|" + f.getId() }]] }; 
-        callTGRaw("sendPhoto", { chat_id: TELEGRAM_TARGET_ID, photo: blob, caption: `🚨 พบงานไม่ผ่าน: ${f.getName()}\n❌ สาเหตุ: ${ai.reason}`, reply_markup: JSON.stringify(kb) });
+        callTGRaw("sendPhoto", { chat_id: TELEGRAM_TARGET_ID, photo: blob, caption: `🚨 พบงานไม่ผ่าน: ${f.getName()}\n📌 หมวด: ${ai.sheetReference}\n❌ สาเหตุ: ${ai.reason}`, reply_markup: JSON.stringify(kb) });
       }
     } catch (e) { fail++; }
   }
@@ -668,12 +673,21 @@ function analyzeAI(file, customChecklist) {
   
   let detailedChecklist = customChecklist;
   if (!detailedChecklist && typeof QC_CONFIG !== 'undefined') {
-    detailedChecklist = "Available: " + Object.keys(QC_CONFIG).join(", ");
+    // V.144 Fix: Construct detailed hierarchy string for AI
+    detailedChecklist = "Available Hierarchy:\n";
+    for (let major in QC_CONFIG) {
+      detailedChecklist += `- ${major}:\n`;
+      for (let sub in QC_CONFIG[major]) {
+        detailedChecklist += `  * ${sub}\n`;
+      }
+    }
   }
 
-  const promptText = `Analyze site photo for AIS standard. Return JSON ONLY.
+  const promptText = `Analyze site photo for AIS standard. You MUST identify Major Category, Sub Category, and Detail.
+  Return JSON ONLY.
   Format: {"majorCategory":"String","subCategory":"String","detail":"String","status":"PASS"|"FAIL","reason":"Thai","imageType":"before"|"after"}
-  Checklist: ${detailedChecklist}`;
+  Hierarchy Checklist: 
+  ${detailedChecklist}`;
 
   const payload = { 
     "model": "llama-3.2-90b-vision-preview", 
@@ -716,14 +730,15 @@ function getDashboardData(siteFilter) {
 }
 
 function runManualTest() {
-  console.log(`[V.143] Starting manual test from Editor...`);
+  console.log(`[V.144] Starting manual test from Editor...`);
   try {
     const folder = DriveApp.getFolderById(FOLDER_ID);
     const files = folder.getFiles();
     if (!files.hasNext()) { console.warn("❌ Folder Empty"); return; }
     const f = files.next();
-    console.log(`[V.143] Testing file: ${f.getName()}`);
-    const result = processFileList([f], "TEST_V143", null);
-    console.log(`[V.143] Result: ${result.details[0].status}`);
-  } catch (e) { console.error(`[V.143] Test Error: ${e}`); }
+    console.log(`[V.144] Testing file: ${f.getName()}`);
+    const result = processFileList([f], "TEST_V144", null);
+    console.log(`[V.144] Result: ${result.details[0].status}`);
+    console.log(`[V.144] Path: ${result.details[0].category}`);
+  } catch (e) { console.error(`[V.144] Test Error: ${e}`); }
 }
