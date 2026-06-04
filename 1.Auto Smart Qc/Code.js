@@ -1,6 +1,6 @@
 /**
  * =========================================================================
- * 🚀 AI SMART QC BOT - V.148 (PREMIUM STABLE)
+ * 🚀 AI SMART QC BOT - V.150 (SUPER-ROBUST LOGIN)
  * =========================================================================
  * ⚠️ วิธีติดตั้ง: 
  * 1. ลบโค้ดเก่าใน Apps Script ออกให้หมดทุกไฟล์ (Ctrl+A -> Delete)
@@ -38,247 +38,56 @@ const QC_CONFIG = {
   },
   "Quality Check": {
     "Sector A": {
-      "ระบุ Sector ที่ติดตั้ง": "Confirming Sector A installation",
-      "ระบุคลื่นความถี่ที่ทำการติดตั้ง": "Frequency identification",
-      "Tower Outdoor View": "General view of the tower",
-      "Antenna/AAU position": "Correct positioning of Antenna/AAU",
-      "Antenna Model": "Readable antenna model label",
-      "M Tilt": "Mechanical tilt setting check",
-      "Azimuth with Compass": "Compass showing azimuth direction",
-      "Zoom Compass of Azimuth Sector A": "Close-up of compass reading",
-      "Jumper/ RET under Antenna/AAU photo include Filter/Combiner/Triplexer": "Cable and peripheral connections",
-      "Clamp Antenna / AAU Top/Bottom": "Clamping status top and bottom",
-      "RRU#1 Overview Photo": "Overview of first RRU",
-      "RRU#1 Serial": "Serial number of RRU#1",
-      "Ground cable connect under RRU#1": "Grounding check for RRU#1",
-      "Jumper/RET/Label/Color mark under RRU#1": "Labeling and color marking RRU#1",
-      "RRU#1/AAU Socket Wire strip length is 18mm with scale": "Wire strip length measurement with ruler (18mm)",
-      "RRU#1/AAU Socket Left Side view": "Left socket view",
-      "RRU#1/AAU Socket Right Side view": "Right socket view",
-      "Open RRU#1 cover with plug in CPRI and socket DC RRU#1 Sector A": "Internal connections of RRU#1",
-      "RRU#2 Overview Photo": "Overview of second RRU",
-      "RRU#2 Serial": "Serial number of RRU#2",
-      "Ground cable connect under RRU#2": "Grounding check for RRU#2",
-      "Jumper/RET/Label/Color mark under RRU#2": "Labeling and color marking RRU#2",
-      "RRU#2/AAU Socket Wire strip length is 18mm with scale": "Wire strip length measurement with ruler (18mm) RRU#2",
-      "RRU#2/AAU Socket Left Side view": "Left socket view RRU#2",
-      "RRU#2/AAU Socket Right Side view": "Right socket view RRU#2",
-      "Open RRU#2 cover with plug in CPRI and socket DC RRU#2 Sector A": "Internal connections of RRU#2",
-      "Stainless cable tie at jumper with pipe": "Cable tie application",
-      "DCDU socket of RRU Sector A#1, After wire strip at DCDU": "DCDU connection check",
-      "OCB": "Over-current breaker check",
-      "Mounting": "Mounting stability",
-      "Ground bar": "Ground bar connection",
-      "Notch CPRI Cable": "CPRI cable routing",
-      "(if any) Filter": "Filter installation (if applicable)",
-      "(if any) Pipe": "Pipe installation (if applicable)",
-      "(if any) Diplexer / Combiner / Splitter": "Peripheral components"
+      "ระบุ Sector ที่ติดตั้ง": "Confirming Sector A", "ระบุคลื่นความถี่ที่ทำการติดตั้ง": "Freq ID", "Tower Outdoor View": "Tower View",
+      "Antenna/AAU position": "Position", "Antenna Model": "Model", "M Tilt": "Tilt", "Azimuth with Compass": "Azimuth",
+      "Zoom Compass of Azimuth Sector A": "Zoom Azimuth", "Jumper/ RET under Antenna/AAU photo": "Jumper", "Clamp Antenna / AAU Top/Bottom": "Clamp",
+      "RRU#1 Overview Photo": "RRU1 View", "RRU#1 Serial": "RRU1 SN", "Ground cable connect under RRU#1": "RRU1 GND",
+      "Jumper/RET/Label/Color mark under RRU#1": "RRU1 Mark", "RRU#1/AAU Socket Wire strip 18mm": "Wire 18mm", "RRU#1/AAU Socket Left": "RRU1 L",
+      "RRU#1/AAU Socket Right": "RRU1 R", "Open RRU#1 cover": "RRU1 Open", "RRU#2 Overview": "RRU2 View", "RRU#2 Serial": "RRU2 SN",
+      "Ground cable under RRU#2": "RRU2 GND", "Jumper/RET/Label/Color mark under RRU#2": "RRU2 Mark", "RRU#2/AAU Socket Wire 18mm": "Wire 18mm",
+      "RRU#2/AAU Socket Left": "RRU2 L", "RRU#2/AAU Socket Right": "RRU2 R", "Open RRU#2 cover": "RRU2 Open",
+      "Stainless cable tie": "Tie", "DCDU socket": "DCDU", "OCB": "OCB", "Mounting": "Mounting", "Ground bar": "GND Bar",
+      "Notch CPRI Cable": "CPRI", "(if any) Filter": "Filter", "(if any) Pipe": "Pipe", "(if any) Diplexer": "Diplexer"
     },
     "Sector B": {
-      "ระบุ Sector ที่ติดตั้ง": "Confirming Sector B installation",
-      "ระบุคลื่นความถี่ที่ทำการติดตั้ง": "Frequency identification",
-      "Tower Outdoor View": "General view of the tower",
-      "Antenna/AAU position": "Correct positioning",
-      "Antenna Model": "Antenna model label",
-      "M Tilt": "Mechanical tilt check",
-      "Azimuth with Compass": "Compass azimuth",
-      "Zoom Compass of Azimuth Sector A": "Zoomed compass reading",
-      "Jumper/ RET under Antenna/AAU photo include Filter/Combiner/Triplexer": "Jumper and peripheral connections",
-      "Clamp Antenna / AAU Top/Bottom": "Clamping status",
-      "RRU#1 Overview Photo": "RRU#1 Overview",
-      "RRU#1 Serial": "RRU#1 Serial number",
-      "Ground cable connect under RRU#1": "RRU#1 Grounding",
-      "Jumper/RET/Label/Color mark under RRU#1": "RRU#1 Labeling",
-      "RRU#1/AAU Socket Wire strip length is 18mm with scale": "Wire strip 18mm RRU#1",
-      "RRU#1/AAU Socket Left Side view": "Left socket RRU#1",
-      "RRU#1/AAU Socket Right Side view": "Right socket RRU#1",
-      "Open RRU#1 cover with plug in CPRI and socket DC RRU#1 Sector A": "Internal RRU#1",
-      "RRU#2 Overview Photo": "RRU#2 Overview",
-      "RRU#2 Serial": "RRU#2 Serial number",
-      "Ground cable connect under RRU#2": "RRU#2 Grounding",
-      "Jumper/RET/Label/Color mark under RRU#2": "RRU#2 Labeling",
-      "RRU#2/AAU Socket Wire strip length is 18mm with scale": "Wire strip 18mm RRU#2",
-      "RRU#2/AAU Socket Left Side view": "Left socket RRU#2",
-      "RRU#2/AAU Socket Right Side view": "Right socket RRU#2",
-      "Open RRU#2 cover with plug in CPRI and socket DC RRU#2 Sector A": "Internal RRU#2",
-      "Stainless cable tie at jumper with pipe": "Cable ties",
-      "DCDU socket of RRU Sector A#1, After wire strip at DCDU": "DCDU socket",
-      "OCB": "OCB",
-      "Mounting": "Mounting",
-      "Ground bar": "Ground bar",
-      "Notch CPRI Cable": "CPRI Cable",
-      "(if any) Filter": "Filter",
-      "(if any) Pipe": "Pipe",
-      "(if any) Diplexer / Combiner / Splitter": "Diplexer/Combiner/Splitter"
+      "ระบุ Sector ที่ติดตั้ง": "Confirming Sector B", "ระบุคลื่นความถี่ที่ทำการติดตั้ง": "Freq ID", "Tower Outdoor View": "Tower View",
+      "Antenna/AAU position": "Position", "Antenna Model": "Model", "M Tilt": "Tilt", "Azimuth with Compass": "Azimuth",
+      "Zoom Compass of Azimuth Sector A": "Zoom Azimuth", "Jumper/ RET under Antenna/AAU photo": "Jumper", "Clamp Antenna / AAU Top/Bottom": "Clamp",
+      "RRU#1 Overview Photo": "RRU1 View", "RRU#1 Serial": "RRU1 SN", "Ground cable connect under RRU#1": "RRU1 GND",
+      "Jumper/RET/Label/Color mark under RRU#1": "RRU1 Mark", "RRU#1/AAU Socket Wire strip 18mm": "Wire 18mm", "RRU#1/AAU Socket Left": "RRU1 L",
+      "RRU#1/AAU Socket Right": "RRU1 R", "Open RRU#1 cover": "RRU1 Open", "RRU#2 Overview": "RRU2 View", "RRU#2 Serial": "RRU2 SN",
+      "Ground cable under RRU#2": "RRU2 GND", "Jumper/RET/Label/Color mark under RRU#2": "RRU2 Mark", "RRU#2/AAU Socket Wire 18mm": "Wire 18mm",
+      "RRU#2/AAU Socket Left": "RRU2 L", "RRU#2/AAU Socket Right": "RRU2 R", "Open RRU#2 cover": "RRU2 Open",
+      "Stainless cable tie": "Tie", "DCDU socket": "DCDU", "OCB": "OCB", "Mounting": "Mounting", "Ground bar": "GND Bar",
+      "Notch CPRI Cable": "CPRI", "(if any) Filter": "Filter", "(if any) Pipe": "Pipe", "(if any) Diplexer": "Diplexer"
     },
     "Sector C": {
-      "ระบุ Sector ที่ติดตั้ง": "Confirming Sector C installation",
-      "ระบุคลื่นความถี่ที่ทำการติดตั้ง": "Frequency identification",
-      "Tower Outdoor View": "Tower View",
-      "Antenna/AAU position": "Antenna Position",
-      "Antenna Model": "Antenna Model Label",
-      "M Tilt": "Tilt check",
-      "Azimuth with Compass": "Azimuth compass",
-      "Zoom Compass of Azimuth Sector A": "Zoomed Azimuth",
-      "Jumper/ RET under Antenna/AAU photo include Filter/Combiner/Triplexer": "Cable connections",
-      "Clamp Antenna / AAU Top/Bottom": "Clamping",
-      "RRU#1 Overview Photo": "RRU#1 Overview",
-      "RRU#1 Serial": "RRU#1 Serial",
-      "Ground cable connect under RRU#1": "RRU#1 Grounding",
-      "Jumper/RET/Label/Color mark under RRU#1": "RRU#1 Labeling",
-      "RRU#1/AAU Socket Wire strip length is 18mm with scale": "Wire strip 18mm RRU#1",
-      "RRU#1/AAU Socket Left Side view": "Left socket RRU#1",
-      "RRU#1/AAU Socket Right Side view": "Right socket RRU#1",
-      "Open RRU#1 cover with plug in CPRI and socket DC RRU#1 Sector A": "Internal RRU#1",
-      "RRU#2 Overview Photo": "RRU#2 Overview",
-      "RRU#2 Serial": "RRU#2 Serial",
-      "Ground cable connect under RRU#2": "RRU#2 Grounding",
-      "Jumper/RET/Label/Color mark under RRU#2": "RRU#2 Labeling",
-      "RRU#2/AAU Socket Wire strip length is 18mm with scale": "Wire strip 18mm RRU#2",
-      "RRU#2/AAU Socket Left Side view": "Left socket RRU#2",
-      "RRU#2/AAU Socket Right Side view": "Right socket RRU#2",
-      "Open RRU#2 cover with plug in CPRI and socket DC RRU#2 Sector A": "Internal RRU#2",
-      "Stainless cable tie at jumper with pipe": "Cable ties",
-      "DCDU socket of RRU Sector A#1, After wire strip at DCDU": "DCDU socket",
-      "OCB": "OCB",
-      "Mounting": "Mounting",
-      "Ground bar": "Ground bar",
-      "Notch CPRI Cable": "CPRI Cable",
-      "(if any) Filter": "Filter",
-      "(if any) Pipe": "Pipe",
-      "(if any) Diplexer / Combiner / Splitter": "Diplexer/Combiner/Splitter"
+      "ระบุ Sector ที่ติดตั้ง": "Confirming Sector C", "ระบุคลื่นความถี่ที่ทำการติดตั้ง": "Freq ID", "Tower Outdoor View": "Tower View",
+      "Antenna/AAU position": "Position", "Antenna Model": "Model", "M Tilt": "Tilt", "Azimuth with Compass": "Azimuth",
+      "Zoom Compass of Azimuth Sector A": "Zoom Azimuth", "Jumper/ RET under Antenna/AAU photo": "Jumper", "Clamp Antenna / AAU Top/Bottom": "Clamp",
+      "RRU#1 Overview Photo": "RRU1 View", "RRU#1 Serial": "RRU1 SN", "Ground cable connect under RRU#1": "RRU1 GND",
+      "Jumper/RET/Label/Color mark under RRU#1": "RRU1 Mark", "RRU#1/AAU Socket Wire strip 18mm": "Wire 18mm", "RRU#1/AAU Socket Left": "RRU1 L",
+      "RRU#1/AAU Socket Right": "RRU1 R", "Open RRU#1 cover": "RRU1 Open", "RRU#2 Overview": "RRU2 View", "RRU#2 Serial": "RRU2 SN",
+      "Ground cable under RRU#2": "RRU2 GND", "Jumper/RET/Label/Color mark under RRU#2": "RRU2 Mark", "RRU#2/AAU Socket Wire 18mm": "Wire 18mm",
+      "RRU#2/AAU Socket Left": "RRU2 L", "RRU#2/AAU Socket Right": "RRU2 R", "Open RRU#2 cover": "RRU2 Open",
+      "Stainless cable tie": "Tie", "DCDU socket": "DCDU", "OCB": "OCB", "Mounting": "Mounting", "Ground bar": "GND Bar",
+      "Notch CPRI Cable": "CPRI", "(if any) Filter": "Filter", "(if any) Pipe": "Pipe", "(if any) Diplexer": "Diplexer"
     },
     "Sector D": {
-      "ระบุ Sector ที่ติดตั้ง": "Confirming Sector D installation",
-      "ระบุคลื่นความถี่ที่ทำการติดตั้ง": "Frequency identification",
-      "Tower Outdoor View": "Tower View",
-      "Antenna/AAU position": "Antenna Position",
-      "Antenna Model": "Antenna Model Label",
-      "M Tilt": "Tilt check",
-      "Azimuth with Compass": "Azimuth compass",
-      "Zoom Compass of Azimuth Sector A": "Zoomed Azimuth",
-      "Jumper/ RET under Antenna/AAU photo include Filter/Combiner/Triplexer": "Cable connections",
-      "Clamp Antenna / AAU Top/Bottom": "Clamping",
-      "RRU#1 Overview Photo": "RRU#1 Overview",
-      "RRU#1 Serial": "RRU#1 Serial",
-      "Ground cable connect under RRU#1": "RRU#1 Grounding",
-      "Jumper/RET/Label/Color mark under RRU#1": "RRU#1 Labeling",
-      "RRU#1/AAU Socket Wire strip length is 18mm with scale": "Wire strip 18mm RRU#1",
-      "RRU#1/AAU Socket Left Side view": "Left socket RRU#1",
-      "RRU#1/AAU Socket Right Side view": "Right socket RRU#1",
-      "Open RRU#1 cover with plug in CPRI and socket DC RRU#1 Sector A": "Internal RRU#1",
-      "RRU#2 Overview Photo": "RRU#2 Overview",
-      "RRU#2 Serial": "RRU#2 Serial",
-      "Ground cable connect under RRU#2": "RRU#2 Grounding",
-      "Jumper/RET/Label/Color mark under RRU#2": "RRU#2 Labeling",
-      "RRU#2/AAU Socket Wire strip length is 18mm with scale": "Wire strip 18mm RRU#2",
-      "RRU#2/AAU Socket Left Side view": "Left socket RRU#2",
-      "RRU#2/AAU Socket Right Side view": "Right socket RRU#2",
-      "Open RRU#2 cover with plug in CPRI and socket DC RRU#2 Sector A": "Internal RRU#2",
-      "Stainless cable tie at jumper with pipe": "Cable ties",
-      "DCDU socket of RRU Sector A#1, After wire strip at DCDU": "DCDU socket",
-      "OCB": "OCB",
-      "Mounting": "Mounting",
-      "Ground bar": "Ground bar",
-      "Notch CPRI Cable": "CPRI Cable",
-      "(if any) Filter": "Filter",
-      "(if any) Pipe": "Pipe",
-      "(if any) Diplexer / Combiner / Splitter": "Diplexer/Combiner/Splitter"
+      "ระบุ Sector ที่ติดตั้ง": "Confirming Sector D", "ระบุคลื่นความถี่ที่ทำการติดตั้ง": "Freq ID", "Tower Outdoor View": "Tower View",
+      "Antenna/AAU position": "Position", "Antenna Model": "Model", "M Tilt": "Tilt", "Azimuth with Compass": "Azimuth",
+      "Zoom Compass of Azimuth Sector A": "Zoom Azimuth", "Jumper/ RET under Antenna/AAU photo": "Jumper", "Clamp Antenna / AAU Top/Bottom": "Clamp",
+      "RRU#1 Overview Photo": "RRU1 View", "RRU#1 Serial": "RRU1 SN", "Ground cable connect under RRU#1": "RRU1 GND",
+      "Jumper/RET/Label/Color mark under RRU#1": "RRU1 Mark", "RRU#1/AAU Socket Wire strip 18mm": "Wire 18mm", "RRU#1/AAU Socket Left": "RRU1 L",
+      "RRU#1/AAU Socket Right": "RRU1 R", "Open RRU#1 cover": "RRU1 Open", "RRU#2 Overview": "RRU2 View", "RRU#2 Serial": "RRU2 SN",
+      "Ground cable under RRU#2": "RRU2 GND", "Jumper/RET/Label/Color mark under RRU#2": "RRU2 Mark", "RRU#2/AAU Socket Wire 18mm": "Wire 18mm",
+      "RRU#2/AAU Socket Left": "RRU2 L", "RRU#2/AAU Socket Right": "RRU2 R", "Open RRU#2 cover": "RRU2 Open",
+      "Stainless cable tie": "Tie", "DCDU socket": "DCDU", "OCB": "OCB", "Mounting": "Mounting", "Ground bar": "GND Bar",
+      "Notch CPRI Cable": "CPRI", "(if any) Filter": "Filter", "(if any) Pipe": "Pipe", "(if any) Diplexer": "Diplexer"
     },
     "On Ground": {
-      "Site Overview": "General view of the entire site",
-      "Tower/Pole 1": "View of tower or pole 1",
-      "Tower/Pole 2": "View of tower or pole 2",
-      "Tower/Pole 3": "View of tower or pole 3",
-      "Master Bar Ground#1": "Master grounding bar 1",
-      "Master Bar Ground#2": "Master grounding bar 2",
-      "Kilowat Hour Meter": "Electricity meter photo"
-    },
-    "On Ground C1": {
-      "Main Breaker of AC MDB#1.1": "Main AC breaker 1.1",
-      "Main Breaker of AC MDB#1.2": "Main AC breaker 1.2",
-      "POE/POR Open Rack": "Open rack overview",
-      "All Cabinet Overview": "All cabinets overview",
-      "Rectifier View Photo": "Rectifier overview",
-      "BUSBAR : Breaker DC-RRU": "Busbar and DC breakers",
-      "Bayface of BBU": "BBU front view",
-      "Ground Cable of BBU": "BBU grounding cable",
-      "Ground Cable of BBU to Ground Bar in Cabinet": "BBU grounding connection",
-      "DCDU : DC-RRU": "DCDU overview",
-      "Ground Cable of DCDU": "DCDU grounding cable",
-      "Ground Cable of DCDU to Ground Bar in Cabinet": "DCDU grounding connection",
-      "Serial of BBU": "BBU Serial number",
-      "Zoom Left Side of BBU with Redmark สำหรับการดที่ทำการติดตั้ง": "BBU left zoom with install mark",
-      "Zoom Right Side of BBU with Redmark สำหรับการดที่ทำการติดตั้ง": "BBU right zoom with install mark",
-      "Serial Card install #1": "Card 1 Serial",
-      "Serial Card install #2": "Card 2 Serial",
-      "Serial UPEU": "UPEU Serial",
-      "Copper Socket DC-BBU@DCDU with scale Socket 1": "DC socket 1 measurement",
-      "Copper Socket DC-BBU@DCDU with scale Socket 2": "DC socket 2 measurement",
-      "Copper Socket DC-BBU@DCDU with scale Socket 3": "DC socket 3 measurement",
-      "Copper Socket DC-BBU@DCDU with scale Socket 4": "DC socket 4 measurement",
-      "Display Current Load": "Load display reading",
-      "Bar Ground in Cabinet": "Cabinet grounding bar",
-      "Alarm Krone": "Krone alarm block",
-      "POE Intlet": "POE inlet connection",
-      "POE Outlet": "POE outlet connection",
-      "ROOM Intlet": "Room inlet",
-      "ROOM Outlet": "Room outlet",
-      "Position Loop CPRI with J-hanger at outdoor POE": "CPRI loop with J-hanger",
-      "Wiring CPRI with Feeder (Vertical)": "CPRI and feeder wiring",
-      "Grounding kit position showing installation After insulation/water proofing tape to see that the kit are connect to shield ground.": "Grounding kit installation details",
-      "Feeder Overview": "Feeder cables overview",
-      "Notch CPRI Cable": "CPRI cable routing",
-      "GPS Antenna Installation": "GPS antenna",
-      "GPS Surge Installation": "GPS surge protection",
-      "GPS Wiring Cable": "GPS wiring",
-      "GPS check photo, screenshot GPS status from OMC": "GPS status screenshot",
-      "Label in door": "Inside door label",
-      "Label Outdoor": "Outdoor label",
-      "Site Cleaness": "Overall site cleanliness"
-    },
-    "On Ground C2": {
-       "Main Breaker of AC MDB#1.1": "Main AC breaker 1.1",
-      "Main Breaker of AC MDB#1.2": "Main AC breaker 1.2",
-      "POE/POR Open Rack": "Open rack overview",
-      "All Cabinet Overview": "All cabinets overview",
-      "Rectifier View Photo": "Rectifier overview",
-      "BUSBAR : Breaker DC-RRU": "Busbar and DC breakers",
-      "Bayface of BBU": "BBU front view",
-      "Ground Cable of BBU": "BBU grounding cable",
-      "Ground Cable of BBU to Ground Bar in Cabinet": "BBU grounding connection",
-      "DCDU : DC-RRU": "DCDU overview",
-      "Ground Cable of DCDU": "DCDU grounding cable",
-      "Ground Cable of DCDU to Ground Bar in Cabinet": "DCDU grounding connection",
-      "Serial of BBU": "BBU Serial number",
-      "Zoom Left Side of BBU with Redmark สำหรับการดที่ทำการติดตั้ง": "BBU left zoom with install mark",
-      "Zoom Right Side of BBU with Redmark สำหรับการดที่ทำการติดตั้ง": "BBU right zoom with install mark",
-      "Serial Card install #1": "Card 1 Serial",
-      "Serial Card install #2": "Card 2 Serial",
-      "Serial UPEU": "UPEU Serial",
-      "Copper Socket DC-BBU@DCDU with scale Socket 1": "DC socket 1 measurement",
-      "Copper Socket DC-BBU@DCDU with scale Socket 2": "DC socket 2 measurement",
-      "Copper Socket DC-BBU@DCDU with scale Socket 3": "DC socket 3 measurement",
-      "Copper Socket DC-BBU@DCDU with scale Socket 4": "DC socket 4 measurement",
-      "Display Current Load": "Load display reading",
-      "Bar Ground in Cabinet": "Cabinet grounding bar",
-      "Alarm Krone": "Krone alarm block",
-      "POE Intlet": "POE inlet connection",
-      "POE Outlet": "POE outlet connection",
-      "ROOM Intlet": "Room inlet",
-      "ROOM Outlet": "Room outlet",
-      "Position Loop CPRI with J-hanger at outdoor POE": "CPRI loop with J-hanger",
-      "Wiring CPRI with Feeder (Vertical)": "CPRI and feeder wiring",
-      "Grounding kit position showing installation After insulation/water proofing tape to see that the kit are connect to shield ground.": "Grounding kit installation details",
-      "Feeder Overview": "Feeder cables overview",
-      "Notch CPRI Cable": "CPRI cable routing",
-      "GPS Antenna Installation": "GPS antenna",
-      "GPS Surge Installation": "GPS surge protection",
-      "GPS Wiring Cable": "GPS wiring",
-      "GPS check photo, screenshot GPS status from OMC": "GPS status screenshot",
-      "Label in door": "Inside door label",
-      "Label Outdoor": "Outdoor label",
-      "Site Cleaness": "Overall site cleanliness"
+      "Site Overview": "Site Overview", "Tower/Pole 1": "Tower 1", "Tower/Pole 2": "Tower 2", "Tower/Pole 3": "Tower 3",
+      "Master Bar Ground#1": "MBG 1", "Master Bar Ground#2": "MBG 2", "Kilowat Hour Meter": "Meter"
     }
   },
   "Equipment Checklist": {
@@ -288,10 +97,10 @@ const QC_CONFIG = {
 };
 
 // =========================================================================
-// === 🧠 AI SMART QC ENGINE - V.149 (DEBUG AUTH) ===
+// === 🧠 AI SMART QC ENGINE - V.150 (SUPER-ROBUST LOGIN) ===
 // =========================================================================
 
-const VERSION = "V.149 (DEBUG AUTH)"; 
+const VERSION = "V.150 (SUPER-ROBUST LOGIN)"; 
 
 const AUTHORIZED_USERS = [
   "adisak.chanmao@teloneer.com",
@@ -366,26 +175,41 @@ function doGet(e) {
   let params = e?.parameter || {};
   const action = String(params.action || "").toLowerCase();
   console.log(`[${VERSION}] GET Action: ${action}`);
+  
   try {
     if (action === "getdata") return jsonResponse(getDashboardData(params.site || "All Sites"));
+    
     if (action === "checkpassword") {
-      const email = String(params.email || "").toLowerCase();
-      const pwd = String(params.password || "");
-      const isAuthorized = AUTHORIZED_USERS.some(u => u.toLowerCase() === email);
-      if (pwd === ADMIN_PASSWORD && (isAuthorized || !email)) {
+      const inputEmail = String(params.email || "").toLowerCase().trim();
+      const inputPwd = String(params.password || "").trim();
+      
+      console.log(`[${VERSION}] Login Attempt: ${inputEmail}`);
+      
+      const isEmailAuthorized = AUTHORIZED_USERS.some(u => u.toLowerCase().trim() === inputEmail);
+      const isPwdCorrect = (inputPwd === ADMIN_PASSWORD);
+      
+      if (isPwdCorrect && isEmailAuthorized) {
+        console.log(`[${VERSION}] Login SUCCESS for ${inputEmail}`);
         return jsonResponse({success:true});
       } else {
-        return jsonResponse({error: isAuthorized ? "รหัสไม่ถูกต้อง" : "Email นี้ไม่มีสิทธิ์เข้าถึงระบบ"});
+        console.warn(`[${VERSION}] Login FAILED for ${inputEmail}. EmailAuth: ${isEmailAuthorized}, PwdCorrect: ${isPwdCorrect}`);
+        if (!isEmailAuthorized) return jsonResponse({error: "Email นี้ไม่มีสิทธิ์เข้าถึงระบบ (Unauthorized)"});
+        if (!isPwdCorrect) return jsonResponse({error: "รหัสผ่านไม่ถูกต้อง (Incorrect Password)"});
       }
     }
+    
     if (action === "listfolders") return jsonResponse({ folders: listSubFolders(params.root || FOLDER_ID) });
     if (action === "listfiles") return jsonResponse(listFilesInFolder(params.folderId));
     if (action === "processfolder") return jsonResponse(processFolderById(params.folderId, params.templateId));
     if (action === "generatepat") return jsonResponse(generatePAT(params.folderId, params.siteName));
     if (action === "createsitefolder") return jsonResponse(createSiteFolder(params.project, params.type, params.site));
     if (action === "listtemplates") return jsonResponse(listTemplates(params.type, params.project));
+    
     return jsonResponse({ status: "READY", version: VERSION });
-  } catch (err) { return jsonResponse({ error: err.toString() }); }
+  } catch (err) { 
+    console.error(`[${VERSION}] doGet Error: ${err.toString()}`);
+    return jsonResponse({ error: err.toString() }); 
+  }
 }
 
 function createSiteFolder(project, type, site) {
@@ -783,7 +607,7 @@ function runManualTest() {
     if (!files.hasNext()) { console.warn("❌ Folder Empty"); return; }
     const f = files.next();
     console.log(`[${VERSION}] Testing file: ${f.getName()}`);
-    const result = processFileList([f], "TEST_V148", null);
+    const result = processFileList([f], "TEST_V150", null);
     console.log(`[${VERSION}] Result: ${result.details[0].status}`);
     console.log(`[${VERSION}] Path: ${result.details[0].category}`);
   } catch (e) { console.error(`[${VERSION}] Test Error: ${e}`); }
