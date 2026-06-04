@@ -87,8 +87,8 @@ const QC_CONFIG = {
       "Ground cable connect under RRU#2": "RRU#2 Grounding",
       "Jumper/RET/Label/Color mark under RRU#2": "RRU#2 Labeling",
       "RRU#2/AAU Socket Wire strip length is 18mm with scale": "Wire strip 18mm RRU#2",
-      "RRU#2/AAU Socket Left Side view": "Left socket RRU#2",
-      "RRU#2/AAU Socket Right Side view": "Right socket RRU#2",
+      "RRU#2/AAU Socket Left Side view": "Left socket view RRU#2",
+      "RRU#2/AAU Socket Right Side view": "Right socket view RRU#2",
       "Open RRU#2 cover with plug in CPRI and socket DC RRU#2 Sector A": "Internal RRU#2",
       "Stainless cable tie at jumper with pipe": "Cable ties",
       "DCDU socket of RRU Sector A#1, After wire strip at DCDU": "DCDU socket",
@@ -124,8 +124,8 @@ const QC_CONFIG = {
       "Ground cable connect under RRU#2": "RRU#2 Grounding",
       "Jumper/RET/Label/Color mark under RRU#2": "RRU#2 Labeling",
       "RRU#2/AAU Socket Wire strip length is 18mm with scale": "Wire strip 18mm RRU#2",
-      "RRU#2/AAU Socket Left Side view": "Left socket RRU#2",
-      "RRU#2/AAU Socket Right Side view": "Right socket RRU#2",
+      "RRU#2/AAU Socket Left Side view": "Left socket view RRU#2",
+      "RRU#2/AAU Socket Right Side view": "Right socket view RRU#2",
       "Open RRU#2 cover with plug in CPRI and socket DC RRU#2 Sector A": "Internal RRU#2",
       "Stainless cable tie at jumper with pipe": "Cable ties",
       "DCDU socket of RRU Sector A#1, After wire strip at DCDU": "DCDU socket",
@@ -161,8 +161,8 @@ const QC_CONFIG = {
       "Ground cable connect under RRU#2": "RRU#2 Grounding",
       "Jumper/RET/Label/Color mark under RRU#2": "RRU#2 Labeling",
       "RRU#2/AAU Socket Wire strip length is 18mm with scale": "Wire strip 18mm RRU#2",
-      "RRU#2/AAU Socket Left Side view": "Left socket RRU#2",
-      "RRU#2/AAU Socket Right Side view": "Right socket RRU#2",
+      "RRU#2/AAU Socket Left Side view": "Left socket view RRU#2",
+      "RRU#2/AAU Socket Right Side view": "Right socket view RRU#2",
       "Open RRU#2 cover with plug in CPRI and socket DC RRU#2 Sector A": "Internal RRU#2",
       "Stainless cable tie at jumper with pipe": "Cable ties",
       "DCDU socket of RRU Sector A#1, After wire strip at DCDU": "DCDU socket",
@@ -277,10 +277,10 @@ const QC_CONFIG = {
 };
 
 // =========================================================================
-// === AI SMART QC BOT - V.139 (SUPER-MATCH ENGINE - 100% RELIABILITY) ===
+// === AI SMART QC BOT - V.140 (SUPER-MATCH ENGINE - 100% RELIABILITY) ===
 // =========================================================================
 
-const VERSION = "V.139 (STABLE)"; 
+const VERSION = "V.140 (STABLE)"; 
 const FOLDER_ID = "1W0o5cNuejntiY7v9__f4LiAH3BH-bNpA";
 const ARCHIVE_FOLDER_ID = "1dYRMNaTQsQfxsS-4z9GaWMIA3gQHq6h7";
 const SPREADSHEET_ID = "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c".trim(); 
@@ -517,7 +517,7 @@ function generatePAT(folderId, siteName) {
     const ssDb = getSpreadsheet();
     const sheet = ssDb.getSheetByName(SHEET_NAME); 
     const siteFolder = DriveApp.getFolderById(folderId);
-    const logs = [`[V.139] Starting PAT for: ${siteName}`];
+    const logs = [`[V.140] Starting PAT for: ${siteName}`];
     
     const fileIdsInFolder = [];
     const scanRecursively = (fld) => {
@@ -695,8 +695,8 @@ function processFileList(files, siteName, checklist) {
   const results = [];
   
   for (let f of files) {
-    if (!f) {
-      console.warn("Skipping undefined file in processFileList");
+    if (!f || typeof f.getBlob !== 'function') {
+      console.warn("Skipping invalid file object in processFileList");
       continue;
     }
     try {
@@ -744,7 +744,6 @@ function processFileList(files, siteName, checklist) {
           path = ["FAIL", ai.majorCategory || "Uncategorized", ai.subCategory || "General", ai.detail || "Misc"];
         }
         
-        // Ensure path is an array before passing to getOrCreateNestedFolder
         const destFolder = getOrCreateNestedFolder(siteFolder, path);
         f.moveTo(destFolder);
         f.setDescription(`PAT_CHECKED: ${status} | PATH: ${path.join(" > ")} | TYPE: ${imageType} | ${f.getDescription() || ""}`);
@@ -777,11 +776,15 @@ function getOrCreateNestedFolder(root, pathArr) {
 }
 
 function analyzeAI(file, customChecklist) {
+  if (!file || typeof file.getBlob !== 'function') {
+    console.error("Critical Error: analyzeAI received an invalid file object:", file);
+    return { status: "ERROR", reason: "Invalid file object received" };
+  }
+
   const blob = file.getBlob();
   const b64 = Utilities.base64Encode(blob.getBytes());
   const mimeType = blob.getContentType();
   
-  // Construct a more detailed checklist from QC_CONFIG if no custom checklist is provided
   let detailedChecklist = customChecklist;
   if (!detailedChecklist && typeof QC_CONFIG !== 'undefined') {
     detailedChecklist = "Identify which category this photo belongs to from the following structure:\n";
@@ -846,13 +849,11 @@ function analyzeAI(file, customChecklist) {
         try {
           aiResult = JSON.parse(cleanJson);
         } catch (e) {
-          // Attempt to extract JSON if it's buried in text
           const match = cleanJson.match(/\{[\s\S]*\}/);
           if (match) aiResult = JSON.parse(match[0]);
           else throw new Error("No valid JSON found in AI response");
         }
 
-        // Return with defaults to prevent undefined errors
         const finalResult = {
           majorCategory: aiResult.majorCategory || "Uncategorized",
           subCategory: aiResult.subCategory || "General",
@@ -862,7 +863,6 @@ function analyzeAI(file, customChecklist) {
           imageType: aiResult.imageType || "unknown"
         };
         
-        // Map to legacy sheetReference
         finalResult.sheetReference = `${finalResult.majorCategory} > ${finalResult.subCategory} > ${finalResult.detail}`;
         return finalResult;
       }
