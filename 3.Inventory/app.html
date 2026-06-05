@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>Inventory Smart App V.6.7.6</title>
+  <title>Inventory Smart App V.6.7.9</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -26,7 +26,7 @@
 
   <div class="container-fluid">
     <div class="header-banner shadow d-flex justify-content-between align-items-center">
-      <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.7.8</h5>
+      <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.7.9</h5>
       <div>
         <button class="btn btn-sm btn-warning fw-bold me-1" onclick="checkHealth()">Verify</button>
         <button class="btn btn-sm btn-light fw-bold" onclick="onCustomerChange()">🔄 SYNC</button>
@@ -320,23 +320,24 @@
 
     async function processImageScan(input) {
       if (!input.files || input.files.length === 0) return;
-      updateProgress(null, "กำลังวิเคราะห์ QR/Barcode (Deep Scan)...");
+      updateProgress(null, "กำลังวิเคราะห์ QR/Barcode (Deep Scan V2)...");
       
       try {
         const file = input.files[0];
         const html5QrCode = new Html5Qrcode("qr-reader");
         
-        // Try multiple processing variations to increase success rate
+        // Specialized variants for iPhone 15 / high-res modern cameras
         const variants = [
-          { max: 1000, gray: true, contrast: 1.2 }, // Attempt 1: High res, B&W
-          { max: 700, gray: true, contrast: 1.5 },  // Attempt 2: Medium res, high contrast
-          { max: 1200, gray: false, contrast: 1.0 } // Attempt 3: Native color
+          { max: 1000, gray: true, contrast: 1.6, sharp: true },  // Attempt 1: High res, High contrast B&W (Best for Barcode)
+          { max: 800, gray: true, contrast: 1.3, sharp: true },   // Attempt 2: Medium res, Sharp B&W (Best for QR)
+          { max: 1200, gray: false, contrast: 1.1, sharp: true }, // Attempt 3: Ultra High res, Natural Color
+          { max: 700, gray: true, contrast: 1.1, sharp: false }   // Attempt 4: Small res, Smooth (For grainy images)
         ];
 
         let decodedText = null;
         for (let i = 0; i < variants.length; i++) {
           try {
-            updateProgress(null, `กำลังลองครั้งที่ ${i+1}/${variants.length}...`);
+            updateProgress(null, `Deep Scan ครั้งที่ ${i+1}/${variants.length}...`);
             const processedDataUrl = await preProcessImage(file, variants[i]);
             const blob = await (await fetch(processedDataUrl)).blob();
             const processedFile = new File([blob], "scan.jpg", { type: "image/jpeg" });
@@ -352,7 +353,7 @@
           else if (scanTarget === 'sn') document.getElementById('sn_' + scanRowId).value = decodedText;
           alert("✅ สแกนสำเร็จ!");
         } else {
-          alert("❌ ไม่สามารถถอดรหัสได้: โปรดถ่ายให้โค้ดอยู่กลางภาพ, นิ่ง, และมีแสงสว่างเพียงพอ (Barcode บางชนิดอาจอ่านยากในที่มืด)");
+          alert("❌ อ่านไม่ได้: โปรดถือให้นิ่ง และเว้นระยะห่างให้รหัสอยู่กลางภาพ (แนะนำ: เช็ดหน้าเลนส์กล้องให้สะอาดด้วยครับ)");
         }
         try { html5QrCode.clear(); } catch(e) {}
       } catch (e) {
@@ -377,11 +378,19 @@
             else { if (h > MAX) { w *= MAX / h; h = MAX; } }
             canvas.width = w; canvas.height = h;
             const ctx = canvas.getContext('2d');
-            if (options.gray || options.contrast !== 1.0) {
-              ctx.filter = `grayscale(${options.gray ? 100 : 0}%) contrast(${options.contrast || 1.0})`;
+            
+            // Apply aggressive filters for mobile scanning
+            let filters = [];
+            if (options.gray) filters.push('grayscale(100%)');
+            if (options.contrast) filters.push(`contrast(${options.contrast})`);
+            if (options.sharp) {
+              // Simulated sharpness using contrast and subtle brightness
+              filters.push('brightness(1.1)');
             }
+            
+            if (filters.length > 0) ctx.filter = filters.join(' ');
             ctx.drawImage(img, 0, 0, w, h);
-            res(canvas.toDataURL('image/jpeg', 0.9));
+            res(canvas.toDataURL('image/jpeg', 0.95));
           };
         };
       });

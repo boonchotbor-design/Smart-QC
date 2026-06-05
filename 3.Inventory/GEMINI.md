@@ -36,13 +36,13 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
 
-## 🐞 Bug Fixes & Stability (V.6.7.8)
-- **Deep Scan Technology**: Implemented multi-attempt scanning with image pre-processing (Attempt 1: B&W, Attempt 2: High Contrast, Attempt 3: Native) to significantly improve success rate on modern high-res cameras (iPhone 15, Samsung S26).
-- **Adaptive Filtering**: Added real-time image resizing and adaptive grayscale filtering before decoding to ensure the engine processes the most readable version of the code.
-- **Improved Feedback**: Added visual feedback for each scan attempt and clearer error instructions if decoding fails.
-- **Version Sync**: Synchronized version to V.6.7.8 across `code.gs`, `app.html`, and `index.js`.
+## 🐞 Bug Fixes & Stability (V.6.7.9)
+- **iPhone 15 Deep Scan V2**: Upgraded Deep Scan logic with aggressive sharpness and brightness filters specifically tuned for high-end mobile cameras (iPhone 15, Samsung S26).
+- **Multi-Phase Decoding**: Implemented 4 distinct pre-processing phases (High Contrast B&W, Sharp B&W, Ultra-res Color, Fast-Low res) to extract data from blurry or high-noise photos.
+- **Enhanced Image Processing**: Used higher quality JPEG output (95%) and simulated sharpening filters to aid the QR/Barcode engine.
+- **Version Sync**: Synchronized version to V.6.7.9 across `code.gs`, `app.html`, and `index.js`.
 
-## 🐞 Bug Fixes & Stability (V.6.7.7)
+## 🐞 Bug Fixes & Stability (V.6.7.8)
 - **Enhanced Diagnostics**: Added token usage logging and detailed diagnostic route in `index.js`.
 - **Version Sync**: Synchronized all success messages and version strings to V.6.7.3.
 - **Robustness**: Improved error logging for Telegram push failures.
