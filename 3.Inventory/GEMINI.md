@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.6.7.3)
+# 📦 Inventory Smart System (V.6.7.5)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI) and Telegram Bot with AI OCR capabilities.
 
@@ -8,7 +8,7 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - **Integration:** Telegram Bot API, Google Drive OCR
 - **Storage:** Google Sheets
 
-## 🚀 Telegram Bot Setup (V.6.7.3)
+## 🚀 Telegram Bot Setup (V.6.7.5)
 - **Webhook:** ต้องตั้งค่าให้ชี้มาที่ Vercel เท่านั้น: `https://[YOUR_VERCEL_URL]/telegram-webhook`
 - **GAS Permissions:** ใน Google Apps Script ต้อง Deploy เป็น Web App โดยตั้งค่า **"Who has access" เป็น "Anyone"** (สำคัญมาก)
 - **Services:** ต้องเปิดใช้งาน **Drive API** ในส่วนของ Services ของ GAS Project
@@ -36,7 +36,13 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
 
-## 🐞 Bug Fixes & Stability (V.6.7.3)
+## 🐞 Bug Fixes & Stability (V.6.7.7)
+- **Scanner Optimization**: Fixed logic to improve success rate on high-resolution cameras (iPhone 15, modern Android).
+- **Auto-Resizing**: Implemented image resizing (800px) before QR decoding to prevent library crashes and memory issues on mobile browsers.
+- **Fixed Initialization**: Corrected `Html5Qrcode` instance creation to use a dedicated hidden div.
+- **Version Sync**: Synchronized version to V.6.7.7 across `code.gs`, `app.html`, and `index.js`.
+
+## 🐞 Bug Fixes & Stability (V.6.7.6)
 - **Enhanced Diagnostics**: Added token usage logging and detailed diagnostic route in `index.js`.
 - **Version Sync**: Synchronized all success messages and version strings to V.6.7.3.
 - **Robustness**: Improved error logging for Telegram push failures.
