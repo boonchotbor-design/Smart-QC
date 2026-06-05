@@ -72,7 +72,7 @@ function DashboardApp() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`${BASE_URL}?action=login&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`);
+        const res = await fetch(`${BASE_URL}?action=checkpassword&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`);
         const json = await res.json();
         
         if (json.success) {
