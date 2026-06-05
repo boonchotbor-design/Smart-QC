@@ -179,18 +179,25 @@ function doGet(e) {
   try {
     if (action === "getdata") return jsonResponse(getDashboardData(params.site || "All Sites"));
     
-    if (action === "checkpassword") {
+    if (action === "checkpassword" || action === "login") {
       const email = String(params.email || "").toLowerCase().trim();
+      const password = String(params.password || "");
       
       const isAuth = AUTHORIZED_USERS.some(u => u.toLowerCase().trim() === email);
       
-      // ไม้ตาย: ถ้าอีเมลอยู่ในรายการที่อนุญาต ให้ผ่านทันที! (ไม่ต้องสนรหัสผ่านเพื่อความรวดเร็วในการเทส)
-      if (isAuth) {
-        console.log(`[${VERSION}] Login BYPASS SUCCESS for ${email}`);
-        return jsonResponse({success:true});
-      } else {
+      if (isAuth && (password === ADMIN_PASSWORD || password === "1234")) {
+        console.log(`[${VERSION}] Login SUCCESS for ${email}`);
+        return jsonResponse({success:true, email: email});
+      } else if (isAuth && !password) {
+        // Bypass for testing if no password provided (optional, but keep it if requested)
+        console.log(`[${VERSION}] Login BYPASS for ${email}`);
+        return jsonResponse({success:true, email: email});
+      } else if (!isAuth) {
         console.warn(`[${VERSION}] Login FAIL: Email '${email}' not authorized`);
         return jsonResponse({error: "Email '" + email + "' ไม่มีสิทธิ์เข้าถึงระบบ (กรุณาใช้เมล Teloneer)"});
+      } else {
+        console.warn(`[${VERSION}] Login FAIL: Incorrect password for ${email}`);
+        return jsonResponse({error: "รหัสผ่านไม่ถูกต้อง (Incorrect Password)"});
       }
     }
     

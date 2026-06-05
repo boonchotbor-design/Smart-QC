@@ -69,12 +69,24 @@ function DashboardApp() {
       setAuthStep(2);
     }
     else {
-      // โหมดแก้ปัญหาเร่งด่วน: บังคับล็อกอินผ่านทันที!
       setLoading(true);
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('userEmail', email || 'test@admin.com');
-      setIsLoggedIn(true);
-      setLoading(false);
+      setError(null);
+      try {
+        const res = await fetch(`${BASE_URL}?action=login&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`);
+        const json = await res.json();
+        
+        if (json.success) {
+          localStorage.setItem('isLoggedIn', 'true');
+          localStorage.setItem('userEmail', email);
+          setIsLoggedIn(true);
+        } else {
+          setError(json.error || "Login Failed: Incorrect email or password");
+        }
+      } catch (err) {
+        setError("Network Error: Could not connect to authentication server");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
