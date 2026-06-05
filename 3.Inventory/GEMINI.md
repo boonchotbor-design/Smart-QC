@@ -36,13 +36,13 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
 
-## 🐞 Bug Fixes & Stability (V.6.7.7)
-- **Scanner Optimization**: Fixed logic to improve success rate on high-resolution cameras (iPhone 15, modern Android).
-- **Auto-Resizing**: Implemented image resizing (800px) before QR decoding to prevent library crashes and memory issues on mobile browsers.
-- **Fixed Initialization**: Corrected `Html5Qrcode` instance creation to use a dedicated hidden div.
-- **Version Sync**: Synchronized version to V.6.7.7 across `code.gs`, `app.html`, and `index.js`.
+## 🐞 Bug Fixes & Stability (V.6.7.8)
+- **Deep Scan Technology**: Implemented multi-attempt scanning with image pre-processing (Attempt 1: B&W, Attempt 2: High Contrast, Attempt 3: Native) to significantly improve success rate on modern high-res cameras (iPhone 15, Samsung S26).
+- **Adaptive Filtering**: Added real-time image resizing and adaptive grayscale filtering before decoding to ensure the engine processes the most readable version of the code.
+- **Improved Feedback**: Added visual feedback for each scan attempt and clearer error instructions if decoding fails.
+- **Version Sync**: Synchronized version to V.6.7.8 across `code.gs`, `app.html`, and `index.js`.
 
-## 🐞 Bug Fixes & Stability (V.6.7.6)
+## 🐞 Bug Fixes & Stability (V.6.7.7)
 - **Enhanced Diagnostics**: Added token usage logging and detailed diagnostic route in `index.js`.
 - **Version Sync**: Synchronized all success messages and version strings to V.6.7.3.
 - **Robustness**: Improved error logging for Telegram push failures.

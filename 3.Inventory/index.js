@@ -29,7 +29,7 @@ const app = express();
 app.get('/', (req, res) => {
   const diagnostic = {
     status: 'Alive',
-    version: 'v6.7.7',
+    version: 'v6.7.8',
     env: {
       hasGasUrl: !!process.env.GAS_WEB_APP_URL,
       lineBotsCount: LINE_CONFIGS.length,
@@ -71,7 +71,7 @@ async function sendNotification(header, items) {
     }
 
     messageText += `━━━━━━━━━━━━━━━\n` +
-                   `✅ บันทึกสำเร็จ (V.6.7.6)!`;
+                   `✅ บันทึกสำเร็จ (V.6.7.8)!`;
 
     // 1. ส่งไป LINE (ทุกตัวที่ตั้งค่าไว้)
     for (const lineBot of LINE_CONFIGS) {
