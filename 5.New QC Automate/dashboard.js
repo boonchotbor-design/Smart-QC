@@ -315,7 +315,13 @@ async function wizardStartScan() {
         while (hasMore) {
             info.textContent = `กำลังตรวจด้วย AI... (ประมวลผลแล้ว ${totalProcessed} รูป)`;
             const res = await fetch(`${SCRIPT_URL}?action=processfolder&folderId=${wizardData.folderId}`);
-            const data = await res.json();
+            let data;
+            try {
+                const text = await res.text();
+                data = JSON.parse(text);
+            } catch (e) {
+                throw new Error("เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง (AI/Server Error) โปรดเช็ค SCRIPT_URL");
+            }
             
             if (data.error) throw new Error(data.error);
             
@@ -591,7 +597,13 @@ async function startProcessing() {
         while (hasMore) {
             info.textContent = `กำลังส่ง AI ตรวจสอบ... (ประมวลผลแล้ว ${totalProcessed} รูป)`;
             const res = await fetch(`${SCRIPT_URL}?action=processfolder&folderId=${currentSite.id}&templateId=${template}`);
-            const data = await res.json();
+            let data;
+            try {
+                const text = await res.text();
+                data = JSON.parse(text);
+            } catch (e) {
+                throw new Error("เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง (AI/Server Error) โปรดเช็ค SCRIPT_URL");
+            }
             
             if (data.error) throw new Error(data.error);
             

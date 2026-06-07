@@ -592,6 +592,7 @@ td { padding: 12px; font-size: 14px; border-bottom: 1px solid var(--border); }
 .toggle-password {
   position: absolute;
   right: 12px;
+  z-index: 10;
   background: none;
   border: none;
   color: var(--text3);
