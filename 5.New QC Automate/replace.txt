@@ -1,0 +1,2 @@
+regex:\b(gsk_[A-Za-z0-9]+)\b==>REMOVED_GROQ_KEY
+regex:8912299134:AAE-wpc6sxXpWJ24wbJraVCEPHPt4cJZs-M==>REMOVED_TELEGRAM_TOKEN
