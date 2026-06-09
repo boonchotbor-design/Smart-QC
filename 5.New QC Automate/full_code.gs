@@ -166,7 +166,7 @@ const TEMPLATES = {
 
 const TELEGRAM_BOT_TOKEN = "REMOVED_TELEGRAM_TOKEN";
 const TELEGRAM_TARGET_ID = "-5199951121";
-const GROQ_KEYS = ["REMOVED_GROQ_KEY","REMOVED_GROQ_KEY","REMOVED_GROQ_KEY","REMOVED_GROQ_KEY"];
+const GROQ_KEYS = (PropertiesService.getScriptProperties().getProperty('GROQ_KEYS') || '').split(',').map(k => k.trim()).filter(k => k); // Set as comma-separated values in Script Properties
 const GROQ_AI_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 function doGet(e) {
