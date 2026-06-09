@@ -124,17 +124,6 @@ const REFERENCE_FOLDER_ID = "1rXNAuOTHL396QAiUgV6D88YgUJCaODom";
 const SPREADSHEET_ID = "1xp3EuRIWthalZhIWfToiJaihs4uYKARLEWXxVykmi9c".trim(); 
 const SHEET_NAME = "Sheet1";
 
-// === GROQ AI Configuration ===
-const TELEGRAM_BOT_TOKEN = "8625222790:AAHjU70oWGm88NyUaXaWIDJveo3b2KpnG90";
-const TELEGRAM_TARGET_ID = "-5199951121";
-const GROQ_KEYS = [
-  "REMOVED_GROQ_KEY",
-  "REMOVED_GROQ_KEY",
-  "REMOVED_GROQ_KEY",
-  "REMOVED_GROQ_KEY"
-];
-const GROQ_AI_URL = "https://api.groq.com/openai/v1/chat/completions";
-
 /**
  * ดึง Spreadsheet แบบกันพัง (Safe Open)
  */
@@ -178,7 +167,7 @@ const TEMPLATES = {
   "DEFAULT": "1Pxdkd0Nxn-HzObefgkzcNFlCTDHrrVkj"
 };
 
-const TELEGRAM_BOT_TOKEN = "8625222790:AAHjU70oWGm88NyUaXaWIDJveo3b2KpnG90"; 
+const TELEGRAM_BOT_TOKEN = "REMOVED_TELEGRAM_TOKEN";
 const TELEGRAM_TARGET_ID = "-5199951121";
 const GROQ_KEYS = ["REMOVED_GROQ_KEY","REMOVED_GROQ_KEY","REMOVED_GROQ_KEY","REMOVED_GROQ_KEY"];
 const GROQ_AI_URL = "https://api.groq.com/openai/v1/chat/completions";
