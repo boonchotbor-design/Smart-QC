@@ -329,13 +329,14 @@ async function wizardStartScan() {
             data.details.forEach(det => {
                 const time = new Date().toLocaleTimeString();
                 const entry = document.createElement('div');
-                entry.className = `log-entry ${det.status.toLowerCase()}`;
+                const statusClass = (det.status || 'error').toLowerCase();
+                entry.className = `log-entry ${statusClass === 'error' ? 'fail' : statusClass}`;
                 entry.innerHTML = `
                     <div class="log-header">
                         <span class="status-tag">${det.status}</span>
                         <span class="log-time">${time}</span>
                     </div>
-                    <div class="log-msg"><b>${det.name}</b><br>${det.reason}</div>
+                    <div class="log-msg"><b>${det.name}</b><br>${det.reason || 'ไม่สามารถวิเคราะห์ได้ (กรุณาตรวจสอบ API Key)'}</div>
                 `;
                 logContainer.prepend(entry);
                 
@@ -610,8 +611,9 @@ async function startProcessing() {
             // Log results
             data.details.forEach(det => {
                 const entry = document.createElement('div');
-                entry.className = `log-entry ${det.status.toLowerCase()}`;
-                entry.textContent = `[${det.status}] ${det.name} - ${det.reason}`;
+                const statusClass = (det.status || 'error').toLowerCase();
+                entry.className = `log-entry ${statusClass === 'error' ? 'fail' : statusClass}`;
+                entry.textContent = `[${det.status}] ${det.name} - ${det.reason || 'ไม่สามารถวิเคราะห์ได้ (กรุณาตรวจสอบ API Key)'}`;
                 logContainer.prepend(entry);
             });
             

@@ -167,9 +167,9 @@ const TEMPLATES = {
   "DEFAULT": "1Pxdkd0Nxn-HzObefgkzcNFlCTDHrrVkj"
 };
 
-const TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"; 
-const TELEGRAM_TARGET_ID = "YOUR_TELEGRAM_TARGET_ID";
-const GROQ_KEYS = ["YOUR_GROQ_KEY_1", "YOUR_GROQ_KEY_2", "YOUR_GROQ_KEY_3", "YOUR_GROQ_KEY_4"];
+const TELEGRAM_BOT_TOKEN = "8625222790:AAHjU70oWGm88NyUaXaWIDJveo3b2KpnG90"; 
+const TELEGRAM_TARGET_ID = "-5199951121";
+const GROQ_KEYS = ["REMOVED_GROQ_KEY","REMOVED_GROQ_KEY","REMOVED_GROQ_KEY","REMOVED_GROQ_KEY"];
 const GROQ_AI_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 function doGet(e) {
@@ -457,8 +457,8 @@ function callTGRaw(m, p) { return UrlFetchApp.fetch(`https://api.telegram.org/bo
 function processFolderById(folderId, templateId) {
   const lock = LockService.getScriptLock();
   try {
-    const hasLock = lock.tryLock(10000); 
-    if (!hasLock) return { error: "⚠️ System Busy" };
+    const hasLock = lock.tryLock(30000); 
+    if (!hasLock) return { error: "⚠️ ระบบกำลังประมวลผลอยู่ กรุณารอสักครู่แล้วลองใหม่ (30 วินาที)" };
     const folder = DriveApp.getFolderById(folderId);
     const files = folder.getFiles();
     const toProcess = [];
@@ -494,7 +494,7 @@ function processFileList(files, siteName, checklist) {
     try {
       const ai = analyzeAI(f, checklist);
       if (!ai || ai.status === "ERROR") {
-        results.push({ name: f.getName(), status: "ERROR" });
+        results.push({ name: f.getName(), status: "ERROR", reason: (ai && ai.reason) ? ai.reason : "AI ไม่สามารถวิเคราะห์รูปได้" });
         fail++;
         continue;
       }
@@ -524,7 +524,7 @@ function processFileList(files, siteName, checklist) {
         const kb = { inline_keyboard: [[{ text: "✅ อนุมัติ", callback_data: "app|" + f.getId() }, { text: "❌ ไมือนุมัติ", callback_data: "rej|" + f.getId() }]] }; 
         callTGRaw("sendPhoto", { chat_id: TELEGRAM_TARGET_ID, photo: blob, caption: `🚨 พบงานไม่ผ่าน: ${f.getName()}\n📌 หมวด: ${ai.sheetReference}\n❌ สาเหตุ: ${ai.reason}`, reply_markup: JSON.stringify(kb) });
       }
-    } catch (e) { fail++; }
+    } catch (e) { fail++; results.push({ name: f.getName(), status: "ERROR", reason: "เกิดข้อผิดพลาด: " + e.toString() }); }
   }
   return { total: files.length, pass: pass, fail: fail, details: results };
 }
@@ -577,10 +577,33 @@ function getReferenceImageBase64(categoryName) {
 
 function analyzeAI(file, customChecklist) {
   if (!file || typeof file.getBlob !== 'function') return { status: "ERROR", reason: "Invalid File" };
+  
   const blob = file.getBlob();
-  const b64 = Utilities.base64Encode(blob.getBytes());
   const mimeType = blob.getContentType();
   
+  // Resize image if larger than 4MB (Groq base64 limit)
+  let imageBlob = blob;
+  const MAX_SIZE = 3.5 * 1024 * 1024; // 3.5MB to be safe
+  if (blob.getBytes().length > MAX_SIZE) {
+    try {
+      // Try to reduce quality/size
+      const tempFile = DriveApp.createFile(blob);
+      const thumbnail = DriveApp.getFileById(tempFile.getId()).getBlob();
+      if (thumbnail.getBytes().length > MAX_SIZE) {
+        // If still too large, skip
+        tempFile.setTrashed(true);
+        return { status: "ERROR", reason: "ไฟล์รูปใหญ่เกินไป (เกิน 4MB) กรุณาลดขนาดรูป" };
+      }
+      imageBlob = thumbnail;
+      tempFile.setTrashed(true);
+    } catch (e) {
+      return { status: "ERROR", reason: "ไม่สามารถประมวลผลรูปได้: " + e.toString() };
+    }
+  }
+  
+  const b64 = Utilities.base64Encode(imageBlob.getBytes());
+  
+  // Build checklist from QC_CONFIG
   let detailedChecklist = customChecklist;
   if (!detailedChecklist && typeof QC_CONFIG !== 'undefined') {
     detailedChecklist = "Available Hierarchy:\n";
@@ -591,6 +614,8 @@ function analyzeAI(file, customChecklist) {
       }
     }
   }
+
+  const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
   // STEP 1: Classify the Image
   const classifyPrompt = `You are an expert Telecom QA Engineer checking AIS standard site photos.
@@ -607,25 +632,34 @@ function analyzeAI(file, customChecklist) {
   ${detailedChecklist}`;
 
   const payloadStep1 = { 
-    "model": "llama-3.2-90b-vision-preview", 
+    "model": VISION_MODEL, 
     "messages": [{ "role": "user", "content": [{ "type": "text", "text": classifyPrompt }, { "type": "image_url", "image_url": { "url": `data:${mimeType};base64,${b64}` } }] }], 
     "response_format": { "type": "json_object" } 
   };
   
   let classification = null;
+  let lastApiError = "";
   for (let key of GROQ_KEYS) {
     try {
       const res = UrlFetchApp.fetch(GROQ_AI_URL, { method: "post", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, payload: JSON.stringify(payloadStep1), muteHttpExceptions: true });
-      if (res.getResponseCode() === 200) {
+      const code = res.getResponseCode();
+      if (code === 200) {
         let rawContent = JSON.parse(res.getContentText()).choices[0].message.content;
         let jsonMatch = rawContent.match(/\{[\s\S]*\}/);
         classification = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(rawContent.replace(/```json/g, "").replace(/```/g, "").trim());
         break;
+      } else {
+        lastApiError = `API ${code}: ${res.getContentText().substring(0, 200)}`;
+        console.warn(`[${VERSION}] Groq Step1 Error (key ${GROQ_KEYS.indexOf(key)+1}): ${lastApiError}`);
+        if (code === 429) { Utilities.sleep(2000); continue; } // Rate limit - try next key
       }
-    } catch (e) {}
+    } catch (e) { 
+      lastApiError = e.toString();
+      console.error(`[${VERSION}] Groq Step1 Exception: ${lastApiError}`);
+    }
   }
   
-  if (!classification) return { status: "ERROR", reason: "AI Classification failed" };
+  if (!classification) return { status: "ERROR", reason: "AI Classification failed: " + lastApiError };
 
   const finalResult = {
     majorCategory: String(classification.majorCategory || "Uncategorized"),
@@ -635,8 +669,8 @@ function analyzeAI(file, customChecklist) {
   };
   finalResult.sheetReference = `${finalResult.majorCategory} > ${finalResult.subCategory} > ${finalResult.detail}`;
 
-  // STEP 2: Compare against Reference Image (if available)
-  const refImage = getReferenceImageBase64(finalResult.detail);
+  // STEP 2: Compare against Reference Image from SMART QC PHOTO CHECK folder
+  const refImage = getReferenceImageBase64(finalResult.detail) || getReferenceImageBase64(finalResult.subCategory);
   
   let comparePrompt = `You are an expert Telecom QA Engineer.
 Category: ${finalResult.sheetReference}
@@ -648,19 +682,30 @@ Type: ${finalResult.imageType}
   
   if (refImage) {
     comparePrompt += `I have provided TWO images:
-1. The first image is the STANDARD REFERENCE PHOTO (SMART QC PHOTO CHECK).
-2. The second image is the ACTUAL INSTALLATION PHOTO.
+1. The first image is the STANDARD REFERENCE PHOTO (SMART QC PHOTO CHECK) showing the correct installation standard.
+2. The second image is the ACTUAL INSTALLATION PHOTO to be inspected.
 
 Please compare the ACTUAL photo against the STANDARD REFERENCE.
-Determine if the actual installation meets the standard.
+Check if the actual installation meets AIS telecom standards:
+- Equipment installed correctly
+- Cables properly connected and labeled
+- Safety equipment present
+- Photo is clear and properly framed
+
 Output JSON ONLY: {"status":"PASS"|"FAIL","reason":"Explain in Thai why it passes or fails compared to the standard. Be specific."}`;
     
     contentArray.push({ "type": "text", "text": comparePrompt });
     contentArray.push({ "type": "image_url", "image_url": { "url": `data:${refImage.mime};base64,${refImage.b64}` } });
     contentArray.push({ "type": "image_url", "image_url": { "url": `data:${mimeType};base64,${b64}` } });
   } else {
-    comparePrompt += `Evaluate the provided ACTUAL INSTALLATION PHOTO based on standard telecom site installation.
-Determine if the installation looks correct, clear, and complete.
+    comparePrompt += `Evaluate the provided ACTUAL INSTALLATION PHOTO based on standard AIS telecom site installation.
+Check:
+- Equipment installed correctly and completely
+- Cables properly connected, tied, and labeled
+- Safety equipment present if applicable
+- Photo is clear and properly framed
+- No visible defects or missing components
+
 Output JSON ONLY: {"status":"PASS"|"FAIL","reason":"Explain in Thai why it passes or fails. Be specific."}`;
     
     contentArray.push({ "type": "text", "text": comparePrompt });
@@ -668,15 +713,17 @@ Output JSON ONLY: {"status":"PASS"|"FAIL","reason":"Explain in Thai why it passe
   }
 
   const payloadStep2 = { 
-    "model": "llama-3.2-90b-vision-preview", 
+    "model": VISION_MODEL, 
     "messages": [{ "role": "user", "content": contentArray }], 
     "response_format": { "type": "json_object" } 
   };
   
+  lastApiError = "";
   for (let key of GROQ_KEYS) {
     try {
       const res = UrlFetchApp.fetch(GROQ_AI_URL, { method: "post", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, payload: JSON.stringify(payloadStep2), muteHttpExceptions: true });
-      if (res.getResponseCode() === 200) {
+      const code = res.getResponseCode();
+      if (code === 200) {
         let rawContent = JSON.parse(res.getContentText()).choices[0].message.content;
         let jsonMatch = rawContent.match(/\{[\s\S]*\}/);
         let compareResult = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(rawContent.replace(/```json/g, "").replace(/```/g, "").trim());
@@ -684,12 +731,19 @@ Output JSON ONLY: {"status":"PASS"|"FAIL","reason":"Explain in Thai why it passe
         finalResult.status = String(compareResult.status || "FAIL").toUpperCase();
         finalResult.reason = String(compareResult.reason || "Unknown");
         return finalResult;
+      } else {
+        lastApiError = `API ${code}: ${res.getContentText().substring(0, 200)}`;
+        console.warn(`[${VERSION}] Groq Step2 Error (key ${GROQ_KEYS.indexOf(key)+1}): ${lastApiError}`);
+        if (code === 429) { Utilities.sleep(2000); continue; }
       }
-    } catch (e) {}
+    } catch (e) {
+      lastApiError = e.toString();
+      console.error(`[${VERSION}] Groq Step2 Exception: ${lastApiError}`);
+    }
   }
   
   finalResult.status = "ERROR";
-  finalResult.reason = "AI Comparison failed";
+  finalResult.reason = "AI Comparison failed: " + lastApiError;
   return finalResult;
 }
 

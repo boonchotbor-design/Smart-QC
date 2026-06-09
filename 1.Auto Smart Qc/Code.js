@@ -556,9 +556,19 @@ function analyzeAI(file, customChecklist) {
     }
   }
 
-  const promptText = `Analyze site photo for AIS standard. You MUST identify Major Category, Sub Category, and Detail.
-  Return JSON ONLY.
-  Format: {"majorCategory":"String","subCategory":"String","detail":"String","status":"PASS"|"FAIL","reason":"Thai","imageType":"before"|"after"}
+  const promptText = `You are an expert Telecom QA Engineer checking AIS standard site photos.
+  Analyze the provided image and classify it according to the provided Hierarchy Checklist.
+  
+  CRITICAL RULES:
+  1. 'majorCategory', 'subCategory', and 'detail' MUST EXACTLY MATCH one of the items in the Hierarchy Checklist below. Do NOT invent new categories.
+  2. Evaluate the photo quality and correctness based on standard telecom site installation.
+  3. 'status' MUST be "PASS" if the installation looks correct and clear, or "FAIL" if it is incorrect, unclear, or missing components.
+  4. 'reason' MUST explain why it PASS or FAIL in Thai language.
+  5. 'imageType' MUST be "before" or "after".
+  
+  Output MUST be valid JSON ONLY, with no extra text or markdown wrappers.
+  Format: {"majorCategory":"...","subCategory":"...","detail":"...","status":"PASS"|"FAIL","reason":"...","imageType":"before"|"after"}
+  
   Hierarchy Checklist: 
   ${detailedChecklist}`;
 
@@ -573,7 +583,15 @@ function analyzeAI(file, customChecklist) {
       const res = UrlFetchApp.fetch(GROQ_AI_URL, { method: "post", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, payload: JSON.stringify(payload), muteHttpExceptions: true });
       if (res.getResponseCode() === 200) {
         let rawContent = JSON.parse(res.getContentText()).choices[0].message.content;
-        let aiResult = JSON.parse(rawContent.replace(/```json/g, "").replace(/```/g, "").trim());
+        let aiResult;
+        
+        let jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          aiResult = JSON.parse(jsonMatch[0]);
+        } else {
+          aiResult = JSON.parse(rawContent.replace(/```json/g, "").replace(/```/g, "").trim());
+        }
+        
         const finalResult = {
           majorCategory: String(aiResult.majorCategory || "Uncategorized"),
           subCategory: String(aiResult.subCategory || "General"),
