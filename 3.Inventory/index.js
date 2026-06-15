@@ -222,6 +222,14 @@ app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) 
         return res.status(200).send('OK');
       }
       
+      if (userMessage.toLowerCase() === '/id' || userMessage.toLowerCase() === 'get id') {
+        await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { 
+          chat_id: currentChatId, 
+          text: `ℹ️ Telegram Chat Info:\n🔹 Chat Type: ${message.chat.type}\n🔹 Chat ID: ${currentChatId}` 
+        });
+        return res.status(200).send('OK');
+      }
+      
       if (userMessage.length < 5 && !userMessage.startsWith('/')) {
          await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { chat_id: currentChatId, text: "❓ ข้อความสั้นเกินไปครับ" });
          return res.status(200).send('OK');
