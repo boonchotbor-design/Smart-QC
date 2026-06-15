@@ -31,7 +31,7 @@ const client = new messagingApi.MessagingApiClient({
 });
 
 const GAS_WEB_APP_URL = (process.env.GAS_WEB_APP_URL || 'https://script.google.com/macros/s/AKfycbwoTnwaExeObR_54tVajXxz7j2rAsQlyIWN3rbaGfTXxf9-HZ8oAMs4_gKOhrFx7b6b/exec').trim();
-const TELEGRAM_BOT_TOKEN_FALLBACK = '8621299992:AAEsgz7NGNZR0gqP7vHlQ3EbeLcxsGySe7Y';
+const TELEGRAM_BOT_TOKEN_FALLBACK = '8621299992:AAHlzLEpw00IAbAAChytKnb4fT6Yys10OL8';
 
 const app = express();
 
