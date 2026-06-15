@@ -1,5 +1,5 @@
 /**
- * 🧪 Test System V.6.6.5
+ * 🧪 Test System V.6.8.1
  * สคริปต์สำหรับทดสอบระบบแจ้งเตือนและการค้นหา (LINE & Telegram)
  * วิธีใช้งาน:
  * 1. ติดตั้ง axios: npm install axios
@@ -46,7 +46,7 @@ async function runTests() {
   console.log("2️⃣  ทดสอบบอท Telegram: ค้นหา DUID...");
   const duidSearchPayload = {
     message: {
-      chat: { id: 7378939928 }, // Mock ID
+      chat: { id: -5188878406 }, // Mock ID
       text: "SHSSM_2025 Coverage Expansion Ph1_New Site_Remote-BBU_ER"
     }
   };
@@ -61,7 +61,7 @@ async function runTests() {
   console.log("3️⃣  ทดสอบบอท Telegram: จำลองการส่งรูปภาพ (OCR)...");
   const photoPayload = {
     message: {
-      chat: { id: 7378939928 },
+      chat: { id: -5188878406 },
       photo: [{ file_id: "mock_file_id" }] 
     }
   };

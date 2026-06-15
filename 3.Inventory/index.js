@@ -38,7 +38,7 @@ const app = express();
 app.get('/', (req, res) => {
   const diagnostic = {
     status: 'Alive',
-    version: 'v6.8.0',
+    version: 'v6.8.1',
     env: {
       hasGasUrl: !!process.env.GAS_WEB_APP_URL,
       lineBotsCount: LINE_CONFIGS.length,
@@ -74,7 +74,7 @@ function formatNotificationMessage(header, items) {
     });
   }
   msg += `━━━━━━━━━━━━━━━\n` +
-         `✅ บันทึกสำเร็จ (V.6.8.0)!`;
+         `✅ บันทึกสำเร็จ (V.6.8.1)!`;
   return msg;
 }
 
@@ -86,7 +86,7 @@ async function sendNotification(header, items) {
   
   try {
     const botToken = process.env.TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN_FALLBACK;
-    const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '7378939928';
+    const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '-5188878406';
     
     console.log(`Notification Triggered: DUID=${header.duid}, Region=${header.region}, TokenUsed=${botToken.substring(0, 10)}...`);
 
@@ -218,7 +218,7 @@ app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) 
     if (message.text) {
       const userMessage = message.text.trim();
       if (userMessage.toLowerCase() === '/start') {
-        await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { chat_id: currentChatId, text: "👋 ยินดีต้อนรับสู่ Inventory Smart Bot (V.6.8.0)\n\n📸 ส่งรูปใบ Picking List เพื่อบันทึกข้อมูลอัตโนมัติ\n🔍 หรือส่ง DUID ที่ต้องการค้นหาข้อมูลได้เลยครับ" });
+        await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { chat_id: currentChatId, text: "👋 ยินดีต้อนรับสู่ Inventory Smart Bot (V.6.8.1)\n\n📸 ส่งรูปใบ Picking List เพื่อบันทึกข้อมูลอัตโนมัติ\n🔍 หรือส่ง DUID ที่ต้องการค้นหาข้อมูลได้เลยครับ" });
         return res.status(200).send('OK');
       }
       
