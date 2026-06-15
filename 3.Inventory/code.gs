@@ -1,5 +1,5 @@
 /*
- * 🚀 Inventory Smart System - V.6.7.9
+ * 🚀 Inventory Smart System - V.6.8.0
  * Includes: DUID Suffix Region Detection & Master Data Lookup Fallback
  */
 
@@ -15,7 +15,7 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
   }
   return HtmlService.createTemplateFromFile('app').evaluate()
-      .setTitle('Inventory Smart App V.6.7.9')
+      .setTitle('Inventory Smart App V.6.8.0')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

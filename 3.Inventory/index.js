@@ -38,10 +38,11 @@ const app = express();
 app.get('/', (req, res) => {
   const diagnostic = {
     status: 'Alive',
-    version: 'v6.7.9',
+    version: 'v6.8.0',
     env: {
       hasGasUrl: !!process.env.GAS_WEB_APP_URL,
       lineBotsCount: LINE_CONFIGS.length,
+      lineDestIdUsed: LINE_CONFIGS[0].destId,
       hasTelegramTokenEnv: !!process.env.TELEGRAM_BOT_TOKEN,
       telegramTokenUsed: (process.env.TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN_FALLBACK).substring(0, 15) + '...',
       hasTelegramDest: !!process.env.TELEGRAM_DESTINATION_ID
@@ -73,7 +74,7 @@ function formatNotificationMessage(header, items) {
     });
   }
   msg += `━━━━━━━━━━━━━━━\n` +
-         `✅ บันทึกสำเร็จ (V.6.7.9)!`;
+         `✅ บันทึกสำเร็จ (V.6.8.0)!`;
   return msg;
 }
 
@@ -217,7 +218,7 @@ app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) 
     if (message.text) {
       const userMessage = message.text.trim();
       if (userMessage.toLowerCase() === '/start') {
-        await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { chat_id: currentChatId, text: "👋 ยินดีต้อนรับสู่ Inventory Smart Bot (V.6.7.9)\n\n📸 ส่งรูปใบ Picking List เพื่อบันทึกข้อมูลอัตโนมัติ\n🔍 หรือส่ง DUID ที่ต้องการค้นหาข้อมูลได้เลยครับ" });
+        await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { chat_id: currentChatId, text: "👋 ยินดีต้อนรับสู่ Inventory Smart Bot (V.6.8.0)\n\n📸 ส่งรูปใบ Picking List เพื่อบันทึกข้อมูลอัตโนมัติ\n🔍 หรือส่ง DUID ที่ต้องการค้นหาข้อมูลได้เลยครับ" });
         return res.status(200).send('OK');
       }
       
@@ -254,6 +255,22 @@ app.post('/notify', express.json(), async (req, res) => {
 async function handleEvent(event) {
   if (event.type !== 'message' || event.message.type !== 'text') return null;
   const userMessage = event.message.text.trim();
+
+  // ดึง LINE Group/User ID ด้วยคำสั่ง /id หรือ get id
+  if (userMessage.toLowerCase() === '/id' || userMessage.toLowerCase() === 'get id') {
+    const sourceInfo = `ℹ️ LINE Connection Info:\n` +
+                       `🔹 Type: ${event.source.type}\n` +
+                       `🔹 User ID: ${event.source.userId || '-'}\n` +
+                       `🔹 Group ID: ${event.source.groupId || '-'}\n` +
+                       `🔹 Room ID: ${event.source.roomId || '-'}`;
+    try {
+      return await client.replyMessage({ replyToken: event.replyToken, messages: [{ type: 'text', text: sourceInfo }] });
+    } catch (err) {
+      console.error('Reply ID Error:', err.message);
+      return null;
+    }
+  }
+
   if (userMessage.length < 5) return null;
   try {
     const response = await axios.get(`${GAS_WEB_APP_URL}?duid=${encodeURIComponent(userMessage)}&format=text`, { timeout: 25000 });

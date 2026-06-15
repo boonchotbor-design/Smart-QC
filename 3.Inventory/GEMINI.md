@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.6.7.5)
+# 📦 Inventory Smart System (V.6.8.0)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI) and Telegram Bot with AI OCR capabilities.
 
@@ -35,6 +35,11 @@ Project Context: A Google Apps Script application for managing hardware inventor
 ### 🐞 Bug Fixing
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
+
+## 🐞 Bug Fixes & Stability (V.6.8.0)
+- **LINE Group ID Diagnostic & Webhook Command**: Added `/id` and `get id` commands in LINE webhook (`handleEvent`) allowing users to query their Group ID or User ID directly from LINE chat.
+- **Diagnostic API Upgrade**: Exposed `lineDestIdUsed` (currently active LINE Destination ID) on the root URL path diagnostic endpoint (`/`) to identify mismatched or incorrect LINE destination configurations.
+- **Version Sync**: Synchronized version to V.6.8.0 across `code.gs`, `app.html`, and `index.js`.
 
 ## 🐞 Bug Fixes & Stability (V.6.7.9)
 - **iPhone 15 Deep Scan V2**: Upgraded Deep Scan logic with aggressive sharpness and brightness filters specifically tuned for high-end mobile cameras (iPhone 15, Samsung S26).
