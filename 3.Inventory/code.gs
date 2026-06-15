@@ -469,6 +469,5 @@ function getOrCreateSubFolder(p, n) {
 }
 
 function notifyOnly(h, i) { var payload = { header: h, items: i }, opt = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true }; try { UrlFetchApp.fetch(NODE_JS_WEBHOOK_URL, opt); } catch(e){} return { success: true }; }
-function searchByDuidOnly(duid) { return { success: true, formattedText: "DUID Rechecked" }; }
 function runGasSystemTests() { notifyOnly({customer:"AIS", type:"IN", duid:"TEST-001"}, []); }
 function testOcrEngine() { Logger.log("🔍 บัญชีพร้อมสแตนด์บายใช้งานเวอร์ชันหลบเลี่ยงลิมิตเต็มในวันพรุ่งนี้ครับ!"); }

@@ -7,19 +7,28 @@ const LINE_CONFIGS = [
   {
     token: (process.env.LINE_CHANNEL_ACCESS_TOKEN || 'eZe15XyurA2eFNBEjeMJ1PNG3lEiujNpzJ01GGarnoq7GFaYDqBttYZk0BHHh7KE5ZOaQdNJUdmhoCc+UoXxqmT1CdHZ7KHUWr7XACo1VY4ezEZpWVHuzufGydzTBOWnVgEgcksIJQDFeQrL3dvkUQdB04t89/1O/w1cDnyilFU=').trim(),
     secret: (process.env.LINE_CHANNEL_SECRET || '9e671fd5239927772a16dbf00b7f7060').trim(),
-    destId: (process.env.LINE_DESTINATION_ID || 'U110afe8872d7f73074e56c457df28598').trim()
+    destId: (process.env.LINE_DESTINATION_ID || 'Cb4baf5e474773f54f2b6538e4cd4d9ac').trim()
   },
   {
     token: 'VOVhBbD6EG9VwKFo0V1s/wAclekysxBkWrudqSrkp5kFd/8tdrWyi1der1Eui54whdk/E0XWQxF9amI05MWgRq2/Nu628A/1O4yZJB/6warrshDOj2MtnhnM59yZh7b66qbEb/Qsx5XY3OzgXnkNZgdB04t89/1O/w1cDnyilFU=',
     secret: 'd7b4fe008fd6c1f75fed2a5d1ef30fb4',
-    destId: 'U110afe8872d7f73074e56c457df28598'
+    destId: (process.env.LINE_DESTINATION_ID || 'Cb4baf5e474773f54f2b6538e4cd4d9ac').trim()
   },
   {
     token: '+rX1Vp8W/wacBl/JTAqkRMDfx7oj/wvTV66GSpASORlUoTL2LHlAoNKIlQDXAX8cLYFHufC5EOPIBWElgRYXjC9qNUNbSjpq9JZ9rInybwWVSVSs9jYObP2EqRTgreI/30kjvTz8U2rnFvAYxX8mGwdB04t89/1O/w1cDnyilFU=',
     secret: '336ea8463c7b4c4d2145faebf9b1a6c2',
-    destId: 'U110afe8872d7f73074e56c457df28598'
+    destId: (process.env.LINE_DESTINATION_ID || 'Cb4baf5e474773f54f2b6538e4cd4d9ac').trim()
   }
 ];
+
+const config = {
+  channelAccessToken: LINE_CONFIGS[0].token,
+  channelSecret: LINE_CONFIGS[0].secret
+};
+
+const client = new messagingApi.MessagingApiClient({
+  channelAccessToken: config.channelAccessToken
+});
 
 const GAS_WEB_APP_URL = (process.env.GAS_WEB_APP_URL || 'https://script.google.com/macros/s/AKfycbwoTnwaExeObR_54tVajXxz7j2rAsQlyIWN3rbaGfTXxf9-HZ8oAMs4_gKOhrFx7b6b/exec').trim();
 const TELEGRAM_BOT_TOKEN_FALLBACK = '8621299992:AAEnMlqf6KKTYp-HLWaaEDEUql-cOAZYwWk';
@@ -29,7 +38,7 @@ const app = express();
 app.get('/', (req, res) => {
   const diagnostic = {
     status: 'Alive',
-    version: 'v6.7.8',
+    version: 'v6.7.9',
     env: {
       hasGasUrl: !!process.env.GAS_WEB_APP_URL,
       lineBotsCount: LINE_CONFIGS.length,
@@ -41,37 +50,46 @@ app.get('/', (req, res) => {
   res.json(diagnostic);
 });
 
+// Helper ฟังก์ชันสำหรับสร้างรูปแบบข้อความแจ้งเตือนตามที่ผู้ใช้งานกำหนด
+function formatNotificationMessage(header, items) {
+  let msg = `📊 ข้อมูล DUID: ${header.duid || "-"}\n` +
+            `━━━━━━━━━━━━━━━\n` +
+            `👤 ลูกค้า: ${header.customer || "-"}\n` +
+            `🛠 งาน: ${header.type || "-"}\n` +
+            `📄 bill No : ${header.billNo || "-"}\n` +
+            `📍 Region: ${header.region || "-"}\n` +
+            `🆔 DUID: ${header.duid || "-"}\n` +
+            `🏢 คลัง: ${header.ownerWarehouse || "-"}\n` +
+            `👷 ผู้รับ: ${header.ownerReceiver || "-"}\n` +
+            `📍 Loc Warehouse: ${header.locationWarehouse || "-"}\n` +
+            `📍 Loc Receiver: ${header.locationReceiver || "-"}\n` +
+            `━━━━━━━━━━━━━━━\n` +
+            `📦 รายการสินค้า (${items ? items.length : 0} รายการ):\n`;
+
+  if (items && items.length > 0) {
+    items.forEach((item, index) => {
+      msg += `🔹 ${index + 1}: ${item.model || "-"}\n` +
+             `   (SN: ${item.sn || "NA"}, Qty: ${item.qty || "0"})\n`;
+    });
+  }
+  msg += `━━━━━━━━━━━━━━━\n` +
+         `✅ บันทึกสำเร็จ (V.6.7.9)!`;
+  return msg;
+}
+
 // ฟังก์ชันกลางสำหรับส่งแจ้งเตือน (Telegram & LINE)
 async function sendNotification(header, items) {
   let errors = [];
+  let lineSuccess = false;
+  let telegramSuccess = false;
+  
   try {
     const botToken = process.env.TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN_FALLBACK;
     const telegramDestId = process.env.TELEGRAM_DESTINATION_ID || '7378939928';
     
     console.log(`Notification Triggered: DUID=${header.duid}, Region=${header.region}, TokenUsed=${botToken.substring(0, 10)}...`);
 
-    let messageText = `📊 ข้อมูล DUID: ${header.duid || "-"}\n` +
-                      `━━━━━━━━━━━━━━━\n` +
-                      `👤 ลูกค้า: ${header.customer || "-"}\n` +
-                      `🛠 งาน: ${header.type || "-"}\n` +
-                      `📄 bill No : ${header.billNo || "-"}\n` +
-                      `📍 Region: ${header.region || "-"}\n` +
-                      `🏢 คลัง: ${header.ownerWarehouse || "-"}\n` +
-                      `👷 ผู้รับ: ${header.ownerReceiver || "-"}\n` +
-                      `📍 Loc Warehouse: ${header.locationWarehouse || "-"}\n` +
-                      `📍 Loc Receiver: ${header.locationReceiver || "-"}\n` +
-                      `━━━━━━━━━━━━━━━\n` +
-                      `📦 รายการสินค้า (${items ? items.length : 0} รายการ):\n`;
-
-    if (items && items.length > 0) {
-      items.forEach((item, index) => {
-        messageText += `🔹 ${index + 1}: ${item.model || "-"}\n` +
-                       `   (SN: ${item.sn || "NA"}, Qty: ${item.qty || "0"})\n`;
-      });
-    }
-
-    messageText += `━━━━━━━━━━━━━━━\n` +
-                   `✅ บันทึกสำเร็จ (V.6.7.8)!`;
+    const messageText = formatNotificationMessage(header, items);
 
     // 1. ส่งไป LINE (ทุกตัวที่ตั้งค่าไว้)
     for (const lineBot of LINE_CONFIGS) {
@@ -83,6 +101,7 @@ async function sendNotification(header, items) {
             messages: [{ type: 'text', text: messageText }]
           });
           console.log(`LINE Push Success: ${lineBot.token.substring(0, 10)}...`);
+          lineSuccess = true;
         } catch (err) {
           console.error(`LINE Push Error (${lineBot.token.substring(0, 10)}...):`, err.message);
           errors.push('LINE:' + err.message);
@@ -92,17 +111,24 @@ async function sendNotification(header, items) {
 
     // 2. ส่งไป Telegram
     if (botToken && telegramDestId) {
-      await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        chat_id: telegramDestId,
-        text: messageText
-      }).catch(err => { 
+      try {
+        await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          chat_id: telegramDestId,
+          text: messageText
+        });
+        console.log(`Telegram Push Success`);
+        telegramSuccess = true;
+      } catch (err) { 
         console.error('Telegram Push Error:', err.message); 
         console.error('Bot Token Used:', botToken.substring(0, 15) + '...');
         errors.push('Telegram:' + err.message); 
-      });
+      }
     }
     
-    if (errors.length > 0) throw new Error(errors.join(', '));
+    // โยน Error เฉพาะกรณีที่ล้มเหลวทั้งหมด (ไม่มีช่องทางไหนส่งสำเร็จเลย)
+    if (!lineSuccess && !telegramSuccess && errors.length > 0) {
+      throw new Error(errors.join(', '));
+    }
     return true;
   } catch (err) {
     console.error('sendNotification Fatal Error:', err.message);
@@ -170,22 +196,7 @@ app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) 
 
             await sendNotification(header, items).catch(e => console.error('Notify fail:', e.message));
             
-            let detailMsg = `📊 ข้อมูล DUID: ${header.duid || "-"}\n` +
-                            `━━━━━━━━━━━━━━━\n` +
-                            `👤 ลูกค้า: ${header.customer || "-"}\n` +
-                            `🛠 งาน: ${header.type || "-"}\n` +
-                            `📄 bill No : ${header.billNo || "-"}\n` +
-                            `📍 Region: ${header.region || "-"}\n` +
-                            `🆔 DUID: ${header.duid || "-"}\n` +
-                            `🏢 คลัง: ${header.ownerWarehouse || "-"}\n` +
-                            `👷 ผู้รับ: ${header.ownerReceiver || "-"}\n` +
-                            `📍 Loc Warehouse: ${header.locationWarehouse || "-"}\n` +
-                            `📍 Loc Receiver: ${header.locationReceiver || "-"}\n` +
-                            `━━━━━━━━━━━━━━━\n` +
-                            `📦 รายการสินค้า (${items.length} รายการ):\n`;
-            
-            items.forEach((item, index) => { detailMsg += `🔹 ${index + 1}: ${item.model || "-"}\n   (SN: ${item.sn || "NA"}, Qty: ${item.qty || "0"})\n`; });
-            detailMsg += `━━━━━━━━━━━━━━━\n✅ บันทึกสำเร็จ (V.6.6.7)!`;
+            let detailMsg = formatNotificationMessage(header, items);
             if (folderUrl) detailMsg += `\n📂 เปิดโฟลเดอร์: ${folderUrl}`;
 
             await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { chat_id: currentChatId, text: detailMsg });
@@ -206,7 +217,7 @@ app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) 
     if (message.text) {
       const userMessage = message.text.trim();
       if (userMessage.toLowerCase() === '/start') {
-        await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { chat_id: currentChatId, text: "👋 ยินดีต้อนรับสู่ Inventory Smart Bot (V.6.6.7)\n\n📸 ส่งรูปใบ Picking List เพื่อบันทึกข้อมูลอัตโนมัติ\n🔍 หรือส่ง DUID ที่ต้องการค้นหาข้อมูลได้เลยครับ" });
+        await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { chat_id: currentChatId, text: "👋 ยินดีต้อนรับสู่ Inventory Smart Bot (V.6.7.9)\n\n📸 ส่งรูปใบ Picking List เพื่อบันทึกข้อมูลอัตโนมัติ\n🔍 หรือส่ง DUID ที่ต้องการค้นหาข้อมูลได้เลยครับ" });
         return res.status(200).send('OK');
       }
       
