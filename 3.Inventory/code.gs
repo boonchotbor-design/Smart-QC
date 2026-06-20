@@ -189,9 +189,10 @@ function saveMainData(header, items) {
     }
 
     var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
+    var internalNo = generateInternalNo(sheet, String(header.region || "ER").trim().toUpperCase());
 
     var allRows = items.map(function(item, index) {
-      var row = new Array(22).fill("");
+      var row = new Array(23).fill("");
       row[0] = index + 1;
       row[1] = cleanDuid;
       row[2] = String(header.region || "").trim();
@@ -209,12 +210,13 @@ function saveMainData(header, items) {
       row[14] = String(header.locationWarehouse || "").trim();
       row[15] = String(header.locationReceiver || "").trim();
       row[21] = "Pending";
+      row[22] = internalNo;
       return row;
     });
 
     if (allRows.length > 0) {
       sheet.insertRowsAfter(1, allRows.length);
-      sheet.getRange(2, 1, allRows.length, 22).setValues(allRows);
+      sheet.getRange(2, 1, allRows.length, 23).setValues(allRows);
     }
 
     SpreadsheetApp.flush();
@@ -225,6 +227,33 @@ function saveMainData(header, items) {
       debug: "✅ บันทึกสำเร็จ (V.6.8.2)\n📍 Sheet: " + sheetName + "\n🔢 บันทึกที่แถว: 2 (บนสุด)\n🆔 DUID: " + cleanDuid + " (Column B)"
     };
   } catch (e) { return { success: false, message: "❌ ระบบขัดข้อง: " + e.toString() }; } finally { lock.releaseLock(); }
+}
+
+function generateInternalNo(sheet, region) {
+  var d = new Date();
+  var yyyy = Utilities.formatDate(d, "GMT+7", "yyyy");
+  var mm = Utilities.formatDate(d, "GMT+7", "MM");
+  var prefix = "TLN-" + region + "-" + yyyy + "-" + mm + "-";
+  
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return prefix + "0001";
+  
+  var data = sheet.getRange(2, 23, lastRow - 1, 1).getValues();
+  var maxNum = 0;
+  
+  for (var i = 0; i < data.length; i++) {
+    var val = String(data[i][0]).trim();
+    if (val.indexOf(prefix) === 0) {
+      var numPart = parseInt(val.replace(prefix, ""), 10);
+      if (!isNaN(numPart) && numPart > maxNum) {
+        maxNum = numPart;
+      }
+    }
+  }
+  
+  var nextNum = maxNum + 1;
+  var paddedNum = ("000" + nextNum).slice(-4);
+  return prefix + paddedNum;
 }
 
 function getProjectData() {
