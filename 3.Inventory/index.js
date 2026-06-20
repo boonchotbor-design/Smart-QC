@@ -1,5 +1,5 @@
 const express = require('express');
-const { messagingApi, middleware } = require('@line/bot-sdk');
+const { messagingApi, middleware, validateSignature } = require('@line/bot-sdk');
 const axios = require('axios');
 
 // สนับสนุนการมีหลาย LINE Bot
@@ -17,6 +17,12 @@ const LINE_CONFIGS = [
   {
     token: '+rX1Vp8W/wacBl/JTAqkRMDfx7oj/wvTV66GSpASORlUoTL2LHlAoNKIlQDXAX8cLYFHufC5EOPIBWElgRYXjC9qNUNbSjpq9JZ9rInybwWVSVSs9jYObP2EqRTgreI/30kjvTz8U2rnFvAYxX8mGwdB04t89/1O/w1cDnyilFU=',
     secret: '336ea8463c7b4c4d2145faebf9b1a6c2',
+    destId: (process.env.LINE_DESTINATION_ID || 'Cb4baf5e474773f54f2b6538e4cd4d9ac').trim()
+  },
+  {
+    // TLN-Inventory#4
+    token: 'PLTC9GGkhVetPnJpG6Uq7tqRjZ6YZkBhsZkEsJGhuuElOW/+UCfLsZwT6tAZx9PeO70O8YORfw80wSw+i2AiyDBgvTtp90ljP1zbQ7EJk3J8mSEkKGdGpM5rO0SAvwcL2GmxxgNsQojv6ILXSI7kFQdB04t89/1O/w1cDnyilFU=',
+    secret: 'dc9465ad716b7c312283d06649ec3ba1',
     destId: (process.env.LINE_DESTINATION_ID || 'Cb4baf5e474773f54f2b6538e4cd4d9ac').trim()
   }
 ];
@@ -137,22 +143,30 @@ async function sendNotification(header, items) {
   }
 }
 
-// Wrapper สำหรับ Middleware ของ LINE เพื่อป้องกัน Crash กรณีไม่มี Secret
-const lineMiddleware = (req, res, next) => {
-  if (!config.channelSecret) return next();
-  try {
-    return middleware(config)(req, res, next);
-  } catch (e) {
-    console.error('LINE Middleware Init Error:', e.message);
-    return next();
+// Middleware ที่รองรับหลาย Bot Secret (ลอง verify ทีละตัวจนสำเร็จ)
+const multiLineMiddleware = (req, res, next) => {
+  const signature = req.headers['x-line-signature'];
+  // ถ้าไม่มี signature ให้ผ่านไปเลย (เช่น health check)
+  if (!signature) return next();
+  const rawBody = req.rawBody || JSON.stringify(req.body);
+  // ลอง validate กับทุก Bot Secret
+  const isValid = LINE_CONFIGS.some(bot => {
+    try {
+      return bot.secret && validateSignature(rawBody, bot.secret, signature);
+    } catch (e) { return false; }
+  });
+  if (!isValid) {
+    console.warn('LINE Signature mismatch - rejecting webhook');
+    return res.status(401).send('Invalid signature');
   }
+  next();
 };
 
-app.post('/webhook', (req, res, next) => {
-  if (!config.channelAccessToken || !config.channelSecret) return res.status(200).send('LINE not configured');
-  next();
-}, lineMiddleware, (req, res) => {
-  if (!req.body.events || !Array.isArray(req.body.events)) return res.status(200).send('OK');
+// Parse raw body ก่อนเพื่อให้ validateSignature ทำงานได้ถูกต้อง
+app.post('/webhook', express.json({
+  verify: (req, res, buf) => { req.rawBody = buf.toString('utf8'); }
+}), multiLineMiddleware, (req, res) => {
+  if (!req.body || !req.body.events || !Array.isArray(req.body.events)) return res.status(200).send('OK');
   Promise.all(req.body.events.map(handleEvent)).then((result) => res.json(result)).catch((err) => { console.error('Webhook Error:', err.message); res.status(500).end(); });
 });
 
