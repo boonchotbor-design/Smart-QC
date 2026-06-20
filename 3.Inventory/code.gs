@@ -1,6 +1,6 @@
 /*
- * 🚀 Inventory Smart System - V.6.8.1
- * Includes: DUID Suffix Region Detection & Master Data Lookup Fallback
+ * 🚀 Inventory Smart System - V.6.8.2
+ * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback & Status Check API
  */
 
 var SPREADSHEET_ID = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ'; 
@@ -15,7 +15,7 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
   }
   return HtmlService.createTemplateFromFile('app').evaluate()
-      .setTitle('Inventory Smart App V.6.8.1')
+      .setTitle('Inventory Smart App V.6.8.2')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -221,8 +221,8 @@ function saveMainData(header, items) {
     updateDuidStatus(cleanDuid, customer);
     return {
       success: true,
-      header: header, 
-      debug: "✅ บันทึกสำเร็จ (V.6.7.6)\n📍 Sheet: " + sheetName + "\n🔢 บันทึกที่แถว: 2 (บนสุด)\n🆔 DUID: " + cleanDuid + " (Column B)"
+      header: header,
+      debug: "✅ บันทึกสำเร็จ (V.6.8.2)\n📍 Sheet: " + sheetName + "\n🔢 บันทึกที่แถว: 2 (บนสุด)\n🆔 DUID: " + cleanDuid + " (Column B)"
     };
   } catch (e) { return { success: false, message: "❌ ระบบขัดข้อง: " + e.toString() }; } finally { lock.releaseLock(); }
 }
@@ -438,6 +438,9 @@ function getBOMData(customer) { try { var ss = SpreadsheetApp.openById(SPREADSHE
 function getOwnerData() { try { var ss = SpreadsheetApp.openById(SPREADSHEET_ID); var ws=[], rs=[]; var sheets = ss.getSheets(); sheets.forEach(function(s){ var name = s.getName(); if (name.indexOf("INOUT") > -1 || name === "data") { var lastRow = s.getLastRow(); if (lastRow < 2) return; var startRow = Math.max(2, lastRow - 500); var numRows = lastRow - startRow + 1; var data = s.getRange(startRow, 1, numRows, s.getLastColumn()).getValues(); var h = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0].map(h => String(h||"").toUpperCase()); var wCol = Math.max(h.indexOf("OWNER WAREHOUSE"), h.indexOf("OWNER WAREHOUSE ")); var rCol = Math.max(h.indexOf("OWNER RECEIVER"), h.indexOf("OWNER RECEIVER ")); for (var i = 0; i < data.length; i++) { if (wCol > -1 && data[i][wCol]) ws.push(String(data[i][wCol])); if (rCol > -1 && data[i][rCol]) rs.push(String(data[i][rCol])); } } }); return { warehouses: [...new Set(ws)].sort(), receivers: [...new Set(rs)].sort() }; } catch(e) { return {warehouses:[], receivers:[]}; } }
 function isDuidClosed(duid, customer) { try { if (!duid) return false; var ss = SpreadsheetApp.openById(SPREADSHEET_ID); var sheet = ss.getSheetByName("INOUT_HW_" + customer); if (!sheet) return false; var data = sheet.getDataRange().getValues(); if (data.length < 2) return false; var h = data[0].map(v => String(v||"").toUpperCase()); var dCol = Math.max(h.indexOf("DUID"), 0); var sCol = Math.max(h.indexOf("STATUS"), 21); var target = duid.trim().toLowerCase(); for (var i = 1; i < data.length; i++) { if (String(data[i][dCol]).trim().toLowerCase() === target && String(data[i][sCol]).trim().toUpperCase() === "CLOSED") return true; } } catch (e) {} return false; }
 function updateDuidStatus(duid, customer) { try { if (!duid) return; var ss = SpreadsheetApp.openById(SPREADSHEET_ID); var sheet = ss.getSheetByName("INOUT_HW_" + customer); if (!sheet) return; var data = sheet.getDataRange().getValues(); var h = data[0].map(v => String(v||"").toUpperCase()); var idx = { duid: Math.max(h.indexOf("DUID"), 1), type: Math.max(h.indexOf("IN/OUT"), 3), qty: Math.max(h.indexOf("SUM OF REQ.QTY"), 10), status: Math.max(h.indexOf("STATUS"), 21) }; var totalIn = 0, totalOut = 0, matchingRows = [], target = duid.trim(); for (var i = 1; i < data.length; i++) { if (String(data[i][idx.duid]).trim() === target) { matchingRows.push(i + 1); var type = String(data[i][idx.type]).toUpperCase(), qty = Number(data[i][idx.qty]) || 0; if (type.indexOf("IN") > -1 || type === "RETURN") totalIn += qty; else if (type.indexOf("OUT") > -1) totalOut += qty; } } var status = (totalIn > 0 && totalIn === totalOut) ? "Closed" : (totalIn > 0 ? "On Process" : "Pending"); if (matchingRows.length > 0) { var statusRange = sheet.getRange(1, idx.status + 1, data.length, 1); var statusValues = statusRange.getValues(); matchingRows.forEach(r => { if (statusValues[r-1]) statusValues[r-1][0] = status; }); statusRange.setValues(statusValues); } } catch (e) {} }
+
+function getDuidStatus(duid, customer) { try { if (!duid) return { found: false }; var ss = SpreadsheetApp.openById(SPREADSHEET_ID); var sheet = ss.getSheetByName("INOUT_HW_" + (customer || "AIS").toUpperCase()); if (!sheet) return { found: false }; var data = sheet.getDataRange().getValues(); if (data.length < 2) return { found: false }; var h = data[0].map(v => String(v||"").toUpperCase()); var dCol = Math.max(h.indexOf("DUID"), 1); var sCol = Math.max(h.indexOf("STATUS"), 21); var target = duid.trim().toLowerCase(); for (var i = 1; i < data.length; i++) { if (String(data[i][dCol]).trim().toLowerCase() === target) { return { found: true, status: String(data[i][sCol] || "Pending") }; } } return { found: false }; } catch(e) { return { found: false }; } }
+function getLocationData() { try { var ss = SpreadsheetApp.openById(SPREADSHEET_ID); var lw=[], lr=[]; var sheets = ss.getSheets(); sheets.forEach(function(s){ var name = s.getName(); if (name.indexOf("INOUT") > -1) { var lastRow = s.getLastRow(); if (lastRow < 2) return; var startRow = Math.max(2, lastRow - 500); var numRows = lastRow - startRow + 1; var data = s.getRange(startRow, 1, numRows, s.getLastColumn()).getValues(); var h = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0].map(h => String(h||"").toUpperCase()); var wCol = h.indexOf("LOCATION WAREHOUSE"); var rCol = h.indexOf("LOCATION RECEIVER"); for (var i = 0; i < data.length; i++) { if (wCol > -1 && data[i][wCol]) lw.push(String(data[i][wCol])); if (rCol > -1 && data[i][rCol]) lr.push(String(data[i][rCol])); } } }); return { warehouses: [...new Set(lw)].sort(), receivers: [...new Set(lr)].sort() }; } catch(e) { return {warehouses:[], receivers:[]}; } }
 
 function uploadPhotoOnly(h, b, p) {
   try {

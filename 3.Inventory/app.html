@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>Inventory Smart App V.6.8.1</title>
+  <title>Inventory Smart App V.6.8.2</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -26,7 +26,7 @@
 
   <div class="container-fluid">
     <div class="header-banner shadow d-flex justify-content-between align-items-center">
-      <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.8.1</h5>
+      <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.8.2</h5>
       <div>
         <button class="btn btn-sm btn-warning fw-bold me-1" onclick="checkHealth()">Verify</button>
         <button class="btn btn-sm btn-light fw-bold" onclick="onCustomerChange()">🔄 SYNC</button>
@@ -36,6 +36,7 @@
     <div class="mb-3">
       <button class="btn-mandatory shadow-sm" onclick="document.getElementById('fileInputCamera').click()">📸 ถ่ายรูปบิล (Mandatory) *</button>
       <button class="btn btn-outline-secondary w-100 btn-sm" onclick="document.getElementById('fileInputGallery').click()">🖼️ แนบรูปจากเครื่อง</button>
+      <button class="btn btn-outline-success w-100 btn-sm mt-1" id="btnOCR" onclick="runOCRFromPhoto()" disabled>🔍 อ่านข้อมูลจากรูปบิล (OCR Auto-Fill)</button>
       <input type="file" id="fileInputCamera" accept="image/*" capture="environment" style="display:none" onchange="handleFile(this)" multiple>
       <input type="file" id="fileInputGallery" accept="image/*" style="display:none" onchange="handleFile(this)" multiple>
       <div id="photoStatus" class="text-center mt-2 small text-danger fw-bold">⚠️ ยังไม่มีรูปบิล</div>
@@ -52,15 +53,15 @@
           <option value="Dismantle">Dismantle</option>
           <option value="RETURN">RETURN</option>
         </select></div>
-        <div class="col-12"><label class="small fw-bold">Region</label><select id="region" class="form-select form-select-sm"><option value="ER">ER</option><option value="NER">NER</option><option value="SR">SR</option><option value="NR">NR</option><option value="CR">CR</option><option value="BKK">BKK</option></select></div>
+        <div class="col-12"><label class="small fw-bold">Region</label><select id="region" class="form-select form-select-sm"><option value="ER">ER</option><option value="NER">NER</option><option value="SR">SR</option><option value="NR">NR</option><option value="CR">CR</option><option value="BKK">BKK</option><option value="HAE">HAE</option><option value="HAN">HAN</option><option value="HSO">HSO</option><option value="HSW">HSW</option></select></div>
         <div class="col-12"><label class="small fw-bold">Bill No. *</label><div class="input-group input-group-sm"><input type="text" id="billNo" class="form-control form-control-sm" placeholder="เลขที่บิล"><button class="btn btn-outline-primary" type="button" onclick="triggerNativeScanner('billNo')">📷 Scan</button></div></div>
         <div class="col-12 mt-2"><button class="btn btn-primary w-100 btn-sm py-2 shadow-sm" onclick="searchBill()">🔍 ค้นหาข้อมูลเดิมจาก Bill No.</button></div>
-        <div class="col-12 mt-2"><label class="small fw-bold text-danger">DUID (Mandatory) *</label><input type="text" id="duid" class="form-control form-control-sm border-danger" list="duidList" oninput="onDuidInput()" placeholder="ค้นหาหรือกรอก DUID"></div>
+        <div class="col-12 mt-2"><label class="small fw-bold text-danger">DUID (Mandatory) *</label><div class="input-group input-group-sm"><input type="text" id="duid" class="form-control form-control-sm border-danger" list="duidList" oninput="onDuidInput()" placeholder="ค้นหาหรือกรอก DUID"><button class="btn btn-outline-danger" type="button" onclick="triggerNativeScanner('duid')">📷 Scan</button></div></div>
         <div id="statusBadge" class="col-12 mt-2 d-none"><div class="alert alert-info py-1 px-2 mb-0 small fw-bold text-center" id="statusText">สถานะ: -</div></div>
         <div class="col-6 mt-2"><label class="small fw-bold">คลัง Owner *</label><input type="text" id="ownerWarehouse" class="form-control form-control-sm" list="warehouseList"></div>
         <div class="col-6 mt-2"><label class="small fw-bold">ผู้รับ Owner *</label><input type="text" id="ownerReceiver" class="form-control form-control-sm" list="receiverList"></div>
-        <div class="col-6 mt-2"><label class="small fw-bold">Location warehouse</label><input type="text" id="locationWarehouse" class="form-control form-control-sm" placeholder="Location ต้นทาง"></div>
-        <div class="col-6 mt-2"><label class="small fw-bold">Location Receiver</label><input type="text" id="locationReceiver" class="form-control form-control-sm" placeholder="Location ปลายทาง"></div>
+        <div class="col-6 mt-2"><label class="small fw-bold">Location warehouse</label><input type="text" id="locationWarehouse" class="form-control form-control-sm" list="locationWarehouseList" placeholder="Location ต้นทาง"></div>
+        <div class="col-6 mt-2"><label class="small fw-bold">Location Receiver</label><input type="text" id="locationReceiver" class="form-control form-control-sm" list="locationReceiverList" placeholder="Location ปลายทาง"></div>
       </div>
     </div>
 
@@ -71,6 +72,8 @@
     <datalist id="duidList"></datalist>
     <datalist id="warehouseList"></datalist>
     <datalist id="receiverList"></datalist>
+    <datalist id="locationWarehouseList"></datalist>
+    <datalist id="locationReceiverList"></datalist>
   </div>
 
   <div id="qr-reader" style="display:none"></div>
@@ -93,6 +96,7 @@
       document.getElementById('photoStatus').innerText = '✅ พร้อมแล้ว (' + photoArray.length + ' รูป)';
       document.getElementById('photoStatus').className = 'text-center mt-2 small text-success fw-bold';
       document.getElementById('loader').style.display = 'none';
+      document.getElementById('btnOCR').disabled = false;
       input.value = "";
     }
 
@@ -138,6 +142,14 @@
         })
         .withFailureHandler(err => console.error("getOwnerData error:", err))
         .getOwnerData();
+
+      google.script.run
+        .withSuccessHandler(d => {
+          document.getElementById('locationWarehouseList').innerHTML = (d.warehouses || []).map(v => `<option value="${v}">`).join('');
+          document.getElementById('locationReceiverList').innerHTML = (d.receivers || []).map(v => `<option value="${v}">`).join('');
+        })
+        .withFailureHandler(err => console.error("getLocationData error:", err))
+        .getLocationData();
     }
 
     function onDuidInput() {
@@ -147,6 +159,28 @@
       if (f) {
         document.getElementById('region').value = f.region || "ER";
       }
+      if (val.length >= 3) checkDuidStatus(val);
+    }
+
+    function checkDuidStatus(duid) {
+      if (!duid) return;
+      var cus = document.getElementById('customer').value;
+      google.script.run
+        .withSuccessHandler(res => {
+          var badge = document.getElementById('statusBadge');
+          var text = document.getElementById('statusText');
+          badge.classList.remove('d-none');
+          if (res.found) {
+            var cls = res.status === 'Closed' ? 'alert-danger' : (res.status === 'On Process' ? 'alert-warning' : 'alert-info');
+            text.className = 'alert py-1 px-2 mb-0 small fw-bold text-center ' + cls;
+            text.innerText = '📊 สถานะ DUID: ' + res.status;
+          } else {
+            text.className = 'alert alert-secondary py-1 px-2 mb-0 small fw-bold text-center';
+            text.innerText = '🆕 DUID ใหม่ (ยังไม่มีประวัติในระบบ)';
+          }
+        })
+        .withFailureHandler(err => {})
+        .getDuidStatus(duid, cus);
     }
 
     function addItemRow() {
@@ -309,13 +343,54 @@
       google.script.run
         .withSuccessHandler(d => {
           document.getElementById('loader').style.display = 'none';
-          alert("✅ GAS Connection: OK\n📦 BOM Items: " + bomData.length + "\n🆔 Project Items: " + projectData.length);
+          alert("✅ GAS Connection: OK\n📦 BOM Items: " + bomData.length + "\n🆔 Project Items: " + projectData.length + "\n🔖 Version: V.6.8.2");
         })
         .withFailureHandler(err => {
           document.getElementById('loader').style.display = 'none';
           alert("❌ GAS Connection Failed: " + err.message);
         })
         .getBOMData(document.getElementById('customer').value);
+    }
+
+    async function runOCRFromPhoto() {
+      if (photoArray.length === 0) return alert('❌ กรุณาถ่ายรูปบิลก่อน');
+      updateProgress(null, 'กำลังอ่านข้อมูลจากรูปบิล (OCR)...');
+      document.getElementById('btnOCR').disabled = true;
+      try {
+        const base64 = photoArray[0].split(',')[1];
+        const result = await new Promise((res, rej) =>
+          google.script.run.withSuccessHandler(res).withFailureHandler(rej).processOCR(base64)
+        );
+        document.getElementById('loader').style.display = 'none';
+        if (result.success && result.data) {
+          const d = result.data;
+          if (d.header.billNo && d.header.billNo !== '-') document.getElementById('billNo').value = d.header.billNo;
+          if (d.header.duid && d.header.duid !== '-') { document.getElementById('duid').value = d.header.duid; onDuidInput(); }
+          if (d.header.region && d.header.region !== '-') document.getElementById('region').value = d.header.region;
+          if (d.items && d.items.length > 0) {
+            document.getElementById('itemList').innerHTML = '';
+            rowCount = 0;
+            d.items.forEach((item, idx) => {
+              addItemRow();
+              let id = rowCount;
+              setTimeout(() => {
+                if (document.getElementById('model_' + id)) {
+                  document.getElementById('model_' + id).value = item.model;
+                  onModelChange(id);
+                  document.getElementById('qty_' + id).value = item.qty;
+                }
+              }, 100 * (idx + 1));
+            });
+          }
+          alert('✅ OCR สำเร็จ! ตรวจสอบข้อมูลก่อนบันทึกด้วยนะครับ');
+        } else {
+          alert('⚠️ OCR ไม่พบข้อมูลที่ชัดเจน กรุณากรอกข้อมูลเพิ่มเติมด้วยตนเอง');
+        }
+      } catch(e) {
+        document.getElementById('loader').style.display = 'none';
+        alert('❌ OCR Error: ' + e.message);
+      }
+      document.getElementById('btnOCR').disabled = false;
     }
 
     async function processImageScan(input) {
@@ -350,6 +425,7 @@
         document.getElementById('loader').style.display = 'none';
         if (decodedText) {
           if (scanTarget === 'billNo') document.getElementById('billNo').value = decodedText;
+          else if (scanTarget === 'duid') { document.getElementById('duid').value = decodedText; onDuidInput(); }
           else if (scanTarget === 'sn') document.getElementById('sn_' + scanRowId).value = decodedText;
           alert("✅ สแกนสำเร็จ!");
         } else {
