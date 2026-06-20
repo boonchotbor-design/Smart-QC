@@ -174,7 +174,6 @@ function saveMainData(header, items) {
 
     var cleanDuid = String(header.duid || "").trim();
     var cleanBill = String(header.billNo || "").trim();
-    if (isDuidClosed(cleanDuid, customer)) return { success: false, message: "❌ DUID: " + cleanDuid + " สถานะเป็น 'Closed' แล้ว" };
 
     if (!header.region || header.region === "-" || header.region === "") {
       try {
