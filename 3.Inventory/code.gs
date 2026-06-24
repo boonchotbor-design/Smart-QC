@@ -190,9 +190,23 @@ function saveMainData(header, items) {
     var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
     var internalNo = generateInternalNo(sheet, String(header.region || "ER").trim().toUpperCase());
 
+    var maxRunningNo = 0;
+    var lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      var existingData = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+      for (var r = 0; r < existingData.length; r++) {
+        if (String(existingData[r][1]).trim().toLowerCase() === cleanDuid.toLowerCase()) {
+          var num = Number(existingData[r][0]);
+          if (!isNaN(num) && num > maxRunningNo) {
+            maxRunningNo = num;
+          }
+        }
+      }
+    }
+
     var allRows = items.map(function(item, index) {
       var row = new Array(23).fill("");
-      row[0] = index + 1;
+      row[0] = maxRunningNo + index + 1;
       row[1] = cleanDuid;
       row[2] = String(header.region || "").trim();
       row[3] = String(header.type || "").trim();
