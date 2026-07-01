@@ -40,7 +40,7 @@ function doPost(e) {
     var data = JSON.parse(e.postData.contents);
 
     // ── ใช้ข้อมูล User จาก Client (localStorage) 100% ──
-    var userEmail = data.userEmail || "unknown@web";
+    var userEmail = data.userEmail || "Unknown (Web)";
     var userName  = data.userName  || "Web User";
 
     logToSheet("RECEIVE", "Action: " + data.action + " | User: " + userEmail);
@@ -93,13 +93,13 @@ function getCurrentUser() {
       try { email = Session.getEffectiveUser().getEmail() || ""; } catch (e) {}
     }
 
-    if (!email) return { email: "unknown@system", name: "Unknown User" };
+    if (!email) return { email: "Unknown (System)", name: "Unknown User" };
 
     var name = "";
     try { name = ContactsApp.getContact(email).getFullName(); } catch (e) {}
     return { email: email, name: name || email.split("@")[0] };
   } catch (e) {
-    return { email: "unknown@system", name: "Unknown User" };
+    return { email: "Unknown (System)", name: "Unknown User" };
   }
 }
 
@@ -129,8 +129,8 @@ function logAuditEntry(action, userEmail, userName, sheetName, duid, billNo, det
     sheet.insertRowAfter(1);
     sheet.getRange(2, 1, 1, 8).setValues([[
       timestamp,
-      userEmail  || "Unknown",
-      userName   || "Unknown",
+      userEmail  || "Unknown (User)",
+      userName   || "Unknown (User)",
       action,
       sheetName  || "-",
       duid       || "-",
@@ -174,7 +174,7 @@ function onEditAudit(e) {
     if (!userEmail) {
       try { userEmail = Session.getEffectiveUser().getEmail() || ""; } catch (ex) {}
     }
-    if (!userEmail) userEmail = "unknown@sheet";
+    if (!userEmail) userEmail = "Unknown (Sheet)";
     var userName = userEmail.split("@")[0];
 
     var detail = "แก้ไข [" + colName + "] แถว " + row +
@@ -413,7 +413,7 @@ function saveMainData(header, items, userEmail, userName) {
 
     // ── แจ้งเตือน LINE + Telegram ทันที หลังบันทึกสำเร็จ ──
     if (!header.userName) header.userName = userName || userEmail || "Web User";
-    if (!header.userEmail) header.userEmail = userEmail || "unknown@web";
+    if (!header.userEmail) header.userEmail = userEmail || "Unknown (Web)";
     try {
       notifyOnly(header, items);
     } catch (notifyErr) {

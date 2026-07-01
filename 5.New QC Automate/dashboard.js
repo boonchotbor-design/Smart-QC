@@ -315,13 +315,7 @@ async function wizardStartScan() {
         while (hasMore) {
             info.textContent = `กำลังตรวจด้วย AI... (ประมวลผลแล้ว ${totalProcessed} รูป)`;
             const res = await fetch(`${SCRIPT_URL}?action=processfolder&folderId=${wizardData.folderId}`);
-            let data;
-            try {
-                const text = await res.text();
-                data = JSON.parse(text);
-            } catch (e) {
-                throw new Error("เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง (AI/Server Error) โปรดเช็ค SCRIPT_URL");
-            }
+            const data = await res.json();
             
             if (data.error) throw new Error(data.error);
             
@@ -329,14 +323,13 @@ async function wizardStartScan() {
             data.details.forEach(det => {
                 const time = new Date().toLocaleTimeString();
                 const entry = document.createElement('div');
-                const statusClass = (det.status || 'error').toLowerCase();
-                entry.className = `log-entry ${statusClass === 'error' ? 'fail' : statusClass}`;
+                entry.className = `log-entry ${det.status.toLowerCase()}`;
                 entry.innerHTML = `
                     <div class="log-header">
                         <span class="status-tag">${det.status}</span>
                         <span class="log-time">${time}</span>
                     </div>
-                    <div class="log-msg"><b>${det.name}</b><br>${det.reason || 'ไม่สามารถวิเคราะห์ได้ (กรุณาตรวจสอบ API Key)'}</div>
+                    <div class="log-msg"><b>${det.name}</b><br>${det.reason}</div>
                 `;
                 logContainer.prepend(entry);
                 
@@ -598,22 +591,15 @@ async function startProcessing() {
         while (hasMore) {
             info.textContent = `กำลังส่ง AI ตรวจสอบ... (ประมวลผลแล้ว ${totalProcessed} รูป)`;
             const res = await fetch(`${SCRIPT_URL}?action=processfolder&folderId=${currentSite.id}&templateId=${template}`);
-            let data;
-            try {
-                const text = await res.text();
-                data = JSON.parse(text);
-            } catch (e) {
-                throw new Error("เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง (AI/Server Error) โปรดเช็ค SCRIPT_URL");
-            }
+            const data = await res.json();
             
             if (data.error) throw new Error(data.error);
             
             // Log results
             data.details.forEach(det => {
                 const entry = document.createElement('div');
-                const statusClass = (det.status || 'error').toLowerCase();
-                entry.className = `log-entry ${statusClass === 'error' ? 'fail' : statusClass}`;
-                entry.textContent = `[${det.status}] ${det.name} - ${det.reason || 'ไม่สามารถวิเคราะห์ได้ (กรุณาตรวจสอบ API Key)'}`;
+                entry.className = `log-entry ${det.status.toLowerCase()}`;
+                entry.textContent = `[${det.status}] ${det.name} - ${det.reason}`;
                 logContainer.prepend(entry);
             });
             

@@ -181,7 +181,7 @@
     var scanTarget  = null;
     var scanRowId   = null;
 
-    var currentUserEmail = "unknown@web";
+    var currentUserEmail = "Unknown (Web)";
     var currentUserName  = "Web User";
 
     // ─────────────────────────────────────────────
@@ -192,7 +192,7 @@
       var savedEmail = localStorage.getItem('inv_user_email') || "";
       var savedName  = localStorage.getItem('inv_user_name')  || "";
       
-      if (savedEmail && savedEmail !== "unknown@system" && savedEmail !== "unknown@web") {
+      if (savedEmail && savedEmail !== "Unknown (System)" && savedEmail !== "Unknown (Web)") {
         currentUserEmail = savedEmail;
         currentUserName  = savedName || savedEmail.split("@")[0];
         document.getElementById('userBadge').innerText = "👤 " + currentUserName + " (" + currentUserEmail + ")";
@@ -201,12 +201,12 @@
         fetch('https://api.ipify.org?format=json')
           .then(response => response.json())
           .then(data => {
-            currentUserEmail = data.ip + "@ip";
+            currentUserEmail = data.ip;
             currentUserName = "IP: " + data.ip;
             document.getElementById('userBadge').innerText = "👤 " + currentUserName;
           })
           .catch(err => {
-            currentUserEmail = "unknown@web";
+            currentUserEmail = "Unknown (Web)";
             currentUserName = "Web User";
           });
       }
@@ -232,7 +232,7 @@
     function promptChangeUser() {
       localStorage.removeItem('inv_user_email');
       localStorage.removeItem('inv_user_name');
-      currentUserEmail = "unknown@web";
+      currentUserEmail = "Unknown (Web)";
       currentUserName  = "Web User";
       document.getElementById('loginName').value  = "";
       document.getElementById('loginEmail').value = "";
@@ -476,7 +476,7 @@
       if (photoArray.length === 0) return alert('❌ กรุณาถ่ายรูปบิลก่อนบันทึก');
 
       // ตรวจสอบ user อีกครั้งก่อน submit
-      if (!currentUserEmail || currentUserEmail === "unknown@web") {
+      if (!currentUserEmail || currentUserEmail === "Unknown (Web)") {
         showLoginModal();
         return;
       }
