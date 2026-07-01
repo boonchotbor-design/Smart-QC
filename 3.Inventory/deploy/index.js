@@ -10,7 +10,7 @@ const LINE_CONFIGS = [
     name:   'TLN-Inventory#1',
     token:  (process.env.LINE_CHANNEL_ACCESS_TOKEN || 'eZe15XyurA2eFNBEjeMJ1PNG3lEiujNpzJ01GGarnoq7GFaYDqBttYZk0BHHh7KE5ZOaQdNJUdmhoCc+UoXxqmT1CdHZ7KHUWr7XACo1VY4ezEZpWVHuzufGydzTBOWnVgEgcksIJQDFeQrL3dvkUQdB04t89/1O/w1cDnyilFU=').trim(),
     secret: (process.env.LINE_CHANNEL_SECRET || '9e671fd5239927772a16dbf00b7f7060').trim(),
-    destId: 'U110afe8872d7f73074e56c457df28598'
+    destId: 'Cb4baf5e474773f54f2b6538e4cd4d9ac'
   },
   {
     name:   'TLN-Inventory#2',
@@ -34,7 +34,7 @@ const LINE_CONFIGS = [
     name:   'TLN-Inventory#5',
     token:  'UXu38/91MpirgVo6cMnUR7Rnqo79WOi7R4GqeIMj2O8jMzO5U1Ws64UmFySOFh6lCbTNzpgUCq43OTw04h3T73uImFd5A2RYt7eyj6Fz1J85MUsTsy2CYTfD/lfRPIWB60jyTWryPTgXOpztiLNaYwdB04t89/1O/w1cDnyilFU=',
     secret: '5fa55926cffd99f317c9d8daf2f84a03',
-    destId: 'U110afe8872d7f73074e56c457df28598'
+    destId: 'Cb4baf5e474773f54f2b6538e4cd4d9ac'
   }
 ];
 
