@@ -185,43 +185,20 @@
     var currentUserName  = "Web User";
 
     // ─────────────────────────────────────────────
-    // 🆕 LOAD CURRENT USER — V.6.9.1
-    // ลำดับการดึง: GAS Session → localStorage → Login Modal
+    // 🆕 LOAD CURRENT USER — V.6.9.2
+    // บังคับใช้ localStorage หรือ Login Modal เท่านั้น (ไม่ดึงจาก Session เพราะจะติดชื่อเจ้าของสคริปต์)
     // ─────────────────────────────────────────────
     function loadCurrentUser() {
-      // ลอง restore จาก localStorage ก่อน (กรณี reload)
       var savedEmail = localStorage.getItem('inv_user_email') || "";
       var savedName  = localStorage.getItem('inv_user_name')  || "";
+      
       if (savedEmail && savedEmail !== "unknown@system" && savedEmail !== "unknown@web") {
         currentUserEmail = savedEmail;
         currentUserName  = savedName || savedEmail.split("@")[0];
         document.getElementById('userBadge').innerText = "👤 " + currentUserName + " (" + currentUserEmail + ")";
+      } else {
+        showLoginModal();
       }
-
-      // ดึงจาก GAS Session
-      google.script.run
-        .withSuccessHandler(function(user) {
-          if (user && user.email && user.email !== "unknown@system" && user.email !== "") {
-            // ได้ email จาก Google Session จริง
-            currentUserEmail = user.email;
-            currentUserName  = user.name || user.email.split("@")[0];
-            localStorage.setItem('inv_user_email', currentUserEmail);
-            localStorage.setItem('inv_user_name',  currentUserName);
-            document.getElementById('userBadge').innerText = "👤 " + currentUserName + " (" + currentUserEmail + ")";
-          } else {
-            // ไม่ได้ email — ตรวจสอบ localStorage อีกครั้ง ถ้าไม่มีให้แสดง modal
-            if (!savedEmail || savedEmail === "unknown@system" || savedEmail === "unknown@web") {
-              showLoginModal();
-            }
-          }
-        })
-        .withFailureHandler(function(err) {
-          console.warn("loadCurrentUser error:", err);
-          if (!savedEmail || savedEmail === "unknown@system" || savedEmail === "unknown@web") {
-            showLoginModal();
-          }
-        })
-        .getCurrentUser();
     }
 
     function showLoginModal() {

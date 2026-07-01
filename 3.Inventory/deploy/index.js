@@ -73,9 +73,16 @@ function formatNotificationMessage(header, items) {
     `👷 ผู้รับ: ${header.ownerReceiver || '-'}\n` +
     `📍 Loc Warehouse: ${header.locationWarehouse || '-'}\n` +
     `📍 Loc Receiver: ${header.locationReceiver || '-'}\n` +
-    `━━━━━━━━━━━━━━━\n` +
-    `📦 จำนวน: ${items ? items.length : 0} รายการ\n` +
-    `🕐 ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
+    `━━━━━━━━━━━━━━━\n`;
+
+  if (items && items.length > 0) {
+    items.forEach((item, idx) => {
+      msg += `🔹 ${idx + 1}: ${item.model || '-'}\n   (SN: ${item.sn || 'NA'}, Qty: ${item.qty || 0})\n`;
+    });
+    msg += `━━━━━━━━━━━━━━━\n`;
+  }
+  
+  msg += `🕐 บันทึกเมื่อ: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
   return msg;
 }
 
@@ -180,12 +187,10 @@ app.post('/webhook', lineJsonParser, multiLineMiddleware, async (req, res) => {
     const upper = text.toUpperCase();
     let replyText = '';
 
+    console.log('Webhook Event Source:', JSON.stringify(event.source));
+
     if (upper === '/ID' || upper === 'GET ID') {
-      replyText =
-        `ℹ️ LINE Info:\n🤖 Bot: ${bot.name}\n` +
-        `🔹 Type: ${event.source.type}\n` +
-        `🔹 User ID: ${event.source.userId || '-'}\n` +
-        `🔹 Group ID: ${event.source.groupId || '-'}`;
+      replyText = 'User ID: ' + (event.source.userId || '-') + '\nGroup ID: ' + (event.source.groupId || '-');
     } else if (upper.startsWith('DUID:') || upper.startsWith('ค้นหา:') || upper.startsWith('SEARCH:')) {
       const duid = text.split(':').slice(1).join(':').trim();
       replyText  = duid

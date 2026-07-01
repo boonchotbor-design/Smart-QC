@@ -39,17 +39,9 @@ function doPost(e) {
 
     var data = JSON.parse(e.postData.contents);
 
-    // ── ดึง email จาก server-side session ก่อน แล้วใช้ client เป็น fallback ──
-    var serverEmail = "";
-    var serverName  = "";
-    try {
-      serverEmail = Session.getActiveUser().getEmail() || "";
-      if (!serverEmail) serverEmail = Session.getEffectiveUser().getEmail() || "";
-      serverName  = serverEmail ? serverEmail.split("@")[0] : "";
-    } catch (ex) {}
-
-    var userEmail = serverEmail || data.userEmail || "unknown@web";
-    var userName  = serverName  || data.userName  || "Web User";
+    // ── ใช้ข้อมูล User จาก Client (localStorage) 100% ──
+    var userEmail = data.userEmail || "unknown@web";
+    var userName  = data.userName  || "Web User";
 
     logToSheet("RECEIVE", "Action: " + data.action + " | User: " + userEmail);
 

@@ -60,7 +60,7 @@ app.get('/', (req, res) => {
 // ─────────────────────────────────────────────
 function formatNotificationMessage(header, items) {
   let msg =
-    `📦 TLN-Inventory V.7.0.1\n` +
+    `📦 TLN-Inventory V.7.1.0\n` +
     `━━━━━━━━━━━━━━━\n` +
     `✅ บันทึกข้อมูลใหม่\n` +
     `👤 โดย: ${header.userName || header.savedBy || '-'}\n` +
@@ -73,9 +73,16 @@ function formatNotificationMessage(header, items) {
     `👷 ผู้รับ: ${header.ownerReceiver || '-'}\n` +
     `📍 Loc Warehouse: ${header.locationWarehouse || '-'}\n` +
     `📍 Loc Receiver: ${header.locationReceiver || '-'}\n` +
-    `━━━━━━━━━━━━━━━\n` +
-    `📦 จำนวน: ${items ? items.length : 0} รายการ\n` +
-    `🕐 ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
+    `━━━━━━━━━━━━━━━\n`;
+
+  if (items && items.length > 0) {
+    items.forEach((item, idx) => {
+      msg += `🔹 ${idx + 1}: ${item.model || '-'}\n   (SN: ${item.sn || 'NA'}, Qty: ${item.qty || 0})\n`;
+    });
+    msg += `━━━━━━━━━━━━━━━\n`;
+  }
+  
+  msg += `🕐 บันทึกเมื่อ: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
   return msg;
 }
 
