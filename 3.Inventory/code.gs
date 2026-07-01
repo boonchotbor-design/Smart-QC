@@ -1,8 +1,10 @@
 /*
- * 🚀 Inventory Smart System - V.6.9.1
+ * 🚀 Inventory Smart System - V.6.9.2
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
+ * Fix V.6.9.2: DISMANTLE/RETURN status logic — ติดตาม row existence แยกจาก qty
+ *              ป้องกัน DISMANTLE หรือ RETURN เดี่ยวๆ แสดง Closed ผิดๆ
  */
 
 var SPREADSHEET_ID      = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -25,7 +27,7 @@ function doGet(e) {
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-    .setTitle('Inventory Smart App V.6.9.1')
+    .setTitle('Inventory Smart App V.6.9.2')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -890,6 +892,13 @@ function computeDuidStatus(data, idx, target) {
   var inQty = 0, outQty = 0;
   var strInQty = 0, strOutQty = 0;
   var dismantleQty = 0, returnQty = 0;
+
+  // ติดตามว่ามีแถวของแต่ละ type จริงๆ หรือไม่ (แยกจาก qty)
+  // เพื่อป้องกัน qty=0 ทำให้ balance check ผิดพลาด
+  var hasIn = false, hasOut = false;
+  var hasStrIn = false, hasStrOut = false;
+  var hasDismantle = false, hasReturn = false;
+
   var matchingRows = [];
   var hasAnyData = false;
 
@@ -900,26 +909,34 @@ function computeDuidStatus(data, idx, target) {
     var qty  = Number(data[i][idx.qty]) || 0;
     hasAnyData = true;
 
-    if      (type === "IN")        inQty        += qty;
-    else if (type === "OUT")       outQty       += qty;
-    else if (type === "STR/IN")    strInQty     += qty;
-    else if (type === "STR/OUT")   strOutQty    += qty;
-    else if (type === "DISMANTLE") dismantleQty += qty;
-    else if (type === "RETURN")    returnQty    += qty;
+    if      (type === "IN")        { inQty        += qty; hasIn        = true; }
+    else if (type === "OUT")       { outQty       += qty; hasOut       = true; }
+    else if (type === "STR/IN")    { strInQty     += qty; hasStrIn     = true; }
+    else if (type === "STR/OUT")   { strOutQty    += qty; hasStrOut    = true; }
+    else if (type === "DISMANTLE") { dismantleQty += qty; hasDismantle = true; }
+    else if (type === "RETURN")    { returnQty    += qty; hasReturn    = true; }
   }
 
   var status;
   if (!hasAnyData) {
     status = "Pending";
   } else {
-    // ตรวจแต่ละคู่แบบอิสระ — คู่ที่ไม่มีข้อมูลเลยถือว่า balance (ไม่ไปบล็อคคู่อื่น)
-    var inOutBalanced     = (inQty === 0 && outQty === 0)         || (inQty > 0 && outQty > 0 && inQty === outQty);
-    var strBalanced       = (strInQty === 0 && strOutQty === 0)   || (strInQty > 0 && strOutQty > 0 && strInQty === strOutQty);
-    var dismantleBalanced = (dismantleQty === 0 && returnQty === 0) || (dismantleQty > 0 && returnQty > 0 && dismantleQty === returnQty);
+    /*
+     * กฎ Balance ที่ถูกต้อง (V.6.9.2):
+     *   คู่ที่ "ไม่ถูกใช้เลย" (ทั้งสองฝั่งไม่มีแถว) = ผ่าน (balanced)
+     *   คู่ที่ "ถูกใช้" (มีแถวฝั่งใดฝั่งหนึ่งหรือทั้งสอง) = ต้องมีทั้งคู่ และ qty เท่ากัน
+     *
+     * ❌ Bug เดิม: ใช้แค่ qty === 0 เพื่อตรวจ → ถ้า qty=0 จะเห็นว่า "ไม่ได้ใช้คู่นี้"
+     *    ทั้งที่จริงๆ มีแถว DISMANTLE/RETURN อยู่ → ทำให้ Closed ผิดๆ
+     */
+    var inOutBalanced  = (!hasIn  && !hasOut)    || (hasIn  && hasOut  && inQty  === outQty);
+    var strBalanced    = (!hasStrIn && !hasStrOut)|| (hasStrIn && hasStrOut && strInQty === strOutQty);
+    var disRetBalanced = (!hasDismantle && !hasReturn) || (hasDismantle && hasReturn && dismantleQty === returnQty);
 
-    var hasRealData = (inQty + outQty + strInQty + strOutQty + dismantleQty + returnQty) > 0;
+    var hasRealData = (inQty + outQty + strInQty + strOutQty + dismantleQty + returnQty) > 0
+                   || hasIn || hasOut || hasStrIn || hasStrOut || hasDismantle || hasReturn;
 
-    status = (hasRealData && inOutBalanced && strBalanced && dismantleBalanced) ? "Closed" : "On Process";
+    status = (hasRealData && inOutBalanced && strBalanced && disRetBalanced) ? "Closed" : "On Process";
   }
 
   return {
