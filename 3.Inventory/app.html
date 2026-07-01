@@ -197,7 +197,18 @@
         currentUserName  = savedName || savedEmail.split("@")[0];
         document.getElementById('userBadge').innerText = "👤 " + currentUserName + " (" + currentUserEmail + ")";
       } else {
-        showLoginModal();
+        // Fetch IP address for unknown users
+        fetch('https://api.ipify.org?format=json')
+          .then(response => response.json())
+          .then(data => {
+            currentUserEmail = data.ip + "@ip";
+            currentUserName = "IP: " + data.ip;
+            document.getElementById('userBadge').innerText = "👤 " + currentUserName;
+          })
+          .catch(err => {
+            currentUserEmail = "unknown@web";
+            currentUserName = "Web User";
+          });
       }
     }
 
@@ -532,12 +543,8 @@
           lastFolderUrl = uploadRes.folderUrl;
         }
 
-        updateProgress(95, "แจ้งเตือน...");
-        // ส่ง notify โดยไม่ block save flow (ถ้า Vercel ไม่ตอบ ข้อมูลก็บันทึกไปแล้ว)
-        await new Promise((res) =>
-          google.script.run.withSuccessHandler(res).withFailureHandler(res).notifyOnly(header, items)
-        );
-
+        updateProgress(95, "รอสักครู่...");
+        // แจ้งเตือนถูกเรียกจากฝั่ง Backend (code.gs) เรียบร้อยแล้ว จึงไม่ต้องเรียกซ้ำที่นี่เพื่อป้องกันการแจ้งเตือนซ้ำซ้อน        
         updateProgress(100, "เสร็จสิ้น!");
         setTimeout(function() {
           alert("✅ " + (saveRes.debug || "บันทึกสำเร็จ!") + "\n👤 บันทึกโดย: " + currentUserName + " (" + currentUserEmail + ")");
