@@ -49,7 +49,7 @@ const app = express();
 // ─────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.json({
-    status: 'Alive', version: 'V.7.0.1',
+    status: 'Alive', version: 'V.7.1.0',
     bots: LINE_CONFIGS.map(b => b.name),
     gasUrl: GAS_WEB_APP_URL.substring(0, 60) + '...'
   });
@@ -60,7 +60,7 @@ app.get('/', (req, res) => {
 // ─────────────────────────────────────────────
 function formatNotificationMessage(header, items) {
   let msg =
-    `📦 TLN-Inventory V.7.0.1\n` +
+    `📦 TLN-Inventory V.7.1.0\n` +
     `━━━━━━━━━━━━━━━\n` +
     `✅ บันทึกข้อมูลใหม่\n` +
     `👤 โดย: ${header.userName || header.savedBy || '-'}\n` +
@@ -86,6 +86,8 @@ async function sendNotification(header, items) {
   const messageText = formatNotificationMessage(header, items);
   let lineSuccess = false, telegramSuccess = false, errors = [];
 
+  // Failover: ลองส่งทีละ bot ตามลำดับ พอตัวไหนสำเร็จให้หยุดทันที (ไม่ส่งซ้ำหลายตัว)
+  // ตัวที่โควตาหมด/error จะถูกข้ามไปลองตัวถัดไปโดยอัตโนมัติ
   for (const bot of LINE_CONFIGS) {
     if (!bot.token || !bot.destId) continue;
     try {
@@ -93,9 +95,11 @@ async function sendNotification(header, items) {
       await client.pushMessage({ to: bot.destId, messages: [{ type: 'text', text: messageText }] });
       console.log(`LINE Push OK: ${bot.name} → ${bot.destId}`);
       lineSuccess = true;
+      break; // สำเร็จแล้ว ไม่ต้องส่งบอทตัวอื่นซ้ำ
     } catch (err) {
       console.error(`LINE Push Error (${bot.name}):`, err.message);
       errors.push(`${bot.name}:${err.message}`);
+      // ไม่ break ตรงนี้ — ปล่อยให้ loop ไปลอง bot ตัวถัดไปต่อ (failover)
     }
   }
 
@@ -189,7 +193,7 @@ app.post('/webhook', lineJsonParser, multiLineMiddleware, async (req, res) => {
         : '❌ กรุณาระบุ DUID\nเช่น DUID: Ph26_CapEx_Mod';
     } else if (['สถานะ','STATUS','HELP','/START'].includes(upper)) {
       replyText =
-        `📦 ${bot.name} V.7.0.1\n━━━━━━━━━━━━━━━\n` +
+        `📦 ${bot.name} V.7.1.0\n━━━━━━━━━━━━━━━\n` +
         `🔍 ค้นหา DUID:\nพิมพ์: DUID: [รหัส]\nเช่น: DUID: Ph26_CapEx_Mod\n\n` +
         `📋 คำสั่ง:\n• DUID: [รหัส] — ค้นหาข้อมูล\n• สถานะ — เมนูนี้\n• /id — Group/User ID`;
     } else if (text.length >= 5) {
@@ -261,7 +265,7 @@ app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) 
       const txt = message.text.trim();
       if (txt.toLowerCase() === '/start') {
         await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
-          { chat_id: currentChatId, text: '👋 TLN-Inventory V.7.0.1\n📸 ส่งรูปใบ Picking List หรือพิมพ์ DUID เพื่อค้นหา' });
+          { chat_id: currentChatId, text: '👋 TLN-Inventory V.7.1.0\n📸 ส่งรูปใบ Picking List หรือพิมพ์ DUID เพื่อค้นหา' });
         return res.status(200).send('OK');
       }
       if (txt.toLowerCase() === '/id' || txt.toLowerCase() === 'get id') {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>Inventory Smart App V.6.8.2</title>
+  <title>Inventory Smart App V.6.9.1</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -15,24 +15,60 @@
     .item-row { background: #fff; padding: 15px; border-radius: 12px; border-left: 5px solid #0d6efd; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
     .loading-overlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index:9999; flex-direction: column; justify-content: center; align-items: center; color: white; }
     .btn-mandatory { background-color: #ffc107; border: none; font-weight: bold; padding: 12px; border-radius: 10px; width: 100%; color: #000; margin-bottom: 8px; }
+    .user-badge { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 4px 10px; font-size: 12px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+    /* Modal overlay สำหรับ login prompt */
+    #loginModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; justify-content:center; align-items:center; }
+    #loginModal.show { display:flex; }
+    #loginBox { background:#fff; border-radius:16px; padding:24px; width:90%; max-width:360px; }
   </style>
 </head>
 <body>
+
+  <!-- Loading Overlay -->
   <div id="loader" class="loading-overlay">
     <div class="spinner-border text-light mb-3"></div>
     <div id="loaderText" class="fw-bold">กำลังโหลดข้อมูล...</div>
-    <div class="container mt-3" style="max-width: 250px;"><div class="progress" style="height: 10px;"><div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;"></div></div></div>
+    <div class="container mt-3" style="max-width: 250px;">
+      <div class="progress" style="height: 10px;">
+        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🆕 Login Modal (แสดงเมื่อ email ไม่ได้จาก session) -->
+  <div id="loginModal">
+    <div id="loginBox">
+      <h5 class="fw-bold mb-1">👤 ยืนยันตัวตน</h5>
+      <p class="small text-muted mb-3">ระบบไม่สามารถดึงข้อมูลผู้ใช้อัตโนมัติได้<br>กรุณากรอกข้อมูลเพื่อบันทึก Audit Log</p>
+      <div class="mb-2">
+        <label class="small fw-bold">ชื่อ-นามสกุล *</label>
+        <input type="text" id="loginName" class="form-control" placeholder="เช่น สมชาย ใจดี">
+      </div>
+      <div class="mb-3">
+        <label class="small fw-bold">Email (ถ้ามี)</label>
+        <input type="email" id="loginEmail" class="form-control" placeholder="เช่น somchai@company.com">
+      </div>
+      <button class="btn btn-primary w-100 fw-bold" onclick="confirmLogin()">✅ ยืนยัน</button>
+    </div>
   </div>
 
   <div class="container-fluid">
-    <div class="header-banner shadow d-flex justify-content-between align-items-center">
-      <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.8.2</h5>
+
+    <!-- Header -->
+    <div class="header-banner shadow d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div>
-        <button class="btn btn-sm btn-warning fw-bold me-1" onclick="checkHealth()">Verify</button>
+        <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.9.1</h5>
+        <div class="user-badge mt-1" id="userBadge">👤 กำลังตรวจสอบผู้ใช้...</div>
+      </div>
+      <div class="d-flex gap-1">
+        <button class="btn btn-sm btn-warning fw-bold" onclick="checkHealth()">Verify</button>
         <button class="btn btn-sm btn-light fw-bold" onclick="onCustomerChange()">🔄 SYNC</button>
+        <!-- 🆕 ปุ่มเปลี่ยนชื่อผู้ใช้ -->
+        <button class="btn btn-sm btn-outline-light fw-bold" onclick="promptChangeUser()" title="เปลี่ยนผู้ใช้">👤</button>
       </div>
     </div>
 
+    <!-- Photo Section -->
     <div class="mb-3">
       <button class="btn-mandatory shadow-sm" onclick="document.getElementById('fileInputCamera').click()">📸 ถ่ายรูปบิล (Mandatory) *</button>
       <button class="btn btn-outline-secondary w-100 btn-sm" onclick="document.getElementById('fileInputGallery').click()">🖼️ แนบรูปจากเครื่อง</button>
@@ -42,33 +78,80 @@
       <div id="photoStatus" class="text-center mt-2 small text-danger fw-bold">⚠️ ยังไม่มีรูปบิล</div>
     </div>
 
+    <!-- Header Form -->
     <div class="card-custom">
       <div class="row g-2">
-        <div class="col-6"><label class="small fw-bold">ลูกค้า</label><select id="customer" class="form-select form-select-sm" onchange="onCustomerChange()"><option value="AIS">AIS</option><option value="TRUE">TRUE</option></select></div>
-        <div class="col-6"><label class="small fw-bold">งาน</label><select id="type" class="form-select form-select-sm">
-          <option value="IN">IN</option>
-          <option value="OUT">OUT</option>
-          <option value="STR/In">STR/In</option>
-          <option value="STR/OUT">STR/OUT</option>
-          <option value="Dismantle">Dismantle</option>
-          <option value="RETURN">RETURN</option>
-        </select></div>
-        <div class="col-12"><label class="small fw-bold">Region</label><select id="region" class="form-select form-select-sm"><option value="ER">ER</option><option value="SR">SR</option><option value="NR">NR</option><option value="BKK">BKK</option><option value="CR">CR</option><option value="NER">NER</option></select></div>
-        <div class="col-12"><label class="small fw-bold">Bill No. *</label><div class="input-group input-group-sm"><input type="text" id="billNo" class="form-control form-control-sm" placeholder="เลขที่บิล"><button class="btn btn-outline-primary" type="button" onclick="triggerNativeScanner('billNo')">📷 Scan</button></div></div>
-        <div class="col-12 mt-2"><button class="btn btn-primary w-100 btn-sm py-2 shadow-sm" onclick="searchBill()">🔍 ค้นหาข้อมูลเดิมจาก Bill No.</button></div>
-        <div class="col-12 mt-2"><label class="small fw-bold text-danger">DUID (Mandatory) *</label><input type="text" id="duid" class="form-control form-control-sm border-danger" list="duidList" oninput="onDuidInput()" placeholder="ค้นหาหรือกรอก DUID"></div>
-        <div id="statusBadge" class="col-12 mt-2 d-none"><div class="alert alert-info py-1 px-2 mb-0 small fw-bold text-center" id="statusText">สถานะ: -</div></div>
-        <div class="col-6 mt-2"><label class="small fw-bold">คลัง Owner *</label><input type="text" id="ownerWarehouse" class="form-control form-control-sm" list="warehouseList"></div>
-        <div class="col-6 mt-2"><label class="small fw-bold">ผู้รับ Owner *</label><input type="text" id="ownerReceiver" class="form-control form-control-sm" list="receiverList"></div>
-        <div class="col-6 mt-2"><label class="small fw-bold">Location warehouse</label><input type="text" id="locationWarehouse" class="form-control form-control-sm" list="locationWarehouseList" placeholder="Location ต้นทาง"></div>
-        <div class="col-6 mt-2"><label class="small fw-bold">Location Receiver</label><input type="text" id="locationReceiver" class="form-control form-control-sm" list="locationReceiverList" placeholder="Location ปลายทาง"></div>
+        <div class="col-6">
+          <label class="small fw-bold">ลูกค้า</label>
+          <select id="customer" class="form-select form-select-sm" onchange="onCustomerChange()">
+            <option value="AIS">AIS</option>
+            <option value="TRUE">TRUE</option>
+          </select>
+        </div>
+        <div class="col-6">
+          <label class="small fw-bold">งาน</label>
+          <select id="type" class="form-select form-select-sm">
+            <option value="IN">IN</option>
+            <option value="OUT">OUT</option>
+            <option value="STR/IN">STR/IN</option>
+            <option value="STR/OUT">STR/OUT</option>
+            <option value="DISMANTLE">DISMANTLE</option>
+            <option value="RETURN">RETURN</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="small fw-bold">Region</label>
+          <select id="region" class="form-select form-select-sm">
+            <option value="ER">ER</option>
+            <option value="SR">SR</option>
+            <option value="NR">NR</option>
+            <option value="BKK">BKK</option>
+            <option value="CR">CR</option>
+            <option value="NER">NER</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="small fw-bold">Bill No. *</label>
+          <div class="input-group input-group-sm">
+            <input type="text" id="billNo" class="form-control form-control-sm" placeholder="เลขที่บิล">
+            <button class="btn btn-outline-primary" type="button" onclick="triggerNativeScanner('billNo')">📷 Scan</button>
+          </div>
+        </div>
+        <div class="col-12 mt-2">
+          <button class="btn btn-primary w-100 btn-sm py-2 shadow-sm" onclick="searchBill()">🔍 ค้นหาข้อมูลเดิมจาก Bill No.</button>
+        </div>
+        <div class="col-12 mt-2">
+          <label class="small fw-bold text-danger">DUID (Mandatory) *</label>
+          <input type="text" id="duid" class="form-control form-control-sm border-danger" list="duidList" oninput="onDuidInput()" placeholder="ค้นหาหรือกรอก DUID">
+        </div>
+        <div id="statusBadge" class="col-12 mt-2 d-none">
+          <div class="alert alert-info py-1 px-2 mb-0 small fw-bold text-center" id="statusText">สถานะ: -</div>
+        </div>
+        <div class="col-6 mt-2">
+          <label class="small fw-bold">คลัง Owner *</label>
+          <input type="text" id="ownerWarehouse" class="form-control form-control-sm" list="warehouseList">
+        </div>
+        <div class="col-6 mt-2">
+          <label class="small fw-bold">ผู้รับ Owner *</label>
+          <input type="text" id="ownerReceiver" class="form-control form-control-sm" list="receiverList">
+        </div>
+        <div class="col-6 mt-2">
+          <label class="small fw-bold">Location Warehouse</label>
+          <input type="text" id="locationWarehouse" class="form-control form-control-sm" list="locationWarehouseList" placeholder="Location ต้นทาง">
+        </div>
+        <div class="col-6 mt-2">
+          <label class="small fw-bold">Location Receiver</label>
+          <input type="text" id="locationReceiver" class="form-control form-control-sm" list="locationReceiverList" placeholder="Location ปลายทาง">
+        </div>
       </div>
     </div>
 
+    <!-- Item List -->
     <div id="itemList"></div>
     <button class="btn btn-outline-primary w-100 mb-3 py-2 fw-bold btn-sm" onclick="addItemRow()">➕ เพิ่มรายการสินค้า</button>
     <button class="btn btn-primary w-100 py-3 fw-bold mb-5 shadow-lg" onclick="submitAll()" id="btnSubmit">🚀 บันทึกข้อมูล (SAVE)</button>
 
+    <!-- Datalists -->
     <datalist id="duidList"></datalist>
     <datalist id="warehouseList"></datalist>
     <datalist id="receiverList"></datalist>
@@ -80,19 +163,103 @@
   <input type="file" id="cameraTrigger" accept="image/*" capture="environment" style="display:none" onchange="processImageScan(this)">
 
   <script>
-    // Global Error Handling
+    // ─────────────────────────────────────────────
+    // GLOBAL ERROR HANDLER
+    // ─────────────────────────────────────────────
     window.onerror = function(msg, url, line) {
       alert("❌ App Crash: " + msg + "\nLine: " + line);
       return false;
     };
 
-    var rowCount = 0, photoArray = [], bomData = [], projectData = [];
-    var scanTarget = null, scanRowId = null;
+    // ─────────────────────────────────────────────
+    // GLOBAL STATE
+    // ─────────────────────────────────────────────
+    var rowCount    = 0;
+    var photoArray  = [];
+    var bomData     = [];
+    var projectData = [];
+    var scanTarget  = null;
+    var scanRowId   = null;
 
+    var currentUserEmail = "unknown@web";
+    var currentUserName  = "Web User";
+
+    // ─────────────────────────────────────────────
+    // 🆕 LOAD CURRENT USER — V.6.9.1
+    // ลำดับการดึง: GAS Session → localStorage → Login Modal
+    // ─────────────────────────────────────────────
+    function loadCurrentUser() {
+      // ลอง restore จาก localStorage ก่อน (กรณี reload)
+      var savedEmail = localStorage.getItem('inv_user_email') || "";
+      var savedName  = localStorage.getItem('inv_user_name')  || "";
+      if (savedEmail && savedEmail !== "unknown@system" && savedEmail !== "unknown@web") {
+        currentUserEmail = savedEmail;
+        currentUserName  = savedName || savedEmail.split("@")[0];
+        document.getElementById('userBadge').innerText = "👤 " + currentUserName + " (" + currentUserEmail + ")";
+      }
+
+      // ดึงจาก GAS Session
+      google.script.run
+        .withSuccessHandler(function(user) {
+          if (user && user.email && user.email !== "unknown@system" && user.email !== "") {
+            // ได้ email จาก Google Session จริง
+            currentUserEmail = user.email;
+            currentUserName  = user.name || user.email.split("@")[0];
+            localStorage.setItem('inv_user_email', currentUserEmail);
+            localStorage.setItem('inv_user_name',  currentUserName);
+            document.getElementById('userBadge').innerText = "👤 " + currentUserName + " (" + currentUserEmail + ")";
+          } else {
+            // ไม่ได้ email — ตรวจสอบ localStorage อีกครั้ง ถ้าไม่มีให้แสดง modal
+            if (!savedEmail || savedEmail === "unknown@system" || savedEmail === "unknown@web") {
+              showLoginModal();
+            }
+          }
+        })
+        .withFailureHandler(function(err) {
+          console.warn("loadCurrentUser error:", err);
+          if (!savedEmail || savedEmail === "unknown@system" || savedEmail === "unknown@web") {
+            showLoginModal();
+          }
+        })
+        .getCurrentUser();
+    }
+
+    function showLoginModal() {
+      document.getElementById('loginModal').classList.add('show');
+    }
+
+    function confirmLogin() {
+      var name  = (document.getElementById('loginName').value  || "").trim();
+      var email = (document.getElementById('loginEmail').value || "").trim();
+      if (!name) { alert("กรุณากรอกชื่อก่อน"); return; }
+
+      currentUserName  = name;
+      currentUserEmail = email || (name.toLowerCase().replace(/\s+/g, ".") + "@staff");
+      localStorage.setItem('inv_user_name',  currentUserName);
+      localStorage.setItem('inv_user_email', currentUserEmail);
+      document.getElementById('userBadge').innerText = "👤 " + currentUserName + " (" + currentUserEmail + ")";
+      document.getElementById('loginModal').classList.remove('show');
+    }
+
+    function promptChangeUser() {
+      localStorage.removeItem('inv_user_email');
+      localStorage.removeItem('inv_user_name');
+      currentUserEmail = "unknown@web";
+      currentUserName  = "Web User";
+      document.getElementById('loginName').value  = "";
+      document.getElementById('loginEmail').value = "";
+      showLoginModal();
+    }
+
+    // ─────────────────────────────────────────────
+    // PHOTO HANDLING
+    // ─────────────────────────────────────────────
     async function handleFile(input) {
       if (!input.files || input.files.length === 0) return;
       updateProgress(null, "กำลังเตรียมรูปภาพ...");
-      for (let f of Array.from(input.files)) { try { photoArray.push(await compressImage(f)); } catch (e) {} }
+      for (let f of Array.from(input.files)) {
+        try { photoArray.push(await compressImage(f)); } catch (e) {}
+      }
       document.getElementById('photoStatus').innerText = '✅ พร้อมแล้ว (' + photoArray.length + ' รูป)';
       document.getElementById('photoStatus').className = 'text-center mt-2 small text-success fw-bold';
       document.getElementById('loader').style.display = 'none';
@@ -100,31 +267,57 @@
       input.value = "";
     }
 
-    function compressImage(file) { return new Promise((res) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = e => { const img = new Image(); img.src = e.target.result; img.onload = () => { const canvas = document.createElement('canvas'); const MAX = 1280; let w = img.width, h = img.height; if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } } else { if (h > MAX) { w *= MAX / h; h = MAX; } } canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(img, 0, 0, w, h); res(canvas.toDataURL('image/jpeg', 0.7)); }; }; }); }
+    function compressImage(file) {
+      return new Promise((res) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = e => {
+          const img = new Image();
+          img.src = e.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX = 1280;
+            let w = img.width, h = img.height;
+            if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+            else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            res(canvas.toDataURL('image/jpeg', 0.7));
+          };
+        };
+      });
+    }
 
+    // ─────────────────────────────────────────────
+    // LOAD BOM / PROJECTS / OWNERS / LOCATIONS
+    // ─────────────────────────────────────────────
     function onCustomerChange() { loadBOM(); loadProjectData(); }
+
     function loadBOM() {
       updateProgress(null, "กำลัง Sync ข้อมูลสินค้า...");
       google.script.run
-        .withSuccessHandler(d => {
+        .withSuccessHandler(function(d) {
           bomData = d || [];
           updateAllRowsDropdowns();
           document.getElementById('loader').style.display = 'none';
         })
-        .withFailureHandler(err => {
+        .withFailureHandler(function(err) {
           console.error("loadBOM error:", err);
           alert("❌ ไม่สามารถดึงข้อมูลสินค้าได้: " + err.message);
           document.getElementById('loader').style.display = 'none';
         })
         .getBOMData(document.getElementById('customer').value);
     }
+
     function loadProjectData() {
       google.script.run
-        .withSuccessHandler(d => {
+        .withSuccessHandler(function(d) {
           projectData = d || [];
-          document.getElementById('duidList').innerHTML = projectData.map(v => `<option value="${v.duid}">${v.site}</option>`).join('');
+          document.getElementById('duidList').innerHTML = projectData
+            .map(function(v) { return '<option value="' + v.duid + '">' + v.site + '</option>'; })
+            .join('');
         })
-        .withFailureHandler(err => console.error("loadProjectData error:", err))
+        .withFailureHandler(function(err) { console.error("loadProjectData error:", err); })
         .getProjectData();
 
       const hardcodedOwners = [
@@ -134,31 +327,32 @@
       ];
 
       google.script.run
-        .withSuccessHandler(d => {
+        .withSuccessHandler(function(d) {
           let ws = [...new Set([...hardcodedOwners, ...(d.warehouses || [])])].sort();
-          let rs = [...new Set([...hardcodedOwners, ...(d.receivers || [])])].sort();
-          document.getElementById('warehouseList').innerHTML = ws.map(v => `<option value="${v}">`).join('');
-          document.getElementById('receiverList').innerHTML = rs.map(v => `<option value="${v}">`).join('');
+          let rs = [...new Set([...hardcodedOwners, ...(d.receivers  || [])])].sort();
+          document.getElementById('warehouseList').innerHTML = ws.map(function(v) { return '<option value="' + v + '">'; }).join('');
+          document.getElementById('receiverList').innerHTML  = rs.map(function(v) { return '<option value="' + v + '">'; }).join('');
         })
-        .withFailureHandler(err => console.error("getOwnerData error:", err))
+        .withFailureHandler(function(err) { console.error("getOwnerData error:", err); })
         .getOwnerData();
 
       google.script.run
-        .withSuccessHandler(d => {
-          document.getElementById('locationWarehouseList').innerHTML = (d.warehouses || []).map(v => `<option value="${v}">`).join('');
-          document.getElementById('locationReceiverList').innerHTML = (d.receivers || []).map(v => `<option value="${v}">`).join('');
+        .withSuccessHandler(function(d) {
+          document.getElementById('locationWarehouseList').innerHTML = (d.warehouses || []).map(function(v) { return '<option value="' + v + '">'; }).join('');
+          document.getElementById('locationReceiverList').innerHTML  = (d.receivers  || []).map(function(v) { return '<option value="' + v + '">'; }).join('');
         })
-        .withFailureHandler(err => console.error("getLocationData error:", err))
+        .withFailureHandler(function(err) { console.error("getLocationData error:", err); })
         .getLocationData();
     }
 
+    // ─────────────────────────────────────────────
+    // DUID INPUT & STATUS CHECK
+    // ─────────────────────────────────────────────
     function onDuidInput() {
-      var val = document.getElementById('duid').value.trim();
+      var val      = document.getElementById('duid').value.trim();
       var valLower = val.toLowerCase();
-      var f = projectData.find(i => i.duid.toLowerCase() === valLower);
-      if (f) {
-        document.getElementById('region').value = f.region || "ER";
-      }
+      var f = projectData.find(function(i) { return i.duid.toLowerCase() === valLower; });
+      if (f) document.getElementById('region').value = f.region || "ER";
       if (val.length >= 3) checkDuidStatus(val);
     }
 
@@ -166,12 +360,14 @@
       if (!duid) return;
       var cus = document.getElementById('customer').value;
       google.script.run
-        .withSuccessHandler(res => {
+        .withSuccessHandler(function(res) {
           var badge = document.getElementById('statusBadge');
-          var text = document.getElementById('statusText');
+          var text  = document.getElementById('statusText');
           badge.classList.remove('d-none');
           if (res.found) {
-            var cls = res.status === 'Closed' ? 'alert-danger' : (res.status === 'On Process' ? 'alert-warning' : 'alert-info');
+            var cls = res.status === 'Closed'     ? 'alert-danger'
+                    : res.status === 'On Process' ? 'alert-warning'
+                    : 'alert-info';
             text.className = 'alert py-1 px-2 mb-0 small fw-bold text-center ' + cls;
             text.innerText = '📊 สถานะ DUID: ' + res.status;
           } else {
@@ -179,98 +375,136 @@
             text.innerText = '🆕 DUID ใหม่ (ยังไม่มีประวัติในระบบ)';
           }
         })
-        .withFailureHandler(err => {})
+        .withFailureHandler(function(err) {})
         .getDuidStatus(duid, cus);
     }
 
+    // ─────────────────────────────────────────────
+    // ITEM ROWS
+    // ─────────────────────────────────────────────
     function addItemRow() {
       rowCount++;
       var div = document.createElement('div');
-      div.className = 'item-row shadow-sm'; div.id = 'row_' + rowCount;
-      div.innerHTML = `<div class="row g-2">
-        <div class="col-12"><label class="small fw-bold">ประเภท(Type)</label><input type="text" id="type_${rowCount}" class="form-control form-control-sm" list="typeData_${rowCount}" oninput="onTypeChange(${rowCount})" placeholder="เลือกหรือพิมพ์เอง"><datalist id="typeData_${rowCount}"></datalist></div>
-        <div class="col-12"><label class="small fw-bold text-primary">Model</label><input type="text" id="model_${rowCount}" class="form-control form-control-sm" list="modelData_${rowCount}" oninput="onModelChange(${rowCount})" placeholder="เลือกหรือพิมพ์เอง"><datalist id="modelData_${rowCount}"></datalist></div>
-        <div class="col-12"><label class="small fw-bold">Item Code</label><input type="text" id="code_${rowCount}" class="form-control form-control-sm" list="codeData_${rowCount}" oninput="onCodeChange(${rowCount})" placeholder="เลือกหรือพิมพ์เอง"><datalist id="codeData_${rowCount}"></datalist></div>
-        <div class="col-12"><label class="small fw-bold">Item Description</label><input type="text" id="desc_${rowCount}" class="form-control form-control-sm" list="descData_${rowCount}" oninput="onDescChange(${rowCount})" placeholder="เลือกหรือพิมพ์เอง"><datalist id="descData_${rowCount}"></datalist></div>
-        <div class="col-12"><label class="small fw-bold">SN</label><div class="input-group input-group-sm"><input type="text" id="sn_${rowCount}" class="form-control form-control-sm" placeholder="SN"><button class="btn btn-outline-primary" type="button" onclick="triggerNativeScanner('sn', ${rowCount})">📷 Scan</button></div></div>
-        <div class="col-6"><label class="small fw-bold">จำนวน</label><input type="number" id="qty_${rowCount}" class="form-control form-control-sm" value="1"></div>
-        <div class="col-6 d-flex align-items-end"><button class="btn btn-danger btn-sm w-100" onclick="document.getElementById('row_${rowCount}').remove()">ลบรายการ</button></div>
-      </div>`;
+      div.className = 'item-row shadow-sm';
+      div.id = 'row_' + rowCount;
+      div.innerHTML =
+        '<div class="row g-2">' +
+          '<div class="col-12"><label class="small fw-bold">ประเภท (Type)</label>' +
+            '<input type="text" id="type_'  + rowCount + '" class="form-control form-control-sm" list="typeData_' + rowCount + '" oninput="onTypeChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
+            '<datalist id="typeData_' + rowCount + '"></datalist></div>' +
+          '<div class="col-12"><label class="small fw-bold text-primary">Model</label>' +
+            '<input type="text" id="model_' + rowCount + '" class="form-control form-control-sm" list="modelData_' + rowCount + '" oninput="onModelChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
+            '<datalist id="modelData_' + rowCount + '"></datalist></div>' +
+          '<div class="col-12"><label class="small fw-bold">Item Code</label>' +
+            '<input type="text" id="code_'  + rowCount + '" class="form-control form-control-sm" list="codeData_' + rowCount + '" oninput="onCodeChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
+            '<datalist id="codeData_' + rowCount + '"></datalist></div>' +
+          '<div class="col-12"><label class="small fw-bold">Item Description</label>' +
+            '<input type="text" id="desc_'  + rowCount + '" class="form-control form-control-sm" list="descData_' + rowCount + '" oninput="onDescChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
+            '<datalist id="descData_' + rowCount + '"></datalist></div>' +
+          '<div class="col-12"><label class="small fw-bold">SN</label>' +
+            '<div class="input-group input-group-sm">' +
+              '<input type="text" id="sn_' + rowCount + '" class="form-control form-control-sm" placeholder="SN">' +
+              '<button class="btn btn-outline-primary" type="button" onclick="triggerNativeScanner(\'sn\',' + rowCount + ')">📷 Scan</button>' +
+            '</div></div>' +
+          '<div class="col-6"><label class="small fw-bold">จำนวน</label>' +
+            '<input type="number" id="qty_' + rowCount + '" class="form-control form-control-sm" value="1"></div>' +
+          '<div class="col-6 d-flex align-items-end">' +
+            '<button class="btn btn-danger btn-sm w-100" onclick="document.getElementById(\'row_' + rowCount + '\').remove()">ลบรายการ</button>' +
+          '</div>' +
+        '</div>';
       document.getElementById('itemList').appendChild(div);
       updateRowDropdowns(rowCount);
     }
 
-    function updateRowDropdowns(id, filtered = null) {
+    function updateRowDropdowns(id, filtered) {
       var source = filtered || bomData;
-      var t = document.getElementById('typeData_'+id), m = document.getElementById('modelData_'+id), c = document.getElementById('codeData_'+id), d = document.getElementById('descData_'+id);
-      t.innerHTML = [...new Set(source.map(i => i.type))].sort().map(v => `<option value="${v}">`).join('');
-      m.innerHTML = [...new Set(source.map(i => i.model))].sort().map(v => `<option value="${v}">`).join('');
-      c.innerHTML = [...new Set(source.map(i => i.code))].sort().map(v => `<option value="${v}">`).join('');
-      d.innerHTML = [...new Set(source.map(i => i.desc))].filter(v => v).sort().map(v => `<option value="${v}">`).join('');
+      var t = document.getElementById('typeData_'  + id);
+      var m = document.getElementById('modelData_' + id);
+      var c = document.getElementById('codeData_'  + id);
+      var d = document.getElementById('descData_'  + id);
+      t.innerHTML = [...new Set(source.map(function(i) { return i.type;  }))].sort().map(function(v) { return '<option value="' + v + '">'; }).join('');
+      m.innerHTML = [...new Set(source.map(function(i) { return i.model; }))].sort().map(function(v) { return '<option value="' + v + '">'; }).join('');
+      c.innerHTML = [...new Set(source.map(function(i) { return i.code;  }))].sort().map(function(v) { return '<option value="' + v + '">'; }).join('');
+      d.innerHTML = [...new Set(source.map(function(i) { return i.desc;  }))].filter(Boolean).sort().map(function(v) { return '<option value="' + v + '">'; }).join('');
     }
 
     function onModelChange(id) {
-      var val = document.getElementById('model_'+id).value; if(!val) return;
-      var filtered = bomData.filter(i => i.model === val);
-      if(filtered.length > 0) {
+      var val = document.getElementById('model_' + id).value; if (!val) return;
+      var filtered = bomData.filter(function(i) { return i.model === val; });
+      if (filtered.length > 0) {
         updateRowDropdowns(id, filtered);
-        var uC = [...new Set(filtered.map(i => i.code))], uD = [...new Set(filtered.map(i => i.desc))], uT = [...new Set(filtered.map(i => i.type))];
-        if(uC.length === 1) { document.getElementById('code_'+id).value = uC[0]; onCodeChange(id); }
-        if(uD.length === 1) document.getElementById('desc_'+id).value = uD[0];
-        if(uT.length === 1) document.getElementById('type_'+id).value = uT[0];
+        var uC = [...new Set(filtered.map(function(i) { return i.code; }))];
+        var uD = [...new Set(filtered.map(function(i) { return i.desc; }))];
+        var uT = [...new Set(filtered.map(function(i) { return i.type; }))];
+        if (uC.length === 1) { document.getElementById('code_' + id).value = uC[0]; onCodeChange(id); }
+        if (uD.length === 1) document.getElementById('desc_' + id).value = uD[0];
+        if (uT.length === 1) document.getElementById('type_' + id).value = uT[0];
       }
     }
 
     function onCodeChange(id) {
-      var val = document.getElementById('code_'+id).value; if(!val) return;
-      var f = bomData.find(i => i.code === val);
-      if(f) {
-        document.getElementById('desc_'+id).value = f.desc;
-        document.getElementById('model_'+id).value = f.model;
-        document.getElementById('type_'+id).value = f.type;
+      var val = document.getElementById('code_' + id).value; if (!val) return;
+      var f = bomData.find(function(i) { return i.code === val; });
+      if (f) {
+        document.getElementById('desc_'  + id).value = f.desc;
+        document.getElementById('model_' + id).value = f.model;
+        document.getElementById('type_'  + id).value = f.type;
       }
     }
 
     function onDescChange(id) {
-      var val = document.getElementById('desc_'+id).value; if(!val) return;
-      var f = bomData.find(i => i.desc === val);
-      if(f) {
-        document.getElementById('code_'+id).value = f.code;
-        document.getElementById('model_'+id).value = f.model;
-        document.getElementById('type_'+id).value = f.type;
+      var val = document.getElementById('desc_' + id).value; if (!val) return;
+      var f = bomData.find(function(i) { return i.desc === val; });
+      if (f) {
+        document.getElementById('code_'  + id).value = f.code;
+        document.getElementById('model_' + id).value = f.model;
+        document.getElementById('type_'  + id).value = f.type;
       }
     }
 
     function onTypeChange(id) {
-      var val = document.getElementById('type_'+id).value; if(!val) return;
-      var filtered = bomData.filter(i => i.type === val);
+      var val = document.getElementById('type_' + id).value; if (!val) return;
+      var filtered = bomData.filter(function(i) { return i.type === val; });
       updateRowDropdowns(id, filtered);
     }
 
-    function updateAllRowsDropdowns() { document.querySelectorAll('[id^="model_"]').forEach(el => updateRowDropdowns(el.id.split('_')[1])); }
+    function updateAllRowsDropdowns() {
+      document.querySelectorAll('[id^="model_"]').forEach(function(el) {
+        updateRowDropdowns(el.id.split('_')[1]);
+      });
+    }
 
+    // ─────────────────────────────────────────────
+    // SUBMIT
+    // ─────────────────────────────────────────────
     async function submitAll() {
-      var bN = document.getElementById('billNo').value.trim();
-      var du = document.getElementById('duid').value.trim();
+      var bN  = document.getElementById('billNo').value.trim();
+      var du  = document.getElementById('duid').value.trim();
       var cus = document.getElementById('customer').value;
-      var wh = document.getElementById('ownerWarehouse').value.trim();
-      var rc = document.getElementById('ownerReceiver').value.trim();
+      var wh  = document.getElementById('ownerWarehouse').value.trim();
+      var rc  = document.getElementById('ownerReceiver').value.trim();
 
-      if (!du || !cus || !bN) return alert('❌ กรุณากรอก DUID, ลูกค้า และ Bill No ให้ครบ');
+      if (!du || !cus || !bN)      return alert('❌ กรุณากรอก DUID, ลูกค้า และ Bill No ให้ครบ');
       if (photoArray.length === 0) return alert('❌ กรุณาถ่ายรูปบิลก่อนบันทึก');
 
+      // ตรวจสอบ user อีกครั้งก่อน submit
+      if (!currentUserEmail || currentUserEmail === "unknown@web") {
+        showLoginModal();
+        return;
+      }
+
       var items = [];
-      document.querySelectorAll('.item-row').forEach(row => {
-        var id = row.id.split('_')[1];
-        var model = document.getElementById('model_'+id).value;
+      document.querySelectorAll('.item-row').forEach(function(row) {
+        var id    = row.id.split('_')[1];
+        var model = document.getElementById('model_' + id).value;
         if (model) {
           items.push({
-            type: document.getElementById('type_'+id).value,
+            type:  document.getElementById('type_' + id).value,
             model: model,
-            code: document.getElementById('code_'+id).value,
-            desc: document.getElementById('desc_'+id).value,
-            sn: document.getElementById('sn_'+id).value,
-            qty: document.getElementById('qty_'+id).value
+            code:  document.getElementById('code_' + id).value,
+            desc:  document.getElementById('desc_' + id).value,
+            sn:    document.getElementById('sn_'   + id).value,
+            qty:   document.getElementById('qty_'  + id).value
           });
         }
       });
@@ -278,80 +512,149 @@
       if (items.length === 0) return alert('❌ กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ');
 
       document.getElementById('btnSubmit').disabled = true;
-      var header = { customer: cus, type: document.getElementById('type').value, region: document.getElementById('region').value, billNo: bN, duid: du, ownerWarehouse: wh, ownerReceiver: rc, locationWarehouse: document.getElementById('locationWarehouse').value, locationReceiver: document.getElementById('locationReceiver').value };
+
+      var header = {
+        customer:          cus,
+        type:              document.getElementById('type').value,
+        region:            document.getElementById('region').value,
+        billNo:            bN,
+        duid:              du,
+        ownerWarehouse:    wh,
+        ownerReceiver:     rc,
+        locationWarehouse: document.getElementById('locationWarehouse').value,
+        locationReceiver:  document.getElementById('locationReceiver').value,
+        userName:          currentUserName,
+        userEmail:         currentUserEmail
+      };
 
       try {
         updateProgress(10, "กำลังบันทึกข้อมูลหลัก...");
-        const saveRes = await new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej).saveMainData(header, items));
-        if (!saveRes.success) throw new Error(saveRes.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูลหลัก");
 
+        const saveRes = await new Promise((res, rej) =>
+          google.script.run
+            .withSuccessHandler(res)
+            .withFailureHandler(rej)
+            .saveMainData(header, items, currentUserEmail, currentUserName)
+        );
+
+        if (!saveRes.success) throw new Error(saveRes.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูลหลัก");
         if (saveRes.header) header = saveRes.header;
 
-        var lastFolderPath = "", lastFolderUrl = "";
+        var lastFolderUrl = "";
         for (let i = 0; i < photoArray.length; i++) {
           let p = 20 + Math.floor(((i + 1) / photoArray.length) * 70);
-          updateProgress(p, `อัปโหลดรูปภาพ (${i + 1}/${photoArray.length})...`);
-          const uploadRes = await new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej).uploadPhotoOnly(header, photoArray[i], i + 1));
+          updateProgress(p, "อัปโหลดรูปภาพ (" + (i + 1) + "/" + photoArray.length + ")...");
+
+          const uploadRes = await new Promise((res, rej) =>
+            google.script.run
+              .withSuccessHandler(res)
+              .withFailureHandler(rej)
+              .uploadPhotoOnly(header, photoArray[i], i + 1, currentUserEmail, currentUserName)
+          );
           if (!uploadRes.success) throw new Error(uploadRes.error);
           lastFolderUrl = uploadRes.folderUrl;
         }
+
         updateProgress(95, "แจ้งเตือน...");
-        await new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej).notifyOnly(header, items));
+        // ส่ง notify โดยไม่ block save flow (ถ้า Vercel ไม่ตอบ ข้อมูลก็บันทึกไปแล้ว)
+        await new Promise((res) =>
+          google.script.run.withSuccessHandler(res).withFailureHandler(res).notifyOnly(header, items)
+        );
+
         updateProgress(100, "เสร็จสิ้น!");
-        setTimeout(() => { alert("✅ " + (saveRes.debug || "บันทึกสำเร็จ!")); if (lastFolderUrl) window.open(lastFolderUrl, '_blank'); location.reload(); }, 500);
-      } catch (err) { alert("❌ Error: " + err.message); document.getElementById('btnSubmit').disabled = false; document.getElementById('loader').style.display = 'none'; }  
+        setTimeout(function() {
+          alert("✅ " + (saveRes.debug || "บันทึกสำเร็จ!") + "\n👤 บันทึกโดย: " + currentUserName + " (" + currentUserEmail + ")");
+          if (lastFolderUrl) window.open(lastFolderUrl, '_blank');
+          location.reload();
+        }, 500);
+
+      } catch (err) {
+        alert("❌ Error: " + err.message);
+        document.getElementById('btnSubmit').disabled = false;
+        document.getElementById('loader').style.display = 'none';
+      }
     }
 
-    function updateProgress(percent, text) { document.getElementById('loader').style.display = 'flex'; document.getElementById('loaderText').innerText = text; let bar = document.getElementById('progressBar'); if (percent !== null) { bar.parentElement.parentElement.style.display = 'block'; bar.style.width = percent + '%'; } else { bar.parentElement.parentElement.style.display = 'none'; } }
+    // ─────────────────────────────────────────────
+    // SEARCH BILL
+    // ─────────────────────────────────────────────
     function searchBill() {
       var b = document.getElementById('billNo').value;
       if (!b) return alert("ระบุ Bill No.");
       updateProgress(null, "ค้นหาข้อมูลเดิม...");
-      google.script.run.withSuccessHandler(res => {
-        document.getElementById('loader').style.display = 'none';
-        if (res.success) {
-          document.getElementById('duid').value = res.data.duid;
-          document.getElementById('region').value = res.data.region;
-          document.getElementById('ownerWarehouse').value = res.data.ownerWarehouse || "";
-          document.getElementById('ownerReceiver').value = res.data.ownerReceiver || "";
-          document.getElementById('locationWarehouse').value = res.data.locationWarehouse || "";
-          document.getElementById('locationReceiver').value = res.data.locationReceiver || "";
-          document.getElementById('itemList').innerHTML = "";
-          rowCount = 0;
-          res.data.items.forEach((item, index) => {
-            addItemRow();
-            let id = rowCount;
-            setTimeout(() => {
-              if (document.getElementById('model_' + id)) {
-                document.getElementById('model_' + id).value = item.model;
-                onModelChange(id);
-                document.getElementById('code_' + id).value = item.code;
-                onCodeChange(id);
-                document.getElementById('qty_' + id).value = item.qty;
-                document.getElementById('sn_' + id).value = item.sn;
-              }
-            }, 100 * (index + 1));
-          });
-          alert("✅ ดึงข้อมูลสำเร็จ!");
-        } else alert(res.message || "ไม่พบข้อมูล");
-      }).searchByBillNo(b, document.getElementById('customer').value);
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('loader').style.display = 'none';
+          if (res.success) {
+            document.getElementById('duid').value              = res.data.duid;
+            document.getElementById('region').value           = res.data.region;
+            document.getElementById('ownerWarehouse').value   = res.data.ownerWarehouse   || "";
+            document.getElementById('ownerReceiver').value    = res.data.ownerReceiver    || "";
+            document.getElementById('locationWarehouse').value = res.data.locationWarehouse || "";
+            document.getElementById('locationReceiver').value  = res.data.locationReceiver  || "";
+            document.getElementById('itemList').innerHTML     = "";
+            rowCount = 0;
+            res.data.items.forEach(function(item, index) {
+              addItemRow();
+              var id = rowCount;
+              setTimeout(function() {
+                if (!document.getElementById('model_' + id)) return;
+                document.getElementById('model_' + id).value = item.model; onModelChange(id);
+                document.getElementById('code_'  + id).value = item.code;  onCodeChange(id);
+                document.getElementById('qty_'   + id).value = item.qty;
+                document.getElementById('sn_'    + id).value = item.sn;
+              }, 100 * (index + 1));
+            });
+            alert("✅ ดึงข้อมูลสำเร็จ!");
+          } else {
+            alert(res.message || "ไม่พบข้อมูล");
+          }
+        })
+        .searchByBillNo(b, document.getElementById('customer').value);
     }
-    function triggerNativeScanner(t, id) { scanTarget = t; scanRowId = id || null; document.getElementById('cameraTrigger').click(); }
 
+    // ─────────────────────────────────────────────
+    // PROGRESS / LOADER
+    // ─────────────────────────────────────────────
+    function updateProgress(percent, text) {
+      document.getElementById('loader').style.display = 'flex';
+      document.getElementById('loaderText').innerText = text;
+      var bar = document.getElementById('progressBar');
+      if (percent !== null) {
+        bar.parentElement.parentElement.style.display = 'block';
+        bar.style.width = percent + '%';
+      } else {
+        bar.parentElement.parentElement.style.display = 'none';
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // HEALTH CHECK
+    // ─────────────────────────────────────────────
     function checkHealth() {
       updateProgress(null, "Checking GAS Connection...");
       google.script.run
-        .withSuccessHandler(d => {
+        .withSuccessHandler(function(d) {
           document.getElementById('loader').style.display = 'none';
-          alert("✅ GAS Connection: OK\n📦 BOM Items: " + bomData.length + "\n🆔 Project Items: " + projectData.length + "\n🔖 Version: V.6.8.2");
+          alert(
+            "✅ GAS Connection: OK\n" +
+            "📦 BOM Items: " + bomData.length + "\n" +
+            "🆔 Project Items: " + projectData.length + "\n" +
+            "👤 User: " + currentUserEmail + "\n" +
+            "📝 Name: " + currentUserName + "\n" +
+            "🔖 Version: V.6.9.1"
+          );
         })
-        .withFailureHandler(err => {
+        .withFailureHandler(function(err) {
           document.getElementById('loader').style.display = 'none';
           alert("❌ GAS Connection Failed: " + err.message);
         })
         .getBOMData(document.getElementById('customer').value);
     }
 
+    // ─────────────────────────────────────────────
+    // OCR
+    // ─────────────────────────────────────────────
     async function runOCRFromPhoto() {
       if (photoArray.length === 0) return alert('❌ กรุณาถ่ายรูปบิลก่อน');
       updateProgress(null, 'กำลังอ่านข้อมูลจากรูปบิล (OCR)...');
@@ -364,21 +667,19 @@
         document.getElementById('loader').style.display = 'none';
         if (result.success && result.data) {
           const d = result.data;
-          if (d.header.billNo && d.header.billNo !== '-') document.getElementById('billNo').value = d.header.billNo;
-          if (d.header.duid && d.header.duid !== '-') { document.getElementById('duid').value = d.header.duid; onDuidInput(); }
-          if (d.header.region && d.header.region !== '-') document.getElementById('region').value = d.header.region;
+          if (d.header.billNo  && d.header.billNo  !== '-') document.getElementById('billNo').value  = d.header.billNo;
+          if (d.header.duid    && d.header.duid    !== '-') { document.getElementById('duid').value   = d.header.duid; onDuidInput(); }
+          if (d.header.region  && d.header.region  !== '-') document.getElementById('region').value  = d.header.region;
           if (d.items && d.items.length > 0) {
             document.getElementById('itemList').innerHTML = '';
             rowCount = 0;
-            d.items.forEach((item, idx) => {
+            d.items.forEach(function(item, idx) {
               addItemRow();
-              let id = rowCount;
-              setTimeout(() => {
-                if (document.getElementById('model_' + id)) {
-                  document.getElementById('model_' + id).value = item.model;
-                  onModelChange(id);
-                  document.getElementById('qty_' + id).value = item.qty;
-                }
+              var id = rowCount;
+              setTimeout(function() {
+                if (!document.getElementById('model_' + id)) return;
+                document.getElementById('model_' + id).value = item.model; onModelChange(id);
+                document.getElementById('qty_'   + id).value = item.qty;
               }, 100 * (idx + 1));
             });
           }
@@ -386,52 +687,55 @@
         } else {
           alert('⚠️ OCR ไม่พบข้อมูลที่ชัดเจน กรุณากรอกข้อมูลเพิ่มเติมด้วยตนเอง');
         }
-      } catch(e) {
+      } catch (e) {
         document.getElementById('loader').style.display = 'none';
         alert('❌ OCR Error: ' + e.message);
       }
       document.getElementById('btnOCR').disabled = false;
     }
 
+    // ─────────────────────────────────────────────
+    // BARCODE / QR SCANNER
+    // ─────────────────────────────────────────────
+    function triggerNativeScanner(t, id) {
+      scanTarget = t;
+      scanRowId  = id || null;
+      document.getElementById('cameraTrigger').click();
+    }
+
     async function processImageScan(input) {
       if (!input.files || input.files.length === 0) return;
       updateProgress(null, "กำลังวิเคราะห์ QR/Barcode (Deep Scan V2)...");
-      
       try {
-        const file = input.files[0];
+        const file        = input.files[0];
         const html5QrCode = new Html5Qrcode("qr-reader");
-        
-        // Specialized variants for iPhone 15 / high-res modern cameras
-        const variants = [
-          { max: 1000, gray: true, contrast: 1.6, sharp: true },  // Attempt 1: High res, High contrast B&W (Best for Barcode)
-          { max: 800, gray: true, contrast: 1.3, sharp: true },   // Attempt 2: Medium res, Sharp B&W (Best for QR)
-          { max: 1200, gray: false, contrast: 1.1, sharp: true }, // Attempt 3: Ultra High res, Natural Color
-          { max: 700, gray: true, contrast: 1.1, sharp: false }   // Attempt 4: Small res, Smooth (For grainy images)
+        const variants    = [
+          { max: 1000, gray: true,  contrast: 1.6, sharp: true  },
+          { max: 800,  gray: true,  contrast: 1.3, sharp: true  },
+          { max: 1200, gray: false, contrast: 1.1, sharp: true  },
+          { max: 700,  gray: true,  contrast: 1.1, sharp: false }
         ];
-
         let decodedText = null;
         for (let i = 0; i < variants.length; i++) {
           try {
-            updateProgress(null, `Deep Scan ครั้งที่ ${i+1}/${variants.length}...`);
+            updateProgress(null, "Deep Scan ครั้งที่ " + (i + 1) + "/" + variants.length + "...");
             const processedDataUrl = await preProcessImage(file, variants[i]);
-            const blob = await (await fetch(processedDataUrl)).blob();
-            const processedFile = new File([blob], "scan.jpg", { type: "image/jpeg" });
-            
-            decodedText = await html5QrCode.scanFile(processedFile, true);
+            const blob             = await (await fetch(processedDataUrl)).blob();
+            const processedFile    = new File([blob], "scan.jpg", { type: "image/jpeg" });
+            decodedText            = await html5QrCode.scanFile(processedFile, true);
             if (decodedText) break;
           } catch (e) {}
         }
-
         document.getElementById('loader').style.display = 'none';
         if (decodedText) {
-          if (scanTarget === 'billNo') document.getElementById('billNo').value = decodedText;
-          else if (scanTarget === 'duid') { document.getElementById('duid').value = decodedText; onDuidInput(); }
-          else if (scanTarget === 'sn') document.getElementById('sn_' + scanRowId).value = decodedText;
+          if      (scanTarget === 'billNo') document.getElementById('billNo').value = decodedText;
+          else if (scanTarget === 'duid')   { document.getElementById('duid').value = decodedText; onDuidInput(); }
+          else if (scanTarget === 'sn')     document.getElementById('sn_' + scanRowId).value = decodedText;
           alert("✅ สแกนสำเร็จ!");
         } else {
-          alert("❌ อ่านไม่ได้: โปรดถือให้นิ่ง และเว้นระยะห่างให้รหัสอยู่กลางภาพ (แนะนำ: เช็ดหน้าเลนส์กล้องให้สะอาดด้วยครับ)");
+          alert("❌ อ่านไม่ได้: โปรดถือให้นิ่ง และเว้นระยะห่างให้รหัสอยู่กลางภาพ");
         }
-        try { html5QrCode.clear(); } catch(e) {}
+        try { html5QrCode.clear(); } catch (e) {}
       } catch (e) {
         document.getElementById('loader').style.display = 'none';
         alert("❌ ระบบสแกนขัดข้อง: " + e.message);
@@ -448,22 +752,16 @@
           img.src = e.target.result;
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX = options.max || 800;
+            const MAX    = options.max || 800;
             let w = img.width, h = img.height;
-            if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } } 
-            else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+            if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+            else       { if (h > MAX) { w *= MAX / h; h = MAX; } }
             canvas.width = w; canvas.height = h;
             const ctx = canvas.getContext('2d');
-            
-            // Apply aggressive filters for mobile scanning
             let filters = [];
-            if (options.gray) filters.push('grayscale(100%)');
-            if (options.contrast) filters.push(`contrast(${options.contrast})`);
-            if (options.sharp) {
-              // Simulated sharpness using contrast and subtle brightness
-              filters.push('brightness(1.1)');
-            }
-            
+            if (options.gray)     filters.push('grayscale(100%)');
+            if (options.contrast) filters.push('contrast(' + options.contrast + ')');
+            if (options.sharp)    filters.push('brightness(1.1)');
             if (filters.length > 0) ctx.filter = filters.join(' ');
             ctx.drawImage(img, 0, 0, w, h);
             res(canvas.toDataURL('image/jpeg', 0.95));
@@ -472,7 +770,15 @@
       });
     }
 
-    window.onload = function() { loadBOM(); loadProjectData(); addItemRow(); };
+    // ─────────────────────────────────────────────
+    // INIT
+    // ─────────────────────────────────────────────
+    window.onload = function() {
+      loadCurrentUser();
+      loadBOM();
+      loadProjectData();
+      addItemRow();
+    };
   </script>
 </body>
 </html>

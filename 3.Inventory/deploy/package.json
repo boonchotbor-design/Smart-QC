@@ -1,0 +1,14 @@
+{
+  "name": "tln-inventory-webhook",
+  "version": "7.0.1",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "24.x"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "@line/bot-sdk": "^9.4.0",
+    "axios": "^1.7.4"
+  }
+}
