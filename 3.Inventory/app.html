@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>Inventory Smart App V.6.9.3</title>
+  <title>Inventory Smart App V.6.9.4</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -119,7 +119,7 @@
       <button class="btn-login" id="btnConfirmLogin" onclick="confirmLogin()" disabled>✅ เข้าใช้งาน</button>
 
       <hr class="login-divider">
-      <div class="login-footer">🔒 ระบบ Smart Inventory V.6.9.3 | ข้อมูลการเข้าใช้งานถูกบันทึกใน Audit Log</div>
+      <div class="login-footer">🔒 ระบบ Smart Inventory V.6.9.4 | ข้อมูลการเข้าใช้งานถูกบันทึกใน Audit Log</div>
     </div>
   </div>
 
@@ -128,7 +128,7 @@
     <!-- Header -->
     <div class="header-banner shadow d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div>
-        <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.9.3</h5>
+        <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.9.4</h5>
         <div class="user-badge mt-1" id="userBadge">👤 กำลังตรวจสอบผู้ใช้...</div>
       </div>
       <div class="d-flex gap-1">
@@ -490,7 +490,7 @@
       var valLower = val.toLowerCase();
       var f = projectData.find(function(i) { return i.duid.toLowerCase() === valLower; });
       if (f) document.getElementById('region').value = f.region || "ER";
-      if (val.length >= 3) checkDuidStatus(val);
+      if (val.length >= 5) checkDuidStatus(val);
     }
 
     function checkDuidStatus(duid) {
@@ -776,7 +776,7 @@
             "👤 User: " + currentUserEmail + "\n" +
             "📝 Name: " + currentUserName + "\n" +
             "💻 Device: " + currentDeviceType + "\n" +
-            "🔖 Version: V.6.9.3"
+            "🔖 Version: V.6.9.4"
           );
         })
         .withFailureHandler(function(err) {

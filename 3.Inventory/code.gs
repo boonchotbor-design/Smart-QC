@@ -1,5 +1,5 @@
 /*
- * 🚀 Inventory Smart System - V.6.9.3
+ * 🚀 Inventory Smart System - V.6.9.4
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
@@ -8,6 +8,9 @@
  * Fix V.6.9.3: getDuidStatus ใช้ computeDuidStatus (live) แทนการอ่าน STATUS column
  *              แก้ DISMANTLE เห็น "Closed" และ RETURN แล้วไม่ Close
  *              app.html: Email Whitelist Dropdown + Add Own Email + Device Detection
+ * Fix V.6.9.4: computeDuidStatus ใช้ case-insensitive compare (toLowerCase) ในทุกจุด
+ *              getDuidStatus: normalize target เป็น lowercase ก่อนเปรียบเทียบ
+ *              app.html: เพิ่ม DUID threshold จาก 3 → 5 ตัว ลด false call
  */
 
 var SPREADSHEET_ID      = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -30,7 +33,7 @@ function doGet(e) {
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-    .setTitle('Inventory Smart App V.6.9.3')
+    .setTitle('Inventory Smart App V.6.9.4')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -428,7 +431,7 @@ function saveMainData(header, items, userEmail, userName) {
     return {
       success: true,
       header:  header,
-      debug:   "✅ บันทึกสำเร็จ (V.6.9.1)\n📍 Sheet: " + sheetName +
+      debug:   "✅ บันทึกสำเร็จ (V.6.9.4)\n📍 Sheet: " + sheetName +
                "\n🔢 บันทึกที่แถว: 2 (บนสุด)\n🆔 DUID: " + cleanDuid +
                " (Column B)\n👤 โดย: " + (userName || userEmail || "Unknown")
     };
@@ -840,11 +843,11 @@ function getDuidStatus(duid, customer) {
       status: Math.max(h.indexOf("STATUS"), 21)
     };
 
-    // ตรวจสอบว่ามี DUID นี้ใน sheet หรือไม่
-    var target = duid.trim();
+    // ตรวจสอบว่ามี DUID นี้ใน sheet หรือไม่ (case-insensitive)
+    var target = duid.trim().toLowerCase();  // FIX: normalize to lowercase
     var found  = false;
     for (var i = 1; i < data.length; i++) {
-      if (String(data[i][idx.duid] || "").trim().toLowerCase() === target.toLowerCase()) {
+      if (String(data[i][idx.duid] || "").trim().toLowerCase() === target) {
         found = true;
         break;
       }
@@ -929,9 +932,10 @@ function computeDuidStatus(data, idx, target) {
 
   var matchingRows = [];
   var hasAnyData = false;
+  var targetLower = target.trim().toLowerCase();  // FIX: always compare lowercase
 
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][idx.duid]).trim() !== target) continue;
+    if (String(data[i][idx.duid] || "").trim().toLowerCase() !== targetLower) continue;
     matchingRows.push(i + 1);
     var type = String(data[i][idx.type] || "").toUpperCase().trim();
     var qty  = Number(data[i][idx.qty]) || 0;
