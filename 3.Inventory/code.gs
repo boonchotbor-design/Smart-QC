@@ -1,10 +1,13 @@
 /*
- * 🚀 Inventory Smart System - V.6.9.2
+ * 🚀 Inventory Smart System - V.6.9.3
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
  * Fix V.6.9.2: DISMANTLE/RETURN status logic — ติดตาม row existence แยกจาก qty
  *              ป้องกัน DISMANTLE หรือ RETURN เดี่ยวๆ แสดง Closed ผิดๆ
+ * Fix V.6.9.3: getDuidStatus ใช้ computeDuidStatus (live) แทนการอ่าน STATUS column
+ *              แก้ DISMANTLE เห็น "Closed" และ RETURN แล้วไม่ Close
+ *              app.html: Email Whitelist Dropdown + Add Own Email + Device Detection
  */
 
 var SPREADSHEET_ID      = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -27,7 +30,7 @@ function doGet(e) {
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-    .setTitle('Inventory Smart App V.6.9.2')
+    .setTitle('Inventory Smart App V.6.9.3')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -812,25 +815,50 @@ function isDuidClosed(duid, customer) {
   return false;
 }
 
+/**
+ * getDuidStatus — V.6.9.3 FIX
+ * คำนวณ status สด (live) ด้วย computeDuidStatus แทนการอ่าน STATUS column ที่ cache อยู่
+ * แก้ปัญหา:
+ *   - DISMANTLE แล้วยังเห็น "Closed" (เพราะ IN+OUT เคย balance ก่อนหน้า)
+ *   - RETURN แล้วสถานะไม่เปลี่ยนเป็น Closed
+ */
 function getDuidStatus(duid, customer) {
   try {
     if (!duid) return { found: false };
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheet = ss.getSheetByName("INOUT_HW_" + (customer || "AIS").toUpperCase());
     if (!sheet) return { found: false };
-    var data  = sheet.getDataRange().getValues();
+
+    var data = sheet.getDataRange().getValues();
     if (data.length < 2) return { found: false };
-    var h     = data[0].map(function(v) { return String(v || "").toUpperCase(); });
-    var dCol  = Math.max(h.indexOf("DUID"), 1);
-    var sCol  = Math.max(h.indexOf("STATUS"), 21);
-    var target = duid.trim().toLowerCase();
+
+    var h   = data[0].map(function(v) { return String(v || "").toUpperCase(); });
+    var idx = {
+      duid:   Math.max(h.indexOf("DUID"), 1),
+      type:   Math.max(h.indexOf("IN/OUT"), 3),
+      qty:    Math.max(h.indexOf("SUM OF REQ.QTY"), 10),
+      status: Math.max(h.indexOf("STATUS"), 21)
+    };
+
+    // ตรวจสอบว่ามี DUID นี้ใน sheet หรือไม่
+    var target = duid.trim();
+    var found  = false;
     for (var i = 1; i < data.length; i++) {
-      if (String(data[i][dCol]).trim().toLowerCase() === target) {
-        return { found: true, status: String(data[i][sCol] || "Pending") };
+      if (String(data[i][idx.duid] || "").trim().toLowerCase() === target.toLowerCase()) {
+        found = true;
+        break;
       }
     }
+    if (!found) return { found: false };
+
+    // ✅ Compute status สดทุกครั้ง — ไม่อ่านจาก column ที่อาจ cache ผิด
+    var result = computeDuidStatus(data, idx, target);
+    return { found: true, status: result.status };
+
+  } catch (e) {
+    logToSheet("GET_DUID_STATUS_ERROR", e.toString());
     return { found: false };
-  } catch (e) { return { found: false }; }
+  }
 }
 
 // ─────────────────────────────────────────────

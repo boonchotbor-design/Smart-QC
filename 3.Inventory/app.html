@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>Inventory Smart App V.6.9.2</title>
+  <title>Inventory Smart App V.6.9.3</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -15,11 +15,51 @@
     .item-row { background: #fff; padding: 15px; border-radius: 12px; border-left: 5px solid #0d6efd; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
     .loading-overlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index:9999; flex-direction: column; justify-content: center; align-items: center; color: white; }
     .btn-mandatory { background-color: #ffc107; border: none; font-weight: bold; padding: 12px; border-radius: 10px; width: 100%; color: #000; margin-bottom: 8px; }
-    .user-badge { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 4px 10px; font-size: 12px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
-    /* Modal overlay สำหรับ login prompt */
-    #loginModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; justify-content:center; align-items:center; }
+    .user-badge { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 4px 10px; font-size: 12px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+    /* ── Login Modal ── */
+    #loginModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.82); backdrop-filter:blur(6px); z-index:99999; justify-content:center; align-items:center; }
     #loginModal.show { display:flex; }
-    #loginBox { background:#fff; border-radius:16px; padding:24px; width:90%; max-width:360px; }
+    #loginBox {
+      background: #fff; border-radius: 20px; padding: 28px 24px; width: 92%; max-width: 380px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+    .login-logo { font-size: 48px; text-align: center; margin-bottom: 6px; }
+    .login-title { font-size: 20px; font-weight: 700; text-align: center; color: #1a1a2e; margin-bottom: 4px; }
+    .login-subtitle { font-size: 13px; color: #666; text-align: center; margin-bottom: 20px; }
+    .login-select {
+      width: 100%; padding: 12px 14px; font-size: 15px;
+      border: 2px solid #e0e0e0; border-radius: 12px;
+      background: #f8f9ff; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23666' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center; background-size: 18px;
+      cursor: pointer; font-family: 'Sarabun', sans-serif;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .login-select:focus { border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,0.15); outline: none; }
+    .login-name-display {
+      margin-top: 10px; padding: 10px 14px; background: #f0f4ff;
+      border-radius: 10px; font-size: 14px; color: #0043a8; font-weight: 600;
+      min-height: 40px; display: flex; align-items: center; gap: 8px;
+    }
+    .device-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(255,255,255,0.2); border-radius: 8px;
+      padding: 3px 8px; font-size: 11px; margin-left: 6px;
+    }
+    .btn-login {
+      width: 100%; padding: 13px; margin-top: 16px;
+      background: linear-gradient(135deg, #0d6efd, #0043a8);
+      color: white; border: none; border-radius: 12px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      font-family: 'Sarabun', sans-serif;
+    }
+    .btn-login:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(13,110,253,0.4); }
+    .btn-login:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .login-divider { border: none; border-top: 1px solid #eee; margin: 16px 0; }
+    .login-footer { font-size: 11px; color: #999; text-align: center; }
   </style>
 </head>
 <body>
@@ -35,20 +75,51 @@
     </div>
   </div>
 
-  <!-- 🆕 Login Modal (แสดงเมื่อ email ไม่ได้จาก session) -->
+  <!-- 🔐 Login Modal — Email Whitelist V.6.9.3 -->
   <div id="loginModal">
     <div id="loginBox">
-      <h5 class="fw-bold mb-1">👤 ยืนยันตัวตน</h5>
-      <p class="small text-muted mb-3">ระบบไม่สามารถดึงข้อมูลผู้ใช้อัตโนมัติได้<br>กรุณากรอกข้อมูลเพื่อบันทึก Audit Log</p>
-      <div class="mb-2">
-        <label class="small fw-bold">ชื่อ-นามสกุล *</label>
-        <input type="text" id="loginName" class="form-control" placeholder="เช่น สมชาย ใจดี">
+      <div class="login-logo">📦</div>
+      <div class="login-title">Smart Inventory</div>
+      <div class="login-subtitle">กรุณาเลือก Email ของคุณเพื่อเข้าใช้งาน</div>
+
+      <label style="font-size:13px; font-weight:600; color:#444; display:block; margin-bottom:6px;">📧 Email ของคุณ *</label>
+      <select id="loginEmail" class="login-select" onchange="onEmailSelect()">
+        <option value="">— เลือก Email —</option>
+        <option value="khathahat.sitthihong@technow.co.th">khathahat.sitthihong@technow.co.th</option>
+        <option value="surapong.tachatieamjun@technow.co.th">surapong.tachatieamjun@technow.co.th</option>
+        <option value="boonchot.bor@gmail.com">boonchot.bor@gmail.com</option>
+        <option value="payon010833@gmail.com">payon010833@gmail.com</option>
+        <option value="manakiat.m@gmail.com">manakiat.m@gmail.com</option>
+        <option value="auttaseth.klomthaisong@gmail.com">auttaseth.klomthaisong@gmail.com</option>
+        <option value="wachirasaovaro919@gmail.com">wachirasaovaro919@gmail.com</option>
+        <option value="a.adisak.ch@gmail.com">a.adisak.ch@gmail.com</option>
+        <option value="bom.paragon@gmail.com">bom.paragon@gmail.com</option>
+        <option value="noomchaloemrit@gmail.com">noomchaloemrit@gmail.com</option>
+        <option value="nattawoot.suwan@technow.co.th">nattawoot.suwan@technow.co.th</option>
+        <option value="supot.hoonyong@technow.co.th">supot.hoonyong@technow.co.th</option>
+        <option value="__custom__">➕ เพิ่ม Email ของฉัน</option>
+      </select>
+
+      <!-- ── Custom Email Input (hidden by default) ── -->
+      <div id="customEmailGroup" style="display:none; margin-top:10px;">
+        <div style="margin-bottom:8px;">
+          <label style="font-size:12px; font-weight:600; color:#444;">&#x1F464; ชื่อ-นามสกุล *</label>
+          <input type="text" id="customName" class="login-select" style="margin-top:4px; font-size:14px;" placeholder="เช่น สมชาย ใจดี">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; color:#444;">&#x1F4E7; Email *</label>
+          <input type="email" id="customEmail" class="login-select" style="margin-top:4px; font-size:14px;" placeholder="เช่น somchai@company.com">
+        </div>
       </div>
-      <div class="mb-3">
-        <label class="small fw-bold">Email (ถ้ามี)</label>
-        <input type="email" id="loginEmail" class="form-control" placeholder="เช่น somchai@company.com">
+
+      <div class="login-name-display" id="loginNameDisplay">
+        <span id="loginNameText" style="color:#aaa;">ชื่อจะแสดงที่นี่หลังเลือก Email</span>
       </div>
-      <button class="btn btn-primary w-100 fw-bold" onclick="confirmLogin()">✅ ยืนยัน</button>
+
+      <button class="btn-login" id="btnConfirmLogin" onclick="confirmLogin()" disabled>✅ เข้าใช้งาน</button>
+
+      <hr class="login-divider">
+      <div class="login-footer">🔒 ระบบ Smart Inventory V.6.9.3 | ข้อมูลการเข้าใช้งานถูกบันทึกใน Audit Log</div>
     </div>
   </div>
 
@@ -57,7 +128,7 @@
     <!-- Header -->
     <div class="header-banner shadow d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div>
-        <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.9.2</h5>
+        <h5 class="fw-bold mb-0">📦 Smart Inventory V.6.9.3</h5>
         <div class="user-badge mt-1" id="userBadge">👤 กำลังตรวจสอบผู้ใช้...</div>
       </div>
       <div class="d-flex gap-1">
@@ -181,61 +252,139 @@
     var scanTarget  = null;
     var scanRowId   = null;
 
-    var currentUserEmail = "Unknown (Web)";
-    var currentUserName  = "Web User";
+    var currentUserEmail = "";
+    var currentUserName  = "";
+    var currentDeviceType = "";
 
     // ─────────────────────────────────────────────
-    // 🆕 LOAD CURRENT USER — V.6.9.2
-    // บังคับใช้ localStorage หรือ Login Modal เท่านั้น (ไม่ดึงจาก Session เพราะจะติดชื่อเจ้าของสคริปต์)
+    // DEVICE DETECTION — V.6.9.3
+    // ─────────────────────────────────────────────
+    function detectDevice() {
+      var ua = navigator.userAgent || "";
+      if (/tablet|ipad|playbook|silk/i.test(ua)) return { type: "Tablet", icon: "📟" };
+      if (/mobile|android|iphone|ipod|blackberry|opera mini|windows phone/i.test(ua)) return { type: "Mobile", icon: "📱" };
+      return { type: "Laptop", icon: "💻" };
+    }
+
+    // ─────────────────────────────────────────────
+    // EMAIL NAME MAP — V.6.9.3
+    // ─────────────────────────────────────────────
+    var EMAIL_NAME_MAP = {
+      "khathahat.sitthihong@technow.co.th":  "Khathahat Sitthihong",
+      "surapong.tachatieamjun@technow.co.th": "Surapong Tachatieamjun",
+      "boonchot.bor@gmail.com":              "Boonchot Bor",
+      "payon010833@gmail.com":               "Payon Sapphat",
+      "manakiat.m@gmail.com":                "Manakiat M",
+      "auttaseth.klomthaisong@gmail.com":    "Auttaseth Klomthaisong",
+      "wachirasaovaro919@gmail.com":         "Wachira Saovaro",
+      "a.adisak.ch@gmail.com":               "Adisak Ch",
+      "bom.paragon@gmail.com":               "Bom Paragon",
+      "noomchaloemrit@gmail.com":            "Noom Chaloemrit",
+      "nattawoot.suwan@technow.co.th":       "Nattawoot Suwan",
+      "supot.hoonyong@technow.co.th":        "Supot Hoonyong"
+    };
+
+    // ─────────────────────────────────────────────
+    // 🔐 LOAD CURRENT USER — V.6.9.3
+    // บังคับ Login Modal ทุกครั้งที่ไม่มี email ใน localStorage
     // ─────────────────────────────────────────────
     function loadCurrentUser() {
+      var dev = detectDevice();
+      currentDeviceType = dev.icon + " " + dev.type;
+
       var savedEmail = localStorage.getItem('inv_user_email') || "";
       var savedName  = localStorage.getItem('inv_user_name')  || "";
-      
-      if (savedEmail && savedEmail !== "Unknown (System)" && savedEmail !== "Unknown (Web)") {
+
+      // ต้องเป็น email ที่อยู่ใน whitelist เท่านั้น
+      if (savedEmail && EMAIL_NAME_MAP[savedEmail]) {
         currentUserEmail = savedEmail;
-        currentUserName  = savedName || savedEmail.split("@")[0];
-        document.getElementById('userBadge').innerText = "👤 " + currentUserName + " (" + currentUserEmail + ")";
+        currentUserName  = savedName || EMAIL_NAME_MAP[savedEmail];
+        updateUserBadge();
       } else {
-        // Fetch IP address for unknown users
-        fetch('https://api.ipify.org?format=json')
-          .then(response => response.json())
-          .then(data => {
-            currentUserEmail = data.ip;
-            currentUserName = "IP: " + data.ip;
-            document.getElementById('userBadge').innerText = "👤 " + currentUserName;
-          })
-          .catch(err => {
-            currentUserEmail = "Unknown (Web)";
-            currentUserName = "Web User";
-          });
+        // ล้างข้อมูลเก่าที่ไม่ valid แล้วแสดง modal
+        localStorage.removeItem('inv_user_email');
+        localStorage.removeItem('inv_user_name');
+        showLoginModal();
       }
+    }
+
+    function updateUserBadge() {
+      var dev = detectDevice();
+      document.getElementById('userBadge').innerHTML =
+        "👤 " + currentUserName + "<span class='device-badge'>" + dev.icon + " " + dev.type + "</span>";
     }
 
     function showLoginModal() {
       document.getElementById('loginModal').classList.add('show');
+      // Reset
+      document.getElementById('loginEmail').value = "";
+      document.getElementById('customEmailGroup').style.display = 'none';
+      if (document.getElementById('customName'))  document.getElementById('customName').value  = "";
+      if (document.getElementById('customEmail')) document.getElementById('customEmail').value = "";
+      document.getElementById('loginNameText').innerText = "ชื่อจะแสดงที่นี่หลังเลือก Email";
+      document.getElementById('loginNameText').style.color = "#aaa";
+      document.getElementById('btnConfirmLogin').disabled = true;
+    }
+
+    function onEmailSelect() {
+      var email = document.getElementById('loginEmail').value;
+      var btnOK = document.getElementById('btnConfirmLogin');
+      var customGroup = document.getElementById('customEmailGroup');
+
+      if (email === '__custom__') {
+        // แสดง custom input fields
+        customGroup.style.display = 'block';
+        document.getElementById('loginNameText').innerText = 'กรอกชื่อและ Email ด้านล่าง';
+        document.getElementById('loginNameText').style.color = '#888';
+        btnOK.disabled = false;
+      } else if (email && EMAIL_NAME_MAP[email]) {
+        customGroup.style.display = 'none';
+        var name = EMAIL_NAME_MAP[email];
+        document.getElementById('loginNameText').innerText = "👤 " + name;
+        document.getElementById('loginNameText').style.color = "#0043a8";
+        btnOK.disabled = false;
+      } else {
+        customGroup.style.display = 'none';
+        document.getElementById('loginNameText').innerText = "ชื่อจะแสดงที่นี่หลังเลือก Email";
+        document.getElementById('loginNameText').style.color = "#aaa";
+        btnOK.disabled = true;
+      }
     }
 
     function confirmLogin() {
-      var name  = (document.getElementById('loginName').value  || "").trim();
-      var email = (document.getElementById('loginEmail').value || "").trim();
-      if (!name) { alert("กรุณากรอกชื่อก่อน"); return; }
+      var sel = document.getElementById('loginEmail').value;
 
-      currentUserName  = name;
-      currentUserEmail = email || (name.toLowerCase().replace(/\s+/g, ".") + "@staff");
-      localStorage.setItem('inv_user_name',  currentUserName);
+      if (sel === '__custom__') {
+        // ใช้ custom email
+        var cName  = (document.getElementById('customName').value  || "").trim();
+        var cEmail = (document.getElementById('customEmail').value || "").trim();
+        if (!cName)  { alert('⚠️ กรุณากรอกชื่อ-นามสกุล'); return; }
+        if (!cEmail) { alert('⚠️ กรุณากรอก Email'); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cEmail)) { alert('⚠️ รูปแบบ Email ไม่ถูกต้อง'); return; }
+        currentUserEmail = cEmail;
+        currentUserName  = cName;
+        // เพิ่มเข้า map ชั่วคราว (session only)
+        EMAIL_NAME_MAP[cEmail] = cName;
+      } else {
+        if (!sel || !EMAIL_NAME_MAP[sel]) {
+          alert('⚠️ กรุณาเลือก Email จากรายชื่อที่กำหนดเท่านั้น');
+          return;
+        }
+        currentUserEmail = sel;
+        currentUserName  = EMAIL_NAME_MAP[sel];
+      }
+
       localStorage.setItem('inv_user_email', currentUserEmail);
-      document.getElementById('userBadge').innerText = "👤 " + currentUserName + " (" + currentUserEmail + ")";
+      localStorage.setItem('inv_user_name',  currentUserName);
       document.getElementById('loginModal').classList.remove('show');
+      updateUserBadge();
     }
 
     function promptChangeUser() {
       localStorage.removeItem('inv_user_email');
       localStorage.removeItem('inv_user_name');
-      currentUserEmail = "Unknown (Web)";
-      currentUserName  = "Web User";
-      document.getElementById('loginName').value  = "";
-      document.getElementById('loginEmail').value = "";
+      currentUserEmail = "";
+      currentUserName  = "";
       showLoginModal();
     }
 
@@ -475,8 +624,8 @@
       if (!du || !cus || !bN)      return alert('❌ กรุณากรอก DUID, ลูกค้า และ Bill No ให้ครบ');
       if (photoArray.length === 0) return alert('❌ กรุณาถ่ายรูปบิลก่อนบันทึก');
 
-      // ตรวจสอบ user อีกครั้งก่อน submit
-      if (!currentUserEmail || currentUserEmail === "Unknown (Web)") {
+      // ตรวจสอบ user อีกครั้งก่อน submit — ต้องเป็น whitelist email เท่านั้น
+      if (!currentUserEmail || !EMAIL_NAME_MAP[currentUserEmail]) {
         showLoginModal();
         return;
       }
@@ -626,7 +775,8 @@
             "🆔 Project Items: " + projectData.length + "\n" +
             "👤 User: " + currentUserEmail + "\n" +
             "📝 Name: " + currentUserName + "\n" +
-            "🔖 Version: V.6.9.2"
+            "💻 Device: " + currentDeviceType + "\n" +
+            "🔖 Version: V.6.9.3"
           );
         })
         .withFailureHandler(function(err) {
@@ -758,7 +908,7 @@
     // INIT
     // ─────────────────────────────────────────────
     window.onload = function() {
-      loadCurrentUser();
+      loadCurrentUser();   // 🔐 บังคับ Login ก่อน ถ้าไม่มี email ใน whitelist
       loadBOM();
       loadProjectData();
       addItemRow();
