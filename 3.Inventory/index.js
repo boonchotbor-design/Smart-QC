@@ -14,7 +14,7 @@ const LINE_CONFIGS = [
   },
   {
     name:   'TLN-Inventory#2',
-    token:  'VOVhBbD6EG9VwKFo0V1s/wAclekysxBkWrudqSrkp5kFd/8tdrWyi1der1Eui54whdk/E0XWQxF9amI05MWgRq2/Nu628A/1O4yZJB/6warrshDOj2MtnhnM59yZh7b66qbEb/Qsx5XY3OzgXnkNZgdB04t89/1O/w1cDnyilFU=',
+    token:  'KZDP3VqXvVOanS6Pn+qbYV80s74EabuZNFUkcpp1PAo1bAKfeqgGvSOY82n4jorohdk/E0XWQxF9amI05MWgRq2/Nu628A/1O4yZJB/6waqBdEZ0K5dHyKmf2q8hdf905HgAPNfA4yF4Ijn+9ydfGwdB04t89/1O/w1cDnyilFU=',
     secret: 'd7b4fe008fd6c1f75fed2a5d1ef30fb4',
     destId: 'Cb4baf5e474773f54f2b6538e4cd4d9ac'
   },
