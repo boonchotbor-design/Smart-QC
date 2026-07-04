@@ -1,5 +1,5 @@
 /*
- * 🚀 Inventory Smart System - V.6.9.4
+ * 🚀 Inventory Smart System - V.7.1.0
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
@@ -11,6 +11,7 @@
  * Fix V.6.9.4: computeDuidStatus ใช้ case-insensitive compare (toLowerCase) ในทุกจุด
  *              getDuidStatus: normalize target เป็น lowercase ก่อนเปรียบเทียบ
  *              app.html: เพิ่ม DUID threshold จาก 3 → 5 ตัว ลด false call
+ * V.7.1.0: Professional UI Upgrade with SweetAlert2 & Sync versions
  */
 
 var SPREADSHEET_ID      = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -33,7 +34,7 @@ function doGet(e) {
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-    .setTitle('Inventory Smart App V.6.9.4')
+    .setTitle('Inventory Smart App V.7.1.0')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
