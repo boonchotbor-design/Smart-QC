@@ -3,38 +3,38 @@ const { messagingApi, validateSignature } = require('@line/bot-sdk');
 const axios = require('axios');
 
 // ─────────────────────────────────────────────
-// Bot Configs (#1-#5)  destination ทุกตัวใช้ U110afe8872d7f73074e56c457df28598
+// Bot Configs (#1-#5)  destination ทุกตัวใช้ Cb4baf5e474773f54f2b6538e4cd4d9ac (กลุ่ม TLN-Inentory (15))
 // ─────────────────────────────────────────────
 const LINE_CONFIGS = [
   {
     name:   'TLN-Inventory#1',
     token:  (process.env.LINE_CHANNEL_ACCESS_TOKEN || 'eZe15XyurA2eFNBEjeMJ1PNG3lEiujNpzJ01GGarnoq7GFaYDqBttYZk0BHHh7KE5ZOaQdNJUdmhoCc+UoXxqmT1CdHZ7KHUWr7XACo1VY4ezEZpWVHuzufGydzTBOWnVgEgcksIJQDFeQrL3dvkUQdB04t89/1O/w1cDnyilFU=').trim(),
     secret: (process.env.LINE_CHANNEL_SECRET || '9e671fd5239927772a16dbf00b7f7060').trim(),
-    destId: 'U110afe8872d7f73074e56c457df28598'
+    destId: 'Cb4baf5e474773f54f2b6538e4cd4d9ac'
   },
   {
     name:   'TLN-Inventory#2',
     token:  'VOVhBbD6EG9VwKFo0V1s/wAclekysxBkWrudqSrkp5kFd/8tdrWyi1der1Eui54whdk/E0XWQxF9amI05MWgRq2/Nu628A/1O4yZJB/6warrshDOj2MtnhnM59yZh7b66qbEb/Qsx5XY3OzgXnkNZgdB04t89/1O/w1cDnyilFU=',
     secret: 'd7b4fe008fd6c1f75fed2a5d1ef30fb4',
-    destId: 'U110afe8872d7f73074e56c457df28598'
+    destId: 'Cb4baf5e474773f54f2b6538e4cd4d9ac'
   },
   {
     name:   'TLN-Inventory#3',
     token:  '+rX1Vp8W/wacBl/JTAqkRMDfx7oj/wvTV66GSpASORlUoTL2LHlAoNKIlQDXAX8cLYFHufC5EOPIBWElgRYXjC9qNUNbSjpq9JZ9rInybwWVSVSs9jYObP2EqRTgreI/30kjvTz8U2rnFvAYxX8mGwdB04t89/1O/w1cDnyilFU=',
     secret: '336ea8463c7b4c4d2145faebf9b1a6c2',
-    destId: 'U110afe8872d7f73074e56c457df28598'
+    destId: 'Cb4baf5e474773f54f2b6538e4cd4d9ac'
   },
   {
     name:   'TLN-Inventory#4',
     token:  'PLTC9GGkhVetPnJpG6Uq7tqRjZ6YZkBhsZkEsJGhuuElOW/+UCfLsZwT6tAZx9PeO70O8YORfw80wSw+i2AiyDBgvTtp90ljP1zbQ7EJk3J8mSEkKGdGpM5rO0SAvwcL2GmxxgNsQojv6ILXSI7kFQdB04t89/1O/w1cDnyilFU=',
     secret: 'dc9465ad716b7c312283d06649ec3ba1',
-    destId: 'U110afe8872d7f73074e56c457df28598'
+    destId: 'Cb4baf5e474773f54f2b6538e4cd4d9ac'
   },
   {
     name:   'TLN-Inventory#5',
     token:  'UXu38/91MpirgVo6cMnUR7Rnqo79WOi7R4GqeIMj2O8jMzO5U1Ws64UmFySOFh6lCbTNzpgUCq43OTw04h3T73uImFd5A2RYt7eyj6Fz1J85MUsTsy2CYTfD/lfRPIWB60jyTWryPTgXOpztiLNaYwdB04t89/1O/w1cDnyilFU=',
     secret: '5fa55926cffd99f317c9d8daf2f84a03',
-    destId: 'U110afe8872d7f73074e56c457df28598'
+    destId: 'Cb4baf5e474773f54f2b6538e4cd4d9ac'
   }
 ];
 
