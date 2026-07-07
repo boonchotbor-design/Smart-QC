@@ -165,8 +165,9 @@ const multiLineMiddleware = (req, res, next) => {
   }
 
   if (!matchedBot) {
-    console.warn('LINE Signature mismatch — returning 200 anyway');
-    return res.status(200).json({ status: 'ok' });
+    console.warn('⚠️ LINE Signature mismatch! Token/Secret อาจหมดอายุหรือไม่ตรงกัน - Fallback to bot 1');
+    req.matchedBot = LINE_CONFIGS[0];
+    return next();
   }
   req.matchedBot = matchedBot;
   next();
