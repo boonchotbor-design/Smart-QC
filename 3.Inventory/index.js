@@ -199,11 +199,6 @@ app.post('/webhook', lineJsonParser, multiLineMiddleware, async (req, res) => {
         `📦 ${bot.name} V.7.0.1\n━━━━━━━━━━━━━━━\n` +
         `🔍 ค้นหา DUID:\nพิมพ์: DUID: [รหัส]\nเช่น: DUID: Ph26_CapEx_Mod\n\n` +
         `📋 คำสั่ง:\n• DUID: [รหัส] — ค้นหาข้อมูล\n• สถานะ — เมนูนี้\n• /id — Group/User ID`;
-    } else if (text.length >= 5) {
-      const result = await searchDuidFromGAS(text);
-      replyText = (result && !result.includes('<!DOCTYPE'))
-        ? result
-        : `📦 ${bot.name}\n━━━━━━━━━━━━━━━\nพิมพ์ DUID: [รหัส] เพื่อค้นหา\nหรือพิมพ์ "สถานะ" เพื่อดูเมนู`;
     }
 
     if (!replyText) continue;
@@ -249,7 +244,9 @@ app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) 
         if (saveRes.data.success) {
           const uploadRes = await axios.post(GAS_WEB_APP_URL, { action: 'upload', header, base64, index: 1 }, { timeout: 60000 }).catch(() => null);
           const folderUrl = uploadRes?.data?.folderUrl || null;
-          await sendNotification(header, items).catch(() => {});
+          
+          // Note: GAS already sends a broadcast notification via /notify endpoint after saving.
+          // We only reply privately to the current chat here.
           let msg = formatNotificationMessage(header, items);
           if (folderUrl) msg += `\n📂 ${folderUrl}`;
           await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, { chat_id: currentChatId, text: msg });
