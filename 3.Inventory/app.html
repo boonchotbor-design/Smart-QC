@@ -709,6 +709,7 @@
         // แจ้งเตือนถูกเรียกจากฝั่ง Backend (code.gs) เรียบร้อยแล้ว จึงไม่ต้องเรียกซ้ำที่นี่เพื่อป้องกันการแจ้งเตือนซ้ำซ้อน        
         updateProgress(100, "เสร็จสิ้น!");
         setTimeout(function() {
+          document.getElementById('loader').style.display = 'none';
           Swal.fire({
             icon: 'success',
             title: saveRes.debug || 'บันทึกสำเร็จ!',
