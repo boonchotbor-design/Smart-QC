@@ -432,7 +432,7 @@ function saveMainData(header, items, userEmail, userName) {
     return {
       success: true,
       header:  header,
-      debug:   "✅ บันทึกสำเร็จ (V.6.9.4)\n📍 Sheet: " + sheetName +
+      debug:   "✅ บันทึกสำเร็จ (V.7.1.1)\n📍 Sheet: " + sheetName +
                "\n🔢 บันทึกที่แถว: 2 (บนสุด)\n🆔 DUID: " + cleanDuid +
                " (Column B)\n👤 โดย: " + (userName || userEmail || "Unknown")
     };

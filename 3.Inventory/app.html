@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>Inventory Smart App V.7.1.0</title>
+  <title>Inventory Smart App V.7.1.1</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -14,7 +14,7 @@
     .header-banner { background: linear-gradient(135deg, #0d6efd, #0043a8); color: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
     .card-custom { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: white; padding: 15px; margin-bottom: 15px; }
     .item-row { background: #fff; padding: 15px; border-radius: 12px; border-left: 5px solid #0d6efd; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    .loading-overlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index:9999; flex-direction: column; justify-content: center; align-items: center; color: white; }
+    .loading-overlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index:1050; flex-direction: column; justify-content: center; align-items: center; color: white; }
     .btn-mandatory { background-color: #ffc107; border: none; font-weight: bold; padding: 12px; border-radius: 10px; width: 100%; color: #000; margin-bottom: 8px; }
     .user-badge { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 4px 10px; font-size: 12px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
     /* ── Login Modal ── */
@@ -120,7 +120,7 @@
       <button class="btn-login" id="btnConfirmLogin" onclick="confirmLogin()" disabled>✅ เข้าใช้งาน</button>
 
       <hr class="login-divider">
-      <div class="login-footer">🔒 ระบบ Smart Inventory V.7.1.0 | ข้อมูลการเข้าใช้งานถูกบันทึกใน Audit Log</div>
+      <div class="login-footer">🔒 ระบบ Smart Inventory V.7.1.1 | ข้อมูลการเข้าใช้งานถูกบันทึกใน Audit Log</div>
     </div>
   </div>
 
@@ -129,7 +129,7 @@
     <!-- Header -->
     <div class="header-banner shadow d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div>
-        <h5 class="fw-bold mb-0">📦 Smart Inventory V.7.1.0</h5>
+        <h5 class="fw-bold mb-0">📦 Smart Inventory V.7.1.1</h5>
         <div class="user-badge mt-1" id="userBadge">👤 กำลังตรวจสอบผู้ใช้...</div>
       </div>
       <div class="d-flex gap-1">
