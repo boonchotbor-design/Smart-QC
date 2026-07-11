@@ -1,0 +1,1 @@
+{"status":"Alive","version":"V.7.1.0","bots":["TLN-Inventory#1","TLN-Inventory#2","TLN-Inventory#3","TLN-Inventory#4","TLN-Inventory#5"],"gasUrl":"https://script.google.com/macros/s/AKfycbwoTnwaExeObR_54tVaj..."}
