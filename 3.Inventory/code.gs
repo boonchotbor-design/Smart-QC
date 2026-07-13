@@ -1,5 +1,5 @@
 /*
- * 🚀 Inventory Smart System - V.7.1.0
+ * 🚀 Inventory Smart System - V.7.1.2
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
@@ -11,7 +11,7 @@
  * Fix V.6.9.4: computeDuidStatus ใช้ case-insensitive compare (toLowerCase) ในทุกจุด
  *              getDuidStatus: normalize target เป็น lowercase ก่อนเปรียบเทียบ
  *              app.html: เพิ่ม DUID threshold จาก 3 → 5 ตัว ลด false call
- * V.7.1.0: Professional UI Upgrade with SweetAlert2 & Sync versions
+ * V.7.1.2: Fixed multiple bots sending duplicate push messages issue by adding failover break.
  */
 
 var SPREADSHEET_ID      = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -34,7 +34,7 @@ function doGet(e) {
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-    .setTitle('Inventory Smart App V.7.1.0')
+    .setTitle('Inventory Smart App V.7.1.2')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -432,7 +432,7 @@ function saveMainData(header, items, userEmail, userName) {
     return {
       success: true,
       header:  header,
-      debug:   "✅ บันทึกสำเร็จ (V.7.1.1)\n📍 Sheet: " + sheetName +
+      debug:   "✅ บันทึกสำเร็จ (V.7.1.2)\n📍 Sheet: " + sheetName +
                "\n🔢 บันทึกที่แถว: 2 (บนสุด)\n🆔 DUID: " + cleanDuid +
                " (Column B)\n👤 โดย: " + (userName || userEmail || "Unknown")
     };
