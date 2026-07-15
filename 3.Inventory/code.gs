@@ -582,66 +582,68 @@ function searchByBillNo(billNo, customer) {
   } catch (e) { return { success: false, message: e.toString() }; }
 }
 
-function searchDuidForUI(duid, customer) {
+function searchDuidForUI(duid) {
   try {
-    var ss        = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheetName = "INOUT_HW_" + (customer || "AIS").toString().toUpperCase();
-    var sheet     = ss.getSheetByName(sheetName);
-    if (!sheet) return { success: false, message: "❌ ไม่พบหน้า Sheet: " + sheetName };
-
-    var data = sheet.getDataRange().getValues();
-    if (data.length < 2) return { success: false, message: "❌ ไม่มีข้อมูลในระบบ" };
-
-    var headerRow = data[0].map(function(h) { return String(h || "").trim().toUpperCase(); });
-    var idx = {
-      duid:      Math.max(headerRow.indexOf("DUID"), 1),
-      region:    Math.max(headerRow.indexOf("REGION"), 2),
-      transType: Math.max(headerRow.indexOf("IN/OUT"), 3),
-      itemType:  Math.max(headerRow.indexOf("TYPE"), 4),
-      billNo:    Math.max(headerRow.indexOf("BILL NO."), headerRow.indexOf("BILL NO"), 6),
-      model:     Math.max(headerRow.indexOf("MODEL"), 7),
-      code:      Math.max(headerRow.indexOf("ITEM CODE"), 8),
-      desc:      Math.max(headerRow.indexOf("ITEM DESCRIPTION"), 9),
-      qty:       Math.max(headerRow.indexOf("SUM OF REQ.QTY"), 10),
-      sn:        Math.max(headerRow.indexOf("SERIAL"), 11),
-      ownerW:    Math.max(headerRow.indexOf("OWNER WAREHOUSE"), 12),
-      ownerR:    Math.max(headerRow.indexOf("OWNER RECEIVER"), 13),
-      locW:      Math.max(headerRow.indexOf("LOCATION WAREHOUSE"), 14),
-      locR:      Math.max(headerRow.indexOf("LOCATION RECEIVER"), 15),
-      status:    Math.max(headerRow.indexOf("STATUS"), 21)
-    };
-
-    var targetDuid = String(duid || "").trim().toLowerCase();
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var targetSheets = ["INOUT_HW_AIS", "INOUT_HW_TRUE"];
     var results = {
       duid: "", region: "", ownerWarehouse: "", ownerReceiver: "",
       locationWarehouse: "", locationReceiver: "", items: []
     };
     var found = false;
+    var targetDuid = String(duid || "").trim().toLowerCase();
 
-    for (var i = 1; i < data.length; i++) {
-      if (String(data[i][idx.duid] || "").trim().toLowerCase() === targetDuid) {
-        if (!found) {
-          results.duid              = String(data[i][idx.duid]   || "");
-          results.region            = String(data[i][idx.region] || "");
-          results.ownerWarehouse    = String(data[i][idx.ownerW] || "");
-          results.ownerReceiver     = String(data[i][idx.ownerR] || "");
-          results.locationWarehouse = String(data[i][idx.locW]   || "");
-          results.locationReceiver  = String(data[i][idx.locR]   || "");
-          results.status            = String(data[i][idx.status] || "");
-          found = true;
+    targetSheets.forEach(function(sheetName) {
+      var sheet = ss.getSheetByName(sheetName);
+      if (!sheet) return;
+      var data = sheet.getDataRange().getValues();
+      if (data.length < 2) return;
+
+      var headerRow = data[0].map(function(h) { return String(h || "").trim().toUpperCase(); });
+      var idx = {
+        duid:      Math.max(headerRow.indexOf("DUID"), 1),
+        region:    Math.max(headerRow.indexOf("REGION"), 2),
+        transType: Math.max(headerRow.indexOf("IN/OUT"), 3),
+        itemType:  Math.max(headerRow.indexOf("TYPE"), 4),
+        billNo:    Math.max(headerRow.indexOf("BILL NO."), headerRow.indexOf("BILL NO"), 6),
+        model:     Math.max(headerRow.indexOf("MODEL"), 7),
+        code:      Math.max(headerRow.indexOf("ITEM CODE"), 8),
+        desc:      Math.max(headerRow.indexOf("ITEM DESCRIPTION"), 9),
+        qty:       Math.max(headerRow.indexOf("SUM OF REQ.QTY"), 10),
+        sn:        Math.max(headerRow.indexOf("SERIAL"), 11),
+        ownerW:    Math.max(headerRow.indexOf("OWNER WAREHOUSE"), 12),
+        ownerR:    Math.max(headerRow.indexOf("OWNER RECEIVER"), 13),
+        locW:      Math.max(headerRow.indexOf("LOCATION WAREHOUSE"), 14),
+        locR:      Math.max(headerRow.indexOf("LOCATION RECEIVER"), 15),
+        status:    Math.max(headerRow.indexOf("STATUS"), 21)
+      };
+
+      for (var i = 1; i < data.length; i++) {
+        if (String(data[i][idx.duid] || "").trim().toLowerCase() === targetDuid) {
+          if (!found) {
+            results.duid              = String(data[i][idx.duid]   || "");
+            results.region            = String(data[i][idx.region] || "");
+            results.ownerWarehouse    = String(data[i][idx.ownerW] || "");
+            results.ownerReceiver     = String(data[i][idx.ownerR] || "");
+            results.locationWarehouse = String(data[i][idx.locW]   || "");
+            results.locationReceiver  = String(data[i][idx.locR]   || "");
+            results.status            = String(data[i][idx.status] || "");
+            found = true;
+          }
+          results.items.push({
+            billNo: String(data[i][idx.billNo] || ""),
+            transType: String(data[i][idx.transType] || ""),
+            type:  String(data[i][idx.itemType] || ""),
+            model: String(data[i][idx.model]    || ""),
+            code:  String(data[i][idx.code]     || ""),
+            desc:  String(data[i][idx.desc]     || ""),
+            qty:   data[i][idx.qty] || 0,
+            sn:    String(data[i][idx.sn]       || "")
+          });
         }
-        results.items.push({
-          billNo: String(data[i][idx.billNo] || ""),
-          transType: String(data[i][idx.transType] || ""),
-          type:  String(data[i][idx.itemType] || ""),
-          model: String(data[i][idx.model]    || ""),
-          code:  String(data[i][idx.code]     || ""),
-          desc:  String(data[i][idx.desc]     || ""),
-          qty:   data[i][idx.qty] || 0,
-          sn:    String(data[i][idx.sn]       || "")
-        });
       }
-    }
+    });
+
     return found
       ? { success: true, data: results }
       : { success: false, message: "❌ ไม่พบข้อมูล DUID: " + duid };
