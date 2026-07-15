@@ -330,6 +330,8 @@ app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) 
   res.status(200).send('OK');
 });
 
+const processedNotifications = new Set();
+
 // ─────────────────────────────────────────────
 // /notify — รับจาก GAS แล้ว push ทุกช่องทาง
 // ─────────────────────────────────────────────
@@ -337,6 +339,17 @@ app.post('/notify', express.json(), async (req, res) => {
   try {
     const { header, items } = req.body;
     if (!header) return res.status(400).send('Missing header');
+
+    // Idempotency Check ป้องกัน GAS Retry (Double Push)
+    if (header.notificationId) {
+      if (processedNotifications.has(header.notificationId)) {
+        console.log('Duplicate notification ignored:', header.notificationId);
+        return res.send('OK');
+      }
+      processedNotifications.add(header.notificationId);
+      if (processedNotifications.size > 500) processedNotifications.clear();
+    }
+
     await sendNotification(header, items);
     res.send('OK');
   } catch (err) {

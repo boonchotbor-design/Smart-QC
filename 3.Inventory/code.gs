@@ -1161,6 +1161,7 @@ function getOrCreateSubFolder(p, n) {
 // ─────────────────────────────────────────────
 
 function notifyOnly(h, i) {
+  if (!h.notificationId) h.notificationId = Utilities.getUuid();
   var payload = { header: h, items: i };
   var opt     = { method: 'post', contentType: 'application/json',
                   payload: JSON.stringify(payload), muteHttpExceptions: true };
