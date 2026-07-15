@@ -782,7 +782,15 @@
             document.getElementById('locationReceiver').value  = res.data.locationReceiver  || "";
             document.getElementById('itemList').innerHTML     = "";
             rowCount = 0;
+            var currentBillNo = "";
             res.data.items.forEach(function(item, index) {
+              if (item.billNo && item.billNo !== currentBillNo) {
+                currentBillNo = item.billNo;
+                var billHeader = document.createElement('div');
+                billHeader.className = 'alert alert-secondary py-1 mt-3 mb-2 small fw-bold text-dark';
+                billHeader.innerHTML = '🧾 Bill No: <span class="text-primary">' + currentBillNo + '</span>';
+                document.getElementById('itemList').appendChild(billHeader);
+              }
               addItemRow();
               var id = rowCount;
               setTimeout(function() {

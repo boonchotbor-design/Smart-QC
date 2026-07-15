@@ -631,6 +631,7 @@ function searchDuidForUI(duid, customer) {
           found = true;
         }
         results.items.push({
+          billNo: String(data[i][idx.billNo] || ""),
           type:  String(data[i][idx.itemType] || ""),
           model: String(data[i][idx.model]    || ""),
           code:  String(data[i][idx.code]     || ""),
