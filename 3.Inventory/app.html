@@ -207,6 +207,9 @@
           <label class="small fw-bold text-danger">DUID (Mandatory) *</label>
           <input type="text" id="duid" class="form-control form-control-sm border-danger" list="duidList" oninput="onDuidInput()" placeholder="ค้นหาหรือกรอก DUID">
         </div>
+        <div class="col-12 mt-2">
+          <button class="btn btn-outline-danger w-100 btn-sm py-2 shadow-sm" onclick="searchByDuid()">🔍 ค้นหาข้อมูลเดิมจาก DUID</button>
+        </div>
         <div id="statusBadge" class="col-12 mt-2 d-none">
           <div class="alert alert-info py-1 px-2 mb-0 small fw-bold text-center" id="statusText">สถานะ: -</div>
         </div>
@@ -762,6 +765,40 @@
           }
         })
         .searchByBillNo(b, document.getElementById('customer').value);
+    }
+
+    function searchByDuid() {
+      var d = document.getElementById('duid').value;
+      if (!d) { Swal.fire({icon: 'warning', title: 'กรุณาระบุ DUID'}); return; }
+      updateProgress(null, "ค้นหาข้อมูลเดิมจาก DUID...");
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('loader').style.display = 'none';
+          if (res.success) {
+            document.getElementById('region').value           = res.data.region;
+            document.getElementById('ownerWarehouse').value   = res.data.ownerWarehouse   || "";
+            document.getElementById('ownerReceiver').value    = res.data.ownerReceiver    || "";
+            document.getElementById('locationWarehouse').value = res.data.locationWarehouse || "";
+            document.getElementById('locationReceiver').value  = res.data.locationReceiver  || "";
+            document.getElementById('itemList').innerHTML     = "";
+            rowCount = 0;
+            res.data.items.forEach(function(item, index) {
+              addItemRow();
+              var id = rowCount;
+              setTimeout(function() {
+                if (!document.getElementById('model_' + id)) return;
+                document.getElementById('model_' + id).value = item.model; onModelChange(id);
+                document.getElementById('code_'  + id).value = item.code;  onCodeChange(id);
+                document.getElementById('qty_'   + id).value = item.qty;
+                document.getElementById('sn_'    + id).value = item.sn;
+              }, 100 * (index + 1));
+            });
+            Toast.fire({icon: 'success', title: 'ดึงข้อมูล DUID สำเร็จ!'});
+          } else {
+            Swal.fire({icon: 'info', title: 'ไม่พบข้อมูล', text: res.message || ''});
+          }
+        })
+        .searchDuidForUI(d, document.getElementById('customer').value);
     }
 
     // ─────────────────────────────────────────────

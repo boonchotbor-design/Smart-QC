@@ -76,9 +76,15 @@ function formatNotificationMessage(header, items) {
     `━━━━━━━━━━━━━━━\n`;
 
   if (items && items.length > 0) {
-    items.forEach((item, idx) => {
-      msg += `🔹 ${idx + 1}: ${item.model || '-'}\n   (SN: ${item.sn || 'NA'}, Qty: ${item.qty || 0})\n`;
-    });
+    for (let idx = 0; idx < items.length; idx++) {
+      const item = items[idx];
+      const itemStr = `🔹 ${idx + 1}: ${item.model || '-'}\n   (SN: ${item.sn || 'NA'}, Qty: ${item.qty || 0})\n`;
+      if (msg.length + itemStr.length > 3800) {
+        msg += `...\n(ข้อมูลมีมากกว่านี้ ถูกตัดออกเพื่อการแสดงผล)\n`;
+        break;
+      }
+      msg += itemStr;
+    }
     msg += `━━━━━━━━━━━━━━━\n`;
   }
   
