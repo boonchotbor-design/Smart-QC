@@ -632,6 +632,7 @@ function searchDuidForUI(duid, customer) {
         }
         results.items.push({
           billNo: String(data[i][idx.billNo] || ""),
+          transType: String(data[i][idx.transType] || ""),
           type:  String(data[i][idx.itemType] || ""),
           model: String(data[i][idx.model]    || ""),
           code:  String(data[i][idx.code]     || ""),

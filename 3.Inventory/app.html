@@ -786,9 +786,16 @@
             res.data.items.forEach(function(item, index) {
               if (item.billNo && item.billNo !== currentBillNo) {
                 currentBillNo = item.billNo;
+                var transBadge = "";
+                if (item.transType) {
+                  var badgeClass = item.transType.toUpperCase() === "IN" ? "bg-success" 
+                                 : item.transType.toUpperCase() === "OUT" ? "bg-danger" 
+                                 : "bg-info text-dark";
+                  transBadge = ' <span class="badge ' + badgeClass + ' ms-2">' + item.transType + '</span>';
+                }
                 var billHeader = document.createElement('div');
-                billHeader.className = 'alert alert-secondary py-1 mt-3 mb-2 small fw-bold text-dark';
-                billHeader.innerHTML = '🧾 Bill No: <span class="text-primary">' + currentBillNo + '</span>';
+                billHeader.className = 'alert alert-secondary py-1 mt-3 mb-2 small fw-bold text-dark d-flex align-items-center';
+                billHeader.innerHTML = '🧾 Bill No: <span class="text-primary ms-1">' + currentBillNo + '</span>' + transBadge;
                 document.getElementById('itemList').appendChild(billHeader);
               }
               addItemRow();
