@@ -87,6 +87,28 @@ app.get('/', (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// Check All Bots Status (bot check ทุกตัว)
+// ─────────────────────────────────────────────
+app.get('/bots-status', async (req, res) => {
+  const results = [];
+  for (const bot of LINE_CONFIGS) {
+    try {
+      await axios.get('https://api.line.me/v2/bot/info', { headers: { Authorization: 'Bearer ' + bot.token } });
+      results.push({ name: bot.name, status: 'OK' });
+    } catch (e) {
+      results.push({ name: bot.name, status: 'ERROR', message: e.response?.data?.message || e.message });
+    }
+  }
+  try {
+    const tRes = await axios.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe`);
+    results.push({ name: 'Telegram Bot', status: 'OK', username: tRes.data.result.username });
+  } catch (e) {
+    results.push({ name: 'Telegram Bot', status: 'ERROR', message: e.message });
+  }
+  res.json({ results });
+});
+
+// ─────────────────────────────────────────────
 // Format Notification Message
 // ─────────────────────────────────────────────
 function formatNotificationMessage(header, items) {
