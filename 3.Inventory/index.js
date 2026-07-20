@@ -89,24 +89,31 @@ app.get('/', (req, res) => {
 // ─────────────────────────────────────────────
 // Check All Bots Status (bot check ทุกตัว)
 // ─────────────────────────────────────────────
-app.get('/bots-status', async (req, res) => {
+async function checkAllBotsStatus() {
   const results = [];
   for (const bot of LINE_CONFIGS) {
+    if (!bot.token) continue;
     try {
       await axios.get('https://api.line.me/v2/bot/info', { headers: { Authorization: 'Bearer ' + bot.token } });
-      results.push({ name: bot.name, status: 'OK' });
+      results.push({ name: bot.name, status: '✅ OK' });
     } catch (e) {
-      results.push({ name: bot.name, status: 'ERROR', message: e.response?.data?.message || e.message });
+      results.push({ name: bot.name, status: '❌ ERROR' });
     }
   }
   try {
     const tRes = await axios.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe`);
-    results.push({ name: 'Telegram Bot', status: 'OK', username: tRes.data.result.username });
+    results.push({ name: 'Telegram Bot', status: `✅ OK (${tRes.data.result.username})` });
   } catch (e) {
-    results.push({ name: 'Telegram Bot', status: 'ERROR', message: e.message });
+    results.push({ name: 'Telegram Bot', status: '❌ ERROR' });
   }
+  return results;
+}
+
+app.get('/bots-status', async (req, res) => {
+  const results = await checkAllBotsStatus();
   res.json({ results });
 });
+
 
 // ─────────────────────────────────────────────
 // Format Notification Message
@@ -251,6 +258,9 @@ app.post('/webhook', lineJsonParser, multiLineMiddleware, async (req, res) => {
         `🔹 Type: ${event.source.type}\n` +
         `🔹 User ID: ${event.source.userId || '-'}\n` +
         `🔹 Group ID: ${event.source.groupId || '-'}`;
+    } else if (upper === '/BOTS-STATUS') {
+      const statuses = await checkAllBotsStatus();
+      replyText = `🤖 Bot Status Report:\n\n` + statuses.map(s => `${s.name}: ${s.status}`).join('\n');
     } else if (upper.startsWith('DUID:') || upper.startsWith('ค้นหา:') || upper.startsWith('SEARCH:')) {
       const duid = text.split(':').slice(1).join(':').trim();
       replyText  = duid
