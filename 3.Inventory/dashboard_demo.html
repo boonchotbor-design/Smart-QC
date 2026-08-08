@@ -308,13 +308,29 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
           <div class="c-title">📝 จัดการ BOM <span id="bomTitleCus" style="color:var(--primary);font-weight:900">AIS</span></div>
           <button class="tbtn g" onclick="addBomRow()">➕ เพิ่มรายการ (Add New)</button>
         </div>
+        <!-- Search + Stats -->
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+          <input class="fi" id="bomSearch" placeholder="🔍 ค้นหา Type / Model / Code..." oninput="bomSearchChange()" style="flex:1;min-width:200px;max-width:400px">
+          <span id="bomStats" style="font-size:11px;color:var(--muted);white-space:nowrap"></span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="tbtn" onclick="bomPrevPage()" id="bomPrevBtn" style="padding:5px 12px">◀</button>
+            <span id="bomPageInfo" style="font-size:11px;color:var(--muted);white-space:nowrap">หน้า 1</span>
+            <button class="tbtn" onclick="bomNextPage()" id="bomNextBtn" style="padding:5px 12px">▶</button>
+          </div>
+        </div>
         <div style="overflow-x:auto">
           <table class="pd-table tb">
             <thead>
-              <tr><th>No</th><th>ประเภท (Type)</th><th>Model</th><th>Item Code</th><th>Item Description</th><th style="text-align:center">จัดการ</th></tr>
+              <tr><th style="width:40px">No</th><th style="width:130px">ประเภท (Type)</th><th style="width:200px">Model</th><th style="width:130px">Item Code</th><th>Item Description</th><th style="width:55px;text-align:center">จัดการ</th></tr>
             </thead>
             <tbody id="bomBody"></tbody>
           </table>
+        </div>
+        <!-- Bottom pagination -->
+        <div style="display:flex;justify-content:center;gap:10px;margin-top:12px;align-items:center">
+          <button class="tbtn" onclick="bomPrevPage()" style="padding:5px 12px">◀ ก่อนหน้า</button>
+          <span id="bomPageInfo2" style="font-size:12px;color:var(--muted)"></span>
+          <button class="tbtn" onclick="bomNextPage()" style="padding:5px 12px">ถัดไป ▶</button>
         </div>
       </div>
     </div>
@@ -5048,41 +5064,102 @@ let BOM_TRUE = [
 function getActiveBOM() { return document.getElementById('m-cus')?.value==='TRUE' ? BOM_TRUE : BOM_AIS; }
 
 let curBomCustomer = 'AIS';
+let bomPage = 0;
+const BOM_PAGE_SIZE = 50;
+let bomFiltered = [];
+
 function openBomPage(cus, el) {
   curBomCustomer = cus;
+  bomPage = 0;
   document.getElementById('bomTitleCus').textContent = cus;
   document.getElementById('bomTitleCus').style.color = cus==='TRUE'?'var(--blue)':'var(--primary)';
+  const searchEl = document.getElementById('bomSearch');
+  if(searchEl) searchEl.value = '';
   pg('bom', el);
+  bomFilterAndRender();
+}
+
+function bomSearchChange() {
+  bomPage = 0;
+  bomFilterAndRender();
+}
+
+function bomFilterAndRender() {
+  const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
+  const q = (document.getElementById('bomSearch')?.value || '').toLowerCase().trim();
+  bomFiltered = q ? bom.filter(x =>
+    (x.type||'').toLowerCase().includes(q) ||
+    (x.model||'').toLowerCase().includes(q) ||
+    (x.code||'').toLowerCase().includes(q) ||
+    (x.desc||'').toLowerCase().includes(q)
+  ) : bom;
   renderBomTable();
 }
+
 function renderBomTable() {
-  const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
   const tbody = document.getElementById('bomBody');
-  tbody.innerHTML = '';
-  bom.forEach((item, idx) => {
-    tbody.innerHTML += `<tr>
-      <td>${idx+1}</td>
-      <td><input class="fi" value="${item.type}" onchange="updateBomItem(${idx}, 'type', this.value)" style="padding:4px"></td>
-      <td><input class="fi" value="${item.model}" onchange="updateBomItem(${idx}, 'model', this.value)" style="padding:4px"></td>
-      <td><input class="fi" value="${item.code}" onchange="updateBomItem(${idx}, 'code', this.value)" style="padding:4px;color:var(--blue)"></td>
-      <td><input class="fi" value="${item.desc}" onchange="updateBomItem(${idx}, 'desc', this.value)" style="padding:4px"></td>
-      <td style="text-align:center"><button class="tbtn r" style="padding:4px 8px;font-size:11px" onclick="deleteBomItem(${idx})">ลบ</button></td>
-    </tr>`;
+  if(!tbody) return;
+
+  const total = bomFiltered.length;
+  const totalPages = Math.max(1, Math.ceil(total / BOM_PAGE_SIZE));
+  if(bomPage >= totalPages) bomPage = totalPages - 1;
+  const start = bomPage * BOM_PAGE_SIZE;
+  const end = Math.min(start + BOM_PAGE_SIZE, total);
+  const pageItems = bomFiltered.slice(start, end);
+
+  // Use DocumentFragment for performance
+  const frag = document.createDocumentFragment();
+  pageItems.forEach((item, i) => {
+    const realIdx = item._bomIdx !== undefined ? item._bomIdx : start + i;
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td style="text-align:center;color:var(--muted);font-size:11px">' + (start+i+1) + '</td>' +
+      '<td><input class="fi" value="' + esc4html(item.type) + '" onchange="updateBomItem(' + realIdx + ',\'type\',this.value)" style="padding:3px 5px;font-size:11px"></td>' +
+      '<td><input class="fi" value="' + esc4html(item.model) + '" onchange="updateBomItem(' + realIdx + ',\'model\',this.value)" style="padding:3px 5px;font-size:11px"></td>' +
+      '<td><input class="fi" value="' + esc4html(item.code) + '" onchange="updateBomItem(' + realIdx + ',\'code\',this.value)" style="padding:3px 5px;font-size:11px;color:var(--blue)"></td>' +
+      '<td><input class="fi" value="' + esc4html(item.desc) + '" onchange="updateBomItem(' + realIdx + ',\'desc\',this.value)" style="padding:3px 5px;font-size:11px"></td>' +
+      '<td style="text-align:center"><button class="tbtn r" style="padding:3px 7px;font-size:10px" onclick="deleteBomItem(' + realIdx + ')">ลบ</button></td>';
+    frag.appendChild(tr);
   });
+  tbody.innerHTML = '';
+  tbody.appendChild(frag);
+
+  // Update stats and pagination
+  const stats = document.getElementById('bomStats');
+  if(stats) stats.textContent = 'แสดง ' + (start+1) + '-' + end + ' จาก ' + total + ' รายการ';
+  const pi1 = document.getElementById('bomPageInfo');
+  const pi2 = document.getElementById('bomPageInfo2');
+  const info = 'หน้า ' + (bomPage+1) + ' / ' + totalPages;
+  if(pi1) pi1.textContent = info;
+  if(pi2) pi2.textContent = info;
+  document.getElementById('bomPrevBtn').disabled = bomPage === 0;
+  document.getElementById('bomNextBtn').disabled = bomPage >= totalPages - 1;
 }
+
+function esc4html(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function bomPrevPage() { if(bomPage > 0){ bomPage--; renderBomTable(); } }
+function bomNextPage() {
+  const total = bomFiltered.length;
+  if(bomPage < Math.ceil(total / BOM_PAGE_SIZE) - 1){ bomPage++; renderBomTable(); }
+}
+
 function updateBomItem(idx, field, val) {
   const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
-  bom[idx][field] = val;
+  if(bom[idx]) bom[idx][field] = val;
 }
 function deleteBomItem(idx) {
   const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
   bom.splice(idx, 1);
-  renderBomTable();
+  bomFilterAndRender();
 }
 function addBomRow() {
   const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
-  bom.push({type: '', model: '', code: '', desc: ''});
-  renderBomTable();
+  bom.unshift({type: '', model: '', code: '', desc: ''});
+  bomPage = 0;
+  bomFilterAndRender();
 }
 
 // ════ MOCK DATA ════
