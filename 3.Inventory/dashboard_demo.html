@@ -170,6 +170,9 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
   <div class="sb-logo"><h2>📦 SmartStock</h2><p>Inventory V.7.4.0</p></div>
   <div class="sb-user"><div class="u-av">TL</div><div class="u-info"><strong>TLN Admin</strong><span id="syncBadge" class="sync-badge sync-demo">● Demo</span></div></div>
   <nav class="sb-nav">
+    <div class="nav-sec">ฐานข้อมูล (Master Data)</div>
+    <a class="ni" onclick="openBomPage('AIS',this)"><span class="ni-ic">📗</span>BOM AIS</a>
+    <a class="ni" onclick="openBomPage('TRUE',this)"><span class="ni-ic">📘</span>BOM TRUE</a>
     <div class="nav-sec">หน้าหลัก</div>
     <a class="ni active" onclick="pg('dashboard',this)"><span class="ni-ic">🏠</span>Dashboard</a>
     <a class="ni" onclick="pg('transactions',this)"><span class="ni-ic">📋</span>รายการทั้งหมด<span class="n-badge" id="nbPending">-</span></a>
@@ -298,6 +301,24 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
       <div class="tc"><div class="c-title" style="margin-bottom:14px">🗺️ สรุปตาม Region</div><canvas id="rgChart" style="max-height:320px"></canvas></div>
     </div>
 
+    <!-- BOM Manager -->
+    <div class="page" id="page-bom">
+      <div class="tc">
+        <div class="t-hdr">
+          <div class="c-title">📝 จัดการ BOM <span id="bomTitleCus" style="color:var(--primary);font-weight:900">AIS</span></div>
+          <button class="tbtn g" onclick="addBomRow()">➕ เพิ่มรายการ (Add New)</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="pd-table tb">
+            <thead>
+              <tr><th>No</th><th>ประเภท (Type)</th><th>Model</th><th>Item Code</th><th>Item Description</th><th style="text-align:center">จัดการ</th></tr>
+            </thead>
+            <tbody id="bomBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Print Center -->
     <div class="page" id="page-print">
       <div class="tc">
@@ -341,7 +362,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
     <div class="fbody">
       <!-- Row 1: ลูกค้า + งาน -->
       <div class="frow">
-        <div class="fg"><label class="fl">ลูกค้า</label><select class="fi" id="m-cus"><option>AIS</option><option>TRUE</option></select></div>
+        <div class="fg"><label class="fl">ลูกค้า</label><select class="fi" id="m-cus" onchange="onCustomerChange()"><option>AIS</option><option>TRUE</option></select></div>
         <div class="fg"><label class="fl">Region</label><select class="fi" id="m-reg"><option>ER</option><option>SR</option><option>NR</option><option>BKK</option><option>CR</option><option>NER</option></select></div>
       </div>
       <!-- Bill No. -->
@@ -402,29 +423,63 @@ const M_ICONS={IN:'📥',OUT:'📤',DISMANTLE:'🔧','STR/IN':'🔄','STR/OUT':'
 const TYPE_CLS={IN:'active-in',OUT:'active-out',DISMANTLE:'active-dis','STR/IN':'active-stri','STR/OUT':'active-stro',RETURN:'active-ret'};
 const TYPE_DEFS=[{type:'IN',icon:'📥',color:'var(--primary)'},{type:'OUT',icon:'📤',color:'var(--red)'},{type:'DISMANTLE',icon:'🔧',color:'var(--purple)'},{type:'STR/IN',icon:'🔄',color:'var(--blue)'},{type:'STR/OUT',icon:'🚚',color:'var(--orange)'},{type:'RETURN',icon:'🔙',color:'var(--yellow)'}];
 
-// ════ Item Master (Model → Code + Desc) ════
-const ITEM_MASTER = [
-  {model:'Cisco C9300-48P',code:'SW-C9300-48P',desc:'Switch Layer3 48Port PoE'},
-  {model:'Cisco C9300-24T',code:'SW-C9300-24T',desc:'Switch Layer3 24Port'},
-  {model:'Cisco C9500-48Y4C',code:'SW-C9500-48Y',desc:'Switch Core 48Port 25G'},
-  {model:'Cisco C9200-48P',code:'SW-C9200-48P',desc:'Switch Access 48Port PoE'},
-  {model:'Cisco SFP-10G-LR',code:'MOD-SFP10G',desc:'Module SFP+ 10G LR'},
-  {model:'Cisco ASR 920',code:'RT-ASR920',desc:'Router ASR 920 Series'},
-  {model:'Huawei CE6870',code:'SW-CE6870',desc:'Switch Core Huawei CE6870'},
-  {model:'Huawei S5731',code:'SW-S5731',desc:'Switch Access S5731'},
-  {model:'Huawei NetEngine 40E',code:'RT-NE40E',desc:'Router PE NetEngine'},
-  {model:'Nokia 7705 SAR',code:'RT-N7705',desc:'Router Nokia 7705 SAR'},
-  {model:'Nokia 7210 IXS',code:'RT-N7210',desc:'Router Nokia 7210 IXS'},
-  {model:'Nokia 7750 SR',code:'RT-N7750',desc:'Router Nokia 7750 SR'},
-  {model:'Ericsson MINI-LINK',code:'MW-EMIN',desc:'Microwave Link Ericsson'},
-  {model:'Ericsson RBS 6601',code:'BS-RBS6601',desc:'Base Station RBS 6601'},
-  {model:'Juniper MX204',code:'RT-JMX204',desc:'Router Core MX204'},
-  {model:'1000BASE-T (RJ45) SFP',code:'MOD-1G-RJ45',desc:'Module SFP 1G Copper'},
-  {model:'Antenna Accessory',code:'ACC-ANT',desc:'Antenna Accessory Kit'},
-  {model:'Battery',code:'BAT-GEN',desc:'Battery Backup Unit'},
-  {model:'BBU',code:'BBU-GEN',desc:'Baseband Unit'},
+// ════ BOM Master Data ════
+let BOM_AIS = [
+  {type: 'Switch', model: 'Cisco C9300-48P', code: 'SW-C9300-48P', desc: 'Switch Layer3 48Port PoE'},
+  {type: 'Switch', model: 'Huawei CE6870', code: 'SW-CE6870', desc: 'Switch Core Huawei CE6870'},
+  {type: 'Router', model: 'Nokia 7705 SAR', code: 'RT-N7705', desc: 'Router Nokia 7705 SAR'},
+  {type: 'Microwave', model: 'Ericsson MINI-LINK', code: 'MW-EMIN', desc: 'Microwave Link Ericsson'},
+  {type: 'Module', model: 'Cisco SFP-10G-LR', code: 'MOD-SFP10G', desc: 'Module SFP+ 10G LR'},
+  {type: 'AAU', model: 'AAU5656', code: '02315PNC', desc: 'AAU5656 2600A 64T65R 320W-24'},
+  {type: 'Material', model: 'D-type RRU clamp 10 sq mm', code: '27151235', desc: 'Antenna Accessory, D-type RRU clamp'}
 ];
-const ITYPE_LIST=['AAU','AISG','ANTENNA','Alarm','Antenna Accessory','Aux','BBU','BOAD','Battery','Bracket','Breaker','CPRI','Cabinet','Cable','Converter','DC_Power','DDF','Device','Fiber','Filter','Frame','GPS','LMU','Microwave','Module','ODF','ODU','RBS','RRU','Router','Switch','Tower'];
+let BOM_TRUE = [
+  {type: 'Router', model: 'Cisco ASR 920', code: 'RT-ASR920', desc: 'Router ASR 920 Series'},
+  {type: 'Router', model: 'Nokia 7210 IXS', code: 'RT-N7210', desc: 'Router Nokia 7210 IXS'},
+  {type: 'Router', model: 'Juniper MX204', code: 'RT-JMX204', desc: 'Router Core MX204'},
+  {type: 'Switch', model: 'Huawei S5731', code: 'SW-S5731', desc: 'Switch Access S5731'},
+  {type: 'Base Station', model: 'Ericsson RBS 6601', code: 'BS-RBS6601', desc: 'Base Station RBS 6601'},
+  {type: 'Switch', model: 'Cisco C9300-24T', code: 'SW-C9300-24T', desc: 'Switch Layer3 24Port'}
+];
+function getActiveBOM() { return document.getElementById('m-cus')?.value==='TRUE' ? BOM_TRUE : BOM_AIS; }
+
+let curBomCustomer = 'AIS';
+function openBomPage(cus, el) {
+  curBomCustomer = cus;
+  document.getElementById('bomTitleCus').textContent = cus;
+  document.getElementById('bomTitleCus').style.color = cus==='TRUE'?'var(--blue)':'var(--primary)';
+  pg('bom', el);
+  renderBomTable();
+}
+function renderBomTable() {
+  const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
+  const tbody = document.getElementById('bomBody');
+  tbody.innerHTML = '';
+  bom.forEach((item, idx) => {
+    tbody.innerHTML += `<tr>
+      <td>${idx+1}</td>
+      <td><input class="fi" value="${item.type}" onchange="updateBomItem(${idx}, 'type', this.value)" style="padding:4px"></td>
+      <td><input class="fi" value="${item.model}" onchange="updateBomItem(${idx}, 'model', this.value)" style="padding:4px"></td>
+      <td><input class="fi" value="${item.code}" onchange="updateBomItem(${idx}, 'code', this.value)" style="padding:4px;color:var(--blue)"></td>
+      <td><input class="fi" value="${item.desc}" onchange="updateBomItem(${idx}, 'desc', this.value)" style="padding:4px"></td>
+      <td style="text-align:center"><button class="tbtn r" style="padding:4px 8px;font-size:11px" onclick="deleteBomItem(${idx})">ลบ</button></td>
+    </tr>`;
+  });
+}
+function updateBomItem(idx, field, val) {
+  const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
+  bom[idx][field] = val;
+}
+function deleteBomItem(idx) {
+  const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
+  bom.splice(idx, 1);
+  renderBomTable();
+}
+function addBomRow() {
+  const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
+  bom.push({type: '', model: '', code: '', desc: ''});
+  renderBomTable();
+}
 
 // ════ MOCK DATA ════
 const today=()=>{const d=new Date();return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`};
@@ -446,7 +501,7 @@ const MOCK=[
 let TX=[...MOCK],curF='ALL',rChInst=null,lChInst=null,pending=0,curAction='IN',itemRowCount=0,isLiveData=false;
 
 // ════ NAV ════
-const PAGES={dashboard:'📊 Dashboard',transactions:'📋 รายการทั้งหมด',import:'📂 Import / Sync',search:'🔍 ค้นหา',region:'🗺️ Region',print:'🖨️ Print ใบเบิก'};
+const PAGES={dashboard:'📊 Dashboard',transactions:'📋 รายการทั้งหมด',import:'📂 Import / Sync',search:'🔍 ค้นหา',region:'🗺️ Region',print:'🖨️ Print ใบเบิก',bom:'📝 จัดการ BOM'};
 function pg(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));document.getElementById('page-'+id)?.classList.add('active');if(el)el.classList.add('active');document.getElementById('pgTitle').textContent=PAGES[id]||id;cSb();if(id==='region')setTimeout(drawRgChart,100);}
 function tSb(){document.getElementById('sb').classList.toggle('open');document.getElementById('sbov').classList.toggle('show')}
 function cSb(){document.getElementById('sb').classList.remove('open');document.getElementById('sbov').classList.remove('show')}
@@ -498,21 +553,67 @@ function closeM(){document.getElementById('modal').classList.remove('show');}
 function addItemRow(itype='',model='',code='',desc='',qty=1,sn=''){
   itemRowCount++;const n=itemRowCount;
   updateItemCount();
-  const typeOpts=ITYPE_LIST.map(t=>`<option${t===itype?' selected':''}>${t}</option>`).join('');
-  const modelOpts=['<option value="">-- เลือก --</option>',...ITEM_MASTER.map(m=>`<option${m.model===model?' selected':''}>${m.model}</option>`)].join('');
   const row=document.createElement('div');
   row.className='item-row';row.id=`ir${n}`;
   row.innerHTML=`
     <div class="item-row-hdr"><span class="item-row-num">สินค้า #${n}</span><button class="del-item" onclick="delItem(${n})">ลบรายการ</button></div>
-    <div class="frow"><div class="fg"><label class="fl">ประเภท (Type)</label><select class="fi" id="itype${n}">${typeOpts}</select></div><div class="fg"><label class="fl">Model</label><select class="fi" id="imodel${n}" onchange="fillItemCode(${n})">${modelOpts}</select></div></div>
+    <div class="frow"><div class="fg"><label class="fl">ประเภท (Type)</label><select class="fi" id="itype${n}" onchange="updateModelOptions(${n})"></select></div><div class="fg"><label class="fl">Model</label><select class="fi" id="imodel${n}" onchange="fillItemCode(${n})"></select></div></div>
     <div class="frow"><div class="fg"><label class="fl">Item Code</label><input class="fi" id="icode${n}" value="${code}" placeholder="รหัสสินค้า" style="color:var(--blue)"></div><div class="fg"><label class="fl">Item Description</label><input class="fi" id="idesc${n}" value="${desc}" placeholder="รายละเอียดสินค้า"></div></div>
     <div class="frow"><div class="fg"><label class="fl">SN</label><div style="display:flex;gap:5px"><input class="fi" id="isn${n}" value="${sn}" placeholder="Serial Number"><button class="fbtn-scan">📷 Scan</button></div></div><div class="fg"><label class="fl">จำนวน</label><div style="display:flex;gap:5px"><input class="fi" id="iqty${n}" type="number" value="${qty}" min="1" style="flex:1"><button class="del-item" style="background:rgba(255,77,106,.12)" onclick="delItem(${n})">ลบรายการ</button></div></div></div>`;
   document.getElementById('itemRows').appendChild(row);
-  if(model)fillItemCode(n);
+
+  // Populate Type options initially based on Customer
+  const bom = getActiveBOM();
+  const types = [...new Set(bom.map(x=>x.type).filter(x=>x))];
+  document.getElementById('itype'+n).innerHTML = '<option value="">-- เลือกประเภท --</option>' + types.map(t=>`<option${t===itype?' selected':''}>${t}</option>`).join('');
+  
+  updateModelOptions(n, model);
   updateItemCount();
 }
+
+function updateModelOptions(n, defaultModel='') {
+  const bom = getActiveBOM();
+  const typeSel = document.getElementById('itype'+n);
+  const modelSel = document.getElementById('imodel'+n);
+  if(!typeSel || !modelSel) return;
+  const selType = typeSel.value;
+  const filtered = selType ? bom.filter(x => x.type === selType) : bom;
+  
+  const currentModel = defaultModel || modelSel.value;
+  modelSel.innerHTML = '<option value="">-- เลือก --</option>' + filtered.map(m => `<option ${m.model===currentModel ? 'selected':''}>${m.model}</option>`).join('');
+  fillItemCode(n, true);
+}
+
+function onCustomerChange() {
+  const rows = document.querySelectorAll('.item-row');
+  rows.forEach(row => {
+    const n = row.id.replace('ir','');
+    const curModel = document.getElementById('imodel'+n).value;
+    const curType = document.getElementById('itype'+n).value;
+    
+    const bom = getActiveBOM();
+    const types = [...new Set(bom.map(x=>x.type).filter(x=>x))];
+    document.getElementById('itype'+n).innerHTML = '<option value="">-- เลือกประเภท --</option>' + types.map(t=>`<option${t===curType?' selected':''}>${t}</option>`).join('');
+    
+    updateModelOptions(n, curModel);
+  });
+}
+
 function addItemRowPrefilled(it,m,c,d,q,s){addItemRow(it,m,c,d,q,s);}
-function fillItemCode(n){const sel=document.getElementById('imodel'+n);const m=ITEM_MASTER.find(x=>x.model===sel.value);if(m){document.getElementById('icode'+n).value=m.code;document.getElementById('idesc'+n).value=m.desc;}}
+function fillItemCode(n, fromTypeChange=false){
+  const sel=document.getElementById('imodel'+n);
+  const bom = getActiveBOM();
+  const m = bom.find(x=>x.model===sel.value);
+  if(m){
+    document.getElementById('icode'+n).value=m.code;
+    document.getElementById('idesc'+n).value=m.desc;
+    const tSel = document.getElementById('itype'+n);
+    if(!tSel.value) { tSel.value = m.type; updateModelOptions(n, m.model); }
+  } else if (!fromTypeChange) {
+    document.getElementById('icode'+n).value='';
+    document.getElementById('idesc'+n).value='';
+  }
+}
 function delItem(n){const el=document.getElementById('ir'+n);if(el)el.remove();updateItemCount();}
 function updateItemCount(){const cnt=document.querySelectorAll('.item-row').length;document.getElementById('itemCount').textContent=cnt+' รายการ';}
 function getItems(){const rows=document.querySelectorAll('.item-row');const items=[];rows.forEach(row=>{const n=row.id.replace('ir','');items.push({itype:document.getElementById('itype'+n)?.value||'',model:document.getElementById('imodel'+n)?.value||'',code:document.getElementById('icode'+n)?.value||'',desc:document.getElementById('idesc'+n)?.value||'',sn:document.getElementById('isn'+n)?.value||'',qty:+(document.getElementById('iqty'+n)?.value||1)});});return items.filter(i=>i.model||i.sn||i.qty>1);}
