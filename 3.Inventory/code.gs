@@ -25,6 +25,12 @@ var NODE_JS_WEBHOOK_URL = 'https://project-ju28a.vercel.app/notify';
 function doGet(e) {
   if (!e || !e.parameter) return HtmlService.createHtmlOutput("Please access via Web App URL");
 
+  if (e.parameter.export === "dashboard") {
+    var result = getDashboardData();
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (e.parameter.duid) {
     var result = searchByDuidOnly(e.parameter.duid);
     if (e.parameter.format === "text")
@@ -1192,3 +1198,146 @@ function runGasSystemTests() {
 function testOcrEngine() {
   Logger.log("🔍 OCR Engine Ready - V.6.9.1");
 }
+
+// ─────────────────────────────────────────────
+// DASHBOARD DATA API — V.7.2.0
+// เรียกจาก dashboard_demo.html ผ่าน google.script.run
+// คืนข้อมูลสรุป KPI, รายการล่าสุด, สรุปตาม Region
+// ─────────────────────────────────────────────
+
+function getDashboardData() {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheets = ["INOUT_HW_AIS", "INOUT_HW_TRUE"];
+    var today  = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
+    var allRows = [];
+
+    sheets.forEach(function(sheetName) {
+      var sheet = ss.getSheetByName(sheetName);
+      if (!sheet) return;
+      var data = sheet.getDataRange().getValues();
+      if (data.length < 2) return;
+
+      var h = data[0].map(function(v) { return String(v || "").trim().toUpperCase(); });
+      var idx = {
+        runNo:  Math.max(h.indexOf("NO"), 0),
+        duid:   Math.max(h.indexOf("DUID"), 1),
+        region: Math.max(h.indexOf("REGION"), 2),
+        type:   Math.max(h.indexOf("IN/OUT"), 3),
+        itype:  Math.max(h.indexOf("TYPE"), 4),
+        date:   Math.max(h.indexOf("DATE"), 5),
+        bill:   Math.max(h.indexOf("BILL NO."), h.indexOf("BILL NO"), 6),
+        model:  Math.max(h.indexOf("MODEL"), 7),
+        code:   Math.max(h.indexOf("ITEM CODE"), 8),
+        desc:   Math.max(h.indexOf("ITEM DESCRIPTION"), 9),
+        qty:    Math.max(h.indexOf("SUM OF REQ.QTY"), 10),
+        sn:     Math.max(h.indexOf("SERIAL"), 11),
+        ownerW: Math.max(h.indexOf("OWNER WAREHOUSE"), 12),
+        ownerR: Math.max(h.indexOf("OWNER RECEIVER"), 13),
+        locW:   Math.max(h.indexOf("LOCATION WAREHOUSE"), 14),
+        locR:   Math.max(h.indexOf("LOCATION RECEIVER"), 15),
+        status: Math.max(h.indexOf("STATUS"), 21),
+        intNo:  Math.max(h.indexOf("INTERNAL NO"), 22),
+        userEm: Math.max(h.indexOf("USER EMAIL"), 23),
+        userNm: Math.max(h.indexOf("USER NAME"), 24)
+      };
+
+      var cus = sheetName.indexOf("TRUE") > -1 ? "TRUE" : "AIS";
+      for (var i = 1; i < data.length; i++) {
+        var row = data[i];
+        if (!row[idx.duid]) continue;
+        allRows.push({
+          no:       row[idx.runNo]  || (i),
+          duid:     String(row[idx.duid]   || ""),
+          region:   String(row[idx.region] || ""),
+          type:     String(row[idx.type]   || ""),
+          itype:    String(row[idx.itype]  || ""),
+          date:     String(row[idx.date]   || ""),
+          bill:     String(row[idx.bill]   || ""),
+          model:    String(row[idx.model]  || ""),
+          code:     String(row[idx.code]   || ""),
+          desc:     String(row[idx.desc]   || ""),
+          qty:      Number(row[idx.qty])   || 0,
+          sn:       String(row[idx.sn]     || ""),
+          ownerW:   String(row[idx.ownerW] || ""),
+          ownerR:   String(row[idx.ownerR] || ""),
+          locW:     String(row[idx.locW]   || ""),
+          locR:     String(row[idx.locR]   || ""),
+          status:   String(row[idx.status] || "Pending"),
+          intNo:    String(row[idx.intNo]  || ""),
+          userEm:   String(row[idx.userEm] || ""),
+          userNm:   String(row[idx.userNm] || ""),
+          customer: cus
+        });
+      }
+    });
+
+    // ─── คำนวณ KPI ───
+    var todayRows  = allRows.filter(function(r) { return r.date === today; });
+    var inToday    = todayRows.filter(function(r) { return r.type.toUpperCase() === "IN"; }).length;
+    var outToday   = todayRows.filter(function(r) { return r.type.toUpperCase() === "OUT"; }).length;
+    var disToday   = todayRows.filter(function(r) { return r.type.toUpperCase() === "DISMANTLE"; }).length;
+    var strInToday = todayRows.filter(function(r) { return r.type.toUpperCase() === "STR/IN"; }).length;
+    var pendingCnt = allRows.filter(function(r) { return r.status === "Pending" || r.status === "On Process"; }).length;
+    var duidSet    = {};
+    allRows.forEach(function(r) { duidSet[r.duid] = true; });
+    var activeDuid = Object.keys(duidSet).length;
+
+    // ─── สรุปตาม Region ───
+    var regionMap = {};
+    allRows.forEach(function(r) {
+      var rg = r.region || "Unknown";
+      if (!regionMap[rg]) regionMap[rg] = 0;
+      regionMap[rg]++;
+    });
+
+    // ─── Week trend (7 วัน) ───
+    var weekMap = {};
+    var now = new Date();
+    for (var d = 6; d >= 0; d--) {
+      var dd = new Date(now.getTime() - d * 86400000);
+      var lbl = Utilities.formatDate(dd, "GMT+7", "dd/MM");
+      weekMap[lbl] = { in: 0, out: 0, dismantle: 0, strIn: 0 };
+    }
+    allRows.forEach(function(r) {
+      // date format dd/MM/yyyy → truncate to dd/MM
+      var shortDate = (r.date || "").substring(0, 5);
+      if (weekMap[shortDate]) {
+        var t = r.type.toUpperCase();
+        if (t === "IN")  weekMap[shortDate]["in"]++;
+        if (t === "OUT") weekMap[shortDate]["out"]++;
+        if (t === "DISMANTLE") weekMap[shortDate]["dismantle"]++;
+        if (t === "STR/IN") weekMap[shortDate]["strIn"]++;
+      }
+    });
+
+    // ─── 60 รายการล่าสุด ───
+    var recent = allRows.slice(0, 60);
+
+    return {
+      success:    true,
+      kpi: {
+        inToday:    inToday,
+        outToday:   outToday,
+        disToday:   disToday,
+        strInToday: strInToday,
+        pending:    pendingCnt,
+        activeDuid: activeDuid,
+        total:      allRows.length
+      },
+      recent:     recent,
+      regionMap:  regionMap,
+      weekLabels: Object.keys(weekMap),
+      weekIn:     Object.values(weekMap).map(function(v) { return v["in"]; }),
+      weekOut:    Object.values(weekMap).map(function(v) { return v["out"]; }),
+      weekDis:    Object.values(weekMap).map(function(v) { return v["dismantle"]; }),
+      weekStrIn:  Object.values(weekMap).map(function(v) { return v["strIn"]; }),
+      fetchedAt:  Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy HH:mm:ss")
+    };
+
+  } catch (e) {
+    logToSheet("DASHBOARD_ERROR", e.toString());
+    return { success: false, message: e.toString() };
+  }
+}
+

@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📦 Smart Inventory Dashboard V.7.4.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--sw:260px;--primary:#00c28a;--pd:#009e6f;--dark:#0e1017;--card:#181b26;--card2:#1e2232;--border:rgba(255,255,255,0.07);--text:#e8ecf4;--muted:#8892a4;--red:#ff4d6a;--blue:#4d9fff;--yellow:#ffd94d;--purple:#b26dff;--orange:#ff9f4d}
+body{font-family:'Sarabun',sans-serif;background:var(--dark);color:var(--text);display:flex;min-height:100vh;overflow-x:hidden}
+/* Sidebar */
+#sb{width:var(--sw);background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:1000;transition:transform .3s}
+.sb-logo{padding:20px 18px 14px;border-bottom:1px solid var(--border)}.sb-logo h2{font-size:16px;font-weight:800;color:var(--primary)}.sb-logo p{font-size:10px;color:var(--muted);margin-top:1px}
+.sb-user{padding:10px 18px;background:rgba(0,194,138,.06);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.u-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--blue));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}
+.u-info strong{display:block;font-size:12px;font-weight:700}.u-info span{font-size:10px;color:var(--primary)}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 0;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.nav-sec{font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--muted);padding:12px 18px 4px;text-transform:uppercase}
+.ni{display:flex;align-items:center;gap:11px;padding:9px 18px;cursor:pointer;font-size:13px;color:var(--muted);border-left:3px solid transparent;transition:all .18s;text-decoration:none;user-select:none}
+.ni:hover{background:rgba(255,255,255,.04);color:var(--text)}.ni.active{background:rgba(0,194,138,.11);color:var(--primary);border-left-color:var(--primary);font-weight:700}
+.ni-ic{font-size:15px;width:20px;text-align:center;flex-shrink:0}.n-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;min-width:18px;text-align:center}
+.ni.t-dis:hover,.ni.t-dis.active{color:var(--purple);border-left-color:var(--purple);background:rgba(178,109,255,.1)}
+.ni.t-stri:hover,.ni.t-stri.active{color:var(--blue);border-left-color:var(--blue);background:rgba(77,159,255,.1)}
+.ni.t-stro:hover,.ni.t-stro.active{color:var(--orange);border-left-color:var(--orange);background:rgba(255,159,77,.1)}
+.ni.t-ret:hover,.ni.t-ret.active{color:var(--yellow);border-left-color:var(--yellow);background:rgba(255,217,77,.1)}
+.sb-foot{padding:10px 18px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);text-align:center}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}.ldot{width:7px;height:7px;background:var(--primary);border-radius:50%;animation:pulse 2s infinite;display:inline-block;margin-right:4px}
+/* Main */
+#main{margin-left:var(--sw);flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:0 22px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:500}
+.tb-left{display:flex;align-items:center;gap:11px}#hbg{display:none;background:none;border:none;color:var(--text);font-size:21px;cursor:pointer;padding:6px;border-radius:8px}
+.tb-right{display:flex;align-items:center;gap:7px}
+.tbtn{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:7px 12px;font-size:12px;font-family:'Sarabun',sans-serif;cursor:pointer;transition:background .2s;white-space:nowrap}
+.tbtn:hover{background:rgba(255,255,255,.1)}.tbtn.g{background:linear-gradient(135deg,var(--primary),var(--pd));border-color:transparent;color:#fff;font-weight:700}.tbtn.b{background:linear-gradient(135deg,#1a6fda,#0043a8);border-color:transparent;color:#fff;font-weight:700}.tbtn.r{background:linear-gradient(135deg,#e0002b,#9b0020);border-color:transparent;color:#fff;font-weight:700}
+.pg-title{font-size:14px;font-weight:700}.pg-sub{font-size:10px;color:var(--muted);margin-top:1px}
+#importBar{background:rgba(0,194,138,.1);border:1px solid rgba(0,194,138,.3);border-radius:10px;padding:8px 14px;margin-bottom:14px;font-size:11px;align-items:center;gap:10px;display:none}#importBar.show{display:flex}.ibar-dot{width:8px;height:8px;background:var(--primary);border-radius:50%;flex-shrink:0}
+.content{padding:20px;flex:1}.page{display:none}.page.active{display:block}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.kc{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.kc:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.3)}.kc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--cc,var(--primary))}
+.k-ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px}
+.k-lbl{font-size:10px;color:var(--muted);font-weight:700;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}.k-val{font-size:28px;font-weight:800;line-height:1}.k-sub{font-size:10px;color:var(--muted);margin-top:6px}
+.kg{--cc:#00c28a}.kr{--cc:#ff4d6a}.kb{--cc:#4d9fff}.kp{--cc:#b26dff}
+/* Charts */
+.dash-row{display:grid;grid-template-columns:1fr 340px;gap:12px;margin-bottom:18px}
+.cc,.ac,.tc{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+.c-title{font-size:13px;font-weight:700}.c-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.c-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.leg{display:flex;gap:10px;flex-wrap:wrap}.li{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)}.ld{width:8px;height:8px;border-radius:50%}
+.ac{display:flex;flex-direction:column}.a-list{flex:1;display:flex;flex-direction:column;gap:6px;overflow-y:auto;max-height:250px}
+.ai{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card2);border-radius:9px;border:1px solid var(--border)}.ai:hover{background:rgba(255,255,255,.04)}
+.ab{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap}
+.b-in{background:rgba(0,194,138,.2);color:var(--primary)}.b-out{background:rgba(255,77,106,.2);color:var(--red)}.b-dis{background:rgba(178,109,255,.2);color:var(--purple)}.b-str{background:rgba(77,159,255,.2);color:var(--blue)}.b-stro{background:rgba(255,159,77,.2);color:var(--orange)}.b-ret{background:rgba(255,217,77,.2);color:var(--yellow)}
+.ai-info{flex:1;min-width:0}.ai-d{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ai-m{font-size:9px;color:var(--muted);margin-top:1px}.ai-t{font-size:9px;color:var(--muted);flex-shrink:0}
+/* Region */
+.mg{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:18px}
+.mc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:transform .2s;cursor:pointer}.mc:hover{transform:translateY(-2px)}
+.m-lbl{font-size:10px;color:var(--muted);margin-bottom:3px}.m-val{font-size:22px;font-weight:800}.m-sub{font-size:9px;color:var(--muted);margin-top:1px}.r-bar{height:3px;border-radius:3px;margin-top:6px}
+/* Table */
+.tc{margin-bottom:20px}
+.t-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.sbox{display:flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:6px 10px}
+.sbox input{background:none;border:none;outline:none;color:var(--text);font-size:12px;font-family:'Sarabun',sans-serif;width:150px}.sbox input::placeholder{color:var(--muted)}
+.ftabs{display:flex;gap:4px;flex-wrap:wrap}
+.ft{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Sarabun',sans-serif;transition:all .18s}.ft:hover{background:rgba(255,255,255,.06);color:var(--text)}.ft.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+table{width:100%;border-collapse:collapse}
+thead th{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}tbody tr:hover{background:rgba(255,255,255,.025)}tbody tr:last-child{border-bottom:none}
+tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
+.td-d{font-weight:700;color:var(--primary);font-family:monospace;font-size:11px}
+.sp{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700}.s-open{background:rgba(0,194,138,.15);color:var(--primary)}.s-closed{background:rgba(255,77,106,.15);color:var(--red)}.s-proc{background:rgba(255,217,77,.15);color:var(--yellow)}
+.prnbtn{background:none;border:none;cursor:pointer;font-size:14px;padding:2px 5px;border-radius:6px;transition:background .15s;color:var(--muted)}.prnbtn:hover{background:rgba(255,255,255,.1);color:var(--text)}
+/* ─── FORM MODAL (matches app.html style) ─── */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);z-index:9000;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0}
+.ov.show{display:flex}
+@keyframes pop{from{transform:scale(.92) translateY(-10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.mbox{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:0;width:96%;max-width:700px;animation:pop .22s cubic-bezier(.34,1.56,.64,1);margin:auto}
+/* Form header */
+.fhdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.fhdr-title{font-size:16px;font-weight:800;flex:1}.fhdr-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:4px;border-radius:8px;line-height:1}.fhdr-close:hover{background:rgba(255,255,255,.08);color:var(--text)}
+/* Type pills */
+.type-pills{display:flex;gap:6px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.tp{padding:5px 13px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Sarabun',sans-serif;transition:all .18s}
+.tp:hover{border-color:var(--muted);color:var(--text)}.tp.active-in{background:var(--primary);color:#fff;border-color:var(--primary)}.tp.active-out{background:var(--red);color:#fff;border-color:var(--red)}.tp.active-dis{background:var(--purple);color:#fff;border-color:var(--purple)}.tp.active-stri{background:var(--blue);color:#fff;border-color:var(--blue)}.tp.active-stro{background:var(--orange);color:#fff;border-color:var(--orange)}.tp.active-ret{background:var(--yellow);color:#222;border-color:var(--yellow)}
+/* Form body */
+.fbody{padding:18px 20px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.frow.full{grid-template-columns:1fr}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.fl.req::after{content:'*';color:var(--red);margin-left:3px}
+.fi{width:100%;padding:9px 12px;background:var(--card2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:12px;font-family:'Sarabun',sans-serif;outline:none;transition:border-color .2s}.fi:focus{border-color:var(--primary)}.fi::placeholder{color:var(--muted)}.fi option{background:var(--card2)}
+.fi.err{border-color:var(--red) !important}
+.fbtn-scan{padding:9px 13px;background:rgba(77,159,255,.15);border:1px solid rgba(77,159,255,.4);border-radius:9px;color:var(--blue);font-size:11px;font-family:'Sarabun',sans-serif;cursor:pointer;font-weight:700;white-space:nowrap}
+.fbtn-srch{width:100%;padding:10px;background:linear-gradient(90deg,#1a6fda,#0043a8);border:none;border-radius:9px;color:#fff;font-size:12px;font-family:'Sarabun',sans-serif;cursor:pointer;font-weight:700;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:7px}
+.fbtn-srch.green{background:linear-gradient(90deg,var(--primary),var(--pd))}
+/* Auto-complete dropdown */
+.ac-wrap{position:relative}
+.ac-drop{position:absolute;top:calc(100%+3px);left:0;right:0;background:var(--card2);border:1px solid var(--border);border-radius:10px;z-index:9999;max-height:200px;overflow-y:auto;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.ac-item{padding:9px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s}
+.ac-item:last-child{border-bottom:none}.ac-item:hover{background:rgba(0,194,138,.12);color:var(--primary)}
+.ac-item .ac-code{font-size:10px;color:var(--muted);margin-top:2px}
+/* Item rows */
+.items-section{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px}
+.items-hdr{background:var(--card2);padding:10px 14px;font-size:11px;font-weight:700;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.item-row{padding:12px 14px;border-bottom:1px solid var(--border);background:var(--card)}
+.item-row:last-child{border-bottom:none}
+.item-row-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.item-row-num{font-size:10px;font-weight:700;color:var(--primary);background:rgba(0,194,138,.1);padding:2px 8px;border-radius:20px}
+.del-item{background:rgba(255,77,106,.15);border:none;border-radius:7px;color:var(--red);cursor:pointer;font-size:11px;padding:3px 8px;font-family:'Sarabun',sans-serif;font-weight:700}
+.del-item:hover{background:rgba(255,77,106,.3)}
+.add-item-btn{width:100%;padding:11px;background:rgba(77,159,255,.08);border:1px dashed rgba(77,159,255,.3);border-radius:10px;color:var(--blue);font-size:12px;font-family:'Sarabun',sans-serif;cursor:pointer;font-weight:700;transition:all .2s}
+.add-item-btn:hover{background:rgba(77,159,255,.14);border-color:rgba(77,159,255,.5)}
+/* Form actions */
+.factions{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:10px;background:rgba(0,0,0,.15)}
+.bcanc{flex:0 0 120px;padding:11px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--muted);font-size:13px;font-family:'Sarabun',sans-serif;cursor:pointer;font-weight:700;transition:background .2s}.bcanc:hover{background:rgba(255,255,255,.06)}
+.bsave{flex:1;padding:11px;background:linear-gradient(135deg,var(--primary),var(--pd));border:none;border-radius:10px;color:#fff;font-size:13px;font-family:'Sarabun',sans-serif;cursor:pointer;font-weight:800;transition:filter .2s;display:flex;align-items:center;justify-content:center;gap:8px}.bsave:hover{filter:brightness(1.1)}
+/* Import */
+.imp-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:18px}
+.imp-title{font-size:14px;font-weight:700;margin-bottom:3px}.imp-sub{font-size:11px;color:var(--muted);margin-bottom:14px}
+.imp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.imp-box{background:var(--card2);border:2px dashed var(--border);border-radius:12px;padding:18px 12px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}.imp-box:hover{border-color:var(--primary);background:rgba(0,194,138,.05)}
+.ib-icon{font-size:26px;margin-bottom:6px}.ib-title{font-size:12px;font-weight:700;margin-bottom:3px}.ib-sub{font-size:10px;color:var(--muted)}
+.prog-wrap{margin-top:12px;display:none}.prog-bar{height:5px;background:rgba(255,255,255,.1);border-radius:5px;overflow:hidden}.prog-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--blue));border-radius:5px;transition:width .3s;width:0%}.prog-text{font-size:10px;color:var(--muted);margin-top:4px;text-align:center}
+/* Search page */
+.srch-bar{display:flex;gap:8px;margin-bottom:4px}
+.srch-bar input{flex:1;padding:9px 12px;background:var(--card2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:12px;font-family:'Sarabun',sans-serif;outline:none;transition:border-color .2s}.srch-bar input:focus{border-color:var(--primary)}.srch-bar input::placeholder{color:var(--muted)}
+.srch-bar button{padding:9px 16px;background:linear-gradient(135deg,var(--primary),var(--pd));border:none;border-radius:9px;color:#fff;font-size:12px;font-family:'Sarabun',sans-serif;cursor:pointer;font-weight:700}
+/* Toast */
+#toasts{position:fixed;top:16px;right:16px;z-index:99999;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.toast{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;min-width:220px;display:flex;align-items:center;gap:9px;box-shadow:0 8px 30px rgba(0,0,0,.4);pointer-events:auto}
+@keyframes tsIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes tsOut{from{opacity:1}to{transform:translateX(110%);opacity:0}}
+.toast{animation:tsIn .25s ease}.toast.out{animation:tsOut .25s ease forwards}
+.t-ic{font-size:18px;flex-shrink:0}.t-msg{font-size:11px;font-weight:600}
+/* Sync status */
+.sync-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700}
+.sync-live{background:rgba(0,194,138,.15);color:var(--primary)}.sync-demo{background:rgba(255,217,77,.12);color:var(--yellow)}
+/* Mobile */
+#sbov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999}
+@media(max-width:900px){#sb{transform:translateX(-100%)}#sb.open{transform:translateX(0)}#main{margin-left:0}#hbg{display:flex}#sbov.show{display:block}.dash-row{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}.mg{grid-template-columns:repeat(3,1fr)}.imp-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}}
+@media(max-width:540px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.content{padding:12px}.imp-grid{grid-template-columns:1fr}.tb-right .tbtn span{display:none}}
+/* Print */
+@media print{#sb,#main>.topbar,#toasts,.no-print{display:none!important}#main{margin-left:0}body{background:#fff;color:#000}#printDoc{display:block!important}}
+#printDoc{display:none;font-family:'Sarabun','TH Sarabun New',sans-serif;font-size:13px;color:#000;background:#fff}
+.pd-page{width:210mm;min-height:148mm;padding:14mm 16mm;margin:0 auto;background:#fff;page-break-after:always}.pd-page:last-child{page-break-after:auto}
+.pd-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #000;padding-bottom:9px;margin-bottom:12px}
+.pd-logo{font-size:20px;font-weight:900}.pd-logo span{font-size:11px;font-weight:400;display:block;color:#555}
+.pd-doctype{text-align:right}.pd-doctype h2{font-size:17px;font-weight:900}.doc-no{font-size:11px;color:#555}
+.pd-info{display:grid;grid-template-columns:1fr 1fr;gap:5px 18px;margin-bottom:12px;font-size:11px}.pd-info-row{display:flex;gap:5px}.pd-info-lbl{font-weight:700;min-width:120px;color:#333}
+.pd-table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:12px}.pd-table th{background:#1a1a2e;color:#fff;padding:6px 7px;text-align:left;font-weight:700}.pd-table td{padding:5px 7px;border-bottom:1px solid #ddd;vertical-align:middle}.pd-table tr:nth-child(even) td{background:#f8f9fa}
+.pd-sig{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:18px}.pd-sig-box{text-align:center;border-top:1px solid #000;padding-top:5px;font-size:10px}.pd-sig-name{margin-top:40px}
+.pd-footer{text-align:center;font-size:9px;color:#888;margin-top:8px;border-top:1px solid #ddd;padding-top:7px}
+.pd-ais{border-top:4px solid #d4000a}.pd-true{border-top:4px solid #0066cc}
+.pd-badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+.pd-badge-ais{background:#ffeaea;color:#d4000a;border:1px solid #d4000a}.pd-badge-true{background:#eaf0ff;color:#0066cc;border:1px solid #0066cc}
+</style>
+</head>
+<body>
+<div id="sbov" onclick="cSb()"></div>
+<nav id="sb">
+  <div class="sb-logo"><h2>📦 SmartStock</h2><p>Inventory V.7.4.0</p></div>
+  <div class="sb-user"><div class="u-av">TL</div><div class="u-info"><strong>TLN Admin</strong><span id="syncBadge" class="sync-badge sync-demo">● Demo</span></div></div>
+  <nav class="sb-nav">
+    <div class="nav-sec">หน้าหลัก</div>
+    <a class="ni active" onclick="pg('dashboard',this)"><span class="ni-ic">🏠</span>Dashboard</a>
+    <a class="ni" onclick="pg('transactions',this)"><span class="ni-ic">📋</span>รายการทั้งหมด<span class="n-badge" id="nbPending">-</span></a>
+    <a class="ni" onclick="pg('import',this)"><span class="ni-ic">📂</span>Import / Sync ข้อมูล</a>
+    <a class="ni" onclick="pg('search',this)"><span class="ni-ic">🔍</span>ค้นหา DUID / Bill</a>
+    <div class="nav-sec">บันทึกข้อมูล</div>
+    <a class="ni" onclick="openM('IN')"><span class="ni-ic">📥</span>รับเข้า (IN)</a>
+    <a class="ni" onclick="openM('OUT')"><span class="ni-ic">📤</span>ส่งออก (OUT)</a>
+    <a class="ni t-dis" onclick="openM('DISMANTLE')"><span class="ni-ic">🔧</span>รื้อถอน (DISMANTLE)</a>
+    <a class="ni t-stri" onclick="openM('STR/IN')"><span class="ni-ic">🔄</span>รับเข้าคลัง (STR/IN)</a>
+    <a class="ni t-stro" onclick="openM('STR/OUT')"><span class="ni-ic">🚚</span>ส่งออกคลัง (STR/OUT)</a>
+    <a class="ni t-ret" onclick="openM('RETURN')"><span class="ni-ic">🔙</span>คืนของ (RETURN)</a>
+    <div class="nav-sec">รายงาน</div>
+    <a class="ni" onclick="pg('region',this)"><span class="ni-ic">🗺️</span>สรุปตาม Region</a>
+    <a class="ni" onclick="pg('print',this)"><span class="ni-ic">🖨️</span>Print ใบเบิก (Teloneer)</a>
+  </nav>
+  <div class="sb-foot"><span class="ldot"></span>Smart Inventory V.7.4.0</div>
+</nav>
+
+<div id="main">
+  <header class="topbar">
+    <div class="tb-left"><button id="hbg" onclick="tSb()">☰</button><div><div class="pg-title" id="pgTitle">📊 Dashboard</div><div class="pg-sub" id="pgSub">กำลังโหลด...</div></div></div>
+    <div class="tb-right">
+      <button class="tbtn no-print" onclick="syncNow()">🔄 <span>Sync</span></button>
+      <button class="tbtn b no-print" onclick="pg('import',document.querySelectorAll('.ni')[3])">📂 <span>Import</span></button>
+      <button class="tbtn g no-print" onclick="openM('IN')">➕ <span>บันทึก</span></button>
+    </div>
+  </header>
+  <div class="content">
+    <div id="importBar"><div class="ibar-dot"></div><span id="importBarText"></span><span style="margin-left:auto;cursor:pointer;color:var(--muted)" onclick="this.parentElement.classList.remove('show')">✕</span></div>
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="kpi-grid">
+        <div class="kc kg"><div class="k-ic" style="background:rgba(0,194,138,.15)">📥</div><div class="k-lbl">IN + STR/IN</div><div class="k-val" id="kIn">0</div><div class="k-sub" style="color:var(--primary)">▲ ยอดรับเข้าวันนี้</div></div>
+        <div class="kc kr"><div class="k-ic" style="background:rgba(255,77,106,.15)">📤</div><div class="k-lbl">OUT + DISMANTLE</div><div class="k-val" id="kOut">0</div><div class="k-sub" style="color:var(--red)">▼ ยอดนำออกวันนี้</div></div>
+        <div class="kc kb"><div class="k-ic" style="background:rgba(77,159,255,.15)">🏷️</div><div class="k-lbl">DUID Active</div><div class="k-val" id="kDuid">0</div><div class="k-sub" style="color:var(--blue)">รายการในระบบ</div></div>
+        <div class="kc kp"><div class="k-ic" style="background:rgba(178,109,255,.15)">⏳</div><div class="k-lbl">รอดำเนินการ</div><div class="k-val" id="kPend">0</div><div class="k-sub" style="color:var(--purple)">Pending / On Process</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:16px" id="typeMini"></div>
+      <div class="dash-row">
+        <div class="cc"><div class="c-hdr"><div><div class="c-title">📈 สถิติรายวัน (7 วันล่าสุด)</div><div class="c-sub">แยกตามประเภท</div></div><div class="leg"><div class="li"><div class="ld" style="background:var(--primary)"></div>IN</div><div class="li"><div class="ld" style="background:var(--blue)"></div>STR/IN</div><div class="li"><div class="ld" style="background:var(--red)"></div>OUT</div><div class="li"><div class="ld" style="background:var(--purple)"></div>DIS</div><div class="li"><div class="ld" style="background:var(--orange)"></div>STR/OUT</div><div class="li"><div class="ld" style="background:var(--yellow)"></div>RET</div></div></div><canvas id="lineChart" style="max-height:230px"></canvas></div>
+        <div class="ac"><div class="c-title" style="margin-bottom:10px">⚡ กิจกรรมล่าสุด</div><div class="a-list" id="actList"></div></div>
+      </div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px">🗺️ สรุปตาม Region</div>
+      <div class="mg" id="rgMini"></div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="page" id="page-transactions">
+      <div class="tc">
+        <div class="t-hdr">
+          <div class="c-title">📋 รายการทั้งหมด (<span id="txCount">0</span>)</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <div class="sbox">🔍<input type="text" placeholder="DUID / Bill / Model / Item Code..." id="txQ" oninput="applyF()"></div>
+            <div class="ftabs">
+              <button class="ft active" onclick="setF('ALL',this)">ทั้งหมด</button>
+              <button class="ft" onclick="setF('IN',this)">IN</button>
+              <button class="ft" onclick="setF('OUT',this)">OUT</button>
+              <button class="ft" onclick="setF('DISMANTLE',this)">DISMANTLE</button>
+              <button class="ft" onclick="setF('STR/IN',this)">STR/IN</button>
+              <button class="ft" onclick="setF('STR/OUT',this)">STR/OUT</button>
+              <button class="ft" onclick="setF('RETURN',this)">RETURN</button>
+              <button class="ft" onclick="setF('AIS',this)">AIS</button>
+              <button class="ft" onclick="setF('TRUE',this)">TRUE</button>
+            </div>
+            <button class="tbtn g no-print" onclick="printBill(null,'AIS')" style="font-size:10px;padding:5px 9px">🖨️ AIS</button>
+            <button class="tbtn b no-print" onclick="printBill(null,'TRUE')" style="font-size:10px;padding:5px 9px">🖨️ TRUE</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto"><table><thead><tr><th></th><th>No</th><th>DUID</th><th>Bill No.</th><th>ประเภท</th><th>Region</th><th>ลูกค้า</th><th>Model</th><th>Item Code</th><th>Description</th><th>จำนวน</th><th>Serial No.</th><th>สถานะ</th><th>วันที่</th></tr></thead><tbody id="txBody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- Import/Sync -->
+    <div class="page" id="page-import">
+      <div class="imp-panel">
+        <div class="imp-title">🔄 Sync & Import ข้อมูล</div>
+        <div class="imp-sub">ดึงข้อมูลจาก GAS Web App หรือนำเข้าจาก CSV</div>
+        <div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:var(--primary)">🌐 Sync จาก GAS Web App URL</div>
+          <div style="display:flex;gap:8px">
+            <input class="fi" id="apiUrlInput" placeholder="https://script.google.com/macros/.../exec" value="https://script.google.com/a/macros/technow.co.th/s/AKfycbwoTnwaExeObR_54tVajXxz7j2rAsQlyIWN3rbaGfTXxf9-HZ8oAMs4_gKOhrFx7b6b/exec" style="flex:1">
+            <button class="tbtn g" onclick="syncFromURL()" style="white-space:nowrap">🔄 Sync Now</button>
+          </div>
+          <div id="syncStatus" style="font-size:10px;color:var(--muted);margin-top:6px">ยังไม่ได้ Sync — กดเพื่อดึงข้อมูลจริงจากระบบ</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;justify-content:center">
+          <button class="tbtn" onclick="downloadTemplate('AIS')" style="font-size:11px;padding:6px 12px;background:rgba(255,255,255,0.1)">📥 Download Template (AIS)</button>
+          <button class="tbtn" onclick="downloadTemplate('TRUE')" style="font-size:11px;padding:6px 12px;background:rgba(255,255,255,0.1)">📥 Download Template (TRUE)</button>
+        </div>
+        <div class="imp-grid">
+          <div class="imp-box" onclick="document.getElementById('csvAIS').click()">
+            <input type="file" id="csvAIS" accept=".csv" style="display:none" onchange="importCSV(this,'AIS')">
+            <div class="ib-icon">📗</div><div class="ib-title">Import CSV — AIS</div>
+            <div class="ib-sub">Sheet <strong>INOUT_HW_AIS</strong></div>
+          </div>
+          <div class="imp-box" onclick="document.getElementById('csvTRUE').click()">
+            <input type="file" id="csvTRUE" accept=".csv" style="display:none" onchange="importCSV(this,'TRUE')">
+            <div class="ib-icon">📘</div><div class="ib-title">Import CSV — TRUE</div>
+            <div class="ib-sub">Sheet <strong>INOUT_HW_TRUE</strong></div>
+          </div>
+          <div class="imp-box" onclick="clearData()" style="border-color:rgba(255,77,106,.3)">
+            <div class="ib-icon">🗑️</div><div class="ib-title" style="color:var(--red)">รีเซ็ตข้อมูล</div>
+            <div class="ib-sub">กลับไปใช้ Mock Data</div>
+          </div>
+        </div>
+        <div class="prog-wrap" id="progWrap"><div class="prog-bar"><div class="prog-fill" id="progFill"></div></div><div class="prog-text" id="progText">กำลังประมวลผล...</div></div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="page" id="page-search">
+      <div class="cc" style="margin-bottom:16px">
+        <div class="c-title" style="margin-bottom:12px">🔍 ค้นหา DUID / Bill No.</div>
+        <div class="srch-bar">
+          <input id="duidQ" placeholder="พิมพ์ DUID หรือ Bill No. แล้วกด Enter..." onkeydown="if(event.key==='Enter') srchDuid()">
+          <button onclick="srchDuid()">🔍 ค้นหา</button>
+        </div>
+        <div id="dRes" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- Region -->
+    <div class="page" id="page-region">
+      <div class="tc"><div class="c-title" style="margin-bottom:14px">🗺️ สรุปตาม Region</div><canvas id="rgChart" style="max-height:320px"></canvas></div>
+    </div>
+
+    <!-- Print Center -->
+    <div class="page" id="page-print">
+      <div class="tc">
+        <div class="c-title" style="margin-bottom:12px">🖨️ ออกใบเบิกของ (Teloneer Form)</div>
+        <div class="srch-bar" style="max-width:500px;margin-bottom:16px">
+          <input id="printQ" placeholder="กรอก DUID หรือ Bill No..." onkeydown="if(event.key==='Enter') loadPrintData()">
+          <button onclick="loadPrintData()">🔍 ดึงข้อมูล</button>
+        </div>
+        <div id="printConfig" style="display:none;background:var(--card2);padding:16px;border-radius:12px;border:1px solid var(--border);margin-bottom:16px">
+          <div class="frow">
+            <div class="fg"><label class="fl">ลูกค้า (Form Type)</label><select class="fi" id="pcCustomer" onchange="renderPrintPreview()"><option>AIS</option><option>TRUE</option></select></div>
+            <div class="fg"><label class="fl">ประเภทรายการ</label><select class="fi" id="pcType" onchange="renderPrintPreview()"><option>IN</option><option>OUT</option><option>DISMANTLE</option><option>STR/IN</option><option>STR/OUT</option><option>RETURN</option></select></div>
+            <div class="fg" style="display:flex;align-items:flex-end;"><button class="tbtn b" style="width:100%;height:38px;font-size:14px" onclick="execPrint()">🖨️ พิมพ์ใบเบิก</button></div>
+          </div>
+        </div>
+        <div id="printPreview" style="background:#fff;color:#000;padding:20px;border-radius:4px;overflow-x:auto;display:none;min-height:300px;box-shadow:inset 0 0 10px rgba(0,0,0,0.1)">
+          <!-- Preview goes here -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ FORM MODAL (app.html style) ════ -->
+<div class="ov" id="modal" onclick="if(event.target===this)closeM()">
+  <div class="mbox">
+    <div class="fhdr">
+      <span id="mIcon" style="font-size:24px">📥</span>
+      <div class="fhdr-title" id="mTitle">บันทึกรายการ IN</div>
+      <button class="fhdr-close" onclick="closeM()">✕</button>
+    </div>
+    <!-- Type selector -->
+    <div class="type-pills">
+      <button class="tp active-in" onclick="switchType('IN',this)">📥 IN</button>
+      <button class="tp" onclick="switchType('OUT',this)">📤 OUT</button>
+      <button class="tp" onclick="switchType('DISMANTLE',this)">🔧 DISMANTLE</button>
+      <button class="tp" onclick="switchType('STR/IN',this)">🔄 STR/IN</button>
+      <button class="tp" onclick="switchType('STR/OUT',this)">🚚 STR/OUT</button>
+      <button class="tp" onclick="switchType('RETURN',this)">🔙 RETURN</button>
+    </div>
+    <div class="fbody">
+      <!-- Row 1: ลูกค้า + งาน -->
+      <div class="frow">
+        <div class="fg"><label class="fl">ลูกค้า</label><select class="fi" id="m-cus"><option>AIS</option><option>TRUE</option></select></div>
+        <div class="fg"><label class="fl">Region</label><select class="fi" id="m-reg"><option>ER</option><option>SR</option><option>NR</option><option>BKK</option><option>CR</option><option>NER</option></select></div>
+      </div>
+      <!-- Bill No. -->
+      <div class="frow full">
+        <div class="fg"><label class="fl req">Bill No.</label>
+          <div style="display:flex;gap:6px">
+            <input class="fi" id="m-bill" placeholder="เลขที่บิล" oninput="liveSearchField('bill')" onkeydown="if(event.key==='Enter')searchByBill()">
+            <button class="fbtn-scan" onclick="searchByBill()">🔍 Scan/ค้นหา</button>
+          </div>
+          <div class="ac-wrap"><div class="ac-drop" id="bill-drop"></div></div>
+        </div>
+      </div>
+      <button class="fbtn-srch" onclick="searchByBill()">🔵 ค้นหาข้อมูลเดิมจาก Bill No.</button>
+      <!-- DUID -->
+      <div class="frow full">
+        <div class="fg"><label class="fl req" style="color:var(--red)">DUID (Mandatory)</label>
+          <div class="ac-wrap">
+            <input class="fi err" id="m-duid" placeholder="ค้นหาหรือกรอก DUID" oninput="liveSearchField('duid')" onkeydown="if(event.key==='Enter')searchByDuid()">
+            <div class="ac-drop" id="duid-drop"></div>
+          </div>
+        </div>
+      </div>
+      <button class="fbtn-srch green" onclick="searchByDuid()">🟢 ค้นหาข้อมูลเดิมจาก DUID</button>
+      <!-- Owner -->
+      <div class="frow">
+        <div class="fg"><label class="fl req">คลัง Owner</label><input class="fi" id="m-ownerW" placeholder="คลังต้นทาง"></div>
+        <div class="fg"><label class="fl req">ผู้รับ Owner</label><input class="fi" id="m-ownerR" placeholder="ผู้รับปลายทาง"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Location Warehouse</label><input class="fi" id="m-locW" placeholder="Location ต้นทาง"></div>
+        <div class="fg"><label class="fl">Location Receiver</label><input class="fi" id="m-locR" placeholder="Location ปลายทาง"></div>
+      </div>
+      <!-- Items -->
+      <div class="items-section" id="itemsSection">
+        <div class="items-hdr"><span>📦 รายการสินค้า</span><span id="itemCount" style="font-size:10px;color:var(--muted)">0 รายการ</span></div>
+        <div id="itemRows"></div>
+      </div>
+      <button class="add-item-btn" onclick="addItemRow()">➕ เพิ่มรายการสินค้า</button>
+    </div>
+    <div class="factions">
+      <button class="bcanc" onclick="closeM()">ยกเลิก</button>
+      <button class="bsave" id="mSaveBtn" onclick="submitM()"><span id="mSaveIcon">🚀</span> <span id="mSaveText">บันทึก IN</span></button>
+    </div>
+  </div>
+</div>
+
+<div id="printDoc"></div>
+<div id="toasts"></div>
+
+<script>
+// ════ CONSTANTS ════
+const BADGE={IN:'b-in',OUT:'b-out',DISMANTLE:'b-dis','STR/IN':'b-str','STR/OUT':'b-stro',RETURN:'b-ret'};
+const SMAP={Open:'s-open',Closed:'s-closed','On Process':'s-proc',Pending:'s-proc'};
+const SICO={Open:'✅',Closed:'❌','On Process':'⏳',Pending:'⏳'};
+const RGCOL={ER:'#00c28a',SR:'#4d9fff',NR:'#b26dff',BKK:'#ffd94d',CR:'#ff4d6a',NER:'#ff9f4d'};
+const TAGO=['เมื่อกี้','2 นาที','5 นาที','15 นาที','1 ชม.','3 ชม.','เมื่อวาน'];
+const M_ICONS={IN:'📥',OUT:'📤',DISMANTLE:'🔧','STR/IN':'🔄','STR/OUT':'🚚',RETURN:'🔙'};
+const TYPE_CLS={IN:'active-in',OUT:'active-out',DISMANTLE:'active-dis','STR/IN':'active-stri','STR/OUT':'active-stro',RETURN:'active-ret'};
+const TYPE_DEFS=[{type:'IN',icon:'📥',color:'var(--primary)'},{type:'OUT',icon:'📤',color:'var(--red)'},{type:'DISMANTLE',icon:'🔧',color:'var(--purple)'},{type:'STR/IN',icon:'🔄',color:'var(--blue)'},{type:'STR/OUT',icon:'🚚',color:'var(--orange)'},{type:'RETURN',icon:'🔙',color:'var(--yellow)'}];
+
+// ════ Item Master (Model → Code + Desc) ════
+const ITEM_MASTER = [
+  {model:'Cisco C9300-48P',code:'SW-C9300-48P',desc:'Switch Layer3 48Port PoE'},
+  {model:'Cisco C9300-24T',code:'SW-C9300-24T',desc:'Switch Layer3 24Port'},
+  {model:'Cisco C9500-48Y4C',code:'SW-C9500-48Y',desc:'Switch Core 48Port 25G'},
+  {model:'Cisco C9200-48P',code:'SW-C9200-48P',desc:'Switch Access 48Port PoE'},
+  {model:'Cisco SFP-10G-LR',code:'MOD-SFP10G',desc:'Module SFP+ 10G LR'},
+  {model:'Cisco ASR 920',code:'RT-ASR920',desc:'Router ASR 920 Series'},
+  {model:'Huawei CE6870',code:'SW-CE6870',desc:'Switch Core Huawei CE6870'},
+  {model:'Huawei S5731',code:'SW-S5731',desc:'Switch Access S5731'},
+  {model:'Huawei NetEngine 40E',code:'RT-NE40E',desc:'Router PE NetEngine'},
+  {model:'Nokia 7705 SAR',code:'RT-N7705',desc:'Router Nokia 7705 SAR'},
+  {model:'Nokia 7210 IXS',code:'RT-N7210',desc:'Router Nokia 7210 IXS'},
+  {model:'Nokia 7750 SR',code:'RT-N7750',desc:'Router Nokia 7750 SR'},
+  {model:'Ericsson MINI-LINK',code:'MW-EMIN',desc:'Microwave Link Ericsson'},
+  {model:'Ericsson RBS 6601',code:'BS-RBS6601',desc:'Base Station RBS 6601'},
+  {model:'Juniper MX204',code:'RT-JMX204',desc:'Router Core MX204'},
+  {model:'1000BASE-T (RJ45) SFP',code:'MOD-1G-RJ45',desc:'Module SFP 1G Copper'},
+  {model:'Antenna Accessory',code:'ACC-ANT',desc:'Antenna Accessory Kit'},
+  {model:'Battery',code:'BAT-GEN',desc:'Battery Backup Unit'},
+  {model:'BBU',code:'BBU-GEN',desc:'Baseband Unit'},
+];
+const ITYPE_LIST=['AAU','AISG','ANTENNA','Alarm','Antenna Accessory','Aux','BBU','BOAD','Battery','Bracket','Breaker','CPRI','Cabinet','Cable','Converter','DC_Power','DDF','Device','Fiber','Filter','Frame','GPS','LMU','Microwave','Module','ODF','ODU','RBS','RRU','Router','Switch','Tower'];
+
+// ════ MOCK DATA ════
+const today=()=>{const d=new Date();return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`};
+const dAgo=n=>{const d=new Date(Date.now()-n*86400000);return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`};
+const MOCK=[
+  {no:1,duid:'AIS-ER-2025-001',bill:'B-2025-001',type:'IN',region:'ER',customer:'AIS',model:'Cisco C9300-48P',itype:'Switch',code:'SW-C9300-48P',desc:'Switch Layer3 48Port PoE',qty:2,sn:'FDO2412A001',ownerW:'คลังกลาง',ownerR:'วิภาส',locW:'A1',locR:'Site-ER1',date:today(),status:'Open',intNo:'INT-001',userNm:'TLN Admin'},
+  {no:2,duid:'AIS-ER-2025-001',bill:'B-2025-001',type:'IN',region:'ER',customer:'AIS',model:'Cisco SFP-10G-LR',itype:'Module',code:'MOD-SFP10G',desc:'Module SFP+ 10G LR',qty:8,sn:'FDO2412A002',ownerW:'คลังกลาง',ownerR:'วิภาส',locW:'A1',locR:'Site-ER1',date:today(),status:'Open',intNo:'INT-001',userNm:'TLN Admin'},
+  {no:3,duid:'AIS-BKK-2025-010',bill:'B-2025-010',type:'OUT',region:'BKK',customer:'AIS',model:'Huawei CE6870',itype:'Switch',code:'SW-CE6870',desc:'Switch Core Huawei CE6870',qty:1,sn:'020HW001BKK',ownerW:'วิภาส',ownerR:'สุรชัย',locW:'BKK-WH',locR:'Site-BKK2',date:today(),status:'Pending',intNo:'INT-010',userNm:'TLN Admin'},
+  {no:4,duid:'TRUE-SR-2025-005',bill:'B-TRUE-005',type:'STR/IN',region:'SR',customer:'TRUE',model:'Nokia 7705 SAR',itype:'Router',code:'RT-N7705',desc:'Router Nokia 7705 SAR',qty:3,sn:'NOK2025SR001',ownerW:'คลัง SR',ownerR:'ปิติ',locW:'SR-STORE',locR:'',date:today(),status:'Open',intNo:'INT-T005',userNm:'Ops Team'},
+  {no:5,duid:'AIS-NR-2025-003',bill:'B-2025-003',type:'DISMANTLE',region:'NR',customer:'AIS',model:'Ericsson MINI-LINK',itype:'Microwave',code:'MW-EMIN',desc:'Microwave Link Ericsson',qty:1,sn:'ERI2025NR003',ownerW:'Site-NR3',ownerR:'คลัง NR',locW:'Site-NR3',locR:'NR-WH',date:dAgo(1),status:'On Process',intNo:'INT-003',userNm:'Eng Team'},
+  {no:6,duid:'TRUE-BKK-2025-007',bill:'B-TRUE-007',type:'STR/OUT',region:'BKK',customer:'TRUE',model:'Cisco ASR 920',itype:'Router',code:'RT-ASR920',desc:'Router ASR 920 Series',qty:2,sn:'ASR2025BKK01',ownerW:'คลัง BKK',ownerR:'ไซต์งาน',locW:'BKK-STORE',locR:'Site-BKK3',date:dAgo(1),status:'Pending',intNo:'INT-T007',userNm:'Ops Team'},
+  {no:7,duid:'AIS-ER-2024-099',bill:'B-2024-099',type:'RETURN',region:'ER',customer:'AIS',model:'Cisco C9300-24T',itype:'Switch',code:'SW-C9300-24T',desc:'Switch Layer3 24Port',qty:1,sn:'FDO2024ER099',ownerW:'ไซต์งาน',ownerR:'คลังกลาง',locW:'Site-ER5',locR:'A1',date:dAgo(1),status:'Closed',intNo:'INT-099',userNm:'TLN Admin'},
+  {no:8,duid:'AIS-CR-2025-012',bill:'B-2025-012',type:'IN',region:'CR',customer:'AIS',model:'Huawei S5731',itype:'Switch',code:'SW-S5731',desc:'Switch Access S5731',qty:4,sn:'020HW012CR01',ownerW:'คลังกลาง',ownerR:'สมชาย',locW:'A2',locR:'Site-CR1',date:dAgo(2),status:'Open',intNo:'INT-012',userNm:'TLN Admin'},
+  {no:9,duid:'TRUE-NER-2025-002',bill:'B-TRUE-002',type:'OUT',region:'NER',customer:'TRUE',model:'Nokia 7210 IXS',itype:'Router',code:'RT-N7210',desc:'Router Nokia 7210 IXS',qty:2,sn:'NOK2025NER002',ownerW:'ปิติ',ownerR:'ไซต์งาน',locW:'NER-WH',locR:'Site-NER1',date:dAgo(2),status:'Closed',intNo:'INT-T002',userNm:'Ops Team'},
+  {no:10,duid:'AIS-SR-2025-008',bill:'B-2025-008',type:'STR/IN',region:'SR',customer:'AIS',model:'Juniper MX204',itype:'Router',code:'RT-JMX204',desc:'Router Core MX204',qty:1,sn:'JUN2025SR008',ownerW:'คลัง SR',ownerR:'',locW:'SR-A',locR:'',date:dAgo(3),status:'Open',intNo:'INT-008',userNm:'TLN Admin'},
+];
+
+// ════ STATE ════
+let TX=[...MOCK],curF='ALL',rChInst=null,lChInst=null,pending=0,curAction='IN',itemRowCount=0,isLiveData=false;
+
+// ════ NAV ════
+const PAGES={dashboard:'📊 Dashboard',transactions:'📋 รายการทั้งหมด',import:'📂 Import / Sync',search:'🔍 ค้นหา',region:'🗺️ Region',print:'🖨️ Print ใบเบิก'};
+function pg(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));document.getElementById('page-'+id)?.classList.add('active');if(el)el.classList.add('active');document.getElementById('pgTitle').textContent=PAGES[id]||id;cSb();if(id==='region')setTimeout(drawRgChart,100);}
+function tSb(){document.getElementById('sb').classList.toggle('open');document.getElementById('sbov').classList.toggle('show')}
+function cSb(){document.getElementById('sb').classList.remove('open');document.getElementById('sbov').classList.remove('show')}
+
+// ════ KPI ════
+function countUp(el,n,dur=700){if(!el)return;let s=0,step=Math.max(1,Math.ceil(n/(dur/16)));const t=setInterval(()=>{s=Math.min(s+step,n);el.textContent=s;if(s>=n)clearInterval(t)},16)}
+function calcKPI(data){const d=new Date(),ts=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`,tR=data.filter(r=>r.date===ts);return{inToday:tR.filter(r=>/^(IN|STR\/IN)$/i.test(r.type||'')).length,outToday:tR.filter(r=>/^(OUT|DISMANTLE)$/i.test(r.type||'')).length,pending:data.filter(r=>r.status==='Pending'||r.status==='On Process').length,activeDuid:new Set(data.map(r=>r.duid)).size};}
+function loadKPIs(data){const k=calcKPI(data);pending=k.pending;document.getElementById('nbPending').textContent=k.pending||'-';setTimeout(()=>countUp(document.getElementById('kIn'),k.inToday),120);setTimeout(()=>countUp(document.getElementById('kOut'),k.outToday),240);setTimeout(()=>countUp(document.getElementById('kDuid'),k.activeDuid),360);setTimeout(()=>countUp(document.getElementById('kPend'),k.pending),480);}
+function renderTypeMini(data){document.getElementById('typeMini').innerHTML=TYPE_DEFS.map(td=>{const cnt=data.filter(r=>(r.type||'').toUpperCase()===td.type.toUpperCase()).length;return`<div style="background:var(--card);border:1px solid var(--border);border-radius:11px;padding:11px 8px;text-align:center;cursor:pointer;transition:transform .2s" onclick="setFAndGo('${td.type}')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''"><div style="font-size:20px;margin-bottom:4px">${td.icon}</div><div style="font-size:18px;font-weight:800;color:${td.color}">${cnt}</div><div style="font-size:9px;color:var(--muted);margin-top:2px">${td.type}</div></div>`;}).join('');}
+function setFAndGo(type){curF=type;pg('transactions',document.querySelectorAll('.ni')[1]);document.querySelectorAll('.ft').forEach(b=>b.classList.remove('active'));applyF();}
+
+// ════ CHARTS ════
+function drawLineChart(data){if(lChInst)lChInst.destroy();const labels=[],d0=[],d1=[],d2=[],d3=[],d4=[],d5=[];for(let i=6;i>=0;i--){const dt=new Date(Date.now()-i*86400000),lbl=`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;labels.push(lbl);const day=data.filter(r=>(r.date||'').startsWith(lbl));d0.push(day.filter(r=>/^IN$/i.test(r.type||'')).length);d1.push(day.filter(r=>/^STR\/IN$/i.test(r.type||'')).length);d2.push(day.filter(r=>/^OUT$/i.test(r.type||'')).length);d3.push(day.filter(r=>/^DISMANTLE$/i.test(r.type||'')).length);d4.push(day.filter(r=>/^STR\/OUT$/i.test(r.type||'')).length);d5.push(day.filter(r=>/^RETURN$/i.test(r.type||'')).length);}const mk=(label,data,color)=>({label,data,borderColor:color,backgroundColor:color+'22',tension:.4,fill:true,pointRadius:4,pointBackgroundColor:color,borderWidth:2});lChInst=new Chart(document.getElementById('lineChart').getContext('2d'),{type:'line',data:{labels,datasets:[mk('IN',d0,'#00c28a'),mk('STR/IN',d1,'#4d9fff'),mk('OUT',d2,'#ff4d6a'),mk('DISMANTLE',d3,'#b26dff'),mk('STR/OUT',d4,'#ff9f4d'),mk('RETURN',d5,'#ffd94d')]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'Sarabun',size:10}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'Sarabun'},stepSize:1},beginAtZero:true}}}});}
+function drawRgChart(){if(rChInst)rChInst.destroy();const map={};TX.forEach(r=>{const rg=r.region||'?';map[rg]=(map[rg]||0)+1});const labels=Object.keys(map),vals=Object.values(map),colors=labels.map(l=>(RGCOL[l]||'#888')+'cc');rChInst=new Chart(document.getElementById('rgChart').getContext('2d'),{type:'bar',data:{labels,datasets:[{label:'รายการ',data:vals,backgroundColor:colors,borderColor:labels.map(l=>RGCOL[l]||'#888'),borderWidth:2,borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'Sarabun',size:12,weight:'bold'}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'Sarabun'}},beginAtZero:true}}}});}
+function renderActivity(data){document.getElementById('actList').innerHTML=data.slice(0,8).map((t,i)=>`<div class="ai"><span class="ab ${BADGE[t.type]||'b-in'}">${t.type}</span><div class="ai-info"><div class="ai-d">${t.duid}</div><div class="ai-m">${t.model||'-'} · ${t.code||''} · ${t.customer} · ${t.region}</div></div><div class="ai-t">${TAGO[i]||''}</div></div>`).join('');}
+function renderRgMini(data){const map={};data.forEach(r=>{const rg=r.region||'?';map[rg]=(map[rg]||0)+1});document.getElementById('rgMini').innerHTML=Object.entries(map).map(([r,n])=>`<div class="mc" onclick="setFAndGo('${r}')"><div class="m-lbl">${r}</div><div class="m-val" style="color:${RGCOL[r]||'#888'}">${n}</div><div class="m-sub">รายการ</div><div class="r-bar" style="background:${RGCOL[r]||'#888'}"></div></div>`).join('');}
+
+// ════ TABLE ════
+function renderTable(data){const el=document.getElementById('txCount');if(el)el.textContent=data.length;document.getElementById('txBody').innerHTML=data.map((t,i)=>{const scls=SMAP[t.status]||'s-open',sico=SICO[t.status]||'',cusC=t.customer==='AIS'?'var(--primary)':'var(--blue)',safeB=(t.bill||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");return`<tr><td><button class="prnbtn" onclick="printBill('${safeB}','${t.customer}')" title="Print">🖨️</button></td><td style="color:var(--muted)">${t.no||i+1}</td><td class="td-d">${t.duid}</td><td style="font-size:10px">${t.bill||'—'}</td><td><span class="ab ${BADGE[t.type]||'b-in'}">${t.type||'—'}</span></td><td>${t.region||'—'}</td><td><span style="font-weight:700;color:${cusC}">${t.customer}</span></td><td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">${t.model||'—'}</td><td style="font-family:monospace;font-size:10px;color:var(--blue)">${t.code||'—'}</td><td style="font-size:10px;color:var(--muted)">${t.desc||'—'}</td><td style="text-align:center">${t.qty||0}</td><td style="font-family:monospace;font-size:10px;color:var(--muted)">${t.sn||'—'}</td><td><span class="sp ${scls}">${sico} ${t.status}</span></td><td style="color:var(--muted);font-size:10px">${t.date||'—'}</td></tr>`;}).join('');}
+function setF(f,btn){document.querySelectorAll('.ft').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');curF=f;applyF();}
+function applyF(){const q=(document.getElementById('txQ')?.value||'').toLowerCase();let d=[...TX];if(curF!=='ALL'){if(curF==='AIS'||curF==='TRUE')d=d.filter(t=>t.customer===curF);else d=d.filter(t=>(t.type||'').toUpperCase()===curF.toUpperCase());}if(q)d=d.filter(t=>(t.duid||'').toLowerCase().includes(q)||(t.bill||'').toLowerCase().includes(q)||(t.model||'').toLowerCase().includes(q)||(t.code||'').toLowerCase().includes(q));renderTable(d);}
+
+// ════ SEARCH PAGE ════
+function srchDuid(){const q=(document.getElementById('duidQ').value||'').trim().toLowerCase(),el=document.getElementById('dRes');if(!q){el.innerHTML='<p style="color:var(--muted)">กรุณากรอก DUID หรือ Bill No.</p>';return}const res=TX.filter(t=>(t.duid||'').toLowerCase().includes(q)||(t.bill||'').toLowerCase().includes(q));if(!res.length){el.innerHTML=`<p style="color:var(--red)">❌ ไม่พบ: <strong>${q}</strong></p>`;return}el.innerHTML=`<div style="font-size:11px;color:var(--muted);margin-bottom:8px">พบ ${res.length} รายการ — คลิกเพื่อเปิดฟอร์มบันทึกด้วย DUID/Bill นี้</div>`+res.map(t=>{const scls=SMAP[t.status]||'s-open',sico=SICO[t.status]||'',safeT=encodeURIComponent(JSON.stringify(t));return`<div class="ai" style="margin-bottom:6px;cursor:pointer" onclick="prefillFromRow('${safeT}')"><span class="ab ${BADGE[t.type]||'b-in'}">${t.type}</span><div class="ai-info"><div class="ai-d">${t.duid} <span style="font-size:9px;color:var(--muted)">· ${t.bill||'—'}</span></div><div class="ai-m">${t.model||'-'} · <span style="color:var(--blue)">${t.code||'—'}</span> · ${t.customer} · ${t.region} · ${t.date}</div></div><div style="display:flex;gap:5px;align-items:center"><span class="sp ${scls}" style="font-size:9px">${sico} ${t.status}</span></div></div>`;}).join('');}
+function prefillFromRow(encoded){const t=JSON.parse(decodeURIComponent(encoded));openM(t.type||'IN');setTimeout(()=>{document.getElementById('m-duid').value=t.duid||'';document.getElementById('m-bill').value=t.bill||'';document.getElementById('m-reg').value=t.region||'ER';document.getElementById('m-cus').value=t.customer||'AIS';document.getElementById('m-ownerW').value=t.ownerW||'';document.getElementById('m-ownerR').value=t.ownerR||'';document.getElementById('m-locW').value=t.locW||'';document.getElementById('m-locR').value=t.locR||'';addItemRowPrefilled(t.itype||'',t.model||'',t.code||'',t.desc||'',t.qty||1,t.sn||'');showToast('✅ โหลดข้อมูลเดิมสำเร็จ — เลือก Type แล้วกดบันทึก','ok');},100);}
+
+// ════ MODAL ════
+function openM(type){
+  curAction=type;
+  document.getElementById('mIcon').textContent=M_ICONS[type]||'📦';
+  document.getElementById('mTitle').textContent=`บันทึกรายการ ${type}`;
+  document.getElementById('mSaveIcon').textContent=M_ICONS[type]||'🚀';
+  document.getElementById('mSaveText').textContent=`บันทึก ${type}`;
+  document.querySelectorAll('.tp').forEach(b=>b.className='tp');
+  const activeBtn=[...document.querySelectorAll('.tp')].find(b=>b.textContent.includes(type));
+  if(activeBtn)activeBtn.classList.add(TYPE_CLS[type]||'active-in');
+  ['m-duid','m-bill','m-ownerW','m-ownerR','m-locW','m-locR'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-cus').value='AIS';
+  document.getElementById('m-reg').value='ER';
+  document.getElementById('itemRows').innerHTML='';itemRowCount=0;
+  hideDrop('duid');hideDrop('bill');
+  addItemRow();
+  document.getElementById('modal').classList.add('show');
+}
+function switchType(type,btn){curAction=type;document.getElementById('mIcon').textContent=M_ICONS[type]||'📦';document.getElementById('mTitle').textContent=`บันทึกรายการ ${type}`;document.getElementById('mSaveIcon').textContent=M_ICONS[type]||'🚀';document.getElementById('mSaveText').textContent=`บันทึก ${type}`;document.querySelectorAll('.tp').forEach(b=>b.className='tp');btn.classList.add(TYPE_CLS[type]||'active-in');}
+function closeM(){document.getElementById('modal').classList.remove('show');}
+
+// ════ ITEM ROWS ════
+function addItemRow(itype='',model='',code='',desc='',qty=1,sn=''){
+  itemRowCount++;const n=itemRowCount;
+  updateItemCount();
+  const typeOpts=ITYPE_LIST.map(t=>`<option${t===itype?' selected':''}>${t}</option>`).join('');
+  const modelOpts=['<option value="">-- เลือก --</option>',...ITEM_MASTER.map(m=>`<option${m.model===model?' selected':''}>${m.model}</option>`)].join('');
+  const row=document.createElement('div');
+  row.className='item-row';row.id=`ir${n}`;
+  row.innerHTML=`
+    <div class="item-row-hdr"><span class="item-row-num">สินค้า #${n}</span><button class="del-item" onclick="delItem(${n})">ลบรายการ</button></div>
+    <div class="frow"><div class="fg"><label class="fl">ประเภท (Type)</label><select class="fi" id="itype${n}">${typeOpts}</select></div><div class="fg"><label class="fl">Model</label><select class="fi" id="imodel${n}" onchange="fillItemCode(${n})">${modelOpts}</select></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Item Code</label><input class="fi" id="icode${n}" value="${code}" placeholder="รหัสสินค้า" style="color:var(--blue)"></div><div class="fg"><label class="fl">Item Description</label><input class="fi" id="idesc${n}" value="${desc}" placeholder="รายละเอียดสินค้า"></div></div>
+    <div class="frow"><div class="fg"><label class="fl">SN</label><div style="display:flex;gap:5px"><input class="fi" id="isn${n}" value="${sn}" placeholder="Serial Number"><button class="fbtn-scan">📷 Scan</button></div></div><div class="fg"><label class="fl">จำนวน</label><div style="display:flex;gap:5px"><input class="fi" id="iqty${n}" type="number" value="${qty}" min="1" style="flex:1"><button class="del-item" style="background:rgba(255,77,106,.12)" onclick="delItem(${n})">ลบรายการ</button></div></div></div>`;
+  document.getElementById('itemRows').appendChild(row);
+  if(model)fillItemCode(n);
+  updateItemCount();
+}
+function addItemRowPrefilled(it,m,c,d,q,s){addItemRow(it,m,c,d,q,s);}
+function fillItemCode(n){const sel=document.getElementById('imodel'+n);const m=ITEM_MASTER.find(x=>x.model===sel.value);if(m){document.getElementById('icode'+n).value=m.code;document.getElementById('idesc'+n).value=m.desc;}}
+function delItem(n){const el=document.getElementById('ir'+n);if(el)el.remove();updateItemCount();}
+function updateItemCount(){const cnt=document.querySelectorAll('.item-row').length;document.getElementById('itemCount').textContent=cnt+' รายการ';}
+function getItems(){const rows=document.querySelectorAll('.item-row');const items=[];rows.forEach(row=>{const n=row.id.replace('ir','');items.push({itype:document.getElementById('itype'+n)?.value||'',model:document.getElementById('imodel'+n)?.value||'',code:document.getElementById('icode'+n)?.value||'',desc:document.getElementById('idesc'+n)?.value||'',sn:document.getElementById('isn'+n)?.value||'',qty:+(document.getElementById('iqty'+n)?.value||1)});});return items.filter(i=>i.model||i.sn||i.qty>1);}
+
+// ════ LIVE SEARCH DROPDOWNS ════
+function liveSearchField(field){
+  const val=(document.getElementById('m-'+field).value||'').trim().toLowerCase();
+  const dropId=field+'-drop';
+  if(val.length<1){hideDrop(field);return}
+  let matches=[];
+  if(field==='duid')matches=TX.filter(t=>(t.duid||'').toLowerCase().includes(val)).slice(0,6);
+  else matches=TX.filter(t=>(t.bill||'').toLowerCase().includes(val)).slice(0,6);
+  if(!matches.length){hideDrop(field);return}
+  const drop=document.getElementById(dropId);
+  drop.style.display='block';
+  if(field==='duid'){
+    drop.innerHTML=[...new Map(matches.map(t=>[t.duid,t])).values()].map(t=>`<div class="ac-item" onclick="fillFromDrop('duid','${encodeURIComponent(JSON.stringify(t))}')"><strong>${t.duid}</strong><div class="ac-code">${t.customer} · ${t.region} · ${t.model||'-'}</div></div>`).join('');
+  } else {
+    drop.innerHTML=[...new Map(matches.map(t=>[t.bill,t])).values()].map(t=>`<div class="ac-item" onclick="fillFromDrop('bill','${encodeURIComponent(JSON.stringify(t))}')"><strong>${t.bill}</strong><div class="ac-code">${t.customer} · ${t.duid||'-'}</div></div>`).join('');
+  }
+}
+function hideDrop(field){const d=document.getElementById(field+'-drop');if(d)d.style.display='none';}
+function fillFromDrop(field,encoded){
+  const t=JSON.parse(decodeURIComponent(encoded));
+  document.getElementById('m-duid').value=t.duid||'';
+  document.getElementById('m-bill').value=t.bill||'';
+  document.getElementById('m-cus').value=t.customer||'AIS';
+  document.getElementById('m-reg').value=t.region||'ER';
+  document.getElementById('m-ownerW').value=t.ownerW||'';
+  document.getElementById('m-ownerR').value=t.ownerR||'';
+  document.getElementById('m-locW').value=t.locW||'';
+  document.getElementById('m-locR').value=t.locR||'';
+  hideDrop(field);showToast('✅ โหลดข้อมูลจากข้อมูลเดิมเรียบร้อย','ok');
+}
+function searchByDuid(){const duid=document.getElementById('m-duid').value.trim().toLowerCase();if(!duid){showToast('⚠️ กรุณากรอก DUID','warn');return}const found=TX.filter(t=>(t.duid||'').toLowerCase()===duid);if(found.length){fillFromDrop('duid',encodeURIComponent(JSON.stringify(found[0])))}else showToast('⚠️ ไม่พบ DUID นี้ — กรอกเป็นรายการใหม่ได้เลย','warn');}
+function searchByBill(){const bill=document.getElementById('m-bill').value.trim().toLowerCase();if(!bill){showToast('⚠️ กรุณากรอก Bill No.','warn');return}const found=TX.filter(t=>(t.bill||'').toLowerCase()===bill);if(found.length){fillFromDrop('bill',encodeURIComponent(JSON.stringify(found[0])))}else showToast('⚠️ ไม่พบ Bill นี้ — กรอกเป็นรายการใหม่ได้เลย','warn');}
+
+// ════ SUBMIT ════
+function submitM(){
+  const duid=document.getElementById('m-duid').value.trim(),bill=document.getElementById('m-bill').value.trim();
+  if(!duid){document.getElementById('m-duid').classList.add('err');showToast('⚠️ กรุณากรอก DUID','warn');return}
+  document.getElementById('m-duid').classList.remove('err');
+  const items=getItems();
+  if(!items.length){showToast('⚠️ กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ','warn');return}
+  const d=new Date(),ds=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  const base={duid,bill,type:curAction,region:document.getElementById('m-reg').value,customer:document.getElementById('m-cus').value,ownerW:document.getElementById('m-ownerW').value,ownerR:document.getElementById('m-ownerR').value,locW:document.getElementById('m-locW').value,locR:document.getElementById('m-locR').value,date:ds,status:'Pending',intNo:'',userNm:'Current User'};
+  const newRows=items.map((it,i)=>({...base,no:TX.length+i+1,...it}));
+  TX.unshift(...newRows);
+  closeM();showToast(`✅ บันทึก ${curAction} · ${duid} · ${items.length} รายการ สำเร็จ`,'ok');
+  refreshDash(TX);
+}
+
+// ════ SYNC & IMPORT ════
+async function syncNow(){await syncFromURL();}
+async function syncFromURL(){
+  const url=(document.getElementById('apiUrlInput')?.value||'').trim();
+  if(!url){showToast('⚠️ กรุณาระบุ URL','warn');return}
+  showProg(true,'กำลังเชื่อมต่อ API...',30);
+  document.getElementById('syncStatus').textContent='กำลัง Sync...';
+  try{
+    const apiUrl=url+(url.includes('?')?'&':'?')+'export=dashboard';
+    const res=await fetch(apiUrl);const dt=await res.json();
+    if(!dt.success){showToast('❌ '+dt.message,'err');showProg(false);document.getElementById('syncStatus').textContent='❌ Sync ล้มเหลว: '+dt.message;return}
+    TX=dt.recent||[];isLiveData=true;
+    refreshDash(TX);
+    showImportBar(`🌐 Live Data: ${TX.length} รายการ | ${new Date().toLocaleTimeString('th-TH')}`);
+    showProg(false);showToast(`✅ Sync สำเร็จ! ${TX.length} รายการ`,'ok');
+    document.getElementById('syncBadge').textContent='● Live';document.getElementById('syncBadge').className='sync-badge sync-live';
+    document.getElementById('syncStatus').textContent=`✅ Sync สำเร็จ ${TX.length} รายการ — ${new Date().toLocaleTimeString('th-TH')}`;
+  }catch(e){
+    showToast('❌ เชื่อมต่อไม่ได้','err');showProg(false);
+    document.getElementById('syncStatus').innerHTML='<span style="color:var(--red);font-weight:bold">❌ เชื่อมต่อไม่ได้ (ติด CORS Policy)</span> <br><span style="color:#fff">หากเปิดไฟล์จากเครื่องตัวเอง (file://) จะไม่สามารถดึงข้อมูลข้ามโดเมนได้<br><b>วิธีแก้:</b> ให้นำโค้ดหน้านี้ทั้งหมด ไปวางในไฟล์ <code>app.html</code> บน Google Apps Script แล้ว Deploy ใหม่ครับ</span>';
+  }
+}
+function importCSV(input,forceCustomer){const file=input.files[0];if(!file)return;showProg(true,`กำลังอ่าน ${file.name}...`,20);const reader=new FileReader();reader.onload=e=>{try{showProg(true,'กำลังประมวลผล...',60);const rows=parseCSV(e.target.result);if(rows.length<2){showToast('❌ CSV ว่างหรือ format ผิด','err');showProg(false);return}const parsed=[],cus=forceCustomer||'AIS';for(let i=1;i<rows.length;i++){const r=rows[i];if(!r[1])continue;parsed.push({no:r[0]||i,duid:r[1]||'',region:r[2]||'',type:r[3]||'IN',itype:r[4]||'',date:r[5]||'',bill:r[6]||'',model:r[7]||'',code:r[8]||'',desc:r[9]||'',qty:+r[10]||0,sn:r[11]||'',ownerW:r[12]||'',ownerR:r[13]||'',locW:r[14]||'',locR:r[15]||'',status:r[21]||'Pending',intNo:r[22]||'',userNm:r[24]||'',customer:cus});}showProg(true,`สำเร็จ! ${parsed.length} รายการ`,100);setTimeout(()=>{TX=[...parsed,...TX.filter(t=>t.customer!==cus)];refreshDash(TX);showImportBar(`📁 ${cus}: ${parsed.length} รายการ | รวม ${TX.length} รายการ`);showProg(false);showToast(`✅ Import ${cus} สำเร็จ! ${parsed.length} รายการ`,'ok');},600);}catch(err){showToast('❌ อ่าน CSV ล้มเหลว: '+err.message,'err');showProg(false)}};reader.readAsText(file,'UTF-8');input.value='';}
+function parseCSV(text){const rows=[],lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');for(const line of lines){if(!line.trim())continue;const cols=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){inQ=!inQ}else if(c===','&&!inQ){cols.push(cur);cur=''}else{cur+=c}}cols.push(cur);rows.push(cols.map(c=>c.replace(/^"|"$/g,'').trim()));}return rows;}
+function clearData(){if(!confirm('รีเซ็ตกลับ Demo Mock Data?'))return;TX=[...MOCK];isLiveData=false;refreshDash(TX);showImportBar('📦 Demo Mock Data');document.getElementById('syncBadge').textContent='● Demo';document.getElementById('syncBadge').className='sync-badge sync-demo';showToast('🔄 รีเซ็ตสำเร็จ','ok');}
+
+// ════ REFRESH ════
+function refreshDash(data){loadKPIs(data);drawLineChart(data);renderActivity(data);renderRgMini(data);renderTypeMini(data);applyF();}
+function showImportBar(text){document.getElementById('importBarText').textContent=text;document.getElementById('importBar').classList.add('show');}
+function showProg(show,text='',pct=0){const w=document.getElementById('progWrap');if(!show){w.style.display='none';return}w.style.display='block';document.getElementById('progText').textContent=text;document.getElementById('progFill').style.width=pct+'%';}
+function showToast(msg,type='info'){const icons={ok:'✅',warn:'⚠️',err:'❌',info:'ℹ️'},c=document.getElementById('toasts'),t=document.createElement('div');t.className='toast';t.innerHTML=`<span class="t-ic">${icons[type]||'ℹ️'}</span><span class="t-msg">${msg}</span>`;c.appendChild(t);setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300)},4000);}
+
+// ════ TEMPLATE DOWNLOAD ════
+function downloadTemplate(cus){
+  const bom="\\uFEFF",hdr="No,DUID,Region,TYPE,IType,Date,Bill No.,Model,Item Code,Item Description,Qty,SN,Owner Warehouse,Owner Receiver,Location Warehouse,Location Receiver,Status,INT No,User\n1,TEST-DUID-001,ER,IN,Switch,08/08/2026,B-001,Cisco C9300-48P,SW-C9300-48P,Switch Layer3,1,SN123,WH-1,RCV-1,L-1,L-2,Pending,INT-001,Admin";
+  const blob=new Blob([bom+hdr],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=`Template_Import_${cus}.csv`;a.click();URL.revokeObjectURL(url);
+}
+
+// ════ PRINT CENTER (Teloneer Form) ════
+let printRowsCache=[];
+function loadPrintData(){
+  const q=(document.getElementById('printQ').value||'').trim().toLowerCase();
+  if(!q){showToast('กรุณากรอก DUID หรือ Bill','warn');return}
+  const res=TX.filter(t=>(t.duid||'').toLowerCase()===q||(t.bill||'').toLowerCase()===q);
+  if(!res.length){showToast('ไม่พบข้อมูล','err');return}
+  printRowsCache=res;
+  document.getElementById('printConfig').style.display='block';
+  document.getElementById('pcCustomer').value=res[0].customer||'AIS';
+  document.getElementById('pcType').value=res[0].type||'OUT';
+  renderPrintPreview();
+}
+function renderPrintPreview(){
+  if(!printRowsCache.length)return;
+  const c=document.getElementById('pcCustomer').value, ty=document.getElementById('pcType').value;
+  document.getElementById('printPreview').style.display='block';
+  document.getElementById('printPreview').innerHTML=buildTeloneerPage(printRowsCache,c,ty);
+}
+function execPrint(){
+  if(!printRowsCache.length)return;
+  document.getElementById('printDoc').innerHTML=document.getElementById('printPreview').innerHTML;
+  window.print();
+}
+function buildTeloneerPage(rows,customer,type){
+  const r0=rows[0]||{}, isOut=type==='OUT'||type==='DISMANTLE';
+  const items=rows.map((t,i)=>{
+    const bg=t.type==='OUT'||isOut?' class="tp-type-out"':'';
+    return `<tr${bg}><td style="text-align:center">${i+1}</td><td>${t.bill||''}</td><td>${t.itype||''}</td><td>${t.model||''}</td><td style="color:blue">${t.code||''}</td><td>${t.desc||''}</td><td style="text-align:center;font-weight:bold">${type}</td><td style="text-align:center;font-weight:bold">${t.qty||0}</td><td style="font-family:monospace">${t.sn||''}</td></tr>`;
+  });
+  for(let i=rows.length;i<12;i++){
+    items.push(`<tr><td style="text-align:center">${i+1}</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td style="text-align:center">0</td><td style="text-align:center">0</td><td>0</td></tr>`);
+  }
+  return `<div class="tp-page"><div class="tp-header"><div class="tp-logo"><span style="color:#a4cc00;font-size:36px;font-weight:900;">t</span><span style="color:#0099cc;font-size:36px;font-weight:900;">eloneer</span></div><div class="tp-title">ใบเบิกของ ${customer}</div></div><div class="tp-info"><div class="tpi-row"><span>ข้าพเจ้า/ผู้รับของ</span><span class="tpi-line" style="width:250px">${r0.ownerR||''}</span><span style="margin-left:15px">Tel</span><span class="tpi-line" style="width:150px"></span></div><div class="tpi-row"><span>ได้เบิกของจาก บริษัท เทโลเนียร์ จำกัด ตามรายละเอียดดังนี้</span><span style="margin-left:15px">Site Code :</span><span class="tpi-line" style="width:200px">${r0.duid||''}</span></div><div class="tpi-row"><span>Owner warehouse :</span><span class="tpi-line" style="width:300px">${r0.ownerW||''}</span></div><div class="tpi-row"><span>Location warehouse :</span><span class="tpi-line" style="width:300px">${r0.locW||''}</span></div><div class="tpi-row"><span>Location Receiver :</span><span class="tpi-line" style="width:300px">${r0.locR||''}</span></div></div><table class="tp-table"><thead><tr style="background:#00ff00;color:#000;"><th>No</th><th>Bill No</th><th>TYPE</th><th>Model</th><th>Item Code</th><th>Item Description</th><th>IN/OUT</th><th>Qty</th><th>SN</th></tr></thead><tbody>${items.join('')}</tbody></table></div>`;
+}
+
+// ════ PRINT (with Item Code) ════
+function buildPrintPage(rows,billNo,customer){
+  const isAIS=customer==='AIS',r0=rows[0],today=new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}),ac=isAIS?'pd-ais':'pd-true',bc=isAIS?'pd-badge-ais':'pd-badge-true',cc=isAIS?'#d4000a':'#0066cc';
+  const items=rows.map((t,i)=>`<tr><td style="text-align:center;font-weight:700">${i+1}</td><td><strong>${t.model||'—'}</strong></td><td style="color:#0043a8;font-weight:700;font-family:monospace">${t.code||'—'}</td><td>${t.desc||'—'}</td><td style="text-align:center;font-weight:700">${t.qty||0}</td><td style="text-align:center">ชิ้น</td><td style="font-family:monospace;font-size:9px">${t.sn||'—'}</td><td style="text-align:center"><span class="pd-badge ${bc}">${t.type||'—'}</span></td></tr>`).join('');
+  const total=rows.reduce((s,r)=>s+(+r.qty||0),0);
+  return`<div class="pd-page ${ac}"><div class="pd-header"><div class="pd-logo">TLN Inventory System<span>บริษัท เทคโนว์ โซลูชั่น จำกัด</span></div><div class="pd-doctype"><h2 style="color:${cc}">ใบเบิกวัสดุ / อุปกรณ์</h2><div style="margin-top:3px"><span class="pd-badge ${bc}">${customer}</span></div><div class="doc-no" style="margin-top:5px">เลขที่: ${r0.intNo||billNo||'—'}</div></div></div><div class="pd-info"><div class="pd-info-row"><span class="pd-info-lbl">Bill No.:</span><strong>${billNo||'—'}</strong></div><div class="pd-info-row"><span class="pd-info-lbl">วันที่:</span>${r0.date||'—'}</div><div class="pd-info-row"><span class="pd-info-lbl">DUID / Site:</span><strong>${r0.duid||'—'}</strong></div><div class="pd-info-row"><span class="pd-info-lbl">Region:</span>${r0.region||'—'}</div><div class="pd-info-row"><span class="pd-info-lbl">คลังต้นทาง:</span>${r0.ownerW||'—'}</div><div class="pd-info-row"><span class="pd-info-lbl">ผู้รับ:</span>${r0.ownerR||'—'}</div><div class="pd-info-row"><span class="pd-info-lbl">Location ต้นทาง:</span>${r0.locW||'—'}</div><div class="pd-info-row"><span class="pd-info-lbl">Location ปลายทาง:</span>${r0.locR||'—'}</div><div class="pd-info-row"><span class="pd-info-lbl">บันทึกโดย:</span>${r0.userNm||'—'}</div><div class="pd-info-row"><span class="pd-info-lbl">วันพิมพ์:</span>${today}</div></div><table class="pd-table"><thead><tr><th style="width:28px">ที่</th><th>Model / รุ่น</th><th style="width:100px">Item Code</th><th>Description</th><th style="text-align:center;width:45px">จำนวน</th><th style="text-align:center;width:35px">หน่วย</th><th style="width:100px">Serial No.</th><th style="text-align:center;width:60px">ประเภท</th></tr></thead><tbody>${items}</tbody><tfoot><tr><td colspan="4" style="text-align:right;font-weight:700;padding-top:7px">รวมทั้งหมด</td><td style="text-align:center;font-weight:800;color:${cc}">${total}</td><td colspan="3"></td></tr></tfoot></table><div class="pd-sig"><div class="pd-sig-box"><div class="pd-sig-name">……………………………………</div><div>ผู้เบิก / ผู้ส่ง</div><div style="color:#555;font-size:9px">(${r0.ownerW||'—'})</div></div><div class="pd-sig-box"><div class="pd-sig-name">……………………………………</div><div>ผู้รับ</div><div style="color:#555;font-size:9px">(${r0.ownerR||'—'})</div></div><div class="pd-sig-box"><div class="pd-sig-name">……………………………………</div><div>ผู้อนุมัติ / Supervisor</div><div style="color:#555;font-size:9px">TLN Management</div></div></div><div class="pd-footer">พิมพ์จาก Smart Inventory V.7.4.0 · ${today} · Bill: ${billNo||'—'} · ${customer}</div></div>`;
+}
+function printBill(billNo,customer){let rows=billNo?TX.filter(t=>t.bill===billNo&&t.customer===customer):TX.filter(t=>t.customer===customer);if(!rows.length){showToast('⚠️ ไม่พบรายการ','warn');return}document.getElementById('printDoc').innerHTML=buildPrintPage(rows,billNo,customer);window.print();}
+function printAll(){const bills=[...new Set(TX.map(t=>(t.bill||'?')+'|'+t.customer))];let html='';bills.forEach(b=>{const[bill,cus]=b.split('|'),rows=TX.filter(t=>t.bill===bill&&t.customer===cus);if(rows.length)html+=buildPrintPage(rows,bill,cus);});document.getElementById('printDoc').innerHTML=html;window.print();}
+
+// ════ INIT ════
+document.addEventListener('DOMContentLoaded',()=>{
+  const d=new Date();document.getElementById('pgSub').textContent='วันที่ '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
+  document.getElementById('duidQ')?.addEventListener('keydown',e=>{if(e.key==='Enter')srchDuid();});
+  document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap')&&!e.target.closest('.fbtn-srch')&&!e.target.closest('.fi')){hideDrop('duid');hideDrop('bill');}});
+  const isGAS=typeof google!=='undefined'&&typeof google.script!=='undefined';
+  if(isGAS){showImportBar('🔗 กำลังดึงข้อมูลจาก GAS...');syncFromGAS();}
+  else{TX=[...MOCK];refreshDash(TX);showImportBar('📦 Demo Mode — กด 🔄 Sync เพื่อดึงข้อมูลจริงจากระบบ');}
+});
+function syncFromGAS(){if(typeof google==='undefined'||!google.script){return}google.script.run.withSuccessHandler(function(data){if(!data.success)return;TX=data.recent||[];refreshDash(TX);showImportBar(`🔗 GAS Live: ${TX.length} รายการ`);}).getDashboardData();}
+</script>
+</body>
+</html>
