@@ -226,19 +226,35 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
       <div class="tc">
         <div class="t-hdr">
           <div class="c-title">📋 รายการทั้งหมด (<span id="txCount">0</span>)</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <div class="sbox">🔍<input type="text" placeholder="DUID / Bill / Model / Item Code..." id="txQ" oninput="applyF()"></div>
-            <div class="ftabs">
-              <button class="ft active" onclick="setF('ALL',this)">ทั้งหมด</button>
-              <button class="ft" onclick="setF('IN',this)">IN</button>
-              <button class="ft" onclick="setF('OUT',this)">OUT</button>
-              <button class="ft" onclick="setF('DISMANTLE',this)">DISMANTLE</button>
-              <button class="ft" onclick="setF('STR/IN',this)">STR/IN</button>
-              <button class="ft" onclick="setF('STR/OUT',this)">STR/OUT</button>
-              <button class="ft" onclick="setF('RETURN',this)">RETURN</button>
-              <button class="ft" onclick="setF('AIS',this)">AIS</button>
-              <button class="ft" onclick="setF('TRUE',this)">TRUE</button>
-            </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;width:100%;margin-top:10px;">
+            <div class="sbox" style="flex:1;min-width:200px">🔍<input type="text" placeholder="ค้นหา DUID / Bill / Model / Code..." id="txQ" oninput="applyF()" style="width:100%;background:transparent;border:none;color:white;outline:none;font-size:12px"></div>
+            
+            <select class="fi" id="txCus" onchange="applyF()" style="width:110px;padding:5px;font-size:12px;background:var(--bg);color:var(--text);border:1px solid var(--border)">
+              <option value="ALL">ทุกลูกค้า (All)</option>
+              <option value="AIS">AIS</option>
+              <option value="TRUE">TRUE</option>
+            </select>
+            
+            <select class="fi" id="txReg" onchange="applyF()" style="width:110px;padding:5px;font-size:12px;background:var(--bg);color:var(--text);border:1px solid var(--border)">
+              <option value="ALL">ทุก Region</option>
+              <option value="BKK">BKK</option>
+              <option value="ER">ER</option>
+              <option value="WR">WR</option>
+              <option value="NR">NR</option>
+              <option value="SR">SR</option>
+              <option value="NER">NER</option>
+            </select>
+            
+            <select class="fi" id="txType" onchange="applyF()" style="width:120px;padding:5px;font-size:12px;background:var(--bg);color:var(--text);border:1px solid var(--border)">
+              <option value="ALL">ทุกประเภท (All)</option>
+              <option value="IN">IN</option>
+              <option value="OUT">OUT</option>
+              <option value="DISMANTLE">DISMANTLE</option>
+              <option value="STR/IN">STR/IN</option>
+              <option value="STR/OUT">STR/OUT</option>
+              <option value="RETURN">RETURN</option>
+            </select>
+            
             <button class="tbtn g no-print" onclick="printBill(null,'AIS')" style="font-size:10px;padding:5px 9px">🖨️ AIS</button>
             <button class="tbtn b no-print" onclick="printBill(null,'TRUE')" style="font-size:10px;padding:5px 9px">🖨️ TRUE</button>
           </div>
@@ -9024,8 +9040,31 @@ function renderRgMini(data){const map={};data.forEach(r=>{const rg=r.region||'?'
 
 // ════ TABLE ════
 function renderTable(data){const el=document.getElementById('txCount');if(el)el.textContent=data.length;document.getElementById('txBody').innerHTML=data.map((t,i)=>{const scls=SMAP[t.status]||'s-open',sico=SICO[t.status]||'',cusC=t.customer==='AIS'?'var(--primary)':'var(--blue)',safeB=(t.bill||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");return`<tr><td><button class="prnbtn" onclick="printBill('${safeB}','${t.customer}')" title="Print">🖨️</button></td><td style="color:var(--muted)">${t.no||i+1}</td><td class="td-d">${t.duid}</td><td style="font-size:10px">${t.bill||'—'}</td><td><span class="ab ${BADGE[t.type]||'b-in'}">${t.type||'—'}</span></td><td>${t.region||'—'}</td><td><span style="font-weight:700;color:${cusC}">${t.customer}</span></td><td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">${t.model||'—'}</td><td style="font-family:monospace;font-size:10px;color:var(--blue)">${t.code||'—'}</td><td style="font-size:10px;color:var(--muted)">${t.desc||'—'}</td><td style="text-align:center">${t.qty||0}</td><td style="font-family:monospace;font-size:10px;color:var(--muted)">${t.sn||'—'}</td><td><span class="sp ${scls}">${sico} ${t.status}</span></td><td style="color:var(--muted);font-size:10px">${t.date||'—'}</td></tr>`;}).join('');}
-function setF(f,btn){document.querySelectorAll('.ft').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');curF=f;applyF();}
-function applyF(){const q=(document.getElementById('txQ')?.value||'').toLowerCase();let d=[...TX];if(curF!=='ALL'){if(curF==='AIS'||curF==='TRUE')d=d.filter(t=>t.customer===curF);else d=d.filter(t=>(t.type||'').toUpperCase()===curF.toUpperCase());}if(q)d=d.filter(t=>(t.duid||'').toLowerCase().includes(q)||(t.bill||'').toLowerCase().includes(q)||(t.model||'').toLowerCase().includes(q)||(t.code||'').toLowerCase().includes(q));renderTable(d);}
+function setF(f,btn){ /* Deprecated by dropdowns */ }
+function applyF() {
+  const q = (document.getElementById('txQ')?.value || '').toLowerCase();
+  const c = document.getElementById('txCus')?.value || 'ALL';
+  const r = document.getElementById('txReg')?.value || 'ALL';
+  const ty = document.getElementById('txType')?.value || 'ALL';
+  
+  let d = [...TX];
+  
+  if (c !== 'ALL') d = d.filter(t => t.customer === c);
+  if (r !== 'ALL') d = d.filter(t => t.region === r);
+  if (ty !== 'ALL') d = d.filter(t => (t.type||'').toUpperCase() === ty);
+  
+  if (q) {
+    d = d.filter(t => 
+      (t.duid||'').toLowerCase().includes(q) || 
+      (t.bill||'').toLowerCase().includes(q) || 
+      (t.model||'').toLowerCase().includes(q) || 
+      (t.code||'').toLowerCase().includes(q) ||
+      (t.desc||'').toLowerCase().includes(q)
+    );
+  }
+  
+  renderTable(d);
+}
 
 // ════ SEARCH PAGE ════
 function srchDuid(){const q=(document.getElementById('duidQ').value||'').trim().toLowerCase(),el=document.getElementById('dRes');if(!q){el.innerHTML='<p style="color:var(--muted)">กรุณากรอก DUID หรือ Bill No.</p>';return}const res=TX.filter(t=>(t.duid||'').toLowerCase().includes(q)||(t.bill||'').toLowerCase().includes(q));if(!res.length){el.innerHTML=`<p style="color:var(--red)">❌ ไม่พบ: <strong>${q}</strong></p>`;return}el.innerHTML=`<div style="font-size:11px;color:var(--muted);margin-bottom:8px">พบ ${res.length} รายการ — คลิกเพื่อเปิดฟอร์มบันทึกด้วย DUID/Bill นี้</div>`+res.map(t=>{const scls=SMAP[t.status]||'s-open',sico=SICO[t.status]||'',safeT=encodeURIComponent(JSON.stringify(t));return`<div class="ai" style="margin-bottom:6px;cursor:pointer" onclick="prefillFromRow('${safeT}')"><span class="ab ${BADGE[t.type]||'b-in'}">${t.type}</span><div class="ai-info"><div class="ai-d">${t.duid} <span style="font-size:9px;color:var(--muted)">· ${t.bill||'—'}</span></div><div class="ai-m">${t.model||'-'} · <span style="color:var(--blue)">${t.code||'—'}</span> · ${t.customer} · ${t.region} · ${t.date}</div></div><div style="display:flex;gap:5px;align-items:center"><span class="sp ${scls}" style="font-size:9px">${sico} ${t.status}</span></div></div>`;}).join('');}
