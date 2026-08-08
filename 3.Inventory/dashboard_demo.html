@@ -143,7 +143,13 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
 @media(max-width:900px){#sb{transform:translateX(-100%)}#sb.open{transform:translateX(0)}#main{margin-left:0}#hbg{display:flex}#sbov.show{display:block}.dash-row{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}.mg{grid-template-columns:repeat(3,1fr)}.imp-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}}
 @media(max-width:540px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.content{padding:12px}.imp-grid{grid-template-columns:1fr}.tb-right .tbtn span{display:none}}
 /* Print */
-@media print{#sb,#main>.topbar,#toasts,.no-print{display:none!important}#main{margin-left:0}body{background:#fff;color:#000}#printDoc{display:block!important}}
+@media print{
+  #sb, .topbar, .content, #toasts, .no-print { display: none !important; }
+  body, html { margin: 0; padding: 0; background: #fff; color: #000; width: 100%; }
+  #printDoc { display: block !important; width: 100%; margin: 0; padding: 0; }
+  .tp-page, .pd-page { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+  @page { margin: 15mm; }
+}
 #printDoc{display:none;font-family:'Sarabun','TH Sarabun New',sans-serif;font-size:13px;color:#000;background:#fff}
 .pd-page{width:210mm;min-height:148mm;padding:14mm 16mm;margin:0 auto;background:#fff;page-break-after:always}.pd-page:last-child{page-break-after:auto}
 .pd-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #000;padding-bottom:9px;margin-bottom:12px}
