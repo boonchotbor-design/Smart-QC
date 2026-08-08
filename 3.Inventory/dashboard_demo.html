@@ -5107,24 +5107,17 @@ function renderBomTable() {
   const end = Math.min(start + BOM_PAGE_SIZE, total);
   const pageItems = bomFiltered.slice(start, end);
 
-  // Use DocumentFragment for performance
   const frag = document.createDocumentFragment();
   pageItems.forEach((item, i) => {
     const realIdx = item._bomIdx !== undefined ? item._bomIdx : start + i;
     const tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td style="text-align:center;color:var(--muted);font-size:11px">' + (start+i+1) + '</td>' +
-      '<td><input class="fi" value="' + esc4html(item.type) + '" onchange="updateBomItem(' + realIdx + ',\'type\',this.value)" style="padding:3px 5px;font-size:11px"></td>' +
-      '<td><input class="fi" value="' + esc4html(item.model) + '" onchange="updateBomItem(' + realIdx + ',\'model\',this.value)" style="padding:3px 5px;font-size:11px"></td>' +
-      '<td><input class="fi" value="' + esc4html(item.code) + '" onchange="updateBomItem(' + realIdx + ',\'code\',this.value)" style="padding:3px 5px;font-size:11px;color:var(--blue)"></td>' +
-      '<td><input class="fi" value="' + esc4html(item.desc) + '" onchange="updateBomItem(' + realIdx + ',\'desc\',this.value)" style="padding:3px 5px;font-size:11px"></td>' +
-      '<td style="text-align:center"><button class="tbtn r" style="padding:3px 7px;font-size:10px" onclick="deleteBomItem(' + realIdx + ')">ลบ</button></td>';
+    tr.id = 'bomtr-' + realIdx;
+    tr.innerHTML = bomReadonlyRow(realIdx, item, start + i + 1);
     frag.appendChild(tr);
   });
   tbody.innerHTML = '';
   tbody.appendChild(frag);
 
-  // Update stats and pagination
   const stats = document.getElementById('bomStats');
   if(stats) stats.textContent = 'แสดง ' + (start+1) + '-' + end + ' จาก ' + total + ' รายการ';
   const pi1 = document.getElementById('bomPageInfo');
@@ -5134,6 +5127,60 @@ function renderBomTable() {
   if(pi2) pi2.textContent = info;
   document.getElementById('bomPrevBtn').disabled = bomPage === 0;
   document.getElementById('bomNextBtn').disabled = bomPage >= totalPages - 1;
+}
+
+function bomReadonlyRow(realIdx, item, rowNum) {
+  return '<td style="text-align:center;color:var(--muted);font-size:11px">' + rowNum + '</td>' +
+    '<td style="font-size:11px;padding:5px 7px">' + esc4html(item.type) + '</td>' +
+    '<td style="font-size:11px;padding:5px 7px;font-weight:600">' + esc4html(item.model) + '</td>' +
+    '<td style="font-size:11px;padding:5px 7px;color:var(--blue)">' + esc4html(item.code) + '</td>' +
+    '<td style="font-size:11px;padding:5px 7px;color:var(--muted)">' + esc4html(item.desc) + '</td>' +
+    '<td style="text-align:center;white-space:nowrap">' +
+      '<button class="tbtn" style="padding:3px 8px;font-size:10px;margin-right:3px" onclick="bomEditRow(' + realIdx + ')">&#x270F;&#xFE0F; Edit</button>' +
+      '<button class="tbtn r" style="padding:3px 7px;font-size:10px" onclick="deleteBomItem(' + realIdx + ')">&#x1F5D1;</button>' +
+    '</td>';
+}
+
+function bomEditRow(realIdx) {
+  const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
+  const item = bom[realIdx];
+  if(!item) return;
+  const tr = document.getElementById('bomtr-' + realIdx);
+  if(!tr) return;
+  const rowNum = tr.cells[0].textContent;
+  tr.innerHTML =
+    '<td style="text-align:center;color:var(--muted);font-size:11px">' + rowNum + '</td>' +
+    '<td><input class="fi" id="bedit-type-' + realIdx + '" value="' + esc4html(item.type) + '" style="padding:3px 5px;font-size:11px"></td>' +
+    '<td><input class="fi" id="bedit-model-' + realIdx + '" value="' + esc4html(item.model) + '" style="padding:3px 5px;font-size:11px;font-weight:600"></td>' +
+    '<td><input class="fi" id="bedit-code-' + realIdx + '" value="' + esc4html(item.code) + '" style="padding:3px 5px;font-size:11px;color:var(--blue)"></td>' +
+    '<td><input class="fi" id="bedit-desc-' + realIdx + '" value="' + esc4html(item.desc) + '" style="padding:3px 5px;font-size:11px"></td>' +
+    '<td style="text-align:center;white-space:nowrap">' +
+      '<button class="tbtn g" style="padding:3px 8px;font-size:10px;margin-right:3px" onclick="bomSaveRow(' + realIdx + ')">&#x1F4BE; บันทึก</button>' +
+      '<button class="tbtn" style="padding:3px 7px;font-size:10px" onclick="bomCancelRow(' + realIdx + ')">&#x2715;</button>' +
+    '</td>';
+  document.getElementById('bedit-type-' + realIdx).focus();
+}
+
+function bomSaveRow(realIdx) {
+  const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
+  if(!bom[realIdx]) return;
+  bom[realIdx].type  = document.getElementById('bedit-type-'  + realIdx).value || '';
+  bom[realIdx].model = document.getElementById('bedit-model-' + realIdx).value || '';
+  bom[realIdx].code  = document.getElementById('bedit-code-'  + realIdx).value || '';
+  bom[realIdx].desc  = document.getElementById('bedit-desc-'  + realIdx).value || '';
+  const tr = document.getElementById('bomtr-' + realIdx);
+  const rowNum = tr.cells[0].textContent;
+  tr.innerHTML = bomReadonlyRow(realIdx, bom[realIdx], rowNum);
+  toast('&#x1F4BE; บันทึกเรียบร้อย', 'g');
+}
+
+function bomCancelRow(realIdx) {
+  const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
+  const item = bom[realIdx];
+  if(!item) return;
+  const tr = document.getElementById('bomtr-' + realIdx);
+  const rowNum = tr.cells[0].textContent;
+  tr.innerHTML = bomReadonlyRow(realIdx, item, rowNum);
 }
 
 function esc4html(s) {
@@ -5151,15 +5198,18 @@ function updateBomItem(idx, field, val) {
   if(bom[idx]) bom[idx][field] = val;
 }
 function deleteBomItem(idx) {
+  if(!confirm('ยืนยันการลบรายการนี้?')) return;
   const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
   bom.splice(idx, 1);
   bomFilterAndRender();
+  toast('ลบรายการแล้ว', 'r');
 }
 function addBomRow() {
   const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
   bom.unshift({type: '', model: '', code: '', desc: ''});
   bomPage = 0;
   bomFilterAndRender();
+  setTimeout(() => bomEditRow(0), 60);
 }
 
 // ════ MOCK DATA ════
