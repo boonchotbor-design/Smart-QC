@@ -262,6 +262,17 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
           </div>
         </div>
         <div style="overflow-x:auto; max-height:65vh; overflow-y:auto; border-bottom:1px solid var(--border)"><table><thead><tr><th></th><th>No</th><th>DUID</th><th>Bill No.</th><th>ประเภท</th><th>Region</th><th>ลูกค้า</th><th>Model</th><th>Item Code</th><th>Description</th><th>จำนวน</th><th>Serial No.</th><th>สถานะ</th><th>วันที่</th></tr></thead><tbody id="txBody"></tbody></table></div>
+<div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+  <div></div>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <span style="font-size:12px;color:var(--muted)" id="txPageInfo">แสดง 0-0 จาก 0 รายการ</span>
+    <div style="display:flex; gap:4px; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:2px;">
+      <button class="tbtn" onclick="chgTxPage(-1)" style="padding:6px 12px; background:transparent; border:none; border-radius:6px;">◀</button>
+      <span id="txPageLabel" style="font-size:12px; padding:6px 4px;">หน้า 1 / 1</span>
+      <button class="tbtn" onclick="chgTxPage(1)" style="padding:6px 12px; background:transparent; border:none; border-radius:6px;">▶</button>
+    </div>
+  </div>
+</div>
       </div>
     </div>
 
@@ -9041,22 +9052,61 @@ function renderActivity(data){document.getElementById('actList').innerHTML=data.
 function renderRgMini(data){const map={};data.forEach(r=>{const rg=r.region||'?';map[rg]=(map[rg]||0)+1});document.getElementById('rgMini').innerHTML=Object.entries(map).map(([r,n])=>`<div class="mc" onclick="setFAndGo('${r}')"><div class="m-lbl">${r}</div><div class="m-val" style="color:${RGCOL[r]||'#888'}">${n}</div><div class="m-sub">รายการ</div><div class="r-bar" style="background:${RGCOL[r]||'#888'}"></div></div>`).join('');}
 
 // ════ TABLE ════
-function renderTable(data){const el=document.getElementById('txCount');if(el)el.textContent=data.length;document.getElementById('txBody').innerHTML=data.map((t,i)=>{const scls=SMAP[t.status]||'s-open',sico=SICO[t.status]||'',cusC=t.customer==='AIS'?'var(--primary)':'var(--blue)',safeB=(t.bill||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");return`<tr><td><button class="prnbtn" onclick="printBill('${safeB}','${t.customer}')" title="Print">🖨️</button></td><td style="color:var(--muted)">${t.no||i+1}</td><td class="td-d">${t.duid}</td><td style="font-size:10px">${t.bill||'—'}</td><td><span class="ab ${BADGE[t.type]||'b-in'}">${t.type||'—'}</span></td><td>${t.region||'—'}</td><td><span style="font-weight:700;color:${cusC}">${t.customer}</span></td><td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">${t.model||'—'}</td><td style="font-family:monospace;font-size:10px;color:var(--blue)">${t.code||'—'}</td><td style="font-size:10px;color:var(--muted)">${t.desc||'—'}</td><td style="text-align:center">${t.qty||0}</td><td style="font-family:monospace;font-size:10px;color:var(--muted)">${t.sn||'—'}</td><td><span class="sp ${scls}">${sico} ${t.status}</span></td><td style="color:var(--muted);font-size:10px">${t.date||'—'}</td></tr>`;}).join('');}
+let txPage = 0;
+const TX_PAGE_SIZE = 50;
+let txFiltered = [];
+
+function chgTxPage(d) {
+  const total = txFiltered.length;
+  const max = Math.max(1, Math.ceil(total / TX_PAGE_SIZE));
+  txPage += d;
+  if(txPage < 0) txPage = 0;
+  if(txPage >= max) txPage = max - 1;
+  renderTable();
+}
+
+function renderTable() {
+  const el = document.getElementById('txCount');
+  if (el) el.textContent = txFiltered.length;
+  
+  const total = txFiltered.length;
+  const max = Math.max(1, Math.ceil(total / TX_PAGE_SIZE));
+  if(txPage >= max) txPage = max - 1;
+  if(txPage < 0) txPage = 0;
+  
+  const start = txPage * TX_PAGE_SIZE;
+  const end = Math.min(start + TX_PAGE_SIZE, total);
+  const dataPage = txFiltered.slice(start, end);
+  
+  const info = document.getElementById('txPageInfo');
+  if(info) info.textContent = total > 0 ? `แสดง ${start+1}-${end} จาก ${total} รายการ` : `แสดง 0-0 จาก 0 รายการ`;
+  
+  const plbl = document.getElementById('txPageLabel');
+  if(plbl) plbl.textContent = `หน้า ${total > 0 ? txPage + 1 : 1} / ${max}`;
+
+  document.getElementById('txBody').innerHTML = dataPage.map((t, i) => {
+    const idx = start + i + 1;
+    const scls = SMAP[t.status] || 's-open', sico = SICO[t.status] || '', cusC = t.customer === 'AIS' ? 'var(--primary)' : 'var(--blue)', safeB = (t.bill || '').replace(/\/g, '\\').replace(/'/g, "\'");
+    return `<tr><td><button class="prnbtn" onclick="printBill('${safeB}','${t.customer}')" title="Print">🖨️</button></td><td style="color:var(--muted)">${t.no || idx}</td><td class="td-d">${t.duid}</td><td style="font-size:10px">${t.bill || '—'}</td><td><span class="ab ${BADGE[t.type] || 'b-in'}">${t.type || '—'}</span></td><td>${t.region || '—'}</td><td><span style="font-weight:700;color:${cusC}">${t.customer}</span></td><td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">${t.model || '—'}</td><td style="font-family:monospace;font-size:10px;color:var(--blue)">${t.code || '—'}</td><td style="font-size:10px;color:var(--muted)">${t.desc || '—'}</td><td style="text-align:center">${t.qty || 0}</td><td style="font-family:monospace;font-size:10px;color:var(--muted)">${t.sn || '—'}</td><td><span class="sp ${scls}">${sico} ${t.status}</span></td><td style="color:var(--muted);font-size:10px">${t.date || '—'}</td></tr>`;
+  }).join('');
+}
+
 function setF(f,btn){ /* Deprecated by dropdowns */ }
+
 function applyF() {
   const q = (document.getElementById('txQ')?.value || '').toLowerCase();
   const c = document.getElementById('txCus')?.value || 'ALL';
   const r = document.getElementById('txReg')?.value || 'ALL';
   const ty = document.getElementById('txType')?.value || 'ALL';
   
-  let d = [...TX];
+  txFiltered = [...TX];
   
-  if (c !== 'ALL') d = d.filter(t => t.customer === c);
-  if (r !== 'ALL') d = d.filter(t => t.region === r);
-  if (ty !== 'ALL') d = d.filter(t => (t.type||'').toUpperCase() === ty);
+  if (c !== 'ALL') txFiltered = txFiltered.filter(t => t.customer === c);
+  if (r !== 'ALL') txFiltered = txFiltered.filter(t => t.region === r);
+  if (ty !== 'ALL') txFiltered = txFiltered.filter(t => (t.type||'').toUpperCase() === ty);
   
   if (q) {
-    d = d.filter(t => 
+    txFiltered = txFiltered.filter(t => 
       (t.duid||'').toLowerCase().includes(q) || 
       (t.bill||'').toLowerCase().includes(q) || 
       (t.model||'').toLowerCase().includes(q) || 
@@ -9065,7 +9115,8 @@ function applyF() {
     );
   }
   
-  renderTable(d);
+  txPage = 0;
+  renderTable();
 }
 
 // ════ SEARCH PAGE ════
