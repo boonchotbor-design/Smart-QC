@@ -226,17 +226,19 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
       <div class="tc">
         <div class="t-hdr">
           <div class="c-title">📋 รายการทั้งหมด (<span id="txCount">0</span>)</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;width:100%;margin-top:10px;">
-            <div class="sbox" style="flex:1;min-width:200px">🔍<input type="text" placeholder="ค้นหา DUID / Bill / Model / Code..." id="txQ" oninput="applyF()" style="width:100%;background:transparent;border:none;color:white;outline:none;font-size:12px"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;width:100%;margin-top:10px;">
+            <div class="sbox" style="flex:1;min-width:250px;max-width:350px;">
+              🔍<input type="text" placeholder="ค้นหา DUID / Bill / Model / Code..." id="txQ" oninput="applyF()" style="width:100%;background:transparent;border:none;color:white;outline:none;font-size:12px">
+            </div>
             
-            <select class="fi" id="txCus" onchange="applyF()" style="width:110px;padding:5px;font-size:12px;background:var(--bg);color:var(--text);border:1px solid var(--border)">
+            <select id="txCus" onchange="applyF()" style="padding:7px;font-size:12px;border-radius:6px;background:var(--card2);color:white;border:1px solid var(--border);outline:none;cursor:pointer;">
               <option value="ALL">ทุกลูกค้า (All)</option>
               <option value="AIS">AIS</option>
               <option value="TRUE">TRUE</option>
             </select>
             
-            <select class="fi" id="txReg" onchange="applyF()" style="width:110px;padding:5px;font-size:12px;background:var(--bg);color:var(--text);border:1px solid var(--border)">
-              <option value="ALL">ทุก Region</option>
+            <select id="txReg" onchange="applyF()" style="padding:7px;font-size:12px;border-radius:6px;background:var(--card2);color:white;border:1px solid var(--border);outline:none;cursor:pointer;">
+              <option value="ALL">ทุก Region (All)</option>
               <option value="BKK">BKK</option>
               <option value="ER">ER</option>
               <option value="WR">WR</option>
@@ -245,7 +247,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
               <option value="NER">NER</option>
             </select>
             
-            <select class="fi" id="txType" onchange="applyF()" style="width:120px;padding:5px;font-size:12px;background:var(--bg);color:var(--text);border:1px solid var(--border)">
+            <select id="txType" onchange="applyF()" style="padding:7px;font-size:12px;border-radius:6px;background:var(--card2);color:white;border:1px solid var(--border);outline:none;cursor:pointer;">
               <option value="ALL">ทุกประเภท (All)</option>
               <option value="IN">IN</option>
               <option value="OUT">OUT</option>
@@ -255,8 +257,8 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
               <option value="RETURN">RETURN</option>
             </select>
             
-            <button class="tbtn g no-print" onclick="printBill(null,'AIS')" style="font-size:10px;padding:5px 9px">🖨️ AIS</button>
-            <button class="tbtn b no-print" onclick="printBill(null,'TRUE')" style="font-size:10px;padding:5px 9px">🖨️ TRUE</button>
+            <button class="tbtn g no-print" onclick="printBill(null,'AIS')" style="font-size:10px;padding:6px 12px;margin-left:auto;">🖨️ AIS</button>
+            <button class="tbtn b no-print" onclick="printBill(null,'TRUE')" style="font-size:10px;padding:6px 12px">🖨️ TRUE</button>
           </div>
         </div>
         <div style="overflow-x:auto"><table><thead><tr><th></th><th>No</th><th>DUID</th><th>Bill No.</th><th>ประเภท</th><th>Region</th><th>ลูกค้า</th><th>Model</th><th>Item Code</th><th>Description</th><th>จำนวน</th><th>Serial No.</th><th>สถานะ</th><th>วันที่</th></tr></thead><tbody id="txBody"></tbody></table></div>
