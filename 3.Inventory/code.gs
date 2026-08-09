@@ -1536,8 +1536,8 @@ function importBulkData(rows, customer, userEmail, userName) {
       row[0]  = newNo;
       row[1]  = cleanDuid;
       row[2]  = reg;
-      row[3]  = String(item.type || "").trim();
-      row[4]  = String(item.itype || "").trim();
+      row[3]  = String(item.transType || item.type || "").trim();
+      row[4]  = String(item.itemType || item.itype || "").trim();
       row[5]  = item.date ? item.date : dateStr;
       row[6]  = String(item.bill || "").trim();
       row[7]  = String(item.model || "").trim();
@@ -1582,3 +1582,4 @@ function importBulkData(rows, customer, userEmail, userName) {
     lock.releaseLock();
   }
 }
+
