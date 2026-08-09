@@ -1339,8 +1339,8 @@ function getDashboardData() {
       }
     });
 
-    // ─── 60 รายการล่าสุด ───
-    var recent = allRows.slice(0, 60);
+    // ─── ข้อมูลรายการทั้งหมด ───
+    var recent = allRows;
 
     return {
       success:    true,
