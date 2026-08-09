@@ -414,7 +414,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
             <button class="tbtn b no-print" onclick="openImportExport('TRUE')" style="font-size:10px;padding:6px 12px">📥 TRUE</button>
           </div>
         </div>
-        <div style="overflow-x:auto; max-height:65vh; overflow-y:auto; border-bottom:1px solid var(--border)"><table><thead><tr><th></th><th>No</th><th>DUID</th><th>Bill No.</th><th>ประเภท</th><th>Region</th><th>ลูกค้า</th><th>Model</th><th>Item Code</th><th>Description</th><th>จำนวน</th><th>Serial No.</th><th>สถานะ</th><th>วันที่</th></tr></thead><tbody id="txBody"></tbody></table></div>
+        <div style="overflow-x:auto; max-height:65vh; overflow-y:auto; border-bottom:1px solid var(--border)"><table><thead><tr><th></th><th>No</th><th>DUID</th><th>Region</th><th>TYPE</th><th>IType</th><th>Date</th><th>Bill No.</th><th>Model</th><th>Item Code</th><th>Item Description</th><th>Qty</th><th>SN</th><th>Owner Warehouse</th><th>Owner Receiver</th><th>Location Warehouse</th><th>Location Receiver</th><th>Status</th><th>INT No</th><th>User</th></tr></thead><tbody id="txBody"></tbody></table></div>
 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
   <div></div>
   <div style="display:flex; align-items:center; gap:12px;">
@@ -9295,15 +9295,6 @@ function renderTable() {
         </td>
         <td style="color:var(--muted)">${t.no || idx}</td>
         <td><input id="etx_duid" value="${t.duid||''}" class="edit-in" style="width:80px"></td>
-        <td><input id="etx_bill" value="${t.bill||''}" class="edit-in" style="width:100px"></td>
-        <td><select id="etx_type" class="edit-in" style="width:70px">
-          <option value="IN" ${t.type==='IN'?'selected':''}>IN</option>
-          <option value="OUT" ${t.type==='OUT'?'selected':''}>OUT</option>
-          <option value="DISMANTLE" ${t.type==='DISMANTLE'?'selected':''}>DISMANTLE</option>
-          <option value="STR/IN" ${t.type==='STR/IN'?'selected':''}>STR/IN</option>
-          <option value="STR/OUT" ${t.type==='STR/OUT'?'selected':''}>STR/OUT</option>
-          <option value="RETURN" ${t.type==='RETURN'?'selected':''}>RETURN</option>
-        </select></td>
         <td><select id="etx_reg" class="edit-in" style="width:50px">
           <option value="BKK" ${t.region==='BKK'?'selected':''}>BKK</option>
           <option value="ER" ${t.region==='ER'?'selected':''}>ER</option>
@@ -9312,22 +9303,34 @@ function renderTable() {
           <option value="SR" ${t.region==='SR'?'selected':''}>SR</option>
           <option value="NER" ${t.region==='NER'?'selected':''}>NER</option>
         </select></td>
-        <td><select id="etx_cus" class="edit-in" style="width:60px">
-          <option value="AIS" ${t.customer==='AIS'?'selected':''}>AIS</option>
-          <option value="TRUE" ${t.customer==='TRUE'?'selected':''}>TRUE</option>
+        <td><select id="etx_type" class="edit-in" style="width:70px">
+          <option value="IN" ${t.type==='IN'?'selected':''}>IN</option>
+          <option value="OUT" ${t.type==='OUT'?'selected':''}>OUT</option>
+          <option value="DISMANTLE" ${t.type==='DISMANTLE'?'selected':''}>DISMANTLE</option>
+          <option value="STR/IN" ${t.type==='STR/IN'?'selected':''}>STR/IN</option>
+          <option value="STR/OUT" ${t.type==='STR/OUT'?'selected':''}>STR/OUT</option>
+          <option value="RETURN" ${t.type==='RETURN'?'selected':''}>RETURN</option>
         </select></td>
+        <td><input id="etx_itype" value="${t.itype||''}" class="edit-in" style="width:70px"></td>
+        <td><input id="etx_date" value="${t.date||''}" class="edit-in" style="width:70px"></td>
+        <td><input id="etx_bill" value="${t.bill||''}" class="edit-in" style="width:100px"></td>
         <td><input id="etx_model" value="${t.model||''}" class="edit-in" style="width:100px"></td>
         <td><input id="etx_code" value="${t.code||''}" class="edit-in" style="width:70px"></td>
         <td><input id="etx_desc" value="${t.desc||''}" class="edit-in" style="width:100px"></td>
         <td><input id="etx_qty" type="number" value="${t.qty||0}" class="edit-in" style="width:40px"></td>
         <td><input id="etx_sn" value="${t.sn||''}" class="edit-in" style="width:100px"></td>
+        <td><input id="etx_ownerW" value="${t.ownerW||''}" class="edit-in" style="width:80px"></td>
+        <td><input id="etx_ownerR" value="${t.ownerR||''}" class="edit-in" style="width:80px"></td>
+        <td><input id="etx_locW" value="${t.locW||''}" class="edit-in" style="width:80px"></td>
+        <td><input id="etx_locR" value="${t.locR||''}" class="edit-in" style="width:80px"></td>
         <td><select id="etx_status" class="edit-in" style="width:80px">
           <option value="Open" ${t.status==='Open'?'selected':''}>Open</option>
           <option value="Closed" ${t.status==='Closed'?'selected':''}>Closed</option>
           <option value="On Process" ${t.status==='On Process'?'selected':''}>On Process</option>
           <option value="Pending" ${t.status==='Pending'?'selected':''}>Pending</option>
         </select></td>
-        <td><input id="etx_date" value="${t.date||''}" class="edit-in" style="width:70px"></td>
+        <td><input id="etx_intNo" value="${t.intNo||''}" class="edit-in" style="width:80px"></td>
+        <td><input id="etx_userNm" value="${t.userNm||''}" class="edit-in" style="width:70px"></td>
       </tr>`;
     }
 
@@ -9338,18 +9341,24 @@ function renderTable() {
         <button class="prnbtn" onclick="deleteTx(${realIdx})" title="Delete" style="background:transparent;border:none;cursor:pointer;font-size:12px;margin:0 2px;">🗑️</button>
       </td>
       <td style="color:var(--muted)">${t.no || idx}</td>
-      <td class="td-d">${t.duid}</td>
-      <td style="font-size:10px">${t.bill || '—'}</td>
-      <td><span class="ab ${BADGE[t.type] || 'b-in'}">${t.type || '—'}</span></td>
+      <td class="td-d">${t.duid || '—'}</td>
       <td>${t.region || '—'}</td>
-      <td><span style="font-weight:700;color:${cusC}">${t.customer}</span></td>
+      <td><span class="ab ${BADGE[t.type] || 'b-in'}">${t.type || '—'}</span></td>
+      <td>${t.itype || '—'}</td>
+      <td style="color:var(--muted);font-size:10px">${t.date || '—'}</td>
+      <td style="font-size:10px">${t.bill || '—'}</td>
       <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">${t.model || '—'}</td>
       <td style="font-family:monospace;font-size:10px;color:var(--blue)">${t.code || '—'}</td>
       <td style="font-size:10px;color:var(--muted)">${t.desc || '—'}</td>
       <td style="text-align:center">${t.qty || 0}</td>
       <td style="font-family:monospace;font-size:10px;color:var(--muted)">${t.sn || '—'}</td>
+      <td style="font-size:10px">${t.ownerW || '—'}</td>
+      <td style="font-size:10px">${t.ownerR || '—'}</td>
+      <td style="font-size:10px">${t.locW || '—'}</td>
+      <td style="font-size:10px">${t.locR || '—'}</td>
       <td><span class="sp ${scls}">${sico} ${t.status}</span></td>
-      <td style="color:var(--muted);font-size:10px">${t.date || '—'}</td>
+      <td style="font-size:10px">${t.intNo || '—'}</td>
+      <td style="font-size:10px">${t.userNm || '—'}</td>
     </tr>`;
   }).join('');
 }
@@ -9360,17 +9369,23 @@ function saveTx(idx) {
   const t = TX[idx];
   if(!t) return;
   t.duid = document.getElementById('etx_duid').value.trim();
-  t.bill = document.getElementById('etx_bill').value.trim();
-  t.type = document.getElementById('etx_type').value;
   t.region = document.getElementById('etx_reg').value;
-  t.customer = document.getElementById('etx_cus').value;
+  t.type = document.getElementById('etx_type').value;
+  t.itype = document.getElementById('etx_itype').value.trim();
+  t.date = document.getElementById('etx_date').value.trim();
+  t.bill = document.getElementById('etx_bill').value.trim();
   t.model = document.getElementById('etx_model').value.trim();
   t.code = document.getElementById('etx_code').value.trim();
   t.desc = document.getElementById('etx_desc').value.trim();
   t.qty = parseInt(document.getElementById('etx_qty').value)||0;
   t.sn = document.getElementById('etx_sn').value.trim();
+  t.ownerW = document.getElementById('etx_ownerW').value.trim();
+  t.ownerR = document.getElementById('etx_ownerR').value.trim();
+  t.locW = document.getElementById('etx_locW').value.trim();
+  t.locR = document.getElementById('etx_locR').value.trim();
   t.status = document.getElementById('etx_status').value;
-  t.date = document.getElementById('etx_date').value.trim();
+  t.intNo = document.getElementById('etx_intNo').value.trim();
+  t.userNm = document.getElementById('etx_userNm').value.trim();
   
   recalculateAllStatusJS();
   editTxRealIdx = -1;
