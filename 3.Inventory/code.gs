@@ -1462,6 +1462,31 @@ function saveImportData(rows, customer, userEmail, userName) {
       "Import " + allRows.length + " รายการ | Customer: " + customer
     );
 
+    // ── แจ้งเตือนสรุปการ Import ──
+    try {
+      var importHeader = {
+        userName: userName || userEmail || "Web User",
+        userEmail: userEmail || "Unknown",
+        customer: customer,
+        type: "BULK IMPORT (นำเข้าข้อมูล)",
+        duid: "MULTIPLE (" + Object.keys(duidSet).length + " DUIDs)",
+        region: "-",
+        billNo: "-",
+        ownerWarehouse: "-",
+        ownerReceiver: "-",
+        locationWarehouse: "-",
+        locationReceiver: "-"
+      };
+      var importItems = [{
+        model: "รายการอัปโหลดจาก CSV",
+        sn: "N/A",
+        qty: allRows.length
+      }];
+      notifyOnly(importHeader, importItems);
+    } catch (e) {
+      logToSheet("NOTIFY_IMPORT_ERROR", e.toString());
+    }
+
     return {
       success: true,
       count:   allRows.length,
