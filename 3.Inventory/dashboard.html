@@ -9413,13 +9413,63 @@ function submitM(){
   const items=getItems();
   if(!items.length){showToast('⚠️ กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ','warn');return}
   const d=new Date(),ds=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-  const base={duid,bill,type:curAction,region:document.getElementById('m-reg').value,customer:document.getElementById('m-cus').value,ownerW:document.getElementById('m-ownerW').value,ownerR:document.getElementById('m-ownerR').value,locW:document.getElementById('m-locW').value,locR:document.getElementById('m-locR').value,date:ds,status:'Pending',intNo:'',userNm:'Current User'};
-  const newRows=items.map((it,i)=>({...base,no:TX.length+i+1,...it}));
+  const cus=document.getElementById('m-cus').value||'AIS';
+  const reg=document.getElementById('m-reg').value||'ER';
+
+  const userEmail = localStorage.getItem('inv_userEmail') || 'Unknown (Web)';
+  const userName  = localStorage.getItem('inv_userName')  || 'Web User';
+
+  const header = {
+    duid:              duid,
+    billNo:            bill,
+    type:              curAction,
+    region:            reg,
+    customer:          cus,
+    ownerWarehouse:    document.getElementById('m-ownerW').value||'',
+    ownerReceiver:     document.getElementById('m-ownerR').value||'',
+    locationWarehouse: document.getElementById('m-locW').value||'',
+    locationReceiver:  document.getElementById('m-locR').value||'',
+    userName:          userName,
+    userEmail:         userEmail
+  };
+  const gasItems = items.map(it=>({
+    type:  it.itype||'',
+    model: it.model||'',
+    code:  it.code||'',
+    desc:  it.desc||'',
+    sn:    it.sn||'',
+    qty:   it.qty||1
+  }));
+
+  // ── แสดงผลใน UI ก่อน (Optimistic Update) ──
+  const base={duid,bill,type:curAction,region:reg,customer:cus,ownerW:header.ownerWarehouse,ownerR:header.ownerReceiver,locW:header.locationWarehouse,locR:header.locationReceiver,date:ds,status:'Pending',intNo:'',userNm:userName};
+  const newRows=gasItems.map((it,i)=>({...base,no:TX.length+i+1,...it}));
   TX.unshift(...newRows);
   recalculateAllStatusJS();
-  closeM();showToast(`✅ บันทึก ${curAction} · ${duid} · ${items.length} รายการ สำเร็จ`,'ok');
+  closeM();showToast(`⏳ กำลังบันทึก ${curAction} · ${duid} · ${gasItems.length} รายการ...`,'ok');
   refreshDash(TX);
+
+  // ── บันทึกจริงลง Google Sheets ──
+  if(typeof google !== 'undefined' && google.script) {
+    google.script.run
+      .withSuccessHandler(function(res){
+        if(res && res.success){
+          showToast(`✅ บันทึกสำเร็จ! ${curAction} · ${duid} · ${gasItems.length} รายการ`,'ok');
+          // Sync ข้อมูลล่าสุดจาก GAS
+          google.script.run.withSuccessHandler(function(data){
+            if(data && data.success){ TX=data.recent||TX; refreshDash(TX); }
+          }).getDashboardData();
+        } else {
+          showToast('❌ บันทึกไม่สำเร็จ: '+(res&&res.message||'Unknown Error'),'err');
+        }
+      })
+      .withFailureHandler(function(err){
+        showToast('❌ เกิดข้อผิดพลาด: '+err.message,'err');
+      })
+      .saveMainData(header, gasItems, userEmail, userName);
+  }
 }
+
 
 // ════ SYNC & IMPORT ════
 async function syncNow(){await syncFromURL();}
