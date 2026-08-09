@@ -258,8 +258,8 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
             </select>
             
             <button class="tbtn" onclick="addTx()" style="font-size:10px;padding:6px 12px;margin-left:auto;background:var(--primary);border-color:var(--primary);">➕ Add New</button>
-            <button class="tbtn g no-print" onclick="printBill(null,'AIS')" style="font-size:10px;padding:6px 12px;">🖨️ AIS</button>
-            <button class="tbtn b no-print" onclick="printBill(null,'TRUE')" style="font-size:10px;padding:6px 12px">🖨️ TRUE</button>
+            <button class="tbtn g no-print" onclick="openImportExport('AIS')" style="font-size:10px;padding:6px 12px;">📥 AIS</button>
+            <button class="tbtn b no-print" onclick="openImportExport('TRUE')" style="font-size:10px;padding:6px 12px">📥 TRUE</button>
           </div>
         </div>
         <div style="overflow-x:auto; max-height:65vh; overflow-y:auto; border-bottom:1px solid var(--border)"><table><thead><tr><th></th><th>No</th><th>DUID</th><th>Bill No.</th><th>ประเภท</th><th>Region</th><th>ลูกค้า</th><th>Model</th><th>Item Code</th><th>Description</th><th>จำนวน</th><th>Serial No.</th><th>สถานะ</th><th>วันที่</th></tr></thead><tbody id="txBody"></tbody></table></div>
@@ -383,6 +383,50 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
         <div id="printPreview" style="background:#fff;color:#000;padding:20px;border-radius:4px;overflow-x:auto;display:none;min-height:300px;box-shadow:inset 0 0 10px rgba(0,0,0,0.1)">
           <!-- Preview goes here -->
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 📥 Import/Export Modal V.7.3.0 -->
+<div class="ov" id="importExportModal" onclick="if(event.target===this)closeImportExport()">
+  <div class="mbox" style="padding:0; overflow:hidden;">
+    <div class="fhdr">
+      <span style="font-size:24px">📦</span>
+      <div class="fhdr-title" id="importExportTitle">Import / Export</div>
+      <button class="fhdr-close" onclick="closeImportExport()">✕</button>
+    </div>
+    
+    <div style="padding:16px 20px;">
+      <!-- Tabs -->
+      <div style="display:flex; background:rgba(255,255,255,0.05); border-radius:10px; padding:4px; margin-bottom:16px; gap:4px; border:1px solid var(--border)">
+        <button id="ieTabImportBtn" onclick="switchIETab('import')" style="flex:1; padding:9px 6px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; background:var(--primary); color:#fff; font-family:'Sarabun',sans-serif;">📥 Import</button>
+        <button id="ieTabExportBtn" onclick="switchIETab('export')" style="flex:1; padding:9px 6px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; background:transparent; color:var(--muted); font-family:'Sarabun',sans-serif;">📤 Export</button>
+      </div>
+
+      <!-- Import Tab -->
+      <div id="ieTabImport">
+        <div style="background:rgba(77,159,255,.1); border:1px solid rgba(77,159,255,.3); border-radius:10px; padding:12px; margin-bottom:12px; font-size:12px; color:var(--text); line-height:1.6;">
+          <b>📋 Format CSV ที่รองรับ:</b><br>
+          <code style="font-size:10px; word-break:break-all; color:var(--blue)">DUID, REGION, IN/OUT, TYPE, DATE, BILL NO., MODEL, ITEM CODE, DESCRIPTION, QTY, SERIAL</code>
+        </div>
+        <button onclick="downloadImportTemplate()" style="width:100%; padding:10px; margin-bottom:8px; background:rgba(255,255,255,.05); color:var(--text); border:1px dashed var(--border); border-radius:10px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:12px; transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,.1)'" onmouseout="this.style.background='rgba(255,255,255,.05)'">⬇️ Download Template CSV</button>
+        <input type="file" id="importFileInput" accept=".csv,.txt" style="display:none" onchange="previewImport(this)">
+        <button onclick="document.getElementById('importFileInput').click()" style="width:100%; padding:10px; margin-bottom:8px; background:var(--card2); border:1px solid var(--border); border-radius:10px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:12px; color:var(--text); transition:all .2s;" onmouseover="this.style.background='rgba(0,194,138,.1)';this.style.borderColor='var(--primary)'" onmouseout="this.style.background='var(--card2)';this.style.borderColor='var(--border)'">📂 เลือกไฟล์ CSV</button>
+        <div id="importPreviewBox" style="display:none;">
+          <div style="font-size:12px; font-weight:700; margin-bottom:6px; color:var(--blue);">📊 Preview: <span id="importRowCount">0</span> รายการ</div>
+          <div id="importPreviewTable" style="overflow-x:auto; max-height:200px; border-radius:8px; border:1px solid var(--border); margin-bottom:10px; background:var(--card2)"></div>
+          <button id="btnConfirmImport" onclick="confirmImport()" style="width:100%; padding:12px; background:linear-gradient(135deg,var(--primary),var(--pd)); color:white; border:none; border-radius:10px; font-size:13px; font-weight:800; cursor:pointer; font-family:'Sarabun',sans-serif;">🚀 Confirm Import (Mock)</button>
+        </div>
+      </div>
+
+      <!-- Export Tab -->
+      <div id="ieTabExport" style="display:none;">
+        <div style="background:rgba(0,194,138,.1); border:1px solid rgba(0,194,138,.3); border-radius:10px; padding:14px; margin-bottom:14px; font-size:12px; line-height:1.6; color:var(--text)">
+          ส่งออกข้อมูลทั้งหมดจาก <b>Mock Data</b> ของ <b id="exportSheetLabel" style="color:var(--primary)">AIS</b> เป็น CSV<br>
+          <span style="color:var(--muted); font-size:10px;">รวมคอลัมน์ทั้งหมด</span>
+        </div>
+        <button onclick="doExport()" style="width:100%; padding:13px; background:linear-gradient(135deg,var(--primary),var(--pd)); color:white; border:none; border-radius:10px; font-size:13px; font-weight:800; cursor:pointer; font-family:'Sarabun',sans-serif;">📤 Export เป็น CSV (Mock)</button>
       </div>
     </div>
   </div>
@@ -9177,6 +9221,7 @@ function saveTx(idx) {
   t.status = document.getElementById('etx_status').value;
   t.date = document.getElementById('etx_date').value.trim();
   
+  recalculateAllStatusJS();
   editTxRealIdx = -1;
   applyF();
   refreshDash(TX);
@@ -9372,6 +9417,7 @@ function submitM(){
   const base={duid,bill,type:curAction,region:document.getElementById('m-reg').value,customer:document.getElementById('m-cus').value,ownerW:document.getElementById('m-ownerW').value,ownerR:document.getElementById('m-ownerR').value,locW:document.getElementById('m-locW').value,locR:document.getElementById('m-locR').value,date:ds,status:'Pending',intNo:'',userNm:'Current User'};
   const newRows=items.map((it,i)=>({...base,no:TX.length+i+1,...it}));
   TX.unshift(...newRows);
+  recalculateAllStatusJS();
   closeM();showToast(`✅ บันทึก ${curAction} · ${duid} · ${items.length} รายการ สำเร็จ`,'ok');
   refreshDash(TX);
 }
@@ -9471,6 +9517,168 @@ document.addEventListener('DOMContentLoaded',()=>{
   else{TX=[...MOCK];refreshDash(TX);showImportBar('📦 Demo Mode — กด 🔄 Sync เพื่อดึงข้อมูลจริงจากระบบ');}
 });
 function syncFromGAS(){if(typeof google==='undefined'||!google.script){return}google.script.run.withSuccessHandler(function(data){if(!data.success)return;TX=data.recent||[];refreshDash(TX);showImportBar(`🔗 GAS Live: ${TX.length} รายการ`);}).getDashboardData();}
+
+// ════ MOCK STATUS CALCULATION ════
+function recalculateAllStatusJS() {
+  const duidMap = {};
+  TX.forEach(r => {
+    if(!r.duid) return;
+    const d = r.duid.toUpperCase();
+    if(!duidMap[d]) duidMap[d] = [];
+    duidMap[d].push(r);
+  });
+  
+  Object.keys(duidMap).forEach(d => {
+    const records = duidMap[d];
+    const groupMap = {};
+    records.forEach(r => {
+      const key = (r.model||'') + '|' + (r.code||'');
+      if(!groupMap[key]) groupMap[key] = {IN:0, OUT:0, STR_IN:0, STR_OUT:0, DISMANTLE:0, RETURN:0};
+      const t = (r.type||'').toUpperCase();
+      const q = parseInt(r.qty)||0;
+      if(t === 'IN') groupMap[key].IN += q;
+      else if(t === 'OUT') groupMap[key].OUT += q;
+      else if(t === 'STR/IN') groupMap[key].STR_IN += q;
+      else if(t === 'STR/OUT') groupMap[key].STR_OUT += q;
+      else if(t === 'DISMANTLE') groupMap[key].DISMANTLE += q;
+      else if(t === 'RETURN') groupMap[key].RETURN += q;
+    });
+    
+    let isAllClosed = true;
+    for(let key in groupMap) {
+      const g = groupMap[key];
+      if (g.IN !== g.OUT) isAllClosed = false;
+      if (g.STR_IN !== g.STR_OUT) isAllClosed = false;
+      if (g.DISMANTLE !== g.RETURN) isAllClosed = false;
+    }
+    const finalStatus = isAllClosed ? 'Closed' : 'On Process';
+    records.forEach(r => r.status = finalStatus);
+  });
+}
+
+// ════ IMPORT / EXPORT MODAL LOGIC ════
+var ieCurrentCustomer = 'AIS';
+var importRows = [];
+function openImportExport(customer) {
+  ieCurrentCustomer = customer;
+  document.getElementById('importExportTitle').innerText = '📦 Import / Export — ' + customer;
+  document.getElementById('exportSheetLabel').innerText  = 'INOUT_HW_' + customer;
+  document.getElementById('importExportModal').style.display = 'flex';
+  switchIETab('import');
+  document.getElementById('importFileInput').value = '';
+  document.getElementById('importPreviewBox').style.display = 'none';
+  importRows = [];
+}
+function closeImportExport() { document.getElementById('importExportModal').style.display = 'none'; }
+function switchIETab(tab) {
+  var isImport = (tab === 'import');
+  document.getElementById('ieTabImport').style.display = isImport ? 'block' : 'none';
+  document.getElementById('ieTabExport').style.display = isImport ? 'none'  : 'block';
+  var btnI = document.getElementById('ieTabImportBtn'), btnE = document.getElementById('ieTabExportBtn');
+  btnI.style.background = isImport ? 'var(--primary)' : 'transparent';
+  btnI.style.color = isImport ? '#fff' : 'var(--muted)';
+  btnE.style.background = !isImport ? 'var(--primary)' : 'transparent';
+  btnE.style.color = !isImport ? '#fff' : 'var(--muted)';
+}
+function parseCsvLine(line) {
+  var result = [], current = '', inQuotes = false;
+  for (var i = 0; i < line.length; i++) {
+    var c = line[i];
+    if (c === '"') {
+      if (inQuotes && line[i+1] === '"') { current += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (c === ',' && !inQuotes) { result.push(current); current = ''; }
+    else current += c;
+  }
+  result.push(current);
+  return result;
+}
+function previewImport(input) {
+  if (!input.files || input.files.length === 0) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var text = e.target.result;
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    var lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
+    if (lines.length < 2) { alert('ไฟล์ว่างเปล่า'); return; }
+    var headerRow = parseCsvLine(lines[0]).map(function(h) { return h.trim().toUpperCase(); });
+    importRows = [];
+    for (var i = 1; i < lines.length; i++) {
+      var cols = parseCsvLine(lines[i]);
+      if (cols.length < 2) continue;
+      function getCol(aliases) {
+        for (var a = 0; a < aliases.length; a++) {
+          var idx = headerRow.indexOf(aliases[a].toUpperCase());
+          if (idx > -1) return String(cols[idx] || '').trim();
+        } return '';
+      }
+      importRows.push({
+        duid: getCol(['DUID','JOB ID']), region: getCol(['REGION','AREA']),
+        transType: getCol(['IN/OUT','INOUT']), itemType: getCol(['TYPE','ITEM TYPE']),
+        date: getCol(['DATE']), bill: getCol(['BILL NO.','BILL NO','BILL']),
+        model: getCol(['MODEL']), code: getCol(['ITEM CODE','CODE']),
+        desc: getCol(['DESCRIPTION','ITEM DESCRIPTION','DESC']),
+        qty: Number(getCol(['QTY','QUANTITY','SUM OF REQ.QTY'])) || 1,
+        sn: getCol(['SERIAL','SN','SERIAL NO'])
+      });
+    }
+    importRows = importRows.filter(function(r) { return r.duid; });
+    document.getElementById('importRowCount').innerText = importRows.length;
+    var cols6 = ['DUID','Region','IN/OUT','Model','Code','Qty'];
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
+      '<tr style="background:var(--primary);color:white;">' + cols6.map(function(h) { return '<th style="padding:6px;text-align:left;">' + h + '</th>'; }).join('') + '</tr>';
+    importRows.slice(0, 25).forEach(function(r, i) {
+      html += '<tr style="background:' + (i%2===0?'var(--card)':'var(--card2)') + ';">' + [r.duid,r.region,r.transType,r.model,r.code,r.qty].map(function(v) {
+        return '<td style="padding:6px;border-bottom:1px solid var(--border);">' + (v||'-') + '</td>';
+      }).join('') + '</tr>';
+    });
+    if (importRows.length > 25) html += '<tr><td colspan="6" style="padding:6px;text-align:center;color:var(--muted);font-style:italic;">… อีก ' + (importRows.length - 25) + ' รายการ</td></tr>';
+    html += '</table>';
+    document.getElementById('importPreviewTable').innerHTML = html;
+    document.getElementById('importPreviewBox').style.display = 'block';
+  };
+  reader.readAsText(input.files[0], 'UTF-8');
+}
+function confirmImport() {
+  if (importRows.length === 0) { showToast('ไม่มีข้อมูล','warn'); return; }
+  if (!confirm('ยืนยัน Import ' + importRows.length + ' รายการ? (Mock)')) return;
+  closeImportExport();
+  showProg(true, 'กำลัง Import ข้อมูล...', 50);
+  
+  const parsed = importRows.map((r, i) => ({
+    no: TX.length + i + 1,
+    duid: r.duid, region: r.region, type: r.transType, itype: r.itemType, date: r.date,
+    bill: r.bill, model: r.model, code: r.code, desc: r.desc, qty: r.qty, sn: r.sn,
+    status: 'Pending', customer: ieCurrentCustomer
+  }));
+
+  setTimeout(() => {
+    TX = [...parsed, ...TX];
+    recalculateAllStatusJS();
+    refreshDash(TX);
+    showProg(false);
+    showToast('✅ Import (Mock) สำเร็จ! ' + parsed.length + ' รายการ', 'ok');
+  }, 500);
+}
+function doExport() {
+  closeImportExport();
+  const rows = TX.filter(t => t.customer === ieCurrentCustomer);
+  if(!rows.length){ showToast('ไม่มีข้อมูล','warn'); return; }
+  const headers = ['NO','DUID','REGION','TYPE','DATE','BILL NO','MODEL','ITEM CODE','DESCRIPTION','QTY','SN','STATUS'];
+  var csvRows = [headers.join(',')];
+  rows.forEach(r => {
+    csvRows.push([r.no, r.duid, r.region, r.type, r.date, r.bill, r.model, r.code, r.desc, r.qty, r.sn, r.status].map(v => {
+      let s = String(v||'').replace(/"/g, '""');
+      return (s.includes(',')||s.includes('\n')||s.includes('"')) ? '"'+s+'"' : s;
+    }).join(','));
+  });
+  var csv = '\uFEFF' + csvRows.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href = url;
+  a.download = 'Export_INOUT_' + ieCurrentCustomer + '_Mock.csv';
+  a.click();
+}
 </script>
 </body>
 </html>
