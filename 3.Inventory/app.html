@@ -569,10 +569,10 @@
     // ─────────────────────────────────────────────
     async function doLogin() {
       clearAlert('loginAlert');
-      var email = (document.getElementById('loginEmail').value || "").trim();
+      var email = (document.getElementById('loginEmail').value || "").trim().toLowerCase();
       var pw    = (document.getElementById('loginPassword').value || "");
 
-      if (!email) { showAlert('loginAlert', '⚠️ กรุณาเลือก Email ก่อน'); return; }
+      if (!email) { showAlert('loginAlert', '⚠️ กรุณากรอก Email ก่อน'); return; }
       if (!pw)    { showAlert('loginAlert', '⚠️ กรุณากรอก Password'); return; }
 
       var users = getLocalUsers();
