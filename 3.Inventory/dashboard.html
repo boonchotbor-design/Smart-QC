@@ -9299,7 +9299,7 @@ function renderTable() {
       <td>${t.region || '—'}</td>
       <td><span class="ab ${BADGE[t.type] || 'b-in'}">${t.type || '—'}</span></td>
       <td>${t.itype || '—'}</td>
-      <td style="color:var(--muted);font-size:10px">${t.date || '—'}</td>
+      <td style="color:var(--muted);font-size:10px;white-space:nowrap">${fmtDate(t.date)}</td>
       <td style="font-size:10px">${t.bill || '—'}</td>
       <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">${t.model || '—'}</td>
       <td style="font-family:monospace;font-size:10px;color:var(--blue)">${t.code || '—'}</td>
@@ -9676,6 +9676,17 @@ function buildPrintPage(rows,billNo,customer){
 }
 function printBill(billNo,customer){let rows=billNo?TX.filter(t=>t.bill===billNo&&t.customer===customer):TX.filter(t=>t.customer===customer);if(!rows.length){showToast('⚠️ ไม่พบรายการ','warn');return}document.getElementById('printDoc').innerHTML=buildPrintPage(rows,billNo,customer);window.print();}
 function printAll(){const bills=[...new Set(TX.map(t=>(t.bill||'?')+'|'+t.customer))];let html='';bills.forEach(b=>{const[bill,cus]=b.split('|'),rows=TX.filter(t=>t.bill===bill&&t.customer===cus);if(rows.length)html+=buildPrintPage(rows,bill,cus);});document.getElementById('printDoc').innerHTML=html;window.print();}
+
+// ════ DATE HELPER ════
+function fmtDate(d){
+  if(!d) return '-';
+  const dt = new Date(d);
+  if(isNaN(dt.getTime())) return String(d).substring(0,10);
+  const dd = String(dt.getDate()).padStart(2,'0');
+  const mm = String(dt.getMonth()+1).padStart(2,'0');
+  const yyyy = dt.getFullYear();
+  return dd+'/'+mm+'/'+yyyy;
+}
 
 // ════ LOGIN SYSTEM ════
 let currentUserEmail = '', currentUserName = '';
