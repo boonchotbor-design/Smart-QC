@@ -39,6 +39,13 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (e.parameter.page === "dashboard") {
+    return HtmlService.createTemplateFromFile('dashboard').evaluate()
+      .setTitle('Inventory Dashboard V.7.3.0')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   return HtmlService.createTemplateFromFile('app').evaluate()
     .setTitle('Inventory Smart App V.7.3.0')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
@@ -1477,5 +1484,101 @@ function exportSheetData(customer) {
   } catch (e) {
     logToSheet("EXPORT_ERROR", e.toString());
     return { success: false, message: e.toString() };
+  }
+}
+
+// ─────────────────────────────────────────────
+// BULK IMPORT DATA (Dashboard)
+// ─────────────────────────────────────────────
+
+function importBulkData(rows, customer, userEmail, userName) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+    if (!rows || rows.length === 0) return { success: false, message: "❌ ไม่มีข้อมูลสำหรับ Import" };
+    
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheetName = "INOUT_HW_" + (customer || "AIS").toUpperCase();
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return { success: false, message: "❌ ไม่พบหน้า Sheet: " + sheetName };
+    
+    var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
+    
+    // หาเลข Running No สูงสุดของแต่ละ DUID ใน Sheet
+    var lastRow = sheet.getLastRow();
+    var existingData = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 2).getValues() : [];
+    
+    var duidMap = {};
+    for (var r = 0; r < existingData.length; r++) {
+      var d = String(existingData[r][1]).trim().toLowerCase();
+      var num = Number(existingData[r][0]);
+      if (!duidMap[d] || num > duidMap[d]) duidMap[d] = isNaN(num) ? 0 : num;
+    }
+    
+    var regionInternalMap = {};
+    
+    // Build rows to insert (25 columns)
+    var allRows = rows.map(function(item) {
+      var cleanDuid = String(item.duid || "").trim();
+      var dLower = cleanDuid.toLowerCase();
+      
+      var currentMax = duidMap[dLower] || 0;
+      var newNo = currentMax + 1;
+      duidMap[dLower] = newNo; // increment for next row with same DUID
+      
+      var reg = String(item.region || "ER").trim().toUpperCase();
+      if (!regionInternalMap[reg]) {
+        regionInternalMap[reg] = generateInternalNo(sheet, reg);
+      }
+      var internalNo = regionInternalMap[reg];
+      
+      var row = new Array(25).fill("");
+      row[0]  = newNo;
+      row[1]  = cleanDuid;
+      row[2]  = reg;
+      row[3]  = String(item.type || "").trim();
+      row[4]  = String(item.itype || "").trim();
+      row[5]  = item.date ? item.date : dateStr;
+      row[6]  = String(item.bill || "").trim();
+      row[7]  = String(item.model || "").trim();
+      row[8]  = String(item.code || "").trim();
+      row[9]  = String(item.desc || "").trim();
+      row[10] = Number(item.qty) || 1;
+      row[11] = String(item.sn || "").trim();
+      row[12] = ""; // ownerW
+      row[13] = ""; // ownerR
+      row[14] = ""; // locW
+      row[15] = ""; // locR
+      row[21] = "Pending";
+      row[22] = internalNo;
+      row[23] = userEmail || "Unknown (Web)";
+      row[24] = userName  || "Web User";
+      
+      return row;
+    });
+    
+    // Insert into sheet at top (row 2). Reverse so they appear in correct chronological order at top
+    if (allRows.length > 0) {
+      sheet.insertRowsAfter(1, allRows.length);
+      var reversedRows = allRows.slice().reverse();
+      sheet.getRange(2, 1, reversedRows.length, 25).setValues(reversedRows);
+    }
+    
+    SpreadsheetApp.flush();
+    
+    var affectedDuids = Object.keys(duidMap);
+    affectedDuids.forEach(function(d) {
+      var actualDuid = rows.find(function(r) { return String(r.duid).trim().toLowerCase() === d; });
+      if (actualDuid) updateDuidStatus(actualDuid.duid, customer);
+    });
+    
+    logAuditEntry("IMPORT_CSV", userEmail, userName, sheetName, "MULTIPLE", "-", "Import " + rows.length + " รายการ");
+    
+    return { success: true, count: rows.length, message: "✅ Import สำเร็จ " + rows.length + " รายการ" };
+    
+  } catch (e) {
+    return { success: false, message: "❌ ระบบขัดข้อง: " + e.toString() };
+  } finally {
+    lock.releaseLock();
   }
 }
