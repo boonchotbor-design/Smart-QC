@@ -126,6 +126,7 @@
       <div class="login-tabs">
         <button class="login-tab-btn active" id="tabLoginBtn" onclick="switchLoginTab('login')">🔑 เข้าสู่ระบบ</button>
         <button class="login-tab-btn" id="tabRegisterBtn" onclick="switchLoginTab('register')">📝 ลงทะเบียน</button>
+        <button class="login-tab-btn" id="tabResetBtn" onclick="switchLoginTab('reset')">🔄 ลืมรหัส</button>
       </div>
 
       <!-- ─── TAB: LOGIN ─── -->
@@ -217,6 +218,38 @@
         </div>
       </div>
 
+      <!-- ─── TAB: RESET PASSWORD ─── -->
+      <div id="tabReset" style="display:none;">
+        <label class="login-label">📧 Email ที่ใช้ลงทะเบียน *</label>
+        <select id="resetEmailSelect" class="login-select" onchange="clearAlert('resetAlert')" style="margin-top:4px;">
+          <option value="">— เลือก Email —</option>
+          <option value="khathahat.sitthihong@technow.co.th">khathahat.sitthihong@technow.co.th</option>
+          <option value="surapong.tachatieamjun@technow.co.th">surapong.tachatieamjun@technow.co.th</option>
+          <option value="boonchot.bor@gmail.com">boonchot.bor@gmail.com</option>
+          <option value="payon010833@gmail.com">payon010833@gmail.com</option>
+          <option value="manakiat.m@gmail.com">manakiat.m@gmail.com</option>
+          <option value="auttaseth.klomthaisong@gmail.com">auttaseth.klomthaisong@gmail.com</option>
+          <option value="wachirasaovaro919@gmail.com">wachirasaovaro919@gmail.com</option>
+          <option value="a.adisak.ch@gmail.com">a.adisak.ch@gmail.com</option>
+          <option value="bom.paragon@gmail.com">bom.paragon@gmail.com</option>
+          <option value="noomchaloemrit@gmail.com">noomchaloemrit@gmail.com</option>
+          <option value="nattawoot.suwan@technow.co.th">nattawoot.suwan@technow.co.th</option>
+          <option value="supot.hoonyong@technow.co.th">supot.hoonyong@technow.co.th</option>
+        </select>
+        
+        <label class="login-label">🔒 ตั้ง Password ใหม่ *</label>
+        <div class="pw-wrap">
+          <input type="password" id="resetPassword" class="login-input" placeholder="อย่างน้อย 6 ตัวอักษร">
+          <span class="pw-toggle" onclick="togglePw('resetPassword',this)">👁️</span>
+        </div>
+        
+        <div id="resetAlert" class="login-alert"></div>
+        <button class="btn-login" id="btnDoReset" onclick="doReset()">🔄 รีเซ็ตรหัสผ่าน</button>
+        
+        <div style="text-align:center; margin-top:10px; font-size:12px; color:#888;">
+          จำรหัสได้แล้ว? <a href="#" onclick="switchLoginTab('login'); return false;" style="color:#0d6efd; font-weight:700;">เข้าสู่ระบบ</a>
+        </div>
+      </div>
       <hr class="login-divider">
       <div class="login-footer">🔒 Smart Inventory V.7.3.0 | ข้อมูลถูกเข้ารหัสและบันทึกในอุปกรณ์ของคุณ</div>
     </div>
@@ -511,6 +544,10 @@
       document.getElementById('pwStrengthText').innerText  = '— ความปลอดภัย Password —';
       document.getElementById('pwStrengthText').style.color = '#aaa';
       clearAlert('registerAlert');
+      // Reset reset tab
+      if(document.getElementById('resetEmailSelect')) document.getElementById('resetEmailSelect').value = "";
+      if(document.getElementById('resetPassword')) document.getElementById('resetPassword').value = "";
+      clearAlert('resetAlert');
       switchLoginTab(tab || 'login');
     }
 
@@ -519,10 +556,16 @@
     // ─────────────────────────────────────────────
     function switchLoginTab(tab) {
       var isLogin = (tab === 'login');
+      var isReg   = (tab === 'register');
+      var isReset = (tab === 'reset');
+      
       document.getElementById('tabLogin').style.display    = isLogin ? 'block' : 'none';
-      document.getElementById('tabRegister').style.display = isLogin ? 'none'  : 'block';
+      document.getElementById('tabRegister').style.display = isReg   ? 'block' : 'none';
+      if(document.getElementById('tabReset')) document.getElementById('tabReset').style.display    = isReset ? 'block' : 'none';
+      
       document.getElementById('tabLoginBtn').classList.toggle('active', isLogin);
-      document.getElementById('tabRegisterBtn').classList.toggle('active', !isLogin);
+      document.getElementById('tabRegisterBtn').classList.toggle('active', isReg);
+      if(document.getElementById('tabResetBtn')) document.getElementById('tabResetBtn').classList.toggle('active', isReset);
     }
 
     // ─────────────────────────────────────────────
@@ -668,6 +711,41 @@
       document.getElementById('btnDoRegister').innerText = '📝 ลงทะเบียน & เข้าสู่ระบบ';
       updateUserBadge();
       Toast.fire({ icon: 'success', title: '✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ ' + fullName });
+    }
+
+    // ─────────────────────────────────────────────
+    // 🔄 DO RESET PASSWORD
+    // ─────────────────────────────────────────────
+    async function doReset() {
+      clearAlert('resetAlert');
+      var email = document.getElementById('resetEmailSelect').value;
+      var pw    = document.getElementById('resetPassword').value || "";
+
+      if (!email) { showAlert('resetAlert', '⚠️ กรุณาเลือก Email'); return; }
+      if (pw.length < 6) { showAlert('resetAlert', '⚠️ Password ต้องมีอย่างน้อย 6 ตัวอักษร'); return; }
+
+      var users = getLocalUsers();
+      if (!users[email]) {
+        showAlert('resetAlert', '❌ ไม่พบบัญชีนี้ในระบบ กรุณาลงทะเบียนใหม่');
+        setTimeout(function() { switchLoginTab('register'); }, 1500);
+        return;
+      }
+
+      document.getElementById('btnDoReset').disabled = true;
+      document.getElementById('btnDoReset').innerText = '⏳ กำลังบันทึก...';
+
+      var hashed = await hashPassword(pw);
+      users[email].hash = hashed;
+      saveLocalUsers(users);
+
+      showAlert('resetAlert', '✅ รีเซ็ตรหัสผ่านสำเร็จ!', 'ok');
+      setTimeout(function() {
+        document.getElementById('btnDoReset').disabled = false;
+        document.getElementById('btnDoReset').innerText = '🔄 รีเซ็ตรหัสผ่าน';
+        document.getElementById('loginEmail').value = email;
+        document.getElementById('loginPassword').value = "";
+        switchLoginTab('login');
+      }, 1500);
     }
 
     function promptChangeUser() {
