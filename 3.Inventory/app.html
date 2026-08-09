@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>Inventory Smart App V.7.2.0</title>
+  <title>Inventory Smart App V.7.3.0</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -218,23 +218,64 @@
       </div>
 
       <hr class="login-divider">
-      <div class="login-footer">🔒 Smart Inventory V.7.2.0 | ข้อมูลถูกเข้ารหัสและบันทึกในอุปกรณ์ของคุณ</div>
+      <div class="login-footer">🔒 Smart Inventory V.7.3.0 | ข้อมูลถูกเข้ารหัสและบันทึกในอุปกรณ์ของคุณ</div>
     </div>
   </div>
 
 
+  <!-- 📥 Import/Export Modal V.7.3.0 -->
+  <div id="importExportModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.82); z-index:99998; justify-content:center; align-items:center; backdrop-filter:blur(6px);">
+    <div style="background:#fff; border-radius:20px; padding:24px; width:94%; max-width:480px; max-height:92vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.4); animation:slideUp 0.3s ease;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h5 id="importExportTitle" style="margin:0; font-weight:700; color:#1a1a2e; font-size:16px;">📦 Import / Export</h5>
+        <button onclick="closeImportExport()" style="background:none; border:none; font-size:22px; cursor:pointer; color:#666; line-height:1;">×</button>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex; background:#f0f2f8; border-radius:12px; padding:4px; margin-bottom:16px; gap:4px;">
+        <button id="ieTabImportBtn" onclick="switchIETab('import')" style="flex:1; padding:9px 6px; border:none; border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; background:#fff; color:#0d6efd; box-shadow:0 2px 8px rgba(0,0,0,0.12); font-family:'Sarabun',sans-serif;">📥 Import</button>
+        <button id="ieTabExportBtn" onclick="switchIETab('export')" style="flex:1; padding:9px 6px; border:none; border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; background:transparent; color:#666; font-family:'Sarabun',sans-serif;">📤 Export</button>
+      </div>
+
+      <!-- Import Tab -->
+      <div id="ieTabImport">
+        <div style="background:#f0f4ff; border-radius:10px; padding:12px; margin-bottom:12px; font-size:13px; line-height:1.6;">
+          <b>📋 Format CSV ที่รองรับ:</b><br>
+          Header: <code style="font-size:11px; word-break:break-all;">DUID, REGION, IN/OUT, TYPE, DATE, BILL NO., MODEL, ITEM CODE, DESCRIPTION, QTY, SERIAL</code>
+        </div>
+        <button onclick="downloadImportTemplate()" style="width:100%; padding:10px; margin-bottom:8px; background:linear-gradient(135deg,#0d6efd,#0043a8); color:white; border:none; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:14px;">⬇️ Download Template CSV</button>
+        <input type="file" id="importFileInput" accept=".csv,.txt" style="display:none" onchange="previewImport(this)">
+        <button onclick="document.getElementById('importFileInput').click()" style="width:100%; padding:10px; margin-bottom:8px; background:#f8f9fa; border:2px dashed #adb5bd; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:14px; color:#555;">📂 เลือกไฟล์ CSV</button>
+        <div id="importPreviewBox" style="display:none;">
+          <div style="font-size:13px; font-weight:700; margin-bottom:6px; color:#0043a8;">📊 Preview: <span id="importRowCount">0</span> รายการ</div>
+          <div id="importPreviewTable" style="overflow-x:auto; max-height:200px; border-radius:8px; border:1px solid #dee2e6; margin-bottom:10px;"></div>
+          <button id="btnConfirmImport" onclick="confirmImport()" style="width:100%; padding:12px; background:linear-gradient(135deg,#198754,#0f5132); color:white; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif;">🚀 Confirm Import</button>
+        </div>
+      </div>
+
+      <!-- Export Tab -->
+      <div id="ieTabExport" style="display:none;">
+        <div style="background:#f0fff4; border-radius:10px; padding:14px; margin-bottom:14px; font-size:13px; line-height:1.6;">
+          ส่งออกข้อมูลทั้งหมดจาก Sheet <b id="exportSheetLabel">INOUT_HW_AIS</b> เป็น CSV<br>
+          <span style="color:#666; font-size:12px;">รวมคอลัมน์ทั้งหมด (NO, DUID, REGION, IN/OUT, TYPE, DATE, BILL NO., MODEL, ITEM CODE ...)</span>
+        </div>
+        <button onclick="doExport()" style="width:100%; padding:13px; background:linear-gradient(135deg,#198754,#0f5132); color:white; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif;">📤 Export เป็น CSV</button>
+      </div>
+    </div>
+  </div>
   <div class="container-fluid">
 
     <!-- Header -->
     <div class="header-banner shadow d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div>
-        <h5 class="fw-bold mb-0">📦 Smart Inventory V.7.2.0</h5>
+        <h5 class="fw-bold mb-0">📦 Smart Inventory V.7.3.0</h5>
         <div class="user-badge mt-1" id="userBadge">👤 กำลังตรวจสอบผู้ใช้...</div>
       </div>
-      <div class="d-flex gap-1">
+      <div class="d-flex gap-1 flex-wrap">
         <button class="btn btn-sm btn-warning fw-bold" onclick="checkHealth()">Verify</button>
-        <button class="btn btn-sm btn-light fw-bold" onclick="onCustomerChange()">🔄 SYNC</button>
-        <!-- 🆕 ปุ่มเปลี่ยนชื่อผู้ใช้ -->
+        <button class="btn btn-sm btn-light fw-bold" onclick="onCustomerChange()">&#x1F504; SYNC</button>
+        <button class="btn btn-sm fw-bold" style="background:#1565c0;color:white;" onclick="openImportExport('AIS')">&#x1F4E5; AIS</button>
+        <button class="btn btn-sm fw-bold" style="background:#b71c1c;color:white;" onclick="openImportExport('TRUE')">&#x1F4E5; TRUE</button>
         <button class="btn btn-sm btn-outline-light fw-bold" onclick="promptChangeUser()" title="เปลี่ยนผู้ใช้">👤</button>
       </div>
     </div>
@@ -1100,7 +1141,7 @@
                 <b>👤 User:</b> ${currentUserEmail}<br>
                 <b>📝 Name:</b> ${currentUserName}<br>
                 <b>💻 Device:</b> ${currentDeviceType}<br>
-                <b>🔖 Version:</b> V.7.1.2
+                <b>🔖 Version:</b> V.7.3.0
               </div>
             `,
             confirmButtonText: 'รับทราบ'
@@ -1229,6 +1270,192 @@
           };
         };
       });
+    }
+
+    // ─────────────────────────────────────────────
+    // 📥 IMPORT / EXPORT — V.7.3.0
+    // ─────────────────────────────────────────────
+    var ieCurrentCustomer = 'AIS';
+    var importRows = [];
+
+    function openImportExport(customer) {
+      ieCurrentCustomer = customer;
+      document.getElementById('importExportTitle').innerText = '\ud83d\udce6 Import / Export — ' + customer;
+      document.getElementById('exportSheetLabel').innerText  = 'INOUT_HW_' + customer;
+      document.getElementById('importExportModal').style.display = 'flex';
+      switchIETab('import');
+      document.getElementById('importFileInput').value = '';
+      document.getElementById('importPreviewBox').style.display = 'none';
+      importRows = [];
+    }
+
+    function closeImportExport() {
+      document.getElementById('importExportModal').style.display = 'none';
+    }
+
+    function switchIETab(tab) {
+      var isImport = (tab === 'import');
+      document.getElementById('ieTabImport').style.display       = isImport ? 'block' : 'none';
+      document.getElementById('ieTabExport').style.display       = isImport ? 'none'  : 'block';
+      var btnI = document.getElementById('ieTabImportBtn');
+      var btnE = document.getElementById('ieTabExportBtn');
+      btnI.style.background  = isImport  ? '#fff' : 'transparent';
+      btnI.style.color       = isImport  ? '#0d6efd' : '#666';
+      btnI.style.boxShadow   = isImport  ? '0 2px 8px rgba(0,0,0,0.12)' : 'none';
+      btnE.style.background  = !isImport ? '#fff' : 'transparent';
+      btnE.style.color       = !isImport ? '#0d6efd' : '#666';
+      btnE.style.boxShadow   = !isImport ? '0 2px 8px rgba(0,0,0,0.12)' : 'none';
+    }
+
+    // ― Download Template CSV
+    function downloadImportTemplate() {
+      var headers = ['DUID','REGION','IN/OUT','TYPE','DATE','BILL NO.','MODEL','ITEM CODE','DESCRIPTION','QTY','SERIAL'];
+      var example = ['DUID-001','ER','OUT','HW','09/08/2026','BILL-001','RRU3962','023115PK','MPE Site Materials','1','N/A'];
+      var csv = [headers.join(','), example.join(',')].join('\n');
+      var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      var url  = URL.createObjectURL(blob);
+      var a    = document.createElement('a');
+      a.href = url; a.download = 'Template_Import_' + ieCurrentCustomer + '.csv'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ― Parse CSV line (handles quoted fields)
+    function parseCsvLine(line) {
+      var result = [], current = '', inQuotes = false;
+      for (var i = 0; i < line.length; i++) {
+        var c = line[i];
+        if (c === '"') {
+          if (inQuotes && line[i+1] === '"') { current += '"'; i++; }
+          else inQuotes = !inQuotes;
+        } else if (c === ',' && !inQuotes) { result.push(current); current = ''; }
+        else current += c;
+      }
+      result.push(current);
+      return result;
+    }
+
+    // ― Preview Import file
+    function previewImport(input) {
+      if (!input.files || input.files.length === 0) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var text = e.target.result;
+        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // remove BOM
+        var lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
+        if (lines.length < 2) {
+          Swal.fire({icon:'warning', title:'ไฟล์ว่างเปล่า', text:'กรุณาตรวจสอบ format ของไฟล์'});
+          return;
+        }
+        var headerRow = parseCsvLine(lines[0]).map(function(h) { return h.trim().toUpperCase(); });
+        importRows = [];
+        for (var i = 1; i < lines.length; i++) {
+          var cols = parseCsvLine(lines[i]);
+          if (cols.length < 2) continue;
+          function getCol(aliases) {
+            for (var a = 0; a < aliases.length; a++) {
+              var idx = headerRow.indexOf(aliases[a].toUpperCase());
+              if (idx > -1) return String(cols[idx] || '').trim();
+            }
+            return '';
+          }
+          importRows.push({
+            duid:      getCol(['DUID','JOB ID']),
+            region:    getCol(['REGION','AREA']),
+            transType: getCol(['IN/OUT','INOUT']),
+            itemType:  getCol(['TYPE','ITEM TYPE']),
+            date:      getCol(['DATE']),
+            bill:      getCol(['BILL NO.','BILL NO','BILL']),
+            model:     getCol(['MODEL']),
+            code:      getCol(['ITEM CODE','CODE']),
+            desc:      getCol(['DESCRIPTION','ITEM DESCRIPTION','DESC']),
+            qty:       Number(getCol(['QTY','QUANTITY','SUM OF REQ.QTY'])) || 1,
+            sn:        getCol(['SERIAL','SN','SERIAL NO'])
+          });
+        }
+        importRows = importRows.filter(function(r) { return r.duid; });
+        document.getElementById('importRowCount').innerText = importRows.length;
+        // Build preview table
+        var cols6 = ['DUID','Region','IN/OUT','Model','Code','Qty'];
+        var html = '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
+          '<tr style="background:#0d6efd;color:white;">' +
+          cols6.map(function(h) { return '<th style="padding:4px 6px;text-align:left;">' + h + '</th>'; }).join('') + '</tr>';
+        importRows.slice(0, 25).forEach(function(r, i) {
+          html += '<tr style="background:' + (i%2===0?'#fff':'#f8f9fa') + ';">' +
+            [r.duid,r.region,r.transType,r.model,r.code,r.qty].map(function(v) {
+              return '<td style="padding:4px 6px;border-bottom:1px solid #e0e0e0;">' + (v||'-') + '</td>';
+            }).join('') + '</tr>';
+        });
+        if (importRows.length > 25) html += '<tr><td colspan="6" style="padding:6px;text-align:center;color:#888;font-style:italic;">… อีก ' + (importRows.length - 25) + ' รายการ</td></tr>';
+        html += '</table>';
+        document.getElementById('importPreviewTable').innerHTML = html;
+        document.getElementById('importPreviewBox').style.display = 'block';
+      };
+      reader.readAsText(input.files[0], 'UTF-8');
+    }
+
+    // ― Confirm Import
+    function confirmImport() {
+      if (importRows.length === 0) { Swal.fire({icon:'warning', title:'ไม่มีข้อมูล'}); return; }
+      Swal.fire({
+        icon: 'question',
+        title: 'ยืนยัน Import?',
+        html: 'จะ Import <b>' + importRows.length + '</b> รายการ เข้า <b>INOUT_HW_' + ieCurrentCustomer + '</b>',
+        showCancelButton: true,
+        confirmButtonText: '\u2705 ยืนยัน',
+        cancelButtonText:  '\u274c ยกเลิก'
+      }).then(function(result) {
+        if (!result.isConfirmed) return;
+        closeImportExport();
+        updateProgress(null, 'กำลัง Import ข้อมูล...');
+        google.script.run
+          .withSuccessHandler(function(res) {
+            document.getElementById('loader').style.display = 'none';
+            if (res.success) {
+              Swal.fire({icon:'success', title:'Import สำเร็จ!', text: res.message});
+            } else {
+              Swal.fire({icon:'error', title:'Import ผิดพลาด', text: res.message});
+            }
+          })
+          .withFailureHandler(function(err) {
+            document.getElementById('loader').style.display = 'none';
+            Swal.fire({icon:'error', title:'Error', text: err.message});
+          })
+          .saveImportData(importRows, ieCurrentCustomer, currentUserEmail, currentUserName);
+      });
+    }
+
+    // ― Export to CSV
+    function doExport() {
+      closeImportExport();
+      updateProgress(null, 'กำลัง Export ข้อมูล...');
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('loader').style.display = 'none';
+          if (!res.success) { Swal.fire({icon:'error', title:'Export ผิดพลาด', text: res.message}); return; }
+          // Build CSV with BOM
+          var csvRows = [res.headers.join(',')];
+          res.rows.forEach(function(row) {
+            csvRows.push(row.map(function(v) {
+              var s = String(v).replace(/"/g, '""');
+              return (s.indexOf(',') > -1 || s.indexOf('"') > -1 || s.indexOf('\n') > -1) ? '"' + s + '"' : s;
+            }).join(','));
+          });
+          var csv  = '\uFEFF' + csvRows.join('\n');
+          var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          var url  = URL.createObjectURL(blob);
+          var a    = document.createElement('a');
+          a.href   = url;
+          var d    = new Date();
+          a.download = 'Export_INOUT_' + ieCurrentCustomer + '_' + d.getDate() + (d.getMonth()+1) + d.getFullYear() + '.csv';
+          a.click();
+          URL.revokeObjectURL(url);
+          Toast.fire({icon:'success', title:'Export สำเร็จ! (' + res.rows.length + ' รายการ)'});
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('loader').style.display = 'none';
+          Swal.fire({icon:'error', title:'Error', text: err.message});
+        })
+        .exportSheetData(ieCurrentCustomer);
     }
 
     // ─────────────────────────────────────────────

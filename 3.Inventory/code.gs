@@ -1,5 +1,5 @@
 /*
- * 🚀 Inventory Smart System - V.7.1.2
+ * 🚀 Inventory Smart System - V.7.3.0
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
@@ -40,7 +40,7 @@ function doGet(e) {
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-    .setTitle('Inventory Smart App V.7.1.2')
+    .setTitle('Inventory Smart App V.7.3.0')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -438,7 +438,7 @@ function saveMainData(header, items, userEmail, userName) {
     return {
       success: true,
       header:  header,
-      debug:   "✅ บันทึกสำเร็จ (V.7.1.2)\n📍 Sheet: " + sheetName +
+      debug:   "✅ บันทึกสำเร็จ (V.7.3.0)\n📍 Sheet: " + sheetName +
                "\n🔢 บันทึกที่แถว: 2 (บนสุด)\n🆔 DUID: " + cleanDuid +
                " (Column B)\n👤 โดย: " + (userName || userEmail || "Unknown")
     };
@@ -914,6 +914,8 @@ function getDuidStatus(duid, customer) {
     var idx = {
       duid:   Math.max(h.indexOf("DUID"), 1),
       type:   Math.max(h.indexOf("IN/OUT"), 3),
+      model:  Math.max(h.indexOf("MODEL"), 7),
+      code:   Math.max(h.indexOf("ITEM CODE"), 8),
       qty:    Math.max(h.indexOf("SUM OF REQ.QTY"), 10),
       status: Math.max(h.indexOf("STATUS"), 21)
     };
@@ -964,6 +966,8 @@ function updateDuidStatus(duid, customer) {
     var idx  = {
       duid:   Math.max(h.indexOf("DUID"), 1),
       type:   Math.max(h.indexOf("IN/OUT"), 3),
+      model:  Math.max(h.indexOf("MODEL"), 7),
+      code:   Math.max(h.indexOf("ITEM CODE"), 8),
       qty:    Math.max(h.indexOf("SUM OF REQ.QTY"), 10),
       status: Math.max(h.indexOf("STATUS"), 21)
     };
@@ -992,58 +996,73 @@ function updateDuidStatus(duid, customer) {
 
 /**
  * คำนวณ status ของ DUID หนึ่งตัว จาก data (getDataRange().getValues()) + idx ที่กำหนดไว้แล้ว
- * แยกเป็นฟังก์ชันกลาง เพื่อให้ updateDuidStatus() และ recalculateAllDuidStatuses() ใช้ logic เดียวกัน
+ * V.7.3.0: จับคู่ตาม Model + Item Code (แต่ละ item group อิสระจากกัน)
+ * กฎ: IN↔OUT, STR/IN↔STR/OUT, DISMANTLE↔RETURN ต้องมีทั้งคู่ และ qty เท่ากัน
  */
 function computeDuidStatus(data, idx, target) {
-  var inQty = 0, outQty = 0;
-  var strInQty = 0, strOutQty = 0;
-  var dismantleQty = 0, returnQty = 0;
-
-  // ติดตามว่ามีแถวของแต่ละ type จริงๆ หรือไม่ (แยกจาก qty)
-  // เพื่อป้องกัน qty=0 ทำให้ balance check ผิดพลาด
-  var hasIn = false, hasOut = false;
-  var hasStrIn = false, hasStrOut = false;
-  var hasDismantle = false, hasReturn = false;
-
+  var targetLower  = target.trim().toLowerCase();
   var matchingRows = [];
-  var hasAnyData = false;
-  var targetLower = target.trim().toLowerCase();  // FIX: always compare lowercase
+  var hasAnyData   = false;
+
+  // V.7.3.0: Group by "model|itemcode" — จับคู่ Balance แยกตามรายการสินค้า
+  var groups = {};
 
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][idx.duid] || "").trim().toLowerCase() !== targetLower) continue;
     matchingRows.push(i + 1);
-    var type = String(data[i][idx.type] || "").toUpperCase().trim();
-    var qty  = Number(data[i][idx.qty]) || 0;
     hasAnyData = true;
 
-    if      (type === "IN")        { inQty        += qty; hasIn        = true; }
-    else if (type === "OUT")       { outQty       += qty; hasOut       = true; }
-    else if (type === "STR/IN")    { strInQty     += qty; hasStrIn     = true; }
-    else if (type === "STR/OUT")   { strOutQty    += qty; hasStrOut    = true; }
-    else if (type === "DISMANTLE") { dismantleQty += qty; hasDismantle = true; }
-    else if (type === "RETURN")    { returnQty    += qty; hasReturn    = true; }
+    var type  = String(data[i][idx.type]  || "").toUpperCase().trim();
+    var qty   = Number(data[i][idx.qty])  || 0;
+    var model = String(idx.model !== undefined ? (data[i][idx.model] || "") : "").trim().toLowerCase();
+    var code  = String(idx.code  !== undefined ? (data[i][idx.code]  || "") : "").trim().toLowerCase();
+    var groupKey = model + "|" + code;
+
+    if (!groups[groupKey]) {
+      groups[groupKey] = {
+        hasIn: false, hasOut: false,
+        hasStrIn: false, hasStrOut: false,
+        hasDismantle: false, hasReturn: false,
+        inQty: 0, outQty: 0,
+        strInQty: 0, strOutQty: 0,
+        dismantleQty: 0, returnQty: 0
+      };
+    }
+
+    var g = groups[groupKey];
+    if      (type === "IN")        { g.inQty        += qty; g.hasIn        = true; }
+    else if (type === "OUT")       { g.outQty       += qty; g.hasOut       = true; }
+    else if (type === "STR/IN")    { g.strInQty     += qty; g.hasStrIn     = true; }
+    else if (type === "STR/OUT")   { g.strOutQty    += qty; g.hasStrOut    = true; }
+    else if (type === "DISMANTLE") { g.dismantleQty += qty; g.hasDismantle = true; }
+    else if (type === "RETURN")    { g.returnQty    += qty; g.hasReturn    = true; }
   }
 
   var status;
+  var inQty = 0, outQty = 0, strInQty = 0, strOutQty = 0, dismantleQty = 0, returnQty = 0;
+
   if (!hasAnyData) {
     status = "Pending";
   } else {
-    /*
-     * กฎ Balance ที่ถูกต้อง (V.6.9.2):
-     *   คู่ที่ "ไม่ถูกใช้เลย" (ทั้งสองฝั่งไม่มีแถว) = ผ่าน (balanced)
-     *   คู่ที่ "ถูกใช้" (มีแถวฝั่งใดฝั่งหนึ่งหรือทั้งสอง) = ต้องมีทั้งคู่ และ qty เท่ากัน
-     *
-     * ❌ Bug เดิม: ใช้แค่ qty === 0 เพื่อตรวจ → ถ้า qty=0 จะเห็นว่า "ไม่ได้ใช้คู่นี้"
-     *    ทั้งที่จริงๆ มีแถว DISMANTLE/RETURN อยู่ → ทำให้ Closed ผิดๆ
-     */
-    var inOutBalanced  = (!hasIn  && !hasOut)    || (hasIn  && hasOut  && inQty  === outQty);
-    var strBalanced    = (!hasStrIn && !hasStrOut)|| (hasStrIn && hasStrOut && strInQty === strOutQty);
-    var disRetBalanced = (!hasDismantle && !hasReturn) || (hasDismantle && hasReturn && dismantleQty === returnQty);
+    var allGroupsBalanced = true;
+    var gKeys = Object.keys(groups);
 
-    var hasRealData = (inQty + outQty + strInQty + strOutQty + dismantleQty + returnQty) > 0
-                   || hasIn || hasOut || hasStrIn || hasStrOut || hasDismantle || hasReturn;
+    for (var k = 0; k < gKeys.length; k++) {
+      var g = groups[gKeys[k]];
+      // รวม totals สำหรับ logging
+      inQty        += g.inQty;        outQty       += g.outQty;
+      strInQty     += g.strInQty;     strOutQty    += g.strOutQty;
+      dismantleQty += g.dismantleQty; returnQty    += g.returnQty;
 
-    status = (hasRealData && inOutBalanced && strBalanced && disRetBalanced) ? "Closed" : "On Process";
+      // ตรวจ balance ของ group นี้ (Model+Code เดียวกัน)
+      var inOutBalanced  = (!g.hasIn  && !g.hasOut)     || (g.hasIn  && g.hasOut  && g.inQty  === g.outQty);
+      var strBalanced    = (!g.hasStrIn && !g.hasStrOut) || (g.hasStrIn && g.hasStrOut && g.strInQty === g.strOutQty);
+      var disRetBalanced = (!g.hasDismantle && !g.hasReturn) || (g.hasDismantle && g.hasReturn && g.dismantleQty === g.returnQty);
+
+      if (!(inOutBalanced && strBalanced && disRetBalanced)) allGroupsBalanced = false;
+    }
+
+    status = allGroupsBalanced ? "Closed" : "On Process";
   }
 
   return {
@@ -1078,6 +1097,8 @@ function recalculateAllDuidStatuses() {
     var idx = {
       duid:   Math.max(h.indexOf("DUID"), 1),
       type:   Math.max(h.indexOf("IN/OUT"), 3),
+      model:  Math.max(h.indexOf("MODEL"), 7),
+      code:   Math.max(h.indexOf("ITEM CODE"), 8),
       qty:    Math.max(h.indexOf("SUM OF REQ.QTY"), 10),
       status: Math.max(h.indexOf("STATUS"), 21)
     };
@@ -1341,3 +1362,120 @@ function getDashboardData() {
   }
 }
 
+// ─────────────────────────────────────────────
+// IMPORT DATA — V.7.3.0
+// รับ array of row objects จาก client, บันทึกลง sheet
+// ─────────────────────────────────────────────
+
+function saveImportData(rows, customer, userEmail, userName) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+    if (!rows || rows.length === 0)
+      return { success: false, message: "❌ ไม่มีข้อมูลที่จะ Import" };
+
+    var ss        = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheetName = "INOUT_HW_" + (customer || "AIS").toString().trim().toUpperCase();
+    var sheet     = ss.getSheetByName(sheetName);
+    if (!sheet) return { success: false, message: "❌ ไม่พบ Sheet: " + sheetName };
+
+    var dateStr    = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
+    var duidSet    = {};
+    var allRows    = [];
+    var internalNo = generateInternalNo(sheet, "ER");
+
+    rows.forEach(function(row) {
+      var cleanDuid   = String(row.duid      || "").trim();
+      var cleanBill   = String(row.bill      || "").trim();
+      var cleanRegion = String(row.region    || "").trim().toUpperCase();
+
+      // Region Fallback
+      if (!cleanRegion || cleanRegion === "-") {
+        try {
+          var projects = getProjectData();
+          var found = projects.find(function(p) {
+            return p.duid.toLowerCase() === cleanDuid.toLowerCase();
+          });
+          if (found && found.region && found.region !== "-")
+            cleanRegion = found.region.toUpperCase();
+        } catch (e) {}
+      }
+
+      var newRow = new Array(25).fill("");
+      newRow[1]  = cleanDuid;
+      newRow[2]  = cleanRegion || "ER";
+      newRow[3]  = String(row.transType || "").trim().toUpperCase(); // IN/OUT
+      newRow[4]  = String(row.itemType  || "").trim();               // TYPE
+      newRow[5]  = row.date || dateStr;
+      newRow[6]  = cleanBill;
+      newRow[7]  = String(row.model     || "").trim();
+      newRow[8]  = String(row.code      || "").trim();
+      newRow[9]  = String(row.desc      || "").trim();
+      newRow[10] = Number(row.qty)  || 1;
+      newRow[11] = String(row.sn    || "").trim();
+      newRow[21] = "Pending";
+      newRow[22] = internalNo;
+      newRow[23] = userEmail || "Import";
+      newRow[24] = userName  || "Import";
+
+      allRows.push(newRow);
+      if (cleanDuid) duidSet[cleanDuid] = true;
+    });
+
+    if (allRows.length > 0) {
+      sheet.insertRowsAfter(1, allRows.length);
+      sheet.getRange(2, 1, allRows.length, 25).setValues(allRows);
+    }
+
+    SpreadsheetApp.flush();
+
+    // อัปเดต Status ของ DUID ที่ถูก Import
+    Object.keys(duidSet).forEach(function(duid) {
+      updateDuidStatus(duid, (customer || "AIS").toUpperCase());
+    });
+
+    logAuditEntry(
+      "IMPORT", userEmail, userName, sheetName, "-", "-",
+      "Import " + allRows.length + " รายการ | Customer: " + customer
+    );
+
+    return {
+      success: true,
+      count:   allRows.length,
+      message: "✅ Import สำเร็จ " + allRows.length + " รายการ เข้า " + sheetName
+    };
+
+  } catch (e) {
+    logToSheet("IMPORT_ERROR", e.toString());
+    return { success: false, message: "❌ Import ผิดพลาด: " + e.toString() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ─────────────────────────────────────────────
+// EXPORT DATA — V.7.3.0
+// คืน headers + rows ของ sheet สำหรับ download CSV บน client
+// ─────────────────────────────────────────────
+
+function exportSheetData(customer) {
+  try {
+    var ss        = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheetName = "INOUT_HW_" + (customer || "AIS").toString().trim().toUpperCase();
+    var sheet     = ss.getSheetByName(sheetName);
+    if (!sheet) return { success: false, message: "❌ ไม่พบ Sheet: " + sheetName };
+
+    var data = sheet.getDataRange().getValues();
+    if (data.length < 1) return { success: true, headers: [], rows: [] };
+
+    var headers = data[0].map(function(h) { return String(h || ""); });
+    var rows    = [];
+    for (var i = 1; i < data.length; i++) {
+      rows.push(data[i].map(function(v) { return String(v || ""); }));
+    }
+    return { success: true, headers: headers, rows: rows };
+  } catch (e) {
+    logToSheet("EXPORT_ERROR", e.toString());
+    return { success: false, message: e.toString() };
+  }
+}
