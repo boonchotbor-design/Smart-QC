@@ -9294,25 +9294,25 @@ function renderTable() {
         <button class="prnbtn" onclick="editTx(${realIdx})" title="Edit" style="background:transparent;border:none;cursor:pointer;font-size:12px;">✏️</button>
         <button class="prnbtn" onclick="deleteTx(${realIdx})" title="Delete" style="background:transparent;border:none;cursor:pointer;font-size:12px;margin:0 2px;">🗑️</button>
       </td>
-      <td style="color:var(--muted)">${t.no || idx}</td>
-      <td class="td-d">${t.duid || '—'}</td>
-      <td>${t.region || '—'}</td>
-      <td><span class="ab ${BADGE[t.type] || 'b-in'}">${t.type || '—'}</span></td>
-      <td>${t.itype || '—'}</td>
+      <td style="color:var(--muted);white-space:nowrap">${t.no || idx}</td>
+      <td class="td-d" style="white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis">${t.duid || '—'}</td>
+      <td style="white-space:nowrap">${t.region || '—'}</td>
+      <td style="white-space:nowrap"><span class="ab ${BADGE[t.type] || 'b-in'}">${t.type || '—'}</span></td>
+      <td style="white-space:nowrap">${t.itype || '—'}</td>
       <td style="color:var(--muted);font-size:10px;white-space:nowrap">${fmtDate(t.date)}</td>
-      <td style="font-size:10px">${t.bill || '—'}</td>
-      <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">${t.model || '—'}</td>
-      <td style="font-family:monospace;font-size:10px;color:var(--blue)">${t.code || '—'}</td>
-      <td style="font-size:10px;color:var(--muted)">${t.desc || '—'}</td>
-      <td style="text-align:center">${t.qty || 0}</td>
-      <td style="font-family:monospace;font-size:10px;color:var(--muted)">${t.sn || '—'}</td>
-      <td style="font-size:10px">${t.ownerW || '—'}</td>
-      <td style="font-size:10px">${t.ownerR || '—'}</td>
-      <td style="font-size:10px">${t.locW || '—'}</td>
-      <td style="font-size:10px">${t.locR || '—'}</td>
-      <td><span class="sp ${scls}">${sico} ${t.status}</span></td>
-      <td style="font-size:10px">${t.intNo || '—'}</td>
-      <td style="font-size:10px">${t.userNm || '—'}</td>
+      <td style="font-size:10px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis">${t.bill || '—'}</td>
+      <td style="font-size:10px;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis">${t.model || '—'}</td>
+      <td style="font-family:monospace;font-size:10px;color:var(--blue);white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis">${t.code || '—'}</td>
+      <td style="font-size:10px;color:var(--muted);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis">${t.desc || '—'}</td>
+      <td style="text-align:center;white-space:nowrap">${t.qty || 0}</td>
+      <td style="font-family:monospace;font-size:10px;color:var(--muted);white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis">${t.sn || '—'}</td>
+      <td style="font-size:10px;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis">${t.ownerW || '—'}</td>
+      <td style="font-size:10px;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis">${t.ownerR || '—'}</td>
+      <td style="font-size:10px;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis">${t.locW || '—'}</td>
+      <td style="font-size:10px;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis">${t.locR || '—'}</td>
+      <td style="white-space:nowrap"><span class="sp ${scls}">${sico} ${t.status}</span></td>
+      <td style="font-size:10px;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis">${t.intNo || '—'}</td>
+      <td style="font-size:10px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis">${t.userNm || '—'}</td>
     </tr>`;
   }).join('');
 }
