@@ -1361,8 +1361,8 @@
           importRows.push({
             duid:      getCol(['DUID','JOB ID']),
             region:    getCol(['REGION','AREA']),
-            transType: getCol(['IN/OUT','INOUT']),
-            itemType:  getCol(['TYPE','ITEM TYPE']),
+            transType: getCol(['IN/OUT','INOUT','TRANSTYPE','TYPE']),
+            itemType:  getCol(['ITYPE','ITEM TYPE','ITEMTYPE','TYPE']),
             date:      getCol(['DATE']),
             bill:      getCol(['BILL NO.','BILL NO','BILL']),
             model:     getCol(['MODEL']),

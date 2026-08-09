@@ -1391,10 +1391,24 @@ function saveImportData(rows, customer, userEmail, userName) {
     var allRows    = [];
     var internalNo = generateInternalNo(sheet, "ER");
 
+    // หาเลข Running No สูงสุดของแต่ละ DUID ใน Sheet
+    var lastRow = sheet.getLastRow();
+    var existingData = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 2).getValues() : [];
+    var duidMap = {};
+    for (var r = 0; r < existingData.length; r++) {
+      var d = String(existingData[r][1]).trim().toLowerCase();
+      var num = Number(existingData[r][0]);
+      if (!duidMap[d] || num > duidMap[d]) duidMap[d] = isNaN(num) ? 0 : num;
+    }
+
     rows.forEach(function(row) {
       var cleanDuid   = String(row.duid      || "").trim();
       var cleanBill   = String(row.bill      || "").trim();
       var cleanRegion = String(row.region    || "").trim().toUpperCase();
+
+      var currentMax = duidMap[cleanDuid.toLowerCase()] || 0;
+      var newNo = currentMax + 1;
+      duidMap[cleanDuid.toLowerCase()] = newNo;
 
       // Region Fallback
       if (!cleanRegion || cleanRegion === "-") {
@@ -1409,10 +1423,11 @@ function saveImportData(rows, customer, userEmail, userName) {
       }
 
       var newRow = new Array(25).fill("");
+      newRow[0]  = newNo;
       newRow[1]  = cleanDuid;
       newRow[2]  = cleanRegion || "ER";
-      newRow[3]  = String(row.transType || "").trim().toUpperCase(); // IN/OUT
-      newRow[4]  = String(row.itemType  || "").trim();               // TYPE
+      newRow[3]  = String(row.transType || row.type || "").trim().toUpperCase(); // IN/OUT
+      newRow[4]  = String(row.itemType  || row.itype || "").trim();               // TYPE
       newRow[5]  = row.date || dateStr;
       newRow[6]  = cleanBill;
       newRow[7]  = String(row.model     || "").trim();
@@ -1431,7 +1446,8 @@ function saveImportData(rows, customer, userEmail, userName) {
 
     if (allRows.length > 0) {
       sheet.insertRowsAfter(1, allRows.length);
-      sheet.getRange(2, 1, allRows.length, 25).setValues(allRows);
+      var reversedRows = allRows.slice().reverse();
+      sheet.getRange(2, 1, reversedRows.length, 25).setValues(reversedRows);
     }
 
     SpreadsheetApp.flush();
