@@ -28,7 +28,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--dark);color:var(--text);d
 .sb-foot{padding:10px 18px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);text-align:center}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}.ldot{width:7px;height:7px;background:var(--primary);border-radius:50%;animation:pulse 2s infinite;display:inline-block;margin-right:4px}
 /* Main */
-#main{margin-left:var(--sw);flex:1;display:flex;flex-direction:column;min-height:100vh}
+#main{margin-left:var(--sw);flex:1;display:flex;flex-direction:column;min-height:100vh;max-width:calc(100vw - var(--sw));overflow-x:hidden}
 .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:0 22px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:500}
 .tb-left{display:flex;align-items:center;gap:11px}#hbg{display:none;background:none;border:none;color:var(--text);font-size:21px;cursor:pointer;padding:6px;border-radius:8px}
 .tb-right{display:flex;align-items:center;gap:7px}
@@ -368,7 +368,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
             <button class="tbtn b no-print" onclick="openImportExport('TRUE')" style="font-size:10px;padding:6px 12px">📥 TRUE</button>
           </div>
         </div>
-        <div style="overflow-x:auto; max-height:65vh; overflow-y:auto; border-bottom:1px solid var(--border)"><table><thead><tr><th></th><th>No</th><th>DUID</th><th>Region</th><th>TYPE</th><th>IType</th><th>Date</th><th>Bill No.</th><th>Model</th><th>Item Code</th><th>Item Description</th><th>Qty</th><th>SN</th><th>Owner Warehouse</th><th>Owner Receiver</th><th>Location Warehouse</th><th>Location Receiver</th><th>Status</th><th>INT No</th><th>User</th></tr></thead><tbody id="txBody"></tbody></table></div>
+        <div style="overflow-x:auto; max-height:65vh; overflow-y:auto; border-bottom:1px solid var(--border); width:100%;"><table style="min-width:1400px"><thead><tr><th></th><th>No</th><th>DUID</th><th>Region</th><th>TYPE</th><th>IType</th><th>Date</th><th>Bill No.</th><th>Model</th><th>Item Code</th><th>Item Description</th><th>Qty</th><th>SN</th><th>Owner Warehouse</th><th>Owner Receiver</th><th>Location Warehouse</th><th>Location Receiver</th><th>Status</th><th>INT No</th><th>User</th></tr></thead><tbody id="txBody"></tbody></table></div>
 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
   <div></div>
   <div style="display:flex; align-items:center; gap:12px;">
