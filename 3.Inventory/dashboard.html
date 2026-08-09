@@ -9647,12 +9647,20 @@ function loadPrintData(){
 function renderPrintPreview(){
   if(!printRowsCache.length)return;
   const c=document.getElementById('pcCustomer').value, ty=document.getElementById('pcType').value;
+  const filteredRows = printRowsCache.filter(t => t.type === ty && (t.customer || 'AIS') === c);
   document.getElementById('printPreview').style.display='block';
-  document.getElementById('printPreview').innerHTML=buildTeloneerPage(printRowsCache,c,ty);
+  if(!filteredRows.length){
+    document.getElementById('printPreview').innerHTML='<div style="padding:20px;text-align:center;color:red;">ไม่มีข้อมูลตรงกับประเภทที่เลือก</div>';
+    return;
+  }
+  document.getElementById('printPreview').innerHTML=buildTeloneerPage(filteredRows,c,ty);
 }
 function execPrint(){
   if(!printRowsCache.length)return;
-  document.getElementById('printDoc').innerHTML=document.getElementById('printPreview').innerHTML;
+  const c=document.getElementById('pcCustomer').value, ty=document.getElementById('pcType').value;
+  const filteredRows = printRowsCache.filter(t => t.type === ty && (t.customer || 'AIS') === c);
+  if(!filteredRows.length) return;
+  document.getElementById('printDoc').innerHTML=buildTeloneerPage(filteredRows,c,ty);
   window.print();
 }
 function buildTeloneerPage(rows,customer,type){
@@ -9664,7 +9672,32 @@ function buildTeloneerPage(rows,customer,type){
   for(let i=rows.length;i<12;i++){
     items.push(`<tr><td style="text-align:center">${i+1}</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td style="text-align:center">0</td><td style="text-align:center">0</td><td>0</td></tr>`);
   }
-  const sigBlock = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:40px;text-align:center;font-size:12px;"><div style="border-top:1px solid #000;padding-top:10px;"><div style="margin-top:30px;">(....................................................)</div><div style="margin-top:5px;font-weight:bold;">ผู้ส่งมอบ / ผู้เบิก</div><div style="margin-top:5px;color:#555;font-size:10px;">(${r0.ownerW||'—'})</div></div><div style="border-top:1px solid #000;padding-top:10px;"><div style="margin-top:30px;">(....................................................)</div><div style="margin-top:5px;font-weight:bold;">ผู้รับมอบ</div><div style="margin-top:5px;color:#555;font-size:10px;">(${r0.ownerR||'—'})</div></div><div style="border-top:1px solid #000;padding-top:10px;"><div style="margin-top:30px;">(....................................................)</div><div style="margin-top:5px;font-weight:bold;">ผู้อนุมัติ / หัวหน้างาน</div></div></div>`;
+  const sigBlock = `
+    <div style="margin-top:20px; border:1px solid #000;">
+      <div style="padding:10px; border-bottom:1px solid #000; min-height:60px;">
+        <strong>หมายเหตุ</strong><br>${r0.desc||''}
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; text-align:center; font-size:12px;">
+        <div style="padding:20px 10px; border-right:1px solid #000;">
+          <div style="margin-top:40px; border-bottom:1px solid #000; width:80%; margin-left:auto; margin-right:auto;"></div>
+          <div style="margin-top:5px;">ผู้ส่งมอบ / ผู้เบิก</div>
+          <div style="margin-top:5px; color:#555; font-size:10px;">(${r0.ownerW||'—'})</div>
+          <div style="margin-top:15px;">วันที่ ____/____/______</div>
+        </div>
+        <div style="padding:20px 10px; border-right:1px solid #000;">
+          <div style="margin-top:40px; border-bottom:1px solid #000; width:80%; margin-left:auto; margin-right:auto;"></div>
+          <div style="margin-top:5px;">ผู้รับมอบ</div>
+          <div style="margin-top:5px; color:#555; font-size:10px;">(${r0.ownerR||'—'})</div>
+          <div style="margin-top:15px;">วันที่ ____/____/______</div>
+        </div>
+        <div style="padding:20px 10px;">
+          <div style="margin-top:40px; border-bottom:1px solid #000; width:80%; margin-left:auto; margin-right:auto;"></div>
+          <div style="margin-top:5px;">ผู้อนุมัติ / หัวหน้างาน</div>
+          <div style="margin-top:5px; color:#555; font-size:10px;">&nbsp;</div>
+          <div style="margin-top:15px;">วันที่ ____/____/______</div>
+        </div>
+      </div>
+    </div>`;
   return `<div class="tp-page"><div class="tp-header"><div class="tp-logo"><span style="color:#a4cc00;font-size:36px;font-weight:900;">t</span><span style="color:#0099cc;font-size:36px;font-weight:900;">eloneer</span></div><div class="tp-title">ใบเบิกของ ${customer}</div></div><div class="tp-info"><div class="tpi-row"><span>ข้าพเจ้า/ผู้รับของ</span><span class="tpi-line" style="width:250px">${r0.ownerR||''}</span><span style="margin-left:15px">Tel</span><span class="tpi-line" style="width:150px"></span></div><div class="tpi-row"><span>ได้เบิกของจาก บริษัท เทโลเนียร์ จำกัด ตามรายละเอียดดังนี้</span><span style="margin-left:15px">Site Code :</span><span class="tpi-line" style="width:200px">${r0.duid||''}</span></div><div class="tpi-row"><span>Owner warehouse :</span><span class="tpi-line" style="width:300px">${r0.ownerW||''}</span></div><div class="tpi-row"><span>Location warehouse :</span><span class="tpi-line" style="width:300px">${r0.locW||''}</span></div><div class="tpi-row"><span>Location Receiver :</span><span class="tpi-line" style="width:300px">${r0.locR||''}</span></div></div><table class="tp-table"><thead><tr style="background:#00ff00;color:#000;"><th>No</th><th>Bill No</th><th>TYPE</th><th>Model</th><th>Item Code</th><th>Item Description</th><th>IN/OUT</th><th>Qty</th><th>SN</th></tr></thead><tbody>${items.join('')}</tbody></table>${sigBlock}</div>`;
 }
 
