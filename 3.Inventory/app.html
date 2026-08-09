@@ -132,21 +132,7 @@
       <!-- ─── TAB: LOGIN ─── -->
       <div id="tabLogin">
         <label class="login-label">📧 Email *</label>
-        <select id="loginEmail" class="login-select" onchange="onLoginEmailChange()" style="margin-top:4px;">
-          <option value="">— เลือก Email —</option>
-          <option value="khathahat.sitthihong@technow.co.th">khathahat.sitthihong@technow.co.th</option>
-          <option value="surapong.tachatieamjun@technow.co.th">surapong.tachatieamjun@technow.co.th</option>
-          <option value="boonchot.bor@gmail.com">boonchot.bor@gmail.com</option>
-          <option value="payon010833@gmail.com">payon010833@gmail.com</option>
-          <option value="manakiat.m@gmail.com">manakiat.m@gmail.com</option>
-          <option value="auttaseth.klomthaisong@gmail.com">auttaseth.klomthaisong@gmail.com</option>
-          <option value="wachirasaovaro919@gmail.com">wachirasaovaro919@gmail.com</option>
-          <option value="a.adisak.ch@gmail.com">a.adisak.ch@gmail.com</option>
-          <option value="bom.paragon@gmail.com">bom.paragon@gmail.com</option>
-          <option value="noomchaloemrit@gmail.com">noomchaloemrit@gmail.com</option>
-          <option value="nattawoot.suwan@technow.co.th">nattawoot.suwan@technow.co.th</option>
-          <option value="supot.hoonyong@technow.co.th">supot.hoonyong@technow.co.th</option>
-        </select>
+        <input type="email" id="loginEmail" class="login-input" style="margin-top:4px;" placeholder="กรอก Email ของคุณ" oninput="clearAlert('loginAlert')">
 
         <label class="login-label">🔒 Password *</label>
         <div class="pw-wrap">
@@ -176,25 +162,7 @@
         </div>
 
         <label class="login-label">📧 Email *</label>
-        <select id="regEmailSelect" class="login-select" onchange="onRegEmailChange()" style="margin-top:4px;">
-          <option value="">— เลือก Email —</option>
-          <option value="khathahat.sitthihong@technow.co.th">khathahat.sitthihong@technow.co.th</option>
-          <option value="surapong.tachatieamjun@technow.co.th">surapong.tachatieamjun@technow.co.th</option>
-          <option value="boonchot.bor@gmail.com">boonchot.bor@gmail.com</option>
-          <option value="payon010833@gmail.com">payon010833@gmail.com</option>
-          <option value="manakiat.m@gmail.com">manakiat.m@gmail.com</option>
-          <option value="auttaseth.klomthaisong@gmail.com">auttaseth.klomthaisong@gmail.com</option>
-          <option value="wachirasaovaro919@gmail.com">wachirasaovaro919@gmail.com</option>
-          <option value="a.adisak.ch@gmail.com">a.adisak.ch@gmail.com</option>
-          <option value="bom.paragon@gmail.com">bom.paragon@gmail.com</option>
-          <option value="noomchaloemrit@gmail.com">noomchaloemrit@gmail.com</option>
-          <option value="nattawoot.suwan@technow.co.th">nattawoot.suwan@technow.co.th</option>
-          <option value="supot.hoonyong@technow.co.th">supot.hoonyong@technow.co.th</option>
-          <option value="__new__">✏️ Email อื่น (พิมพ์เอง)</option>
-        </select>
-        <div id="regCustomEmailWrap" style="display:none; margin-top:6px;">
-          <input type="email" id="regCustomEmail" class="login-input" placeholder="กรอก Email เช่น somchai@company.com">
-        </div>
+        <input type="email" id="regEmail" class="login-input" style="margin-top:4px;" placeholder="กรอก Email ที่ใช้ลงทะเบียน" oninput="clearAlert('registerAlert')">
 
         <label class="login-label">🔒 ตั้ง Password *</label>
         <div class="pw-wrap">
@@ -221,21 +189,7 @@
       <!-- ─── TAB: RESET PASSWORD ─── -->
       <div id="tabReset" style="display:none;">
         <label class="login-label">📧 Email ที่ใช้ลงทะเบียน *</label>
-        <select id="resetEmailSelect" class="login-select" onchange="clearAlert('resetAlert')" style="margin-top:4px;">
-          <option value="">— เลือก Email —</option>
-          <option value="khathahat.sitthihong@technow.co.th">khathahat.sitthihong@technow.co.th</option>
-          <option value="surapong.tachatieamjun@technow.co.th">surapong.tachatieamjun@technow.co.th</option>
-          <option value="boonchot.bor@gmail.com">boonchot.bor@gmail.com</option>
-          <option value="payon010833@gmail.com">payon010833@gmail.com</option>
-          <option value="manakiat.m@gmail.com">manakiat.m@gmail.com</option>
-          <option value="auttaseth.klomthaisong@gmail.com">auttaseth.klomthaisong@gmail.com</option>
-          <option value="wachirasaovaro919@gmail.com">wachirasaovaro919@gmail.com</option>
-          <option value="a.adisak.ch@gmail.com">a.adisak.ch@gmail.com</option>
-          <option value="bom.paragon@gmail.com">bom.paragon@gmail.com</option>
-          <option value="noomchaloemrit@gmail.com">noomchaloemrit@gmail.com</option>
-          <option value="nattawoot.suwan@technow.co.th">nattawoot.suwan@technow.co.th</option>
-          <option value="supot.hoonyong@technow.co.th">supot.hoonyong@technow.co.th</option>
-        </select>
+        <input type="email" id="resetEmail" class="login-input" style="margin-top:4px;" placeholder="กรอก Email ของคุณ" oninput="clearAlert('resetAlert')">
         
         <label class="login-label">🔒 ตั้ง Password ใหม่ *</label>
         <div class="pw-wrap">
@@ -535,9 +489,7 @@
       // Reset register tab
       document.getElementById('regFirstName').value        = "";
       document.getElementById('regLastName').value         = "";
-      document.getElementById('regEmailSelect').value      = "";
-      document.getElementById('regCustomEmailWrap').style.display = 'none';
-      document.getElementById('regCustomEmail').value      = "";
+      if(document.getElementById('regEmail')) document.getElementById('regEmail').value = "";
       document.getElementById('regPassword').value         = "";
       document.getElementById('regPasswordConfirm').value  = "";
       document.getElementById('pwStrengthBar').style.width = '0%';
@@ -545,7 +497,7 @@
       document.getElementById('pwStrengthText').style.color = '#aaa';
       clearAlert('registerAlert');
       // Reset reset tab
-      if(document.getElementById('resetEmailSelect')) document.getElementById('resetEmailSelect').value = "";
+      if(document.getElementById('resetEmail')) document.getElementById('resetEmail').value = "";
       if(document.getElementById('resetPassword')) document.getElementById('resetPassword').value = "";
       clearAlert('resetAlert');
       switchLoginTab(tab || 'login');
@@ -587,11 +539,6 @@
     }
 
     function onLoginEmailChange() { clearAlert('loginAlert'); }
-
-    function onRegEmailChange() {
-      var sel = document.getElementById('regEmailSelect').value;
-      document.getElementById('regCustomEmailWrap').style.display = (sel === '__new__') ? 'block' : 'none';
-    }
 
     function checkPwStrength(pw) {
       var bar  = document.getElementById('pwStrengthBar');
@@ -667,10 +614,7 @@
 
       var firstName = (document.getElementById('regFirstName').value || "").trim();
       var lastName  = (document.getElementById('regLastName').value  || "").trim();
-      var emailSel  = document.getElementById('regEmailSelect').value;
-      var email     = emailSel === '__new__'
-                      ? (document.getElementById('regCustomEmail').value || "").trim().toLowerCase()
-                      : (emailSel || "").trim().toLowerCase();
+      var email     = (document.getElementById('regEmail').value || "").trim().toLowerCase();
       var pw        = document.getElementById('regPassword').value        || "";
       var pwConf    = document.getElementById('regPasswordConfirm').value || "";
 
@@ -718,7 +662,7 @@
     // ─────────────────────────────────────────────
     async function doReset() {
       clearAlert('resetAlert');
-      var email = document.getElementById('resetEmailSelect').value;
+      var email = (document.getElementById('resetEmail').value || "").trim().toLowerCase();
       var pw    = document.getElementById('resetPassword').value || "";
 
       if (!email) { showAlert('resetAlert', '⚠️ กรุณาเลือก Email'); return; }

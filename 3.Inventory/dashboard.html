@@ -209,21 +209,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
     <!-- TAB: LOGIN -->
     <div id="tabLogin">
       <label class="login-label">📧 Email *</label>
-      <select id="loginEmail" class="login-select" onchange="clearAlert('loginAlert')">
-        <option value="">— เลือก Email —</option>
-        <option value="khathahat.sitthihong@technow.co.th">khathahat.sitthihong@technow.co.th</option>
-        <option value="surapong.tachatieamjun@technow.co.th">surapong.tachatieamjun@technow.co.th</option>
-        <option value="boonchot.bor@gmail.com">boonchot.bor@gmail.com</option>
-        <option value="payon010833@gmail.com">payon010833@gmail.com</option>
-        <option value="manakiat.m@gmail.com">manakiat.m@gmail.com</option>
-        <option value="auttaseth.klomthaisong@gmail.com">auttaseth.klomthaisong@gmail.com</option>
-        <option value="wachirasaovaro919@gmail.com">wachirasaovaro919@gmail.com</option>
-        <option value="a.adisak.ch@gmail.com">a.adisak.ch@gmail.com</option>
-        <option value="bom.paragon@gmail.com">bom.paragon@gmail.com</option>
-        <option value="noomchaloemrit@gmail.com">noomchaloemrit@gmail.com</option>
-        <option value="nattawoot.suwan@technow.co.th">nattawoot.suwan@technow.co.th</option>
-        <option value="supot.hoonyong@technow.co.th">supot.hoonyong@technow.co.th</option>
-      </select>
+      <input type="email" id="loginEmail" class="login-input" style="margin-top:4px" placeholder="กรอก Email ของคุณ" oninput="clearAlert('loginAlert')" onkeydown="if(event.key==='Enter') document.getElementById('loginPassword').focus()">
       <label class="login-label">🔒 Password *</label>
       <div class="pw-wrap">
         <input type="password" id="loginPassword" class="login-input" placeholder="กรอก Password ของคุณ" onkeydown="if(event.key==='Enter') doLogin()">
@@ -242,25 +228,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
         <div><label class="login-label">👤 นามสกุล *</label><input type="text" id="regLastName" class="login-input" style="margin-top:4px" placeholder="นามสกุล"></div>
       </div>
       <label class="login-label">📧 Email *</label>
-      <select id="regEmailSelect" class="login-select" onchange="onRegEmailChange()">
-        <option value="">— เลือก Email —</option>
-        <option value="khathahat.sitthihong@technow.co.th">khathahat.sitthihong@technow.co.th</option>
-        <option value="surapong.tachatieamjun@technow.co.th">surapong.tachatieamjun@technow.co.th</option>
-        <option value="boonchot.bor@gmail.com">boonchot.bor@gmail.com</option>
-        <option value="payon010833@gmail.com">payon010833@gmail.com</option>
-        <option value="manakiat.m@gmail.com">manakiat.m@gmail.com</option>
-        <option value="auttaseth.klomthaisong@gmail.com">auttaseth.klomthaisong@gmail.com</option>
-        <option value="wachirasaovaro919@gmail.com">wachirasaovaro919@gmail.com</option>
-        <option value="a.adisak.ch@gmail.com">a.adisak.ch@gmail.com</option>
-        <option value="bom.paragon@gmail.com">bom.paragon@gmail.com</option>
-        <option value="noomchaloemrit@gmail.com">noomchaloemrit@gmail.com</option>
-        <option value="nattawoot.suwan@technow.co.th">nattawoot.suwan@technow.co.th</option>
-        <option value="supot.hoonyong@technow.co.th">supot.hoonyong@technow.co.th</option>
-        <option value="__new__">✏️ Email อื่น (พิมพ์เอง)</option>
-      </select>
-      <div id="regCustomEmailWrap" style="display:none;margin-top:6px">
-        <input type="email" id="regCustomEmail" class="login-input" placeholder="กรอก Email เช่น somchai@company.com">
-      </div>
+      <input type="email" id="regEmail" class="login-input" style="margin-top:4px" placeholder="กรอก Email ที่ต้องการลงทะเบียน" oninput="clearAlert('registerAlert')">
       <label class="login-label">🔒 ตั้ง Password *</label>
       <div class="pw-wrap">
         <input type="password" id="regPassword" class="login-input" placeholder="อย่างน้อย 6 ตัวอักษร" oninput="checkPwStrength(this.value)">
@@ -279,21 +247,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
     <!-- TAB: RESET -->
     <div id="tabReset" style="display:none">
       <label class="login-label">📧 Email ที่ใช้ลงทะเบียน *</label>
-      <select id="resetEmailSelect" class="login-select" onchange="clearAlert('resetAlert')" style="margin-top:4px;">
-        <option value="">— เลือก Email —</option>
-        <option value="khathahat.sitthihong@technow.co.th">khathahat.sitthihong@technow.co.th</option>
-        <option value="surapong.tachatieamjun@technow.co.th">surapong.tachatieamjun@technow.co.th</option>
-        <option value="boonchot.bor@gmail.com">boonchot.bor@gmail.com</option>
-        <option value="payon010833@gmail.com">payon010833@gmail.com</option>
-        <option value="manakiat.m@gmail.com">manakiat.m@gmail.com</option>
-        <option value="auttaseth.klomthaisong@gmail.com">auttaseth.klomthaisong@gmail.com</option>
-        <option value="wachirasaovaro919@gmail.com">wachirasaovaro919@gmail.com</option>
-        <option value="a.adisak.ch@gmail.com">a.adisak.ch@gmail.com</option>
-        <option value="bom.paragon@gmail.com">bom.paragon@gmail.com</option>
-        <option value="noomchaloemrit@gmail.com">noomchaloemrit@gmail.com</option>
-        <option value="nattawoot.suwan@technow.co.th">nattawoot.suwan@technow.co.th</option>
-        <option value="supot.hoonyong@technow.co.th">supot.hoonyong@technow.co.th</option>
-      </select>
+      <input type="email" id="resetEmail" class="login-input" style="margin-top:4px" placeholder="กรอก Email ของคุณ" oninput="clearAlert('resetAlert')">
       
       <label class="login-label">🔒 ตั้ง Password ใหม่ *</label>
       <div class="pw-wrap">
@@ -9761,14 +9715,13 @@ function showLoginModal(tab){
   clearAlert('loginAlert');
   if(document.getElementById('regFirstName'))document.getElementById('regFirstName').value='';
   if(document.getElementById('regLastName'))document.getElementById('regLastName').value='';
-  if(document.getElementById('regEmailSelect'))document.getElementById('regEmailSelect').value='';
-  if(document.getElementById('regCustomEmailWrap'))document.getElementById('regCustomEmailWrap').style.display='none';
+  if(document.getElementById('regEmail'))document.getElementById('regEmail').value='';
   if(document.getElementById('regPassword'))document.getElementById('regPassword').value='';
   if(document.getElementById('regPasswordConfirm'))document.getElementById('regPasswordConfirm').value='';
   if(document.getElementById('pwStrengthBar'))document.getElementById('pwStrengthBar').style.width='0%';
   if(document.getElementById('pwStrengthText')){document.getElementById('pwStrengthText').innerText='— ความปลอดภัย Password —';document.getElementById('pwStrengthText').style.color='#aaa';}
   clearAlert('registerAlert');
-  if(document.getElementById('resetEmailSelect'))document.getElementById('resetEmailSelect').value='';
+  if(document.getElementById('resetEmail'))document.getElementById('resetEmail').value='';
   if(document.getElementById('resetPassword'))document.getElementById('resetPassword').value='';
   clearAlert('resetAlert');
   switchLoginTab(tab||'login');
@@ -9816,8 +9769,7 @@ async function doRegister(){
   clearAlert('registerAlert');
   const firstName=(document.getElementById('regFirstName').value||'').trim();
   const lastName=(document.getElementById('regLastName').value||'').trim();
-  const emailSel=document.getElementById('regEmailSelect').value;
-  const email=emailSel==='__new__'?(document.getElementById('regCustomEmail').value||'').trim().toLowerCase():(emailSel||'').trim().toLowerCase();
+  const email=(document.getElementById('regEmail').value||'').trim().toLowerCase();
   const pw=document.getElementById('regPassword').value||'';
   const pwConf=document.getElementById('regPasswordConfirm').value||'';
   if(!firstName){showAlert('registerAlert','⚠️ กรุณากรอกชื่อ');return;}
@@ -9844,7 +9796,7 @@ async function doRegister(){
 
 async function doReset(){
   clearAlert('resetAlert');
-  const email=document.getElementById('resetEmailSelect').value;
+  const email=(document.getElementById('resetEmail').value||'').trim().toLowerCase();
   const pw=document.getElementById('resetPassword').value||'';
   if(!email){showAlert('resetAlert','⚠️ กรุณาเลือก Email');return;}
   if(pw.length<6){showAlert('resetAlert','⚠️ Password ต้องมีอย่างน้อย 6 ตัวอักษร');return;}
