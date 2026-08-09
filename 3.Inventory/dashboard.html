@@ -36,7 +36,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--dark);color:var(--text);d
 .tbtn:hover{background:rgba(255,255,255,.1)}.tbtn.g{background:linear-gradient(135deg,var(--primary),var(--pd));border-color:transparent;color:#fff;font-weight:700}.tbtn.b{background:linear-gradient(135deg,#1a6fda,#0043a8);border-color:transparent;color:#fff;font-weight:700}.tbtn.r{background:linear-gradient(135deg,#e0002b,#9b0020);border-color:transparent;color:#fff;font-weight:700}
 .pg-title{font-size:14px;font-weight:700}.pg-sub{font-size:10px;color:var(--muted);margin-top:1px}
 #importBar{background:rgba(0,194,138,.1);border:1px solid rgba(0,194,138,.3);border-radius:10px;padding:8px 14px;margin-bottom:14px;font-size:11px;align-items:center;gap:10px;display:none}#importBar.show{display:flex}.ibar-dot{width:8px;height:8px;background:var(--primary);border-radius:50%;flex-shrink:0}
-.content{padding:20px;flex:1}.page{display:none}.page.active{display:block}
+.content{padding:20px;flex:1;overflow-x:hidden;min-width:0}.page{display:none}.page.active{display:block}
 /* KPI */
 .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
 .kc{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
@@ -368,7 +368,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
             <button class="tbtn b no-print" onclick="openImportExport('TRUE')" style="font-size:10px;padding:6px 12px">📥 TRUE</button>
           </div>
         </div>
-        <div style="overflow-x:auto; max-height:65vh; overflow-y:auto; border-bottom:1px solid var(--border); width:100%;"><table style="min-width:1400px"><thead><tr><th></th><th>No</th><th>DUID</th><th>Region</th><th>TYPE</th><th>IType</th><th>Date</th><th>Bill No.</th><th>Model</th><th>Item Code</th><th>Item Description</th><th>Qty</th><th>SN</th><th>Owner Warehouse</th><th>Owner Receiver</th><th>Location Warehouse</th><th>Location Receiver</th><th>Status</th><th>INT No</th><th>User</th></tr></thead><tbody id="txBody"></tbody></table></div>
+        <div style="overflow-x:auto;overflow-y:auto;max-height:65vh;border-bottom:1px solid var(--border);width:100%;-webkit-overflow-scrolling:touch"><table style="min-width:1400px;width:max-content"><thead><tr><th></th><th>No</th><th>DUID</th><th>Region</th><th>TYPE</th><th>IType</th><th>Date</th><th>Bill No.</th><th>Model</th><th>Item Code</th><th>Item Description</th><th>Qty</th><th>SN</th><th>Owner Warehouse</th><th>Owner Receiver</th><th>Location Warehouse</th><th>Location Receiver</th><th>Status</th><th>INT No</th><th>User</th></tr></thead><tbody id="txBody"></tbody></table></div>
 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
   <div></div>
   <div style="display:flex; align-items:center; gap:12px;">
