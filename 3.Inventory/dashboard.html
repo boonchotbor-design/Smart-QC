@@ -162,13 +162,132 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle}
 .pd-ais{border-top:4px solid #d4000a}.pd-true{border-top:4px solid #0066cc}
 .pd-badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
 .pd-badge-ais{background:#ffeaea;color:#d4000a;border:1px solid #d4000a}.pd-badge-true{background:#eaf0ff;color:#0066cc;border:1px solid #0066cc}
+/* ── LOGIN MODAL ── */
+#loginModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);z-index:99999;justify-content:center;align-items:center;}
+#loginModal.show{display:flex;}
+#loginBox{background:#fff;border-radius:20px;padding:28px 24px;width:92%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.5);animation:slideUp .3s ease;max-height:92vh;overflow-y:auto;}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.login-logo{font-size:46px;text-align:center;margin-bottom:6px}
+.login-title{font-size:20px;font-weight:700;text-align:center;color:#1a1a2e;margin-bottom:4px}
+.login-subtitle{font-size:13px;color:#666;text-align:center;margin-bottom:16px}
+.login-tabs{display:flex;background:#f0f2f8;border-radius:12px;padding:4px;margin-bottom:14px;gap:4px}
+.login-tab-btn{flex:1;padding:9px 6px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:#666;transition:all .2s;font-family:'Sarabun',sans-serif;}
+.login-tab-btn.active{background:#fff;color:#0d6efd;box-shadow:0 2px 8px rgba(0,0,0,0.12)}
+.login-label{font-size:12px;font-weight:700;color:#444;display:block;margin-bottom:0;margin-top:10px}
+.login-select{width:100%;padding:12px 14px;font-size:15px;box-sizing:border-box;border:2px solid #e0e0e0;border-radius:12px;background:#f8f9ff;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23666' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;background-size:18px;cursor:pointer;font-family:'Sarabun',sans-serif;transition:border-color .2s,box-shadow .2s;outline:none;margin-top:4px}
+.login-select:focus{border-color:#0d6efd;box-shadow:0 0 0 3px rgba(13,110,253,0.15)}
+.pw-wrap{position:relative;margin-top:4px}
+.login-input{width:100%;padding:12px 42px 12px 14px;font-size:15px;box-sizing:border-box;border:2px solid #e0e0e0;border-radius:12px;background:#f8f9ff;font-family:'Sarabun',sans-serif;transition:border-color .2s,box-shadow .2s;outline:none;}
+.login-input:focus{border-color:#0d6efd;box-shadow:0 0 0 3px rgba(13,110,253,0.15)}
+.pw-toggle{position:absolute;right:13px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none}
+.pw-strength-bar{height:4px;border-radius:4px;margin-top:5px;transition:all .3s}
+.pw-strength-text{font-size:11px;margin-top:2px;font-weight:600}
+.btn-login{width:100%;padding:13px;margin-top:14px;background:linear-gradient(135deg,#0d6efd,#0043a8);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;font-family:'Sarabun',sans-serif;}
+.btn-login:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(13,110,253,0.4)}
+.btn-login:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.login-alert{padding:9px 12px;border-radius:10px;font-size:13px;font-weight:600;margin-top:10px;text-align:center;display:none}
+.login-alert.err{background:#fff0f0;color:#c0392b;display:block}
+.login-alert.ok{background:#f0fff4;color:#1a7f40;display:block}
+.login-divider{border:none;border-top:1px solid #eee;margin:14px 0}
+.login-footer{font-size:11px;color:#999;text-align:center}
+.name-row{display:flex;gap:8px}.name-row>div{flex:1}
 </style>
 </head>
 <body>
+
+<!-- 🔐 LOGIN MODAL -->
+<div id="loginModal">
+  <div id="loginBox">
+    <div class="login-logo">📦</div>
+    <div class="login-title">Smart Inventory</div>
+    <div class="login-subtitle">เข้าสู่ระบบก่อนใช้งาน Dashboard</div>
+    <div class="login-tabs">
+      <button class="login-tab-btn active" id="tabLoginBtn" onclick="switchLoginTab('login')">🔑 เข้าสู่ระบบ</button>
+      <button class="login-tab-btn" id="tabRegisterBtn" onclick="switchLoginTab('register')">📝 ลงทะเบียน</button>
+    </div>
+    <!-- TAB: LOGIN -->
+    <div id="tabLogin">
+      <label class="login-label">📧 Email *</label>
+      <select id="loginEmail" class="login-select" onchange="clearAlert('loginAlert')">
+        <option value="">— เลือก Email —</option>
+        <option value="khathahat.sitthihong@technow.co.th">khathahat.sitthihong@technow.co.th</option>
+        <option value="surapong.tachatieamjun@technow.co.th">surapong.tachatieamjun@technow.co.th</option>
+        <option value="boonchot.bor@gmail.com">boonchot.bor@gmail.com</option>
+        <option value="payon010833@gmail.com">payon010833@gmail.com</option>
+        <option value="manakiat.m@gmail.com">manakiat.m@gmail.com</option>
+        <option value="auttaseth.klomthaisong@gmail.com">auttaseth.klomthaisong@gmail.com</option>
+        <option value="wachirasaovaro919@gmail.com">wachirasaovaro919@gmail.com</option>
+        <option value="a.adisak.ch@gmail.com">a.adisak.ch@gmail.com</option>
+        <option value="bom.paragon@gmail.com">bom.paragon@gmail.com</option>
+        <option value="noomchaloemrit@gmail.com">noomchaloemrit@gmail.com</option>
+        <option value="nattawoot.suwan@technow.co.th">nattawoot.suwan@technow.co.th</option>
+        <option value="supot.hoonyong@technow.co.th">supot.hoonyong@technow.co.th</option>
+      </select>
+      <label class="login-label">🔒 Password *</label>
+      <div class="pw-wrap">
+        <input type="password" id="loginPassword" class="login-input" placeholder="กรอก Password ของคุณ" onkeydown="if(event.key==='Enter') doLogin()">
+        <span class="pw-toggle" onclick="togglePw('loginPassword',this)">👁️</span>
+      </div>
+      <div id="loginAlert" class="login-alert"></div>
+      <button class="btn-login" id="btnDoLogin" onclick="doLogin()">🔑 เข้าสู่ระบบ</button>
+      <div style="text-align:center;margin-top:10px;font-size:12px;color:#888">
+        ยังไม่มีบัญชี? <a href="#" onclick="switchLoginTab('register');return false;" style="color:#0d6efd;font-weight:700">ลงทะเบียนใหม่</a>
+      </div>
+    </div>
+    <!-- TAB: REGISTER -->
+    <div id="tabRegister" style="display:none">
+      <div class="name-row">
+        <div><label class="login-label">👤 ชื่อ *</label><input type="text" id="regFirstName" class="login-input" style="margin-top:4px" placeholder="ชื่อ"></div>
+        <div><label class="login-label">👤 นามสกุล *</label><input type="text" id="regLastName" class="login-input" style="margin-top:4px" placeholder="นามสกุล"></div>
+      </div>
+      <label class="login-label">📧 Email *</label>
+      <select id="regEmailSelect" class="login-select" onchange="onRegEmailChange()">
+        <option value="">— เลือก Email —</option>
+        <option value="khathahat.sitthihong@technow.co.th">khathahat.sitthihong@technow.co.th</option>
+        <option value="surapong.tachatieamjun@technow.co.th">surapong.tachatieamjun@technow.co.th</option>
+        <option value="boonchot.bor@gmail.com">boonchot.bor@gmail.com</option>
+        <option value="payon010833@gmail.com">payon010833@gmail.com</option>
+        <option value="manakiat.m@gmail.com">manakiat.m@gmail.com</option>
+        <option value="auttaseth.klomthaisong@gmail.com">auttaseth.klomthaisong@gmail.com</option>
+        <option value="wachirasaovaro919@gmail.com">wachirasaovaro919@gmail.com</option>
+        <option value="a.adisak.ch@gmail.com">a.adisak.ch@gmail.com</option>
+        <option value="bom.paragon@gmail.com">bom.paragon@gmail.com</option>
+        <option value="noomchaloemrit@gmail.com">noomchaloemrit@gmail.com</option>
+        <option value="nattawoot.suwan@technow.co.th">nattawoot.suwan@technow.co.th</option>
+        <option value="supot.hoonyong@technow.co.th">supot.hoonyong@technow.co.th</option>
+        <option value="__new__">✏️ Email อื่น (พิมพ์เอง)</option>
+      </select>
+      <div id="regCustomEmailWrap" style="display:none;margin-top:6px">
+        <input type="email" id="regCustomEmail" class="login-input" placeholder="กรอก Email เช่น somchai@company.com">
+      </div>
+      <label class="login-label">🔒 ตั้ง Password *</label>
+      <div class="pw-wrap">
+        <input type="password" id="regPassword" class="login-input" placeholder="อย่างน้อย 6 ตัวอักษร" oninput="checkPwStrength(this.value)">
+        <span class="pw-toggle" onclick="togglePw('regPassword',this)">👁️</span>
+      </div>
+      <div class="pw-strength-bar" id="pwStrengthBar" style="width:0%;background:#e0e0e0"></div>
+      <div class="pw-strength-text" id="pwStrengthText" style="color:#aaa">— ความปลอดภัย Password —</div>
+      <label class="login-label">🔒 ยืนยัน Password *</label>
+      <div class="pw-wrap">
+        <input type="password" id="regPasswordConfirm" class="login-input" placeholder="กรอก Password อีกครั้ง">
+        <span class="pw-toggle" onclick="togglePw('regPasswordConfirm',this)">👁️</span>
+      </div>
+      <div id="registerAlert" class="login-alert"></div>
+      <button class="btn-login" id="btnDoRegister" onclick="doRegister()">📝 ลงทะเบียน &amp; เข้าสู่ระบบ</button>
+    </div>
+  </div>
+</div>
+
 <div id="sbov" onclick="cSb()"></div>
 <nav id="sb">
   <div class="sb-logo"><h2>📦 SmartStock</h2><p>Inventory V.7.4.0</p></div>
-  <div class="sb-user"><div class="u-av">TL</div><div class="u-info"><strong>TLN Admin</strong><span id="syncBadge" class="sync-badge sync-demo">● Demo</span></div></div>
+  <div class="sb-user" style="cursor:pointer" onclick="promptChangeUser()" title="คลิกเพื่อออกจากระบบ">
+    <div class="u-av" id="sbUserAv">??</div>
+    <div class="u-info">
+      <strong id="sbUserName">กำลังโหลด...</strong>
+      <span id="syncBadge" class="sync-badge sync-demo">● Demo</span>
+    </div>
+  </div>
   <nav class="sb-nav">
     <div class="nav-sec">ฐานข้อมูล (Master Data)</div>
     <a class="ni" onclick="openBomPage('AIS',this)"><span class="ni-ic">📗</span>BOM AIS</a>
@@ -9416,8 +9535,8 @@ function submitM(){
   const cus=document.getElementById('m-cus').value||'AIS';
   const reg=document.getElementById('m-reg').value||'ER';
 
-  const userEmail = localStorage.getItem('inv_userEmail') || 'Unknown (Web)';
-  const userName  = localStorage.getItem('inv_userName')  || 'Web User';
+  const userEmail = localStorage.getItem('inv_user_email') || 'Unknown (Web)';
+  const userName  = localStorage.getItem('inv_user_name')  || 'Web User';
 
   const header = {
     duid:              duid,
@@ -9556,11 +9675,134 @@ function buildPrintPage(rows,billNo,customer){
 function printBill(billNo,customer){let rows=billNo?TX.filter(t=>t.bill===billNo&&t.customer===customer):TX.filter(t=>t.customer===customer);if(!rows.length){showToast('⚠️ ไม่พบรายการ','warn');return}document.getElementById('printDoc').innerHTML=buildPrintPage(rows,billNo,customer);window.print();}
 function printAll(){const bills=[...new Set(TX.map(t=>(t.bill||'?')+'|'+t.customer))];let html='';bills.forEach(b=>{const[bill,cus]=b.split('|'),rows=TX.filter(t=>t.bill===bill&&t.customer===cus);if(rows.length)html+=buildPrintPage(rows,bill,cus);});document.getElementById('printDoc').innerHTML=html;window.print();}
 
+// ════ LOGIN SYSTEM ════
+let currentUserEmail = '', currentUserName = '';
+
+async function sha256(pw){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function getLocalUsers(){try{return JSON.parse(localStorage.getItem('inv_users')||'{}');}catch(e){return{};}}
+function saveLocalUsers(u){localStorage.setItem('inv_users',JSON.stringify(u));}
+
+function loadCurrentUser(){
+  const savedEmail=localStorage.getItem('inv_user_email')||'';
+  const savedName =localStorage.getItem('inv_user_name') ||'';
+  const users=getLocalUsers();
+  if(savedEmail&&savedName&&users[savedEmail]){
+    currentUserEmail=savedEmail;
+    currentUserName=savedName;
+    updateSbUser();
+  } else {
+    localStorage.removeItem('inv_user_email');
+    localStorage.removeItem('inv_user_name');
+    showLoginModal('login');
+  }
+}
+
+function updateSbUser(){
+  const initials=(currentUserName||'??').split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
+  document.getElementById('sbUserAv').textContent=initials;
+  document.getElementById('sbUserName').textContent=currentUserName||'Unknown';
+}
+
+function showLoginModal(tab){
+  document.getElementById('loginModal').classList.add('show');
+  if(document.getElementById('loginEmail'))document.getElementById('loginEmail').value='';
+  if(document.getElementById('loginPassword'))document.getElementById('loginPassword').value='';
+  clearAlert('loginAlert');
+  if(document.getElementById('regFirstName'))document.getElementById('regFirstName').value='';
+  if(document.getElementById('regLastName'))document.getElementById('regLastName').value='';
+  if(document.getElementById('regEmailSelect'))document.getElementById('regEmailSelect').value='';
+  if(document.getElementById('regCustomEmailWrap'))document.getElementById('regCustomEmailWrap').style.display='none';
+  if(document.getElementById('regPassword'))document.getElementById('regPassword').value='';
+  if(document.getElementById('regPasswordConfirm'))document.getElementById('regPasswordConfirm').value='';
+  if(document.getElementById('pwStrengthBar'))document.getElementById('pwStrengthBar').style.width='0%';
+  if(document.getElementById('pwStrengthText')){document.getElementById('pwStrengthText').innerText='— ความปลอดภัย Password —';document.getElementById('pwStrengthText').style.color='#aaa';}
+  clearAlert('registerAlert');
+  switchLoginTab(tab||'login');
+}
+
+function switchLoginTab(tab){
+  const isLogin=(tab==='login');
+  document.getElementById('tabLogin').style.display=isLogin?'block':'none';
+  document.getElementById('tabRegister').style.display=isLogin?'none':'block';
+  document.getElementById('tabLoginBtn').classList.toggle('active',isLogin);
+  document.getElementById('tabRegisterBtn').classList.toggle('active',!isLogin);
+}
+
+function clearAlert(id){const el=document.getElementById(id);if(el){el.className='login-alert';el.innerText='';}}
+function showAlert(id,msg,type){const el=document.getElementById(id);if(el){el.className='login-alert '+(type||'err');el.innerText=msg;}}
+function togglePw(inputId,btn){const inp=document.getElementById(inputId);if(inp.type==='password'){inp.type='text';btn.innerText='🙈';}else{inp.type='password';btn.innerText='👁️';}}
+function onRegEmailChange(){const sel=document.getElementById('regEmailSelect').value;document.getElementById('regCustomEmailWrap').style.display=(sel==='__new__')?'block':'none';}
+function checkPwStrength(pw){const bar=document.getElementById('pwStrengthBar'),txt=document.getElementById('pwStrengthText');let score=0;if(pw.length>=6)score++;if(pw.length>=10)score++;if(/[A-Z]/.test(pw))score++;if(/[0-9]/.test(pw))score++;if(/[^A-Za-z0-9]/.test(pw))score++;const levels=[{pct:'0%',color:'#e0e0e0',label:'— ความปลอดภัย Password —',txtColor:'#aaa'},{pct:'25%',color:'#e74c3c',label:'🔴 อ่อนแอมาก',txtColor:'#e74c3c'},{pct:'45%',color:'#e67e22',label:'🟠 อ่อน',txtColor:'#e67e22'},{pct:'65%',color:'#f1c40f',label:'🟡 ปานกลาง',txtColor:'#b8860b'},{pct:'85%',color:'#2ecc71',label:'🟢 แข็งแกร่ง',txtColor:'#1a7f40'},{pct:'100%',color:'#0d6efd',label:'💪 แข็งแกร่งมาก',txtColor:'#0043a8'}];const lv=levels[Math.min(score,5)];if(bar){bar.style.width=pw.length===0?'0%':lv.pct;bar.style.background=lv.color;}if(txt){txt.innerText=lv.label;txt.style.color=lv.txtColor;}}
+
+async function doLogin(){
+  clearAlert('loginAlert');
+  const email=(document.getElementById('loginEmail').value||'').trim();
+  const pw=(document.getElementById('loginPassword').value||'');
+  if(!email){showAlert('loginAlert','⚠️ กรุณาเลือก Email ก่อน');return;}
+  if(!pw){showAlert('loginAlert','⚠️ กรุณากรอก Password');return;}
+  const users=getLocalUsers();
+  if(!users[email]){showAlert('loginAlert','❌ Email นี้ยังไม่มีบัญชี กรุณาลงทะเบียนก่อน');setTimeout(()=>switchLoginTab('register'),1500);return;}
+  const btn=document.getElementById('btnDoLogin');btn.disabled=true;btn.innerText='⏳ กำลังตรวจสอบ...';
+  const hashed=await sha256(pw);
+  if(hashed!==users[email].hash){showAlert('loginAlert','❌ Password ไม่ถูกต้อง กรุณาลองใหม่');btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';document.getElementById('loginPassword').value='';return;}
+  currentUserEmail=email;currentUserName=users[email].name;
+  localStorage.setItem('inv_user_email',currentUserEmail);
+  localStorage.setItem('inv_user_name',currentUserName);
+  document.getElementById('loginModal').classList.remove('show');
+  btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';
+  updateSbUser();
+  showToast('✅ ยินดีต้อนรับ '+currentUserName,'ok');
+}
+
+async function doRegister(){
+  clearAlert('registerAlert');
+  const firstName=(document.getElementById('regFirstName').value||'').trim();
+  const lastName=(document.getElementById('regLastName').value||'').trim();
+  const emailSel=document.getElementById('regEmailSelect').value;
+  const email=emailSel==='__new__'?(document.getElementById('regCustomEmail').value||'').trim().toLowerCase():(emailSel||'').trim().toLowerCase();
+  const pw=document.getElementById('regPassword').value||'';
+  const pwConf=document.getElementById('regPasswordConfirm').value||'';
+  if(!firstName){showAlert('registerAlert','⚠️ กรุณากรอกชื่อ');return;}
+  if(!lastName){showAlert('registerAlert','⚠️ กรุณากรอกนามสกุล');return;}
+  if(!email){showAlert('registerAlert','⚠️ กรุณาเลือกหรือกรอก Email');return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showAlert('registerAlert','⚠️ รูปแบบ Email ไม่ถูกต้อง');return;}
+  if(pw.length<6){showAlert('registerAlert','⚠️ Password ต้องมีอย่างน้อย 6 ตัวอักษร');return;}
+  if(pw!==pwConf){showAlert('registerAlert','❌ Password ไม่ตรงกัน กรุณาลองใหม่');return;}
+  const users=getLocalUsers();
+  if(users[email]){showAlert('registerAlert','⚠️ Email นี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบ');setTimeout(()=>switchLoginTab('login'),1500);return;}
+  const btn=document.getElementById('btnDoRegister');btn.disabled=true;btn.innerText='⏳ กำลังบันทึก...';
+  const hashed=await sha256(pw);
+  const fullName=firstName+' '+lastName;
+  users[email]={name:fullName,hash:hashed,createdAt:new Date().toISOString()};
+  saveLocalUsers(users);
+  currentUserEmail=email;currentUserName=fullName;
+  localStorage.setItem('inv_user_email',currentUserEmail);
+  localStorage.setItem('inv_user_name',currentUserName);
+  document.getElementById('loginModal').classList.remove('show');
+  btn.disabled=false;btn.innerText='📝 ลงทะเบียน & เข้าสู่ระบบ';
+  updateSbUser();
+  showToast('✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ '+fullName,'ok');
+}
+
+function promptChangeUser(){
+  if(!confirm('ออกจากระบบ ('+currentUserName+') ?'))return;
+  localStorage.removeItem('inv_user_email');
+  localStorage.removeItem('inv_user_name');
+  currentUserEmail='';currentUserName='';
+  showLoginModal('login');
+}
+
 // ════ INIT ════
 document.addEventListener('DOMContentLoaded',()=>{
   const d=new Date();document.getElementById('pgSub').textContent='วันที่ '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
   document.getElementById('duidQ')?.addEventListener('keydown',e=>{if(e.key==='Enter')srchDuid();});
   document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap')&&!e.target.closest('.fbtn-srch')&&!e.target.closest('.fi')){hideDrop('duid');hideDrop('bill');}});
+  // ─── Load user session first ───
+  loadCurrentUser();
+  // ─── Then load data ───
   const isGAS=typeof google!=='undefined'&&typeof google.script!=='undefined';
   if(isGAS){showImportBar('🔗 กำลังดึงข้อมูลจาก GAS...');syncFromGAS();}
   else{TX=[...MOCK];refreshDash(TX);showImportBar('📦 Demo Mode — กด 🔄 Sync เพื่อดึงข้อมูลจริงจากระบบ');}
@@ -9695,8 +9937,8 @@ function confirmImport() {
   showProg(true, 'กำลัง Import ข้อมูล...', 50);
   
   if (typeof google !== 'undefined' && google.script) {
-    var userEmail = localStorage.getItem("inv_userEmail") || "Unknown (Web)";
-    var userName  = localStorage.getItem("inv_userName") || "Web User";
+    var userEmail = localStorage.getItem('inv_user_email') || 'Unknown (Web)';
+    var userName  = localStorage.getItem('inv_user_name')  || 'Web User';
     
     google.script.run.withSuccessHandler(function(res) {
       if (res.success) {
