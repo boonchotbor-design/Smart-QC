@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>Inventory Smart App V.7.2.0</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body { font-family: 'Sarabun', sans-serif; background-color: #f0f2f5; padding: 10px; }
+    .header-banner { background: linear-gradient(135deg, #0d6efd, #0043a8); color: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+    .card-custom { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: white; padding: 15px; margin-bottom: 15px; }
+    .item-row { background: #fff; padding: 15px; border-radius: 12px; border-left: 5px solid #0d6efd; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .loading-overlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index:9999; flex-direction: column; justify-content: center; align-items: center; color: white; }
+    #loaderSuccess { display:none; margin-top:20px; background:#fff; color:#111; border-radius:16px; padding:20px 24px; max-width:280px; width:90%; text-align:center; }
+    #loaderSuccess h5 { color:#198754; font-weight:700; margin-bottom:8px; }
+    #loaderSuccess p  { font-size:13px; margin-bottom:14px; }
+    #btnLoaderOK { background:linear-gradient(135deg,#198754,#0f5132); color:#fff; border:none; border-radius:10px; padding:12px 32px; font-size:16px; font-weight:700; cursor:pointer; width:100%; font-family:'Sarabun',sans-serif; }
+    .btn-mandatory { background-color: #ffc107; border: none; font-weight: bold; padding: 12px; border-radius: 10px; width: 100%; color: #000; margin-bottom: 8px; }
+    .user-badge { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 4px 10px; font-size: 12px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+    /* ── Login Modal ── */
+    #loginModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.82); backdrop-filter:blur(6px); z-index:99999; justify-content:center; align-items:center; }
+    #loginModal.show { display:flex; }
+    #loginBox {
+      background: #fff; border-radius: 20px; padding: 28px 24px; width: 92%; max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      animation: slideUp 0.3s ease; max-height: 92vh; overflow-y: auto;
+    }
+    @keyframes slideUp { from { transform: translateY(30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+    .login-logo { font-size: 48px; text-align: center; margin-bottom: 6px; }
+    .login-title { font-size: 20px; font-weight: 700; text-align: center; color: #1a1a2e; margin-bottom: 4px; }
+    .login-subtitle { font-size: 13px; color: #666; text-align: center; margin-bottom: 18px; }
+    .login-select {
+      width: 100%; padding: 12px 14px; font-size: 15px; box-sizing: border-box;
+      border: 2px solid #e0e0e0; border-radius: 12px;
+      background: #f8f9ff; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23666' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center; background-size: 18px;
+      cursor: pointer; font-family: 'Sarabun', sans-serif;
+      transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+    }
+    .login-select:focus { border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,0.15); }
+    .device-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(255,255,255,0.2); border-radius: 8px;
+      padding: 3px 8px; font-size: 11px; margin-left: 6px;
+    }
+    .btn-login {
+      width: 100%; padding: 13px; margin-top: 14px;
+      background: linear-gradient(135deg, #0d6efd, #0043a8);
+      color: white; border: none; border-radius: 12px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      font-family: 'Sarabun', sans-serif;
+    }
+    .btn-login:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(13,110,253,0.4); }
+    .btn-login:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .login-divider { border: none; border-top: 1px solid #eee; margin: 14px 0; }
+    .login-footer { font-size: 11px; color: #999; text-align: center; }
+    /* ── Login Tabs ── */
+    .login-tabs { display: flex; background: #f0f2f8; border-radius: 12px; padding: 4px; margin-bottom: 16px; gap: 4px; }
+    .login-tab-btn {
+      flex: 1; padding: 9px 6px; border: none; border-radius: 9px; font-size: 13px; font-weight: 700;
+      cursor: pointer; background: transparent; color: #666; transition: all 0.2s; font-family: 'Sarabun', sans-serif;
+    }
+    .login-tab-btn.active { background: #fff; color: #0d6efd; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+    /* ── Password Input ── */
+    .pw-wrap { position: relative; margin-top: 4px; }
+    .login-input {
+      width: 100%; padding: 12px 42px 12px 14px; font-size: 15px; box-sizing: border-box;
+      border: 2px solid #e0e0e0; border-radius: 12px; background: #f8f9ff;
+      font-family: 'Sarabun', sans-serif; transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+    }
+    .login-input:focus { border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,0.15); }
+    .pw-toggle { position: absolute; right: 13px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 18px; user-select: none; }
+    /* ── Password Strength ── */
+    .pw-strength-bar { height: 4px; border-radius: 4px; margin-top: 5px; transition: all 0.3s; }
+    .pw-strength-text { font-size: 11px; margin-top: 2px; font-weight: 600; }
+    /* ── Form label ── */
+    .login-label { font-size: 12px; font-weight: 700; color: #444; display: block; margin-bottom: 0; margin-top: 10px; }
+    /* ── Alert inline ── */
+    .login-alert { padding: 9px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; margin-top: 10px; text-align: center; display: none; }
+    .login-alert.err { background: #fff0f0; color: #c0392b; display: block; }
+    .login-alert.ok  { background: #f0fff4; color: #1a7f40; display: block; }
+    /* ── Register name row ── */
+    .name-row { display: flex; gap: 8px; }
+    .name-row > div { flex: 1; }
+    .login-name-display {
+      margin-top: 10px; padding: 10px 14px; background: #f0f4ff;
+      border-radius: 10px; font-size: 14px; color: #0043a8; font-weight: 600;
+      min-height: 40px; display: flex; align-items: center; gap: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading Overlay -->
+  <div id="loader" class="loading-overlay">
+    <div id="loaderSpinner" class="spinner-border text-light mb-3"></div>
+    <div id="loaderText" class="fw-bold">กำลังโหลดข้อมูล...</div>
+    <div id="loaderProgressWrap" class="container mt-3" style="max-width: 250px;">
+      <div class="progress" style="height: 10px;">
+        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;"></div>
+      </div>
+    </div>
+    <!-- ✅ Success Panel (แสดงแทน SweetAlert) -->
+    <div id="loaderSuccess">
+      <div style="font-size:48px;margin-bottom:8px;">✅</div>
+      <h5 id="loaderSuccessTitle">บันทึกสำเร็จ!</h5>
+      <p id="loaderSuccessText"></p>
+      <button id="btnLoaderOK" onclick="onLoaderOK()">ตกลง</button>
+    </div>
+  </div>
+
+  <!-- 🔐 Login Modal — Password + Register V.7.2.0 -->
+  <div id="loginModal">
+    <div id="loginBox">
+      <div class="login-logo">📦</div>
+      <div class="login-title">Smart Inventory</div>
+      <div class="login-subtitle" id="loginSubtitle">เข้าสู่ระบบหรือลงทะเบียนใหม่</div>
+
+      <!-- Tabs -->
+      <div class="login-tabs">
+        <button class="login-tab-btn active" id="tabLoginBtn" onclick="switchLoginTab('login')">🔑 เข้าสู่ระบบ</button>
+        <button class="login-tab-btn" id="tabRegisterBtn" onclick="switchLoginTab('register')">📝 ลงทะเบียน</button>
+      </div>
+
+      <!-- ─── TAB: LOGIN ─── -->
+      <div id="tabLogin">
+        <label class="login-label">📧 Email *</label>
+        <select id="loginEmail" class="login-select" onchange="onLoginEmailChange()" style="margin-top:4px;">
+          <option value="">— เลือก Email —</option>
+          <option value="khathahat.sitthihong@technow.co.th">khathahat.sitthihong@technow.co.th</option>
+          <option value="surapong.tachatieamjun@technow.co.th">surapong.tachatieamjun@technow.co.th</option>
+          <option value="boonchot.bor@gmail.com">boonchot.bor@gmail.com</option>
+          <option value="payon010833@gmail.com">payon010833@gmail.com</option>
+          <option value="manakiat.m@gmail.com">manakiat.m@gmail.com</option>
+          <option value="auttaseth.klomthaisong@gmail.com">auttaseth.klomthaisong@gmail.com</option>
+          <option value="wachirasaovaro919@gmail.com">wachirasaovaro919@gmail.com</option>
+          <option value="a.adisak.ch@gmail.com">a.adisak.ch@gmail.com</option>
+          <option value="bom.paragon@gmail.com">bom.paragon@gmail.com</option>
+          <option value="noomchaloemrit@gmail.com">noomchaloemrit@gmail.com</option>
+          <option value="nattawoot.suwan@technow.co.th">nattawoot.suwan@technow.co.th</option>
+          <option value="supot.hoonyong@technow.co.th">supot.hoonyong@technow.co.th</option>
+        </select>
+
+        <label class="login-label">🔒 Password *</label>
+        <div class="pw-wrap">
+          <input type="password" id="loginPassword" class="login-input" placeholder="กรอก Password ของคุณ" onkeydown="if(event.key==='Enter') doLogin()">
+          <span class="pw-toggle" onclick="togglePw('loginPassword',this)">👁️</span>
+        </div>
+
+        <div id="loginAlert" class="login-alert"></div>
+        <button class="btn-login" id="btnDoLogin" onclick="doLogin()">🔑 เข้าสู่ระบบ</button>
+
+        <div style="text-align:center; margin-top:10px; font-size:12px; color:#888;">
+          ยังไม่มีบัญชี? <a href="#" onclick="switchLoginTab('register'); return false;" style="color:#0d6efd; font-weight:700;">ลงทะเบียนใหม่</a>
+        </div>
+      </div>
+
+      <!-- ─── TAB: REGISTER ─── -->
+      <div id="tabRegister" style="display:none;">
+        <div class="name-row">
+          <div>
+            <label class="login-label">👤 ชื่อ *</label>
+            <input type="text" id="regFirstName" class="login-input" style="margin-top:4px;" placeholder="ชื่อ">
+          </div>
+          <div>
+            <label class="login-label">👤 นามสกุล *</label>
+            <input type="text" id="regLastName" class="login-input" style="margin-top:4px;" placeholder="นามสกุล">
+          </div>
+        </div>
+
+        <label class="login-label">📧 Email *</label>
+        <select id="regEmailSelect" class="login-select" onchange="onRegEmailChange()" style="margin-top:4px;">
+          <option value="">— เลือก Email —</option>
+          <option value="khathahat.sitthihong@technow.co.th">khathahat.sitthihong@technow.co.th</option>
+          <option value="surapong.tachatieamjun@technow.co.th">surapong.tachatieamjun@technow.co.th</option>
+          <option value="boonchot.bor@gmail.com">boonchot.bor@gmail.com</option>
+          <option value="payon010833@gmail.com">payon010833@gmail.com</option>
+          <option value="manakiat.m@gmail.com">manakiat.m@gmail.com</option>
+          <option value="auttaseth.klomthaisong@gmail.com">auttaseth.klomthaisong@gmail.com</option>
+          <option value="wachirasaovaro919@gmail.com">wachirasaovaro919@gmail.com</option>
+          <option value="a.adisak.ch@gmail.com">a.adisak.ch@gmail.com</option>
+          <option value="bom.paragon@gmail.com">bom.paragon@gmail.com</option>
+          <option value="noomchaloemrit@gmail.com">noomchaloemrit@gmail.com</option>
+          <option value="nattawoot.suwan@technow.co.th">nattawoot.suwan@technow.co.th</option>
+          <option value="supot.hoonyong@technow.co.th">supot.hoonyong@technow.co.th</option>
+          <option value="__new__">✏️ Email อื่น (พิมพ์เอง)</option>
+        </select>
+        <div id="regCustomEmailWrap" style="display:none; margin-top:6px;">
+          <input type="email" id="regCustomEmail" class="login-input" placeholder="กรอก Email เช่น somchai@company.com">
+        </div>
+
+        <label class="login-label">🔒 ตั้ง Password *</label>
+        <div class="pw-wrap">
+          <input type="password" id="regPassword" class="login-input" placeholder="อย่างน้อย 6 ตัวอักษร" oninput="checkPwStrength(this.value)">
+          <span class="pw-toggle" onclick="togglePw('regPassword',this)">👁️</span>
+        </div>
+        <div id="pwStrengthBar" class="pw-strength-bar" style="background:#e0e0e0; width:0%;"></div>
+        <div id="pwStrengthText" class="pw-strength-text" style="color:#aaa;">— ความปลอดภัย Password —</div>
+
+        <label class="login-label">🔒 ยืนยัน Password *</label>
+        <div class="pw-wrap">
+          <input type="password" id="regPasswordConfirm" class="login-input" placeholder="พิมพ์ Password อีกครั้ง" onkeydown="if(event.key==='Enter') doRegister()">
+          <span class="pw-toggle" onclick="togglePw('regPasswordConfirm',this)">👁️</span>
+        </div>
+
+        <div id="registerAlert" class="login-alert"></div>
+        <button class="btn-login" id="btnDoRegister" onclick="doRegister()">📝 ลงทะเบียน &amp; เข้าสู่ระบบ</button>
+
+        <div style="text-align:center; margin-top:10px; font-size:12px; color:#888;">
+          มีบัญชีแล้ว? <a href="#" onclick="switchLoginTab('login'); return false;" style="color:#0d6efd; font-weight:700;">เข้าสู่ระบบ</a>
+        </div>
+      </div>
+
+      <hr class="login-divider">
+      <div class="login-footer">🔒 Smart Inventory V.7.2.0 | ข้อมูลถูกเข้ารหัสและบันทึกในอุปกรณ์ของคุณ</div>
+    </div>
+  </div>
+
+
+  <div class="container-fluid">
+
+    <!-- Header -->
+    <div class="header-banner shadow d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h5 class="fw-bold mb-0">📦 Smart Inventory V.7.2.0</h5>
+        <div class="user-badge mt-1" id="userBadge">👤 กำลังตรวจสอบผู้ใช้...</div>
+      </div>
+      <div class="d-flex gap-1">
+        <button class="btn btn-sm btn-warning fw-bold" onclick="checkHealth()">Verify</button>
+        <button class="btn btn-sm btn-light fw-bold" onclick="onCustomerChange()">🔄 SYNC</button>
+        <!-- 🆕 ปุ่มเปลี่ยนชื่อผู้ใช้ -->
+        <button class="btn btn-sm btn-outline-light fw-bold" onclick="promptChangeUser()" title="เปลี่ยนผู้ใช้">👤</button>
+      </div>
+    </div>
+
+    <!-- Photo Section -->
+    <div class="mb-3">
+      <button class="btn-mandatory shadow-sm" onclick="document.getElementById('fileInputCamera').click()">📸 ถ่ายรูปบิล (Mandatory) *</button>
+      <button class="btn btn-outline-secondary w-100 btn-sm" onclick="document.getElementById('fileInputGallery').click()">🖼️ แนบรูปจากเครื่อง</button>
+      <button class="btn btn-outline-success w-100 btn-sm mt-1" id="btnOCR" onclick="runOCRFromPhoto()" disabled>🔍 อ่านข้อมูลจากรูปบิล (OCR Auto-Fill)</button>
+      <input type="file" id="fileInputCamera" accept="image/*" capture="environment" style="display:none" onchange="handleFile(this)" multiple>
+      <input type="file" id="fileInputGallery" accept="image/*" style="display:none" onchange="handleFile(this)" multiple>
+      <div id="photoStatus" class="text-center mt-2 small text-danger fw-bold">⚠️ ยังไม่มีรูปบิล</div>
+    </div>
+
+    <!-- Header Form -->
+    <div class="card-custom">
+      <div class="row g-2">
+        <div class="col-6">
+          <label class="small fw-bold">ลูกค้า</label>
+          <select id="customer" class="form-select form-select-sm" onchange="onCustomerChange()">
+            <option value="AIS">AIS</option>
+            <option value="TRUE">TRUE</option>
+          </select>
+        </div>
+        <div class="col-6">
+          <label class="small fw-bold">งาน</label>
+          <select id="type" class="form-select form-select-sm">
+            <option value="IN">IN</option>
+            <option value="OUT">OUT</option>
+            <option value="STR/IN">STR/IN</option>
+            <option value="STR/OUT">STR/OUT</option>
+            <option value="DISMANTLE">DISMANTLE</option>
+            <option value="RETURN">RETURN</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="small fw-bold">Region</label>
+          <select id="region" class="form-select form-select-sm">
+            <option value="ER">ER</option>
+            <option value="SR">SR</option>
+            <option value="NR">NR</option>
+            <option value="BKK">BKK</option>
+            <option value="CR">CR</option>
+            <option value="NER">NER</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="small fw-bold">Bill No. *</label>
+          <div class="input-group input-group-sm">
+            <input type="text" id="billNo" class="form-control form-control-sm" placeholder="เลขที่บิล">
+            <button class="btn btn-outline-primary" type="button" onclick="triggerNativeScanner('billNo')">📷 Scan</button>
+          </div>
+        </div>
+        <div class="col-12 mt-2">
+          <button class="btn btn-primary w-100 btn-sm py-2 shadow-sm" onclick="searchBill()">🔍 ค้นหาข้อมูลเดิมจาก Bill No.</button>
+        </div>
+        <div class="col-12 mt-2">
+          <label class="small fw-bold text-danger">DUID (Mandatory) *</label>
+          <input type="text" id="duid" class="form-control form-control-sm border-danger" list="duidList" oninput="onDuidInput()" placeholder="ค้นหาหรือกรอก DUID">
+        </div>
+        <div class="col-12 mt-2">
+          <button class="btn btn-outline-danger w-100 btn-sm py-2 shadow-sm" onclick="searchByDuid()">🔍 ค้นหาข้อมูลเดิมจาก DUID</button>
+        </div>
+        <div id="statusBadge" class="col-12 mt-2 d-none">
+          <div class="alert alert-info py-1 px-2 mb-0 small fw-bold text-center" id="statusText">สถานะ: -</div>
+        </div>
+        <div class="col-6 mt-2">
+          <label class="small fw-bold">คลัง Owner *</label>
+          <input type="text" id="ownerWarehouse" class="form-control form-control-sm" list="warehouseList">
+        </div>
+        <div class="col-6 mt-2">
+          <label class="small fw-bold">ผู้รับ Owner *</label>
+          <input type="text" id="ownerReceiver" class="form-control form-control-sm" list="receiverList">
+        </div>
+        <div class="col-6 mt-2">
+          <label class="small fw-bold">Location Warehouse</label>
+          <input type="text" id="locationWarehouse" class="form-control form-control-sm" list="locationWarehouseList" placeholder="Location ต้นทาง">
+        </div>
+        <div class="col-6 mt-2">
+          <label class="small fw-bold">Location Receiver</label>
+          <input type="text" id="locationReceiver" class="form-control form-control-sm" list="locationReceiverList" placeholder="Location ปลายทาง">
+        </div>
+      </div>
+    </div>
+
+    <!-- Item List -->
+    <div id="itemList"></div>
+    <button class="btn btn-outline-primary w-100 mb-3 py-2 fw-bold btn-sm" onclick="addItemRow()">➕ เพิ่มรายการสินค้า</button>
+    <button class="btn btn-primary w-100 py-3 fw-bold mb-5 shadow-lg" onclick="submitAll()" id="btnSubmit">🚀 บันทึกข้อมูล (SAVE)</button>
+
+    <!-- Datalists -->
+    <datalist id="duidList"></datalist>
+    <datalist id="warehouseList"></datalist>
+    <datalist id="receiverList"></datalist>
+    <datalist id="locationWarehouseList"></datalist>
+    <datalist id="locationReceiverList"></datalist>
+  </div>
+
+  <div id="qr-reader" style="display:none"></div>
+  <input type="file" id="cameraTrigger" accept="image/*" capture="environment" style="display:none" onchange="processImageScan(this)">
+
+  <script>
+    // ─────────────────────────────────────────────
+    // GLOBAL ERROR HANDLER & SWEETALERT TOAST
+    // ─────────────────────────────────────────────
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    });
+
+    window.onerror = function(msg, url, line) {
+      Swal.fire({icon: 'error', title: 'App Crash', text: msg + "\\nLine: " + line});
+      return false;
+    };
+
+    // ─────────────────────────────────────────────
+    // GLOBAL STATE
+    // ─────────────────────────────────────────────
+    var rowCount    = 0;
+    var photoArray  = [];
+    var bomData     = [];
+    var projectData = [];
+    var scanTarget  = null;
+    var scanRowId   = null;
+
+    var currentUserEmail = "";
+    var currentUserName  = "";
+    var currentDeviceType = "";
+
+    // ─────────────────────────────────────────────
+    // DEVICE DETECTION — V.6.9.3
+    // ─────────────────────────────────────────────
+    function detectDevice() {
+      var ua = navigator.userAgent || "";
+      if (/tablet|ipad|playbook|silk/i.test(ua)) return { type: "Tablet", icon: "📟" };
+      if (/mobile|android|iphone|ipod|blackberry|opera mini|windows phone/i.test(ua)) return { type: "Mobile", icon: "📱" };
+      return { type: "Laptop", icon: "💻" };
+    }
+
+    // ─────────────────────────────────────────────
+    // EMAIL → DEFAULT NAME MAP (whitelist reference)
+    // ─────────────────────────────────────────────
+    var EMAIL_NAME_MAP = {
+      "khathahat.sitthihong@technow.co.th":  "Khathahat Sitthihong",
+      "surapong.tachatieamjun@technow.co.th": "Surapong Tachatieamjun",
+      "boonchot.bor@gmail.com":              "Boonchot Bor",
+      "payon010833@gmail.com":               "Payon Sapphat",
+      "manakiat.m@gmail.com":                "Manakiat M",
+      "auttaseth.klomthaisong@gmail.com":    "Auttaseth Klomthaisong",
+      "wachirasaovaro919@gmail.com":         "Wachira Saovaro",
+      "a.adisak.ch@gmail.com":               "Adisak Ch",
+      "bom.paragon@gmail.com":               "Bom Paragon",
+      "noomchaloemrit@gmail.com":            "Noom Chaloemrit",
+      "nattawoot.suwan@technow.co.th":       "Nattawoot Suwan",
+      "supot.hoonyong@technow.co.th":        "Supot Hoonyong"
+    };
+
+    // ─────────────────────────────────────────────
+    // 🔐 PASSWORD SYSTEM — V.7.2.0
+    // จัดเก็บ user+password ใน localStorage เป็น SHA-256 hash
+    // ─────────────────────────────────────────────
+
+    // Hash password ด้วย SubtleCrypto (SHA-256)
+    async function hashPassword(pw) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    // อ่าน user store จาก localStorage: { [email]: { name, hash } }
+    function getLocalUsers() {
+      try { return JSON.parse(localStorage.getItem('inv_users') || '{}'); } catch(e) { return {}; }
+    }
+
+    // บันทึก user store
+    function saveLocalUsers(users) {
+      localStorage.setItem('inv_users', JSON.stringify(users));
+    }
+
+    // ─────────────────────────────────────────────
+    // 🔐 LOAD CURRENT USER — V.7.2.0
+    // ─────────────────────────────────────────────
+    function loadCurrentUser() {
+      var dev = detectDevice();
+      currentDeviceType = dev.icon + " " + dev.type;
+
+      var savedEmail = localStorage.getItem('inv_user_email') || "";
+      var savedName  = localStorage.getItem('inv_user_name')  || "";
+
+      // ต้องมี session และ user ต้อง register แล้ว
+      var users = getLocalUsers();
+      if (savedEmail && savedName && users[savedEmail]) {
+        currentUserEmail = savedEmail;
+        currentUserName  = savedName;
+        updateUserBadge();
+      } else {
+        localStorage.removeItem('inv_user_email');
+        localStorage.removeItem('inv_user_name');
+        showLoginModal('login');
+      }
+    }
+
+    function updateUserBadge() {
+      var dev = detectDevice();
+      document.getElementById('userBadge').innerHTML =
+        "👤 " + currentUserName + "<span class='device-badge'>" + dev.icon + " " + dev.type + "</span>";
+    }
+
+    // ─────────────────────────────────────────────
+    // SHOW LOGIN MODAL
+    // ─────────────────────────────────────────────
+    function showLoginModal(tab) {
+      document.getElementById('loginModal').classList.add('show');
+      // Reset login tab
+      document.getElementById('loginEmail').value    = "";
+      document.getElementById('loginPassword').value = "";
+      clearAlert('loginAlert');
+      // Reset register tab
+      document.getElementById('regFirstName').value        = "";
+      document.getElementById('regLastName').value         = "";
+      document.getElementById('regEmailSelect').value      = "";
+      document.getElementById('regCustomEmailWrap').style.display = 'none';
+      document.getElementById('regCustomEmail').value      = "";
+      document.getElementById('regPassword').value         = "";
+      document.getElementById('regPasswordConfirm').value  = "";
+      document.getElementById('pwStrengthBar').style.width = '0%';
+      document.getElementById('pwStrengthText').innerText  = '— ความปลอดภัย Password —';
+      document.getElementById('pwStrengthText').style.color = '#aaa';
+      clearAlert('registerAlert');
+      switchLoginTab(tab || 'login');
+    }
+
+    // ─────────────────────────────────────────────
+    // TAB SWITCHER
+    // ─────────────────────────────────────────────
+    function switchLoginTab(tab) {
+      var isLogin = (tab === 'login');
+      document.getElementById('tabLogin').style.display    = isLogin ? 'block' : 'none';
+      document.getElementById('tabRegister').style.display = isLogin ? 'none'  : 'block';
+      document.getElementById('tabLoginBtn').classList.toggle('active', isLogin);
+      document.getElementById('tabRegisterBtn').classList.toggle('active', !isLogin);
+    }
+
+    // ─────────────────────────────────────────────
+    // HELPERS
+    // ─────────────────────────────────────────────
+    function clearAlert(id) {
+      var el = document.getElementById(id);
+      if (el) { el.className = 'login-alert'; el.innerText = ''; }
+    }
+    function showAlert(id, msg, type) {
+      var el = document.getElementById(id);
+      if (el) { el.className = 'login-alert ' + (type || 'err'); el.innerText = msg; }
+    }
+
+    function togglePw(inputId, btn) {
+      var inp = document.getElementById(inputId);
+      if (inp.type === 'password') { inp.type = 'text';     btn.innerText = '🙈'; }
+      else                         { inp.type = 'password'; btn.innerText = '👁️'; }
+    }
+
+    function onLoginEmailChange() { clearAlert('loginAlert'); }
+
+    function onRegEmailChange() {
+      var sel = document.getElementById('regEmailSelect').value;
+      document.getElementById('regCustomEmailWrap').style.display = (sel === '__new__') ? 'block' : 'none';
+    }
+
+    function checkPwStrength(pw) {
+      var bar  = document.getElementById('pwStrengthBar');
+      var txt  = document.getElementById('pwStrengthText');
+      var score = 0;
+      if (pw.length >= 6)  score++;
+      if (pw.length >= 10) score++;
+      if (/[A-Z]/.test(pw)) score++;
+      if (/[0-9]/.test(pw)) score++;
+      if (/[^A-Za-z0-9]/.test(pw)) score++;
+      var levels = [
+        { pct: '0%',   color: '#e0e0e0', label: '— ความปลอดภัย Password —', txtColor: '#aaa'    },
+        { pct: '25%',  color: '#e74c3c', label: '🔴 อ่อนแอมาก',            txtColor: '#e74c3c' },
+        { pct: '45%',  color: '#e67e22', label: '🟠 อ่อน',                  txtColor: '#e67e22' },
+        { pct: '65%',  color: '#f1c40f', label: '🟡 ปานกลาง',               txtColor: '#b8860b' },
+        { pct: '85%',  color: '#2ecc71', label: '🟢 แข็งแกร่ง',            txtColor: '#1a7f40' },
+        { pct: '100%', color: '#0d6efd', label: '💪 แข็งแกร่งมาก',         txtColor: '#0043a8' }
+      ];
+      var lv = levels[Math.min(score, 5)];
+      bar.style.width      = pw.length === 0 ? '0%' : lv.pct;
+      bar.style.background = lv.color;
+      txt.innerText        = lv.label;
+      txt.style.color      = lv.txtColor;
+    }
+
+    // ─────────────────────────────────────────────
+    // 🔑 DO LOGIN
+    // ─────────────────────────────────────────────
+    async function doLogin() {
+      clearAlert('loginAlert');
+      var email = (document.getElementById('loginEmail').value || "").trim();
+      var pw    = (document.getElementById('loginPassword').value || "");
+
+      if (!email) { showAlert('loginAlert', '⚠️ กรุณาเลือก Email ก่อน'); return; }
+      if (!pw)    { showAlert('loginAlert', '⚠️ กรุณากรอก Password'); return; }
+
+      var users = getLocalUsers();
+      if (!users[email]) {
+        showAlert('loginAlert', '❌ Email นี้ยังไม่มีบัญชี กรุณาลงทะเบียนก่อน');
+        setTimeout(function() { switchLoginTab('register'); }, 1500);
+        return;
+      }
+
+      document.getElementById('btnDoLogin').disabled = true;
+      document.getElementById('btnDoLogin').innerText = '⏳ กำลังตรวจสอบ...';
+
+      var hashed = await hashPassword(pw);
+      if (hashed !== users[email].hash) {
+        showAlert('loginAlert', '❌ Password ไม่ถูกต้อง กรุณาลองใหม่');
+        document.getElementById('btnDoLogin').disabled = false;
+        document.getElementById('btnDoLogin').innerText = '🔑 เข้าสู่ระบบ';
+        document.getElementById('loginPassword').value = "";
+        return;
+      }
+
+      // ✅ Login สำเร็จ
+      currentUserEmail = email;
+      currentUserName  = users[email].name;
+      localStorage.setItem('inv_user_email', currentUserEmail);
+      localStorage.setItem('inv_user_name',  currentUserName);
+      document.getElementById('loginModal').classList.remove('show');
+      document.getElementById('btnDoLogin').disabled = false;
+      document.getElementById('btnDoLogin').innerText = '🔑 เข้าสู่ระบบ';
+      updateUserBadge();
+      Toast.fire({ icon: 'success', title: '✅ เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับ ' + currentUserName });
+    }
+
+    // ─────────────────────────────────────────────
+    // 📝 DO REGISTER
+    // ─────────────────────────────────────────────
+    async function doRegister() {
+      clearAlert('registerAlert');
+
+      var firstName = (document.getElementById('regFirstName').value || "").trim();
+      var lastName  = (document.getElementById('regLastName').value  || "").trim();
+      var emailSel  = document.getElementById('regEmailSelect').value;
+      var email     = emailSel === '__new__'
+                      ? (document.getElementById('regCustomEmail').value || "").trim().toLowerCase()
+                      : (emailSel || "").trim().toLowerCase();
+      var pw        = document.getElementById('regPassword').value        || "";
+      var pwConf    = document.getElementById('regPasswordConfirm').value || "";
+
+      // ─── Validation ───
+      if (!firstName) { showAlert('registerAlert', '⚠️ กรุณากรอกชื่อ'); return; }
+      if (!lastName)  { showAlert('registerAlert', '⚠️ กรุณากรอกนามสกุล'); return; }
+      if (!email)     { showAlert('registerAlert', '⚠️ กรุณาเลือกหรือกรอก Email'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showAlert('registerAlert', '⚠️ รูปแบบ Email ไม่ถูกต้อง'); return;
+      }
+      if (pw.length < 6) { showAlert('registerAlert', '⚠️ Password ต้องมีอย่างน้อย 6 ตัวอักษร'); return; }
+      if (pw !== pwConf)  { showAlert('registerAlert', '❌ Password ไม่ตรงกัน กรุณาลองใหม่'); return; }
+
+      var users = getLocalUsers();
+      if (users[email]) {
+        showAlert('registerAlert', '⚠️ Email นี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบ');
+        setTimeout(function() { switchLoginTab('login'); }, 1500);
+        return;
+      }
+
+      document.getElementById('btnDoRegister').disabled = true;
+      document.getElementById('btnDoRegister').innerText = '⏳ กำลังบันทึก...';
+
+      var hashed   = await hashPassword(pw);
+      var fullName = firstName + " " + lastName;
+
+      users[email] = { name: fullName, hash: hashed, createdAt: new Date().toISOString() };
+      saveLocalUsers(users);
+      // อัปเดต EMAIL_NAME_MAP สำหรับ session นี้
+      EMAIL_NAME_MAP[email] = fullName;
+
+      currentUserEmail = email;
+      currentUserName  = fullName;
+      localStorage.setItem('inv_user_email', currentUserEmail);
+      localStorage.setItem('inv_user_name',  currentUserName);
+      document.getElementById('loginModal').classList.remove('show');
+      document.getElementById('btnDoRegister').disabled = false;
+      document.getElementById('btnDoRegister').innerText = '📝 ลงทะเบียน & เข้าสู่ระบบ';
+      updateUserBadge();
+      Toast.fire({ icon: 'success', title: '✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ ' + fullName });
+    }
+
+    function promptChangeUser() {
+      localStorage.removeItem('inv_user_email');
+      localStorage.removeItem('inv_user_name');
+      currentUserEmail = "";
+      currentUserName  = "";
+      showLoginModal('login');
+    }
+
+
+    // ─────────────────────────────────────────────
+    // PHOTO HANDLING
+    // ─────────────────────────────────────────────
+    async function handleFile(input) {
+      if (!input.files || input.files.length === 0) return;
+      updateProgress(null, "กำลังเตรียมรูปภาพ...");
+      for (let f of Array.from(input.files)) {
+        try { photoArray.push(await compressImage(f)); } catch (e) {}
+      }
+      document.getElementById('photoStatus').innerText = '✅ พร้อมแล้ว (' + photoArray.length + ' รูป)';
+      document.getElementById('photoStatus').className = 'text-center mt-2 small text-success fw-bold';
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('btnOCR').disabled = false;
+      input.value = "";
+    }
+
+    function compressImage(file) {
+      return new Promise((res) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = e => {
+          const img = new Image();
+          img.src = e.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX = 1280;
+            let w = img.width, h = img.height;
+            if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+            else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            res(canvas.toDataURL('image/jpeg', 0.7));
+          };
+        };
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    // LOAD BOM / PROJECTS / OWNERS / LOCATIONS
+    // ─────────────────────────────────────────────
+    function onCustomerChange() { loadBOM(); loadProjectData(); }
+
+    function loadBOM() {
+      updateProgress(null, "กำลัง Sync ข้อมูลสินค้า...");
+      google.script.run
+        .withSuccessHandler(function(d) {
+          bomData = d || [];
+          updateAllRowsDropdowns();
+          document.getElementById('loader').style.display = 'none';
+        })
+        .withFailureHandler(function(err) {
+          console.error("loadBOM error:", err);
+          Swal.fire({icon: 'error', title: 'เกิดข้อผิดพลาด', text: "ไม่สามารถดึงข้อมูลสินค้าได้: " + err.message});
+          document.getElementById('loader').style.display = 'none';
+        })
+        .getBOMData(document.getElementById('customer').value);
+    }
+
+    function loadProjectData() {
+      google.script.run
+        .withSuccessHandler(function(d) {
+          projectData = d || [];
+          document.getElementById('duidList').innerHTML = projectData
+            .map(function(v) { return '<option value="' + v.duid + '">' + v.site + '</option>'; })
+            .join('');
+        })
+        .withFailureHandler(function(err) { console.error("loadProjectData error:", err); })
+        .getProjectData();
+
+      const hardcodedOwners = [
+        "HW_Prapat Jutavijittum", "HW_Sirikan Anuratphanit", "TLN_Adisak Chanmao",
+        "TLN_nammon manakiat", "TLN_thossapol chaloemrit", "TLN_Payon Sapphat",
+        "TLN_Palagon Prommueangma", "TLN_Wachira SAOWARO", "TLN_Phet SAITHONG", "TLN_Adirak Kong-ang"
+      ];
+
+      google.script.run
+        .withSuccessHandler(function(d) {
+          let ws = [...new Set([...hardcodedOwners, ...(d.warehouses || [])])].sort();
+          let rs = [...new Set([...hardcodedOwners, ...(d.receivers  || [])])].sort();
+          document.getElementById('warehouseList').innerHTML = ws.map(function(v) { return '<option value="' + v + '">'; }).join('');
+          document.getElementById('receiverList').innerHTML  = rs.map(function(v) { return '<option value="' + v + '">'; }).join('');
+        })
+        .withFailureHandler(function(err) { console.error("getOwnerData error:", err); })
+        .getOwnerData();
+
+      google.script.run
+        .withSuccessHandler(function(d) {
+          document.getElementById('locationWarehouseList').innerHTML = (d.warehouses || []).map(function(v) { return '<option value="' + v + '">'; }).join('');
+          document.getElementById('locationReceiverList').innerHTML  = (d.receivers  || []).map(function(v) { return '<option value="' + v + '">'; }).join('');
+        })
+        .withFailureHandler(function(err) { console.error("getLocationData error:", err); })
+        .getLocationData();
+    }
+
+    // ─────────────────────────────────────────────
+    // DUID INPUT & STATUS CHECK
+    // ─────────────────────────────────────────────
+    function onDuidInput() {
+      var val      = document.getElementById('duid').value.trim();
+      var valLower = val.toLowerCase();
+      var f = projectData.find(function(i) { return i.duid.toLowerCase() === valLower; });
+      if (f) document.getElementById('region').value = f.region || "ER";
+      if (val.length >= 5) checkDuidStatus(val);
+    }
+
+    function checkDuidStatus(duid) {
+      if (!duid) return;
+      var cus = document.getElementById('customer').value;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          var badge = document.getElementById('statusBadge');
+          var text  = document.getElementById('statusText');
+          badge.classList.remove('d-none');
+          if (res.found) {
+            var cls = res.status === 'Closed'     ? 'alert-danger'
+                    : res.status === 'On Process' ? 'alert-warning'
+                    : 'alert-info';
+            text.className = 'alert py-1 px-2 mb-0 small fw-bold text-center ' + cls;
+            text.innerText = '📊 สถานะ DUID: ' + res.status;
+          } else {
+            text.className = 'alert alert-secondary py-1 px-2 mb-0 small fw-bold text-center';
+            text.innerText = '🆕 DUID ใหม่ (ยังไม่มีประวัติในระบบ)';
+          }
+        })
+        .withFailureHandler(function(err) {})
+        .getDuidStatus(duid, cus);
+    }
+
+    // ─────────────────────────────────────────────
+    // ITEM ROWS
+    // ─────────────────────────────────────────────
+    function addItemRow() {
+      rowCount++;
+      var div = document.createElement('div');
+      div.className = 'item-row shadow-sm';
+      div.id = 'row_' + rowCount;
+      div.innerHTML =
+        '<div class="row g-2">' +
+          '<div class="col-12"><label class="small fw-bold">ประเภท (Type)</label>' +
+            '<input type="text" id="type_'  + rowCount + '" class="form-control form-control-sm" list="typeData_' + rowCount + '" oninput="onTypeChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
+            '<datalist id="typeData_' + rowCount + '"></datalist></div>' +
+          '<div class="col-12"><label class="small fw-bold text-primary">Model</label>' +
+            '<input type="text" id="model_' + rowCount + '" class="form-control form-control-sm" list="modelData_' + rowCount + '" oninput="onModelChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
+            '<datalist id="modelData_' + rowCount + '"></datalist></div>' +
+          '<div class="col-12"><label class="small fw-bold">Item Code</label>' +
+            '<input type="text" id="code_'  + rowCount + '" class="form-control form-control-sm" list="codeData_' + rowCount + '" oninput="onCodeChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
+            '<datalist id="codeData_' + rowCount + '"></datalist></div>' +
+          '<div class="col-12"><label class="small fw-bold">Item Description</label>' +
+            '<input type="text" id="desc_'  + rowCount + '" class="form-control form-control-sm" list="descData_' + rowCount + '" oninput="onDescChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
+            '<datalist id="descData_' + rowCount + '"></datalist></div>' +
+          '<div class="col-12"><label class="small fw-bold">SN</label>' +
+            '<div class="input-group input-group-sm">' +
+              '<input type="text" id="sn_' + rowCount + '" class="form-control form-control-sm" placeholder="SN">' +
+              '<button class="btn btn-outline-primary" type="button" onclick="triggerNativeScanner(\'sn\',' + rowCount + ')">📷 Scan</button>' +
+            '</div></div>' +
+          '<div class="col-6"><label class="small fw-bold">จำนวน</label>' +
+            '<input type="number" id="qty_' + rowCount + '" class="form-control form-control-sm" value="1"></div>' +
+          '<div class="col-6 d-flex align-items-end">' +
+            '<button class="btn btn-danger btn-sm w-100" onclick="document.getElementById(\'row_' + rowCount + '\').remove()">ลบรายการ</button>' +
+          '</div>' +
+        '</div>';
+      document.getElementById('itemList').appendChild(div);
+      updateRowDropdowns(rowCount);
+    }
+
+    function updateRowDropdowns(id, filtered) {
+      var source = filtered || bomData;
+      var t = document.getElementById('typeData_'  + id);
+      var m = document.getElementById('modelData_' + id);
+      var c = document.getElementById('codeData_'  + id);
+      var d = document.getElementById('descData_'  + id);
+      t.innerHTML = [...new Set(source.map(function(i) { return i.type;  }))].sort().map(function(v) { return '<option value="' + v + '">'; }).join('');
+      m.innerHTML = [...new Set(source.map(function(i) { return i.model; }))].sort().map(function(v) { return '<option value="' + v + '">'; }).join('');
+      c.innerHTML = [...new Set(source.map(function(i) { return i.code;  }))].sort().map(function(v) { return '<option value="' + v + '">'; }).join('');
+      d.innerHTML = [...new Set(source.map(function(i) { return i.desc;  }))].filter(Boolean).sort().map(function(v) { return '<option value="' + v + '">'; }).join('');
+    }
+
+    function onModelChange(id) {
+      var val = document.getElementById('model_' + id).value; if (!val) return;
+      var filtered = bomData.filter(function(i) { return i.model === val; });
+      if (filtered.length > 0) {
+        updateRowDropdowns(id, filtered);
+        var uC = [...new Set(filtered.map(function(i) { return i.code; }))];
+        var uD = [...new Set(filtered.map(function(i) { return i.desc; }))];
+        var uT = [...new Set(filtered.map(function(i) { return i.type; }))];
+        if (uC.length === 1) { document.getElementById('code_' + id).value = uC[0]; onCodeChange(id); }
+        if (uD.length === 1) document.getElementById('desc_' + id).value = uD[0];
+        if (uT.length === 1) document.getElementById('type_' + id).value = uT[0];
+      }
+    }
+
+    function onCodeChange(id) {
+      var val = document.getElementById('code_' + id).value; if (!val) return;
+      var f = bomData.find(function(i) { return i.code === val; });
+      if (f) {
+        document.getElementById('desc_'  + id).value = f.desc;
+        document.getElementById('model_' + id).value = f.model;
+        document.getElementById('type_'  + id).value = f.type;
+      }
+    }
+
+    function onDescChange(id) {
+      var val = document.getElementById('desc_' + id).value; if (!val) return;
+      var f = bomData.find(function(i) { return i.desc === val; });
+      if (f) {
+        document.getElementById('code_'  + id).value = f.code;
+        document.getElementById('model_' + id).value = f.model;
+        document.getElementById('type_'  + id).value = f.type;
+      }
+    }
+
+    function onTypeChange(id) {
+      var val = document.getElementById('type_' + id).value; if (!val) return;
+      var filtered = bomData.filter(function(i) { return i.type === val; });
+      updateRowDropdowns(id, filtered);
+    }
+
+    function updateAllRowsDropdowns() {
+      document.querySelectorAll('[id^="model_"]').forEach(function(el) {
+        updateRowDropdowns(el.id.split('_')[1]);
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    // SUBMIT
+    // ─────────────────────────────────────────────
+    async function submitAll() {
+      var bN  = document.getElementById('billNo').value.trim();
+      var du  = document.getElementById('duid').value.trim();
+      var cus = document.getElementById('customer').value;
+      var wh  = document.getElementById('ownerWarehouse').value.trim();
+      var rc  = document.getElementById('ownerReceiver').value.trim();
+
+      if (!du || !cus || !bN)      { Swal.fire({icon: 'warning', title: 'ข้อมูลไม่ครบ', text: 'กรุณากรอก DUID, ลูกค้า และ Bill No ให้ครบ'}); return; }
+      if (photoArray.length === 0) { Swal.fire({icon: 'warning', title: 'ยังไม่มีรูปบิล', text: 'กรุณาถ่ายรูปบิลก่อนบันทึก'}); return; }
+
+      // ตรวจสอบ user อีกครั้งก่อน submit — ต้องมี session ที่ login แล้ว
+      var _users = getLocalUsers();
+      if (!currentUserEmail || !_users[currentUserEmail]) {
+        showLoginModal('login');
+        return;
+      }
+
+      var items = [];
+      document.querySelectorAll('.item-row').forEach(function(row) {
+        var id    = row.id.split('_')[1];
+        var model = document.getElementById('model_' + id).value;
+        if (model) {
+          items.push({
+            type:  document.getElementById('type_' + id).value,
+            model: model,
+            code:  document.getElementById('code_' + id).value,
+            desc:  document.getElementById('desc_' + id).value,
+            sn:    document.getElementById('sn_'   + id).value,
+            qty:   document.getElementById('qty_'  + id).value
+          });
+        }
+      });
+
+      if (items.length === 0) { Swal.fire({icon: 'warning', title: 'ไม่มีสินค้า', text: 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'}); return; }
+
+      document.getElementById('btnSubmit').disabled = true;
+
+      var header = {
+        customer:          cus,
+        type:              document.getElementById('type').value,
+        region:            document.getElementById('region').value,
+        billNo:            bN,
+        duid:              du,
+        ownerWarehouse:    wh,
+        ownerReceiver:     rc,
+        locationWarehouse: document.getElementById('locationWarehouse').value,
+        locationReceiver:  document.getElementById('locationReceiver').value,
+        userName:          currentUserName,
+        userEmail:         currentUserEmail
+      };
+
+      try {
+        updateProgress(10, "กำลังบันทึกข้อมูลหลัก...");
+
+        const saveRes = await new Promise((res, rej) =>
+          google.script.run
+            .withSuccessHandler(res)
+            .withFailureHandler(rej)
+            .saveMainData(header, items, currentUserEmail, currentUserName)
+        );
+
+        if (!saveRes.success) throw new Error(saveRes.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูลหลัก");
+        if (saveRes.header) header = saveRes.header;
+
+        var lastFolderUrl = "";
+        for (let i = 0; i < photoArray.length; i++) {
+          let p = 20 + Math.floor(((i + 1) / photoArray.length) * 70);
+          updateProgress(p, "อัปโหลดรูปภาพ (" + (i + 1) + "/" + photoArray.length + ")...");
+
+          const uploadRes = await new Promise((res, rej) =>
+            google.script.run
+              .withSuccessHandler(res)
+              .withFailureHandler(rej)
+              .uploadPhotoOnly(header, photoArray[i], i + 1, currentUserEmail, currentUserName)
+          );
+          if (!uploadRes.success) throw new Error(uploadRes.error);
+          lastFolderUrl = uploadRes.folderUrl;
+        }
+
+        updateProgress(95, "รอสักครู่...");
+        showSuccessInLoader(saveRes.debug || 'บันทึกสำเร็จ!', '👤 บันทึกโดย: ' + currentUserName, lastFolderUrl);
+
+      } catch (err) {
+        Swal.fire({icon: 'error', title: 'เกิดข้อผิดพลาด', text: err.message});
+        document.getElementById('btnSubmit').disabled = false;
+        document.getElementById('loader').style.display = 'none';
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // SEARCH BILL
+    // ─────────────────────────────────────────────
+    function searchBill() {
+      var b = document.getElementById('billNo').value;
+      if (!b) { Swal.fire({icon: 'warning', title: 'กรุณาระบุ Bill No.'}); return; }
+      updateProgress(null, "ค้นหาข้อมูลเดิม...");
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('loader').style.display = 'none';
+          if (res.success) {
+            document.getElementById('duid').value              = res.data.duid;
+            document.getElementById('region').value           = res.data.region;
+            document.getElementById('ownerWarehouse').value   = res.data.ownerWarehouse   || "";
+            document.getElementById('ownerReceiver').value    = res.data.ownerReceiver    || "";
+            document.getElementById('locationWarehouse').value = res.data.locationWarehouse || "";
+            document.getElementById('locationReceiver').value  = res.data.locationReceiver  || "";
+            document.getElementById('itemList').innerHTML     = "";
+            rowCount = 0;
+            res.data.items.forEach(function(item, index) {
+              addItemRow();
+              var id = rowCount;
+              setTimeout(function() {
+                if (!document.getElementById('model_' + id)) return;
+                document.getElementById('model_' + id).value = item.model; onModelChange(id);
+                document.getElementById('code_'  + id).value = item.code;  onCodeChange(id);
+                document.getElementById('qty_'   + id).value = item.qty;
+                document.getElementById('sn_'    + id).value = item.sn;
+              }, 100 * (index + 1));
+            });
+            Toast.fire({icon: 'success', title: 'ดึงข้อมูลสำเร็จ!'});
+          } else {
+            Swal.fire({icon: 'info', title: 'ไม่พบข้อมูล', text: res.message || ''});
+          }
+        })
+        .searchByBillNo(b, document.getElementById('customer').value);
+    }
+
+    function searchByDuid() {
+      var d = document.getElementById('duid').value;
+      if (!d) { Swal.fire({icon: 'warning', title: 'กรุณาระบุ DUID'}); return; }
+      updateProgress(null, "ค้นหาข้อมูลเดิมจาก DUID...");
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('loader').style.display = 'none';
+          if (res.success) {
+            document.getElementById('region').value           = res.data.region;
+            document.getElementById('ownerWarehouse').value   = res.data.ownerWarehouse   || "";
+            document.getElementById('ownerReceiver').value    = res.data.ownerReceiver    || "";
+            document.getElementById('locationWarehouse').value = res.data.locationWarehouse || "";
+            document.getElementById('locationReceiver').value  = res.data.locationReceiver  || "";
+            document.getElementById('itemList').innerHTML     = "";
+            rowCount = 0;
+            var currentGroup = "";
+            res.data.items.forEach(function(item, index) {
+              var itemGroup = (item.billNo || "") + "|" + (item.transType || "");
+              if (itemGroup !== currentGroup) {
+                currentGroup = itemGroup;
+                var transBadge = "";
+                if (item.transType) {
+                  var badgeClass = item.transType.toUpperCase() === "IN" ? "bg-success" 
+                                 : item.transType.toUpperCase() === "OUT" ? "bg-danger" 
+                                 : "bg-info text-dark";
+                  transBadge = ' <span class="badge ' + badgeClass + ' ms-2">' + item.transType + '</span>';
+                }
+                var billHeader = document.createElement('div');
+                billHeader.className = 'alert alert-secondary py-1 mt-3 mb-2 small fw-bold text-dark d-flex align-items-center';
+                billHeader.innerHTML = '🧾 Bill No: <span class="text-primary ms-1">' + (item.billNo || "-") + '</span>' + transBadge;
+                document.getElementById('itemList').appendChild(billHeader);
+              }
+              addItemRow();
+              var id = rowCount;
+              setTimeout(function() {
+                if (!document.getElementById('model_' + id)) return;
+                document.getElementById('model_' + id).value = item.model; onModelChange(id);
+                document.getElementById('code_'  + id).value = item.code;  onCodeChange(id);
+                document.getElementById('qty_'   + id).value = item.qty;
+                document.getElementById('sn_'    + id).value = item.sn;
+              }, 100 * (index + 1));
+            });
+            Toast.fire({icon: 'success', title: 'ดึงข้อมูล DUID สำเร็จ!'});
+          } else {
+            Swal.fire({icon: 'info', title: 'ไม่พบข้อมูล', text: res.message || ''});
+          }
+        })
+        .searchDuidForUI(d, document.getElementById('customer').value);
+    }
+
+    // ─────────────────────────────────────────────
+    // PROGRESS / LOADER
+    // ─────────────────────────────────────────────
+    function updateProgress(percent, text) {
+      document.getElementById('loader').style.display = 'flex';
+      document.getElementById('loaderText').innerText = text;
+      var bar = document.getElementById('progressBar');
+      if (percent !== null) {
+        bar.parentElement.parentElement.style.display = 'block';
+        bar.style.width = percent + '%';
+      } else {
+        bar.parentElement.parentElement.style.display = 'none';
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // SUCCESS PANEL IN LOADER (แทน SweetAlert)
+    // ─────────────────────────────────────────────
+    var _loaderOKCallback = null;
+    function showSuccessInLoader(title, text, folderUrl) {
+      // ซ่อน spinner + progress
+      document.getElementById('loaderSpinner').style.display = 'none';
+      document.getElementById('loaderProgressWrap').style.display = 'none';
+      document.getElementById('loaderText').style.display = 'none';
+      // แสดง success panel
+      document.getElementById('loaderSuccessTitle').innerText = title;
+      document.getElementById('loaderSuccessText').innerText  = text;
+      document.getElementById('loaderSuccess').style.display  = 'block';
+      // เก็บ callback
+      _loaderOKCallback = function() {
+        if (folderUrl) window.open(folderUrl, '_blank');
+        location.reload();
+      };
+    }
+
+    function onLoaderOK() {
+      document.getElementById('loader').style.display = 'none';
+      if (_loaderOKCallback) _loaderOKCallback();
+    }
+
+
+    // ─────────────────────────────────────────────
+    // HEALTH CHECK
+    // ─────────────────────────────────────────────
+    function checkHealth() {
+      updateProgress(null, "Checking GAS Connection...");
+      google.script.run
+        .withSuccessHandler(function(d) {
+          document.getElementById('loader').style.display = 'none';
+          Swal.fire({
+            icon: 'success',
+            title: 'System Status: OK',
+            html: `
+              <div style="text-align: left; font-size: 14px;">
+                <b>📦 BOM Items:</b> ${bomData.length}<br>
+                <b>🆔 Project Items:</b> ${projectData.length}<br>
+                <b>👤 User:</b> ${currentUserEmail}<br>
+                <b>📝 Name:</b> ${currentUserName}<br>
+                <b>💻 Device:</b> ${currentDeviceType}<br>
+                <b>🔖 Version:</b> V.7.1.2
+              </div>
+            `,
+            confirmButtonText: 'รับทราบ'
+          });
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('loader').style.display = 'none';
+          Swal.fire({icon: 'error', title: 'GAS Connection Failed', text: err.message});
+        })
+        .getBOMData(document.getElementById('customer').value);
+    }
+
+    // ─────────────────────────────────────────────
+    // OCR
+    // ─────────────────────────────────────────────
+    async function runOCRFromPhoto() {
+      if (photoArray.length === 0) { Swal.fire({icon: 'warning', title: 'ยังไม่มีรูปบิล', text: 'กรุณาถ่ายรูปบิลก่อนทำ OCR'}); return; }
+      updateProgress(null, 'กำลังอ่านข้อมูลจากรูปบิล (OCR)...');
+      document.getElementById('btnOCR').disabled = true;
+      try {
+        const base64 = photoArray[0].split(',')[1];
+        const result = await new Promise((res, rej) =>
+          google.script.run.withSuccessHandler(res).withFailureHandler(rej).processOCR(base64)
+        );
+        document.getElementById('loader').style.display = 'none';
+        if (result.success && result.data) {
+          const d = result.data;
+          if (d.header.billNo  && d.header.billNo  !== '-') document.getElementById('billNo').value  = d.header.billNo;
+          if (d.header.duid    && d.header.duid    !== '-') { document.getElementById('duid').value   = d.header.duid; onDuidInput(); }
+          if (d.header.region  && d.header.region  !== '-') document.getElementById('region').value  = d.header.region;
+          if (d.items && d.items.length > 0) {
+            document.getElementById('itemList').innerHTML = '';
+            rowCount = 0;
+            d.items.forEach(function(item, idx) {
+              addItemRow();
+              var id = rowCount;
+              setTimeout(function() {
+                if (!document.getElementById('model_' + id)) return;
+                document.getElementById('model_' + id).value = item.model; onModelChange(id);
+                document.getElementById('qty_'   + id).value = item.qty;
+              }, 100 * (idx + 1));
+            });
+          }
+          Swal.fire({icon: 'success', title: 'OCR สำเร็จ!', text: 'ตรวจสอบข้อมูลก่อนบันทึกด้วยนะครับ'});
+        } else {
+          Swal.fire({icon: 'warning', title: 'OCR ไม่พบข้อมูลที่ชัดเจน', text: 'กรุณากรอกข้อมูลเพิ่มเติมด้วยตนเอง'});
+        }
+      } catch (e) {
+        document.getElementById('loader').style.display = 'none';
+        Swal.fire({icon: 'error', title: 'OCR Error', text: e.message});
+      }
+      document.getElementById('btnOCR').disabled = false;
+    }
+
+    // ─────────────────────────────────────────────
+    // BARCODE / QR SCANNER
+    // ─────────────────────────────────────────────
+    function triggerNativeScanner(t, id) {
+      scanTarget = t;
+      scanRowId  = id || null;
+      document.getElementById('cameraTrigger').click();
+    }
+
+    async function processImageScan(input) {
+      if (!input.files || input.files.length === 0) return;
+      updateProgress(null, "กำลังวิเคราะห์ QR/Barcode (Deep Scan V2)...");
+      try {
+        const file        = input.files[0];
+        const html5QrCode = new Html5Qrcode("qr-reader");
+        const variants    = [
+          { max: 1000, gray: true,  contrast: 1.6, sharp: true  },
+          { max: 800,  gray: true,  contrast: 1.3, sharp: true  },
+          { max: 1200, gray: false, contrast: 1.1, sharp: true  },
+          { max: 700,  gray: true,  contrast: 1.1, sharp: false }
+        ];
+        let decodedText = null;
+        for (let i = 0; i < variants.length; i++) {
+          try {
+            updateProgress(null, "Deep Scan ครั้งที่ " + (i + 1) + "/" + variants.length + "...");
+            const processedDataUrl = await preProcessImage(file, variants[i]);
+            const blob             = await (await fetch(processedDataUrl)).blob();
+            const processedFile    = new File([blob], "scan.jpg", { type: "image/jpeg" });
+            decodedText            = await html5QrCode.scanFile(processedFile, true);
+            if (decodedText) break;
+          } catch (e) {}
+        }
+        document.getElementById('loader').style.display = 'none';
+        if (decodedText) {
+          if      (scanTarget === 'billNo') document.getElementById('billNo').value = decodedText;
+          else if (scanTarget === 'duid')   { document.getElementById('duid').value = decodedText; onDuidInput(); }
+          else if (scanTarget === 'sn')     document.getElementById('sn_' + scanRowId).value = decodedText;
+          Toast.fire({icon: 'success', title: 'สแกนสำเร็จ!'});
+        } else {
+          Swal.fire({icon: 'error', title: 'อ่านไม่ได้', text: 'โปรดถือให้นิ่ง และเว้นระยะห่างให้รหัสอยู่กลางภาพ'});
+        }
+        try { html5QrCode.clear(); } catch (e) {}
+      } catch (e) {
+        document.getElementById('loader').style.display = 'none';
+        Swal.fire({icon: 'error', title: 'ระบบสแกนขัดข้อง', text: e.message});
+      }
+      input.value = "";
+    }
+
+    function preProcessImage(file, options) {
+      return new Promise((res) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = e => {
+          const img = new Image();
+          img.src = e.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX    = options.max || 800;
+            let w = img.width, h = img.height;
+            if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+            else       { if (h > MAX) { w *= MAX / h; h = MAX; } }
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            let filters = [];
+            if (options.gray)     filters.push('grayscale(100%)');
+            if (options.contrast) filters.push('contrast(' + options.contrast + ')');
+            if (options.sharp)    filters.push('brightness(1.1)');
+            if (filters.length > 0) ctx.filter = filters.join(' ');
+            ctx.drawImage(img, 0, 0, w, h);
+            res(canvas.toDataURL('image/jpeg', 0.95));
+          };
+        };
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    // INIT
+    // ─────────────────────────────────────────────
+    window.onload = function() {
+      loadCurrentUser();   // 🔐 บังคับ Login ก่อน ถ้าไม่มี email ใน whitelist
+      loadBOM();
+      loadProjectData();
+      addItemRow();
+    };
+  </script>
+</body>
+</html>
