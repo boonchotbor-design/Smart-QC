@@ -9,7 +9,9 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--sw:260px;--primary:#00c28a;--pd:#009e6f;--dark:#0e1017;--card:#181b26;--card2:#1e2232;--border:rgba(255,255,255,0.07);--text:#e8ecf4;--muted:#8892a4;--red:#ff4d6a;--blue:#4d9fff;--yellow:#ffd94d;--purple:#b26dff;--orange:#ff9f4d}
-body{font-family:'Sarabun',sans-serif;background:var(--dark);color:var(--text);display:flex;min-height:100vh;overflow-x:hidden}
+body.light-mode{--dark:#f4f7f6;--card:#ffffff;--card2:#f8f9fa;--border:rgba(0,0,0,0.08);--text:#181b26;--muted:#6c757d}
+body{font-family:'Sarabun',sans-serif;background:var(--dark);color:var(--text);display:flex;min-height:100vh;overflow-x:hidden;transition:background 0.3s, color 0.3s}
+.tbtn, .mc, .tc, .cc, .ac, .kc, .ni, #sb, .topbar { transition: background 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s; }
 /* Sidebar */
 #sb{width:var(--sw);background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:1000;transition:transform .3s}
 .sb-logo{padding:20px 18px 14px;border-bottom:1px solid var(--border)}.sb-logo h2{font-size:16px;font-weight:800;color:var(--primary)}.sb-logo p{font-size:10px;color:var(--muted);margin-top:1px}
@@ -268,12 +270,13 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
 <div id="sbov" onclick="cSb()"></div>
 <nav id="sb">
   <div class="sb-logo"><h2>📦 SmartStock</h2><p>Inventory V.7.4.0</p></div>
-  <div class="sb-user" style="cursor:pointer" onclick="promptChangeUser()" title="คลิกเพื่อออกจากระบบ">
+  <div class="sb-user" style="cursor:pointer" title="ข้อมูลผู้ใช้">
     <div class="u-av" id="sbUserAv">??</div>
-    <div class="u-info">
+    <div class="u-info" style="flex:1" onclick="promptChangeUser()">
       <strong id="sbUserName">กำลังโหลด...</strong>
       <span id="syncBadge" class="sync-badge sync-demo">● Demo</span>
     </div>
+    <button class="tbtn r no-print" style="padding:4px 8px;font-size:10px" onclick="event.stopPropagation(); logoutUser()" title="ออกจากระบบ">🚪 Logout</button>
   </div>
   <nav class="sb-nav">
     <div class="nav-sec">ฐานข้อมูล (Master Data)</div>
@@ -302,6 +305,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
   <header class="topbar">
     <div class="tb-left"><button id="hbg" onclick="tSb()">☰</button><div><div class="pg-title" id="pgTitle">📊 Dashboard</div><div class="pg-sub" id="pgSub">กำลังโหลด...</div></div></div>
     <div class="tb-right">
+      <button class="tbtn no-print" id="lightModeBtn" onclick="toggleLightMode()" title="สลับโหมด Light/Dark" style="border-radius:50%;padding:7px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px">☀️</button>
       <button class="tbtn no-print" onclick="syncNow()">🔄 <span>Sync</span></button>
       <button class="tbtn b no-print" onclick="pg('import',document.querySelectorAll('.ni')[3])">📂 <span>Import</span></button>
       <button class="tbtn g no-print" onclick="openM('IN')">➕ <span>บันทึก</span></button>
@@ -9400,7 +9404,8 @@ function applyF() {
 }
 
 // ════ SEARCH PAGE ════
-function srchDuid(){const q=(document.getElementById('duidQ').value||'').trim().toLowerCase(),el=document.getElementById('dRes');if(!q){el.innerHTML='<p style="color:var(--muted)">กรุณากรอก DUID หรือ Bill No.</p>';return}const res=TX.filter(t=>(t.duid||'').toLowerCase().includes(q)||(t.bill||'').toLowerCase().includes(q));if(!res.length){el.innerHTML=`<p style="color:var(--red)">❌ ไม่พบ: <strong>${q}</strong></p>`;return}el.innerHTML=`<div style="font-size:11px;color:var(--muted);margin-bottom:8px">พบ ${res.length} รายการ — คลิกเพื่อเปิดฟอร์มบันทึกด้วย DUID/Bill นี้</div>`+res.map(t=>{const scls=SMAP[t.status]||'s-open',sico=SICO[t.status]||'',safeT=encodeURIComponent(JSON.stringify(t));return`<div class="ai" style="margin-bottom:6px;cursor:pointer" onclick="prefillFromRow('${safeT}')"><span class="ab ${BADGE[t.type]||'b-in'}">${t.type}</span><div class="ai-info"><div class="ai-d">${t.duid} <span style="font-size:9px;color:var(--muted)">· ${t.bill||'—'}</span></div><div class="ai-m">${t.model||'-'} · <span style="color:var(--blue)">${t.code||'—'}</span> · ${t.customer} · ${t.region} · ${t.date}</div></div><div style="display:flex;gap:5px;align-items:center"><span class="sp ${scls}" style="font-size:9px">${sico} ${t.status}</span></div></div>`;}).join('');}
+function srchDuid(){const q=(document.getElementById('duidQ').value||'').trim().toLowerCase(),el=document.getElementById('dRes');if(!q){el.innerHTML='<p style="color:var(--muted)">กรุณากรอก DUID หรือ Bill No.</p>';return}const res=TX.filter(t=>(t.duid||'').toLowerCase().includes(q)||(t.bill||'').toLowerCase().includes(q));if(!res.length){el.innerHTML=`<p style="color:var(--red)">❌ ไม่พบ: <strong>${q}</strong></p>`;return}window.lastSearchResult=res;el.innerHTML=`<div style="margin-bottom:12px"><button class="tbtn g" style="width:100%;font-size:13px;padding:10px" onclick="prefillAllFromRows()">📝 ดึงข้อมูลทั้งหมดเพื่อทำรายการ (Action on All Items)</button></div><div style="font-size:11px;color:var(--muted);margin-bottom:8px">พบ ${res.length} รายการ — คลิกเพื่อเปิดฟอร์มทีละรายการ</div>`+res.map(t=>{const scls=SMAP[t.status]||'s-open',sico=SICO[t.status]||'',safeT=encodeURIComponent(JSON.stringify(t));return`<div class="ai" style="margin-bottom:6px;cursor:pointer" onclick="prefillFromRow('${safeT}')"><span class="ab ${BADGE[t.type]||'b-in'}">${t.type}</span><div class="ai-info"><div class="ai-d">${t.duid} <span style="font-size:9px;color:var(--muted)">· ${t.bill||'—'}</span></div><div class="ai-m">${t.model||'-'} · <span style="color:var(--blue)">${t.code||'—'}</span> · ${t.customer} · ${t.region} · ${t.date}</div></div><div style="display:flex;gap:5px;align-items:center"><span class="sp ${scls}" style="font-size:9px">${sico} ${t.status}</span></div></div>`;}).join('');}
+function prefillAllFromRows(){const res=window.lastSearchResult;if(!res||!res.length)return;const first=res[0];openM('IN');setTimeout(()=>{document.getElementById('m-duid').value=first.duid||'';document.getElementById('m-bill').value=first.bill||'';document.getElementById('m-reg').value=first.region||'ER';document.getElementById('m-cus').value=first.customer||'AIS';document.getElementById('m-ownerW').value=first.ownerW||'';document.getElementById('m-ownerR').value=first.ownerR||'';document.getElementById('m-locW').value=first.locW||'';document.getElementById('m-locR').value=first.locR||'';document.getElementById('itemRows').innerHTML='';itemRowCount=0;res.forEach(t=>{addItemRowPrefilled(t.itype||'',t.model||'',t.code||'',t.desc||'',t.qty||1,t.sn||'');});showToast(`✅ โหลดข้อมูลครบ ${res.length} รายการ`, 'ok');}, 150);}
 function prefillFromRow(encoded){const t=JSON.parse(decodeURIComponent(encoded));openM(t.type||'IN');setTimeout(()=>{document.getElementById('m-duid').value=t.duid||'';document.getElementById('m-bill').value=t.bill||'';document.getElementById('m-reg').value=t.region||'ER';document.getElementById('m-cus').value=t.customer||'AIS';document.getElementById('m-ownerW').value=t.ownerW||'';document.getElementById('m-ownerR').value=t.ownerR||'';document.getElementById('m-locW').value=t.locW||'';document.getElementById('m-locR').value=t.locR||'';addItemRowPrefilled(t.itype||'',t.model||'',t.code||'',t.desc||'',t.qty||1,t.sn||'');showToast('✅ โหลดข้อมูลเดิมสำเร็จ — เลือก Type แล้วกดบันทึก','ok');},100);}
 
 // ════ MODAL ════
@@ -10059,6 +10064,33 @@ function doExport() {
   a.download = 'Export_INOUT_' + ieCurrentCustomer + '.csv';
   a.click();
 }
+
+function toggleLightMode() {
+  document.body.classList.toggle('light-mode');
+  const btn = document.getElementById('lightModeBtn');
+  if (document.body.classList.contains('light-mode')) {
+    localStorage.setItem('inv_theme', 'light');
+    btn.textContent = '🌙';
+  } else {
+    localStorage.setItem('inv_theme', 'dark');
+    btn.textContent = '☀️';
+  }
+}
+
+// Load theme on startup
+window.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('inv_theme') === 'light') {
+    document.body.classList.add('light-mode');
+    document.getElementById('lightModeBtn').textContent = '🌙';
+  }
+});
+
+function logoutUser() {
+  if(confirm('คุณต้องการออกจากระบบใช่หรือไม่? (การออกระบบจะเปิดหน้าต่าง Logout ของ Google)')) {
+    window.location.href = 'https://accounts.google.com/Logout';
+  }
+}
+
 </script>
 </body>
 </html>
