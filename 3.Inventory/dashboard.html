@@ -70,6 +70,16 @@ body{font-family:'Sarabun',sans-serif;background:var(--dark);color:var(--text);d
 .ft{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Sarabun',sans-serif;transition:all .18s}.ft:hover{background:rgba(255,255,255,.06);color:var(--text)}.ft.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 table{width:100%;border-collapse:collapse}
 thead th{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--card);z-index:10;box-shadow: 0 1px 0 var(--border);}
+/* Filter select & inline edit — supports dark+light */
+.fi-sel{padding:7px 10px;font-size:12px;border-radius:6px;background:var(--card2);color:var(--text);border:1px solid var(--border);outline:none;cursor:pointer;font-family:'Sarabun',sans-serif;transition:border-color .2s}
+.fi-sel option{background:var(--card2);color:var(--text)}
+.fi-sel:focus{border-color:var(--primary)}
+.edit-in{background:var(--card2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:3px 6px;font-size:11px;font-family:'Sarabun',sans-serif;outline:none}
+.edit-in:focus{border-color:var(--primary)}
+.edit-in option{background:var(--card2);color:var(--text)}
+/* Font sharpness */
+h1,h2,h3,h4,h5,h6,.c-title,.ni,.ti,.ai-d,.td-d{font-weight:700;letter-spacing:-0.01em}
+tbody td{color:var(--text)}
 tbody tr{border-bottom:1px solid var(--border);transition:background .15s}tbody tr:hover{background:rgba(255,255,255,.025)}tbody tr:last-child{border-bottom:none}
 tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
 .td-d{font-weight:700;color:var(--primary);font-family:monospace;font-size:11px}
@@ -338,16 +348,16 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
           <div class="c-title">📋 รายการทั้งหมด (<span id="txCount">0</span>)</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;width:100%;margin-top:10px;">
             <div class="sbox" style="flex:1;min-width:250px;max-width:350px;">
-              🔍<input type="text" placeholder="ค้นหา DUID / Bill / Model / Code..." id="txQ" oninput="applyF()" style="width:100%;background:transparent;border:none;color:white;outline:none;font-size:12px">
+              🔍<input type="text" placeholder="ค้นหา DUID / Bill / Model / Code..." id="txQ" oninput="applyF()" style="width:100%;background:transparent;border:none;color:var(--text);outline:none;font-size:12px">
             </div>
             
-            <select id="txCus" onchange="applyF()" style="padding:7px;font-size:12px;border-radius:6px;background:var(--card2);color:var(--text);border:1px solid var(--border);outline:none;cursor:pointer;">
+            <select id="txCus" onchange="applyF()" class="fi-sel">
               <option value="ALL">ทุกลูกค้า (All)</option>
               <option value="AIS">AIS</option>
               <option value="TRUE">TRUE</option>
             </select>
             
-            <select id="txReg" onchange="applyF()" style="padding:7px;font-size:12px;border-radius:6px;background:var(--card2);color:var(--text);border:1px solid var(--border);outline:none;cursor:pointer;">
+            <select id="txReg" onchange="applyF()" class="fi-sel">
               <option value="ALL">ทุก Region (All)</option>
               <option value="BKK">BKK</option>
               <option value="ER">ER</option>
@@ -357,7 +367,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
               <option value="NER">NER</option>
             </select>
             
-            <select id="txType" onchange="applyF()" style="padding:7px;font-size:12px;border-radius:6px;background:var(--card2);color:var(--text);border:1px solid var(--border);outline:none;cursor:pointer;">
+            <select id="txType" onchange="applyF()" class="fi-sel">
               <option value="ALL">ทุกประเภท (All)</option>
               <option value="IN">IN</option>
               <option value="OUT">OUT</option>
