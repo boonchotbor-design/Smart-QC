@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -23,7 +23,7 @@
     .user-badge { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 4px 10px; font-size: 12px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
     /* ── Login Modal ── */
     #loginModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.82); backdrop-filter:blur(6px); z-index:99999; justify-content:center; align-items:center; }
-    #loginModal.show { display:flex; }
+    #loginModal.show { display:flex !important; }
     #loginBox {
       background: #fff; border-radius: 20px; padding: 28px 24px; width: 92%; max-width: 400px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.4);
@@ -362,7 +362,8 @@
   </div>
 
   <div id="qr-reader" style="display:none"></div>
-  <input type="file" id="cameraTrigger" accept="image/*" capture="environment" style="display:none" onchange="processImageScan(this)">
+  <input type="file" id="cameraTrigger" accept="image/*" style="display:none" onchange="processImageScan(this)">
+<input type="file" id="cameraTriggerCamera" accept="image/*" capture="environment" style="display:none" onchange="processImageScan(this)">
 
   <script>
     // ─────────────────────────────────────────────
@@ -1232,7 +1233,33 @@
     function triggerNativeScanner(t, id) {
       scanTarget = t;
       scanRowId  = id || null;
-      document.getElementById('cameraTrigger').click();
+
+      // Detect mobile device
+      var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isMobile) {
+        Swal.fire({
+          title: "📷 สแกน Barcode / QR",
+          html: "<p style='font-size:14px;color:#555;margin-bottom:8px'>เลือกวิธีสแกน</p>",
+          showCancelButton: false,
+          showDenyButton: true,
+          confirmButtonText: "📸 ถ่ายรูป",
+          denyButtonText: "🖼️ เลือกจากแกลเลอรี",
+          confirmButtonColor: "#0d6efd",
+          denyButtonColor: "#6c757d",
+          allowOutsideClick: true
+        }).then(function(result) {
+          if (result.isConfirmed) {
+            document.getElementById("cameraTriggerCamera").value = "";
+            document.getElementById("cameraTriggerCamera").click();
+          } else if (result.isDenied) {
+            document.getElementById("cameraTrigger").value = "";
+            document.getElementById("cameraTrigger").click();
+          }
+        });
+      } else {
+        document.getElementById("cameraTrigger").value = "";
+        document.getElementById("cameraTrigger").click();
+      }
     }
 
     async function processImageScan(input) {
@@ -1502,17 +1529,17 @@
   <div id="searchSelectModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.82); z-index:99998; justify-content:center; align-items:center; backdrop-filter:blur(6px);">
     <div style="background:#fff; border-radius:20px; padding:24px; width:94%; max-width:500px; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.4); animation:slideUp 0.3s ease;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <h5 style="margin:0; font-weight:700; color:#1a1a2e; font-size:16px;">?? ���͡��¡�÷���ͧ��ù����</h5>
+        <h5 style="margin:0; font-weight:700; color:#1a1a2e; font-size:16px;">?? ���͡��¡�÷���ͧ��ù����</h5>
         <button onclick="document.getElementById('searchSelectModal').style.display='none'" style="background:none; border:none; font-size:22px; cursor:pointer; color:#666; line-height:1;">&times;</button>
       </div>
       <div style="background:#f0f4ff; border-radius:10px; padding:12px; margin-bottom:12px; font-size:13px; line-height:1.6;">
-        <b>�����������:</b> <span id="ssmHeaderInfo" style="color:#0d6efd; font-weight:700;"></span>
+        <b>�����������:</b> <span id="ssmHeaderInfo" style="color:#0d6efd; font-weight:700;"></span>
       </div>
       <div id="ssmItems" style="overflow-y:auto; flex:1; margin-bottom:16px; border:1px solid #dee2e6; border-radius:10px; padding:10px; background:#fafafa;">
       </div>
       <div style="display:flex; gap:10px;">
-        <button onclick="document.getElementById('searchSelectModal').style.display='none'" style="flex:1; padding:12px; background:#e9ecef; color:#495057; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif;">¡��ԡ</button>
-        <button onclick="confirmSearchSelection()" style="flex:2; padding:12px; background:linear-gradient(135deg,#0d6efd,#0043a8); color:white; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif;">?? ����ҷ�����͡</button>
+        <button onclick="document.getElementById('searchSelectModal').style.display='none'" style="flex:1; padding:12px; background:#e9ecef; color:#495057; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif;">¡��ԡ</button>
+        <button onclick="confirmSearchSelection()" style="flex:2; padding:12px; background:linear-gradient(135deg,#0d6efd,#0043a8); color:white; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif;">?? ����ҷ�����͡</button>
       </div>
     </div>
   </div>
