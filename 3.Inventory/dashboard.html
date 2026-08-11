@@ -9542,8 +9542,87 @@ function fillFromDrop(field,encoded){
   document.getElementById('m-locR').value=t.locR||'';
   hideDrop(field);showToast('✅ โหลดข้อมูลจากข้อมูลเดิมเรียบร้อย','ok');
 }
-function searchByDuid(){const duid=document.getElementById('m-duid').value.trim().toLowerCase();if(!duid){showToast('⚠️ กรุณากรอก DUID','warn');return}const found=TX.filter(t=>(t.duid||'').toLowerCase()===duid);if(found.length){fillFromDrop('duid',encodeURIComponent(JSON.stringify(found[0])))}else showToast('⚠️ ไม่พบ DUID นี้ — กรอกเป็นรายการใหม่ได้เลย','warn');}
-function searchByBill(){const bill=document.getElementById('m-bill').value.trim().toLowerCase();if(!bill){showToast('⚠️ กรุณากรอก Bill No.','warn');return}const found=TX.filter(t=>(t.bill||'').toLowerCase()===bill);if(found.length){fillFromDrop('bill',encodeURIComponent(JSON.stringify(found[0])))}else showToast('⚠️ ไม่พบ Bill นี้ — กรอกเป็นรายการใหม่ได้เลย','warn');}
+var _tempSearchData = null;
+
+function renderSearchSelectModal(items, headerText) {
+  _tempSearchData = items;
+  document.getElementById('ssmHeaderInfo').innerText = headerText;
+  var container = document.getElementById('ssmItems');
+  container.innerHTML = '';
+  
+  var validItems = 0;
+  items.forEach(function(item, idx) {
+    if (!item.model && !item.code && !item.itype && !item.desc) return; 
+    validItems++;
+    
+    var div = document.createElement('div');
+    div.style.cssText = 'padding:10px; margin-bottom:8px; background:var(--card2); border:1px solid var(--border); border-radius:8px; display:flex; align-items:center; gap:10px;';
+    
+    div.innerHTML = 
+      '<input type="checkbox" id="ssmChk_' + idx + '" class="ssm-chk" value="' + idx + '" checked style="width:18px; height:18px; cursor:pointer;">' +
+      '<label for="ssmChk_' + idx + '" style="cursor:pointer; flex:1; margin:0; font-size:11px; display:flex; flex-direction:column; gap:2px;">' +
+        '<div style="font-weight:700; color:var(--primary);">' + (item.model || 'Unknown Model') + ' <span style="font-weight:400; color:var(--muted); font-size:10px;">(' + (item.itype || '-') + ')</span></div>' +
+        '<div style="color:var(--text);">' + (item.desc || item.code || '') + '</div>' +
+        '<div style="color:var(--muted); font-size:10px; margin-top:2px;">Qty: ' + (item.qty || 1) + ' | SN: ' + (item.sn || '-') + '</div>' +
+      '</label>';
+    container.appendChild(div);
+  });
+  
+  if (validItems === 0) {
+    container.innerHTML = '<div style="text-align:center; color:var(--muted); padding:20px;">ไม่มีข้อมูลสินค้าที่สมบูรณ์</div>';
+  }
+  document.getElementById('searchSelectModal').style.display = 'flex';
+}
+
+function confirmSearchSelection() {
+  if (!_tempSearchData) return;
+  var checkboxes = document.querySelectorAll('.ssm-chk:checked');
+  var selectedIndices = Array.from(checkboxes).map(function(cb) { return parseInt(cb.value); });
+  
+  if (selectedIndices.length === 0) {
+    showToast('⚠️ กรุณาเลือกอย่างน้อย 1 รายการ', 'warn');
+    return;
+  }
+  
+  var selectedItems = selectedIndices.map(i => _tempSearchData[i]);
+  document.getElementById('searchSelectModal').style.display = 'none';
+  
+  const first = selectedItems[0];
+  document.getElementById('m-duid').value = first.duid || document.getElementById('m-duid').value;
+  document.getElementById('m-bill').value = first.bill || document.getElementById('m-bill').value;
+  document.getElementById('m-cus').value = first.customer || document.getElementById('m-cus').value || 'AIS';
+  document.getElementById('m-reg').value = first.region || document.getElementById('m-reg').value || 'ER';
+  document.getElementById('m-ownerW').value = first.ownerW || '';
+  document.getElementById('m-ownerR').value = first.ownerR || '';
+  document.getElementById('m-locW').value = first.locW || '';
+  document.getElementById('m-locR').value = first.locR || '';
+  
+  document.getElementById('itemRows').innerHTML = '';
+  itemRowCount = 0;
+  
+  selectedItems.forEach(t => {
+    addItemRowPrefilled(t.itype||'', t.model||'', t.code||'', t.desc||'', t.qty||1, t.sn||'');
+  });
+  
+  showToast(`✅ นำเข้าข้อมูล ${selectedItems.length} รายการ`, 'ok');
+}
+
+function searchByDuid(){
+  const duid=document.getElementById('m-duid').value.trim().toLowerCase();
+  if(!duid){showToast('⚠️ กรุณากรอก DUID','warn');return}
+  const found=TX.filter(t=>(t.duid||'').toLowerCase()===duid);
+  if(found.length){
+    renderSearchSelectModal(found, 'DUID: ' + duid + ' (' + found.length + ' รายการ)');
+  }else showToast('⚠️ ไม่พบ DUID นี้ — กรอกเป็นรายการใหม่ได้เลย','warn');
+}
+function searchByBill(){
+  const bill=document.getElementById('m-bill').value.trim().toLowerCase();
+  if(!bill){showToast('⚠️ กรุณากรอก Bill No.','warn');return}
+  const found=TX.filter(t=>(t.bill||'').toLowerCase()===bill);
+  if(found.length){
+    renderSearchSelectModal(found, 'Bill No: ' + bill + ' (' + found.length + ' รายการ)');
+  }else showToast('⚠️ ไม่พบ Bill นี้ — กรอกเป็นรายการใหม่ได้เลย','warn');
+}
 
 // ════ SUBMIT ════
 function submitM(){
@@ -10106,5 +10185,26 @@ function logoutUser() {
 }
 
 </script>
+<!-- ════ SEARCH SELECT MODAL ════ -->
+<div class="ov" id="searchSelectModal" style="display:none;z-index:99999;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="mbox" style="max-width:500px; display:flex; flex-direction:column; max-height:92vh;">
+    <div class="fhdr">
+      <span style="font-size:24px">☑️</span>
+      <div class="fhdr-title">เลือกรายการที่ต้องการนำเข้า</div>
+      <button class="fhdr-close" onclick="document.getElementById('searchSelectModal').style.display='none'">✕</button>
+    </div>
+    <div style="background:var(--card2); border-radius:10px; padding:12px; margin:12px 20px 0 20px; font-size:12px; line-height:1.6; border:1px solid var(--border);">
+      <b>พบข้อมูลเดิม:</b> <span id="ssmHeaderInfo" style="color:var(--primary); font-weight:700;"></span>
+    </div>
+    <div class="fbody" style="padding:12px 20px;">
+      <div id="ssmItems" style="overflow-y:auto; flex:1; border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--card);">
+      </div>
+    </div>
+    <div class="factions">
+      <button class="bcanc" onclick="document.getElementById('searchSelectModal').style.display='none'">ยกเลิก</button>
+      <button class="bsave" onclick="confirmSearchSelection()">📥 นำเข้าที่เลือก</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
