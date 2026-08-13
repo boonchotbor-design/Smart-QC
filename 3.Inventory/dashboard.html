@@ -3,13 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📦 Smart Inventory Dashboard V.7.4.0</title>
+<title>📦 Smart Inventory Dashboard V.7.4.1</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--sw:260px;--primary:#00c28a;--pd:#009e6f;--dark:#0e1017;--card:#181b26;--card2:#1e2232;--border:rgba(255,255,255,0.07);--text:#e8ecf4;--muted:#8892a4;--red:#ff4d6a;--blue:#4d9fff;--yellow:#ffd94d;--purple:#b26dff;--orange:#ff9f4d}
-body.light-mode{--dark:#f4f7f6;--card:#ffffff;--card2:#f8f9fa;--border:rgba(0,0,0,0.08);--text:#181b26;--muted:#6c757d}
+body.light-mode{--dark:#f0f2f5;--card:#ffffff;--card2:#f0f4f8;--border:rgba(0,0,0,0.1);--text:#181b26;--muted:#555e6c}
+body.light-mode .tbtn{color:#181b26;background:rgba(0,0,0,0.06);border-color:rgba(0,0,0,0.12)}
+body.light-mode .tbtn:hover{background:rgba(0,0,0,0.1)}
+body.light-mode .tbtn.g{color:#fff}
+body.light-mode .tbtn.b{color:#fff}
+body.light-mode .tbtn.r{color:#fff}
+body.light-mode .ni{color:#444}
+body.light-mode .ni:hover{background:rgba(0,0,0,0.04);color:#181b26}
+body.light-mode .ni.active{color:var(--primary)}
+body.light-mode .fl{color:#444}
+body.light-mode .c-title{color:#181b26}
+body.light-mode .k-lbl{color:#555e6c}
+body.light-mode .ai-m{color:#555e6c}
+body.light-mode .ai-t{color:#555e6c}
 body{font-family:'Sarabun',sans-serif;background:var(--dark);color:var(--text);display:flex;min-height:100vh;overflow-x:hidden;transition:background 0.3s, color 0.3s;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-weight:400;letter-spacing:0.01em}
 .tbtn, .mc, .tc, .cc, .ac, .kc, .ni, #sb, .topbar { transition: background 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s; }
 /* Sidebar */
@@ -154,6 +167,30 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
 #sbov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999}
 @media(max-width:900px){#sb{transform:translateX(-100%)}#sb.open{transform:translateX(0)}#main{margin-left:0}#hbg{display:flex}#sbov.show{display:block}.dash-row{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}.mg{grid-template-columns:repeat(3,1fr)}.imp-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}}
 @media(max-width:540px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.content{padding:12px}.imp-grid{grid-template-columns:1fr}.tb-right .tbtn span{display:none}}
+/* ── Issue 2: Remove red/focus ring on search rows ── */
+.srch-row{outline:none !important;}
+.srch-row:focus{outline:none !important;box-shadow:none !important;}
+.srch-row.highlighted{background:rgba(0,194,138,0.1) !important;border-color:var(--primary) !important;}
+.row-check{accent-color:var(--primary);outline:none !important;}
+.row-check:focus{outline:none !important;}
+/* ── Issue 4: Modal photo section ── */
+.photo-section{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px;}
+.photo-btn-row{display:flex;gap:8px;margin-bottom:8px;}
+.photo-btn-cam{flex:1;padding:10px;background:linear-gradient(135deg,#ff9f4d,#e07a20);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;}
+.photo-btn-gal{flex:1;padding:10px;background:rgba(255,255,255,0.08);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text);font-family:'Sarabun',sans-serif;}
+.photo-btn-gal:hover{background:rgba(255,255,255,0.14);}
+.modal-photo-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;min-height:0;}
+.modal-photo-thumb{position:relative;width:60px;height:60px;border-radius:8px;overflow:hidden;border:2px solid var(--primary);flex-shrink:0;}
+.modal-photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.modal-photo-del{position:absolute;top:1px;right:1px;background:rgba(220,53,69,.85);color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;line-height:16px;text-align:center;padding:0;}
+#mPhotoStatus{font-size:11px;font-weight:700;margin-top:6px;text-align:center;}
+#mPhotoStatus.ok{color:var(--primary);}
+#mPhotoStatus.warn{color:var(--red);}
+/* ── Issue 3: Search Select Modal items ── */
+.ssm-chk-row{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .18s,background .18s;outline:none !important;}
+.ssm-chk-row:hover{border-color:var(--primary);background:rgba(0,194,138,0.05);}
+.ssm-chk-row.checked{border-color:var(--primary);background:rgba(0,194,138,0.1);}
+.ssm-chk-input{width:18px;height:18px;accent-color:var(--primary);cursor:pointer;flex-shrink:0;outline:none !important;}
 /* Print */
 @media print{
   #sb, .topbar, .content, #toasts, .no-print { display: none !important; }
@@ -279,7 +316,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
 
 <div id="sbov" onclick="cSb()"></div>
 <nav id="sb">
-  <div class="sb-logo"><h2>📦 SmartStock</h2><p>Inventory V.7.4.0</p></div>
+  <div class="sb-logo"><h2>📦 SmartStock</h2><p>Inventory V.7.4.1</p></div>
   <div class="sb-user" style="cursor:pointer" title="ข้อมูลผู้ใช้">
     <div class="u-av" id="sbUserAv">??</div>
     <div class="u-info" style="flex:1" onclick="promptChangeUser()">
@@ -604,6 +641,18 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
       <div class="frow">
         <div class="fg"><label class="fl">Location Warehouse</label><input class="fi" id="m-locW" placeholder="Location ต้นทาง"></div>
         <div class="fg"><label class="fl">Location Receiver</label><input class="fi" id="m-locR" placeholder="Location ปลายทาง"></div>
+      </div>
+      <!-- Issue 4: Photo Section (Mandatory) -->
+      <div class="photo-section">
+        <div class="fl" style="margin-bottom:8px;">📸 รูปบิล <span style="color:var(--red)">*</span> <span style="font-size:9px;color:var(--muted);font-weight:400">(บังคับก่อน Submit)</span></div>
+        <div class="photo-btn-row">
+          <button class="photo-btn-cam" onclick="document.getElementById('mFileCam').click()">📸 ถ่ายรูปบิล</button>
+          <button class="photo-btn-gal" onclick="document.getElementById('mFileGal').click()">🖼️ จากเครื่อง</button>
+        </div>
+        <input type="file" id="mFileCam" accept="image/*" capture="environment" style="display:none" onchange="handleModalFile(this)" multiple>
+        <input type="file" id="mFileGal" accept="image/*" style="display:none" onchange="handleModalFile(this)" multiple>
+        <div class="modal-photo-wrap" id="mPhotoWrap"></div>
+        <div id="mPhotoStatus" class="warn">⚠️ ยังไม่มีรูปบิล — กรุณาถ่ายรูปก่อนบันทึก</div>
       </div>
       <!-- Items -->
       <div class="items-section" id="itemsSection">
@@ -9414,15 +9463,20 @@ function applyF() {
 }
 
 // ════ SEARCH PAGE ════
-function srchDuid(){const q=(document.getElementById('duidQ').value||'').trim().toLowerCase(),el=document.getElementById('dRes');if(!q){el.innerHTML='<p style="color:var(--muted)">กรุณากรอก DUID หรือ Bill No.</p>';return}const res=TX.filter(t=>(t.duid||'').toLowerCase().includes(q)||(t.bill||'').toLowerCase().includes(q));if(!res.length){el.innerHTML=`<p style="color:var(--red)">❌ ไม่พบ: <strong>${q}</strong></p>`;return}window.lastSearchResult=res;el.innerHTML=`<div style="margin-bottom:12px;display:flex;gap:8px"><button class="tbtn g" style="flex:1;font-size:13px;padding:10px" onclick="prefillSelectedRows()">✅ ทำรายการที่เลือก</button><button class="tbtn" style="font-size:13px;padding:10px;background:rgba(77,159,255,.15);color:var(--blue);border-color:rgba(77,159,255,.3)" onclick="toggleAllChecks()">☑️ เลือกทั้งหมด</button></div><div style="font-size:11px;color:var(--muted);margin-bottom:8px">พบ ${res.length} รายการ — ติ๊ก checkbox เพื่อเลือก หรือคลิกแถวเพื่อทำทีละรายการ</div>`+res.map((t,idx)=>{const scls=SMAP[t.status]||'s-open',sico=SICO[t.status]||'',safeT=encodeURIComponent(JSON.stringify(t));return`<div class="ai srch-row" id="srow-${idx}" style="margin-bottom:6px;cursor:pointer" onclick="handleRowClick(event,${idx},'${safeT}')"><label style="display:flex;align-items:center;cursor:pointer;margin-right:4px" onclick="event.stopPropagation()"><input type="checkbox" class="row-check" id="chk-${idx}" value="${idx}" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;flex-shrink:0" onchange="highlightRow(${idx})"></label><span class="ab ${BADGE[t.type]||'b-in'}" style="flex-shrink:0">${t.type}</span><div class="ai-info" style="flex:1;min-width:0"><div class="ai-d" style="font-weight:700">${t.duid} <span style="font-size:9px;color:var(--muted)">· ${t.bill||'—'}</span></div><div class="ai-m">${t.model||'-'} · <span style="color:var(--blue)">${t.code||'—'}</span> · ${t.customer} · ${t.region} · ${t.date}</div></div><div style="display:flex;gap:5px;align-items:center"><span class="sp ${scls}" style="font-size:9px">${sico} ${t.status}</span></div></div>`;}).join('');}
+// Issue 2: srchDuid — remove red ring, use .highlighted instead
+function srchDuid(){const q=(document.getElementById('duidQ').value||'').trim().toLowerCase(),el=document.getElementById('dRes');if(!q){el.innerHTML='<p style="color:var(--muted)">กรุณากรอก DUID หรือ Bill No.</p>';return}const res=TX.filter(t=>(t.duid||'').toLowerCase().includes(q)||(t.bill||'').toLowerCase().includes(q));if(!res.length){el.innerHTML=`<p style="color:var(--red)">❌ ไม่พบ: <strong>${q}</strong></p>`;return}window.lastSearchResult=res;el.innerHTML=`<div style="margin-bottom:12px;display:flex;gap:8px"><button class="tbtn g" style="flex:1;font-size:13px;padding:10px" onclick="prefillSelectedRows()">✅ ทำรายการที่เลือก</button><button class="tbtn" style="font-size:13px;padding:10px;background:rgba(77,159,255,.15);color:var(--blue);border-color:rgba(77,159,255,.3)" onclick="toggleAllChecks()">☑️ เลือกทั้งหมด</button></div><div style="font-size:11px;color:var(--muted);margin-bottom:8px">พบ ${res.length} รายการ — ติ๊ก checkbox เพื่อเลือก หรือคลิกแถวเพื่อทำทีละรายการ</div>`+res.map((t,idx)=>{const scls=SMAP[t.status]||'s-open',sico=SICO[t.status]||'',safeT=encodeURIComponent(JSON.stringify(t));return`<div class="ai srch-row" id="srow-${idx}" tabindex="-1" style="margin-bottom:6px;cursor:pointer;outline:none;" onclick="handleRowClick(event,${idx},'${safeT}')"><label style="display:flex;align-items:center;cursor:pointer;margin-right:4px" onclick="event.stopPropagation()"><input type="checkbox" class="row-check" id="chk-${idx}" value="${idx}" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;flex-shrink:0;outline:none;" onchange="highlightRow(${idx})"></label><span class="ab ${BADGE[t.type]||'b-in'}" style="flex-shrink:0">${t.type}</span><div class="ai-info" style="flex:1;min-width:0"><div class="ai-d" style="font-weight:700">${t.duid} <span style="font-size:9px;color:var(--muted)">· ${t.bill||'—'}</span></div><div class="ai-m">${t.model||'-'} · <span style="color:var(--blue)">${t.code||'—'}</span> · ${t.customer} · ${t.region} · ${t.date}</div></div><div style="display:flex;gap:5px;align-items:center"><span class="sp ${scls}" style="font-size:9px">${sico} ${t.status}</span></div></div>`;}).join('');}
 function handleRowClick(e,idx,safeT){if(e.target.type==='checkbox'||e.target.tagName==='LABEL')return;prefillFromRow(safeT);}
-function highlightRow(idx){const chk=document.getElementById('chk-'+idx);const row=document.getElementById('srow-'+idx);if(row)row.style.background=chk&&chk.checked?'rgba(0,194,138,0.12)':'';}
+// Issue 2: highlight only, no red ring
+function highlightRow(idx){const chk=document.getElementById('chk-'+idx);const row=document.getElementById('srow-'+idx);if(row){if(chk&&chk.checked){row.classList.add('highlighted');}else{row.classList.remove('highlighted');}}}
 function toggleAllChecks(){const checks=document.querySelectorAll('.row-check');const anyUnchecked=[...checks].some(c=>!c.checked);checks.forEach((c,i)=>{c.checked=anyUnchecked;highlightRow(i);});}
 function prefillSelectedRows(){const res=window.lastSearchResult;if(!res||!res.length)return;const checkboxes=document.querySelectorAll('.row-check:checked');if(!checkboxes.length){showToast('⚠️ กรุณาเลือกอย่างน้อย 1 รายการ','warn');return}const selectedItems=Array.from(checkboxes).map(cb=>res[parseInt(cb.value)]);const first=selectedItems[0];openM('IN');setTimeout(()=>{document.getElementById('m-duid').value=first.duid||'';document.getElementById('m-bill').value=first.bill||'';document.getElementById('m-reg').value=first.region||'ER';document.getElementById('m-cus').value=first.customer||'AIS';document.getElementById('m-ownerW').value=first.ownerW||'';document.getElementById('m-ownerR').value=first.ownerR||'';document.getElementById('m-locW').value=first.locW||'';document.getElementById('m-locR').value=first.locR||'';document.getElementById('itemRows').innerHTML='';itemRowCount=0;selectedItems.forEach(t=>{addItemRowPrefilled(t.itype||'',t.model||'',t.code||'',t.desc||'',t.qty||1,t.sn||'');});showToast(`✅ โหลดข้อมูลครบ ${selectedItems.length} รายการ`,'ok');},150);}
 function prefillAllFromRows(){const res=window.lastSearchResult;if(!res||!res.length)return;const first=res[0];openM('IN');setTimeout(()=>{document.getElementById('m-duid').value=first.duid||'';document.getElementById('m-bill').value=first.bill||'';document.getElementById('m-reg').value=first.region||'ER';document.getElementById('m-cus').value=first.customer||'AIS';document.getElementById('m-ownerW').value=first.ownerW||'';document.getElementById('m-ownerR').value=first.ownerR||'';document.getElementById('m-locW').value=first.locW||'';document.getElementById('m-locR').value=first.locR||'';document.getElementById('itemRows').innerHTML='';itemRowCount=0;res.forEach(t=>{addItemRowPrefilled(t.itype||'',t.model||'',t.code||'',t.desc||'',t.qty||1,t.sn||'');});showToast(`✅ โหลดข้อมูลครบ ${res.length} รายการ`, 'ok');}, 150);}
 function prefillFromRow(encoded){const t=JSON.parse(decodeURIComponent(encoded));openM(t.type||'IN');setTimeout(()=>{document.getElementById('m-duid').value=t.duid||'';document.getElementById('m-bill').value=t.bill||'';document.getElementById('m-reg').value=t.region||'ER';document.getElementById('m-cus').value=t.customer||'AIS';document.getElementById('m-ownerW').value=t.ownerW||'';document.getElementById('m-ownerR').value=t.ownerR||'';document.getElementById('m-locW').value=t.locW||'';document.getElementById('m-locR').value=t.locR||'';addItemRowPrefilled(t.itype||'',t.model||'',t.code||'',t.desc||'',t.qty||1,t.sn||'');showToast('✅ โหลดข้อมูลเดิมสำเร็จ — เลือก Type แล้วกดบันทึก','ok');},100);}
 
 // ════ MODAL ════
+// Issue 4: modal photo state
+var modalPhotoArray = [];
+
 function openM(type){
   curAction=type;
   document.getElementById('mIcon').textContent=M_ICONS[type]||'📦';
@@ -9437,6 +9491,12 @@ function openM(type){
   document.getElementById('m-reg').value='ER';
   document.getElementById('itemRows').innerHTML='';itemRowCount=0;
   hideDrop('duid');hideDrop('bill');
+  // Issue 4: Reset photo
+  modalPhotoArray=[];
+  document.getElementById('mPhotoWrap').innerHTML='';
+  updateModalPhotoStatus();
+  if(document.getElementById('mFileCam')) document.getElementById('mFileCam').value='';
+  if(document.getElementById('mFileGal')) document.getElementById('mFileGal').value='';
   addItemRow();
   document.getElementById('modal').classList.add('show');
 }
@@ -9544,34 +9604,78 @@ function fillFromDrop(field,encoded){
 }
 var _tempSearchData = null;
 
+// Issue 3: Improved renderSearchSelectModal with check-all + no red ring
 function renderSearchSelectModal(items, headerText) {
   _tempSearchData = items;
   document.getElementById('ssmHeaderInfo').innerText = headerText;
   var container = document.getElementById('ssmItems');
   container.innerHTML = '';
-  
-  var validItems = 0;
+
+  var validItems = items.filter(function(item) {
+    return item.model || item.code || item.itype || item.desc;
+  });
+
+  if (validItems.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">ไม่มีข้อมูลสินค้าที่สมบูรณ์</div>';
+    document.getElementById('searchSelectModal').style.display = 'flex';
+    return;
+  }
+
+  // Check-all row
+  var checkAllDiv = document.createElement('div');
+  checkAllDiv.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 4px;margin-bottom:8px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);';
+  checkAllDiv.innerHTML =
+    '<input type="checkbox" id="ssmCheckAll" class="ssm-chk-input" checked onchange="ssmToggleAll(this)">'
+    +'<span>เลือกทั้งหมด ('+validItems.length+' รายการ)</span>';
+  container.appendChild(checkAllDiv);
+
+  // Build item index mapping (original idx -> item)
   items.forEach(function(item, idx) {
-    if (!item.model && !item.code && !item.itype && !item.desc) return; 
-    validItems++;
-    
+    if (!item.model && !item.code && !item.itype && !item.desc) return;
+
     var div = document.createElement('div');
-    div.style.cssText = 'padding:10px; margin-bottom:8px; background:var(--card2); border:1px solid var(--border); border-radius:8px; display:flex; align-items:center; gap:10px;';
-    
-    div.innerHTML = 
-      '<input type="checkbox" id="ssmChk_' + idx + '" class="ssm-chk" value="' + idx + '" checked style="width:18px; height:18px; cursor:pointer;">' +
-      '<label for="ssmChk_' + idx + '" style="cursor:pointer; flex:1; margin:0; font-size:11px; display:flex; flex-direction:column; gap:2px;">' +
-        '<div style="font-weight:700; color:var(--primary);">' + (item.model || 'Unknown Model') + ' <span style="font-weight:400; color:var(--muted); font-size:10px;">(' + (item.itype || '-') + ')</span></div>' +
-        '<div style="color:var(--text);">' + (item.desc || item.code || '') + '</div>' +
-        '<div style="color:var(--muted); font-size:10px; margin-top:2px;">Qty: ' + (item.qty || 1) + ' | SN: ' + (item.sn || '-') + '</div>' +
+    div.className = 'ssm-chk-row checked';
+    div.id = 'ssmrow_' + idx;
+    div.setAttribute('data-idx', idx);
+    div.innerHTML =
+      '<input type="checkbox" id="ssmChk_'+idx+'" class="ssm-chk ssm-chk-input" value="'+idx+'" checked onchange="ssmRowCheck(this,'+idx+')">' +
+      '<label for="ssmChk_'+idx+'" style="cursor:pointer;flex:1;margin:0;font-size:11px;display:flex;flex-direction:column;gap:2px;">' +
+        '<div style="font-weight:700;color:var(--primary);">'+( item.model||'Unknown Model')+'<span style="font-weight:400;color:var(--muted);font-size:10px;margin-left:4px;">('+( item.itype||'-')+')</span></div>' +
+        '<div style="color:var(--text);">'+( item.desc||item.code||'')+'</div>' +
+        '<div style="color:var(--muted);font-size:10px;margin-top:2px;">Qty: '+(item.qty||1)+' | SN: '+(item.sn||'-')+'</div>' +
       '</label>';
+    div.addEventListener('click', function(e){
+      if(e.target.tagName==='INPUT'||e.target.tagName==='LABEL') return;
+      var chk = document.getElementById('ssmChk_'+idx);
+      chk.checked = !chk.checked;
+      ssmRowCheck(chk, idx);
+    });
     container.appendChild(div);
   });
-  
-  if (validItems === 0) {
-    container.innerHTML = '<div style="text-align:center; color:var(--muted); padding:20px;">ไม่มีข้อมูลสินค้าที่สมบูรณ์</div>';
-  }
+
   document.getElementById('searchSelectModal').style.display = 'flex';
+}
+
+function ssmRowCheck(chk, idx){
+  var row = document.getElementById('ssmrow_'+idx);
+  if(row) row.classList.toggle('checked', chk.checked);
+  // sync check-all
+  var all = document.querySelectorAll('.ssm-chk');
+  var checked = document.querySelectorAll('.ssm-chk:checked');
+  var ca = document.getElementById('ssmCheckAll');
+  if(ca){
+    ca.indeterminate = checked.length>0 && checked.length<all.length;
+    ca.checked = checked.length===all.length;
+  }
+}
+
+function ssmToggleAll(chkAll){
+  document.querySelectorAll('.ssm-chk').forEach(function(c){
+    c.checked = chkAll.checked;
+    var idx = c.value;
+    var row = document.getElementById('ssmrow_'+idx);
+    if(row) row.classList.toggle('checked', chkAll.checked);
+  });
 }
 
 function confirmSearchSelection() {
@@ -9629,6 +9733,8 @@ function submitM(){
   const duid=document.getElementById('m-duid').value.trim(),bill=document.getElementById('m-bill').value.trim();
   if(!duid){document.getElementById('m-duid').classList.add('err');showToast('⚠️ กรุณากรอก DUID','warn');return}
   document.getElementById('m-duid').classList.remove('err');
+  // Issue 4: Require photo before submit
+  if(modalPhotoArray.length===0){showToast('📸 กรุณาถ่ายรูปบิลก่อนบันทึก','warn');return}
   const items=getItems();
   if(!items.length){showToast('⚠️ กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ','warn');return}
   const d=new Date(),ds=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
@@ -9686,9 +9792,83 @@ function submitM(){
         showToast('❌ เกิดข้อผิดพลาด: '+err.message,'err');
       })
       .saveMainData(header, gasItems, userEmail, userName);
+    // Issue 4: Upload photos if GAS available
+    if(modalPhotoArray.length>0){
+      modalPhotoArray.forEach(function(base64,i){
+        google.script.run
+          .withSuccessHandler(function(r){if(r&&r.success)console.log('Photo '+(i+1)+' uploaded: '+r.folderUrl);})
+          .withFailureHandler(function(e){console.warn('Photo upload failed:',e.message);})
+          .uploadPhotoOnly(header, base64, i+1, userEmail, userName);
+      });
+    }
   }
 }
 
+// ── Issue 4: Modal Photo Functions ──
+async function handleModalFile(input){
+  if(!input.files||!input.files.length)return;
+  for(let f of Array.from(input.files)){
+    try{
+      const compressed=await compressModalImage(f);
+      modalPhotoArray.push(compressed);
+      addModalPhotoThumb(compressed,modalPhotoArray.length-1);
+    }catch(e){console.error('compress error:',e);}
+  }
+  updateModalPhotoStatus();
+  input.value='';
+}
+
+function compressModalImage(file){
+  return new Promise((res)=>{
+    const reader=new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload=e=>{
+      const img=new Image();
+      img.src=e.target.result;
+      img.onload=()=>{
+        const canvas=document.createElement('canvas');
+        const MAX=1280;let w=img.width,h=img.height;
+        if(w>h){if(w>MAX){h*=MAX/w;w=MAX;}}else{if(h>MAX){w*=MAX/h;h=MAX;}}
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        res(canvas.toDataURL('image/jpeg',0.75));
+      };
+    };
+  });
+}
+
+function addModalPhotoThumb(dataUrl,index){
+  const wrap=document.getElementById('mPhotoWrap');
+  const div=document.createElement('div');
+  div.className='modal-photo-thumb';
+  div.id='mthumb_'+index;
+  div.innerHTML='<img src="'+dataUrl+'" alt="รูป '+(index+1)+'">'
+    +'<button class="modal-photo-del" onclick="removeModalPhoto('+index+')" title="ลบ">✕</button>';
+  wrap.appendChild(div);
+}
+
+function removeModalPhoto(index){
+  modalPhotoArray.splice(index,1);
+  const wrap=document.getElementById('mPhotoWrap');
+  wrap.innerHTML='';
+  modalPhotoArray.forEach(function(d,i){addModalPhotoThumb(d,i);});
+  updateModalPhotoStatus();
+}
+
+function updateModalPhotoStatus(){
+  const el=document.getElementById('mPhotoStatus');
+  const btn=document.getElementById('mSaveBtn');
+  if(!el)return;
+  if(modalPhotoArray.length>0){
+    el.textContent='✅ มีรูปบิล '+modalPhotoArray.length+' รูป — พร้อม Submit';
+    el.className='ok';
+    if(btn)btn.style.opacity='1';
+  }else{
+    el.textContent='⚠️ ยังไม่มีรูปบิล — กรุณาถ่ายรูปก่อนบันทึก';
+    el.className='warn';
+    if(btn)btn.style.opacity='0.65';
+  }
+}
 
 // ════ SYNC & IMPORT ════
 async function syncNow(){await syncFromURL();}

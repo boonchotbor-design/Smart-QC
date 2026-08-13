@@ -1,19 +1,95 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>Inventory Smart App V.7.3.0</title>
+  <title>Inventory Smart App V.7.3.1</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
-    body { font-family: 'Sarabun', sans-serif; background-color: #f0f2f5; padding: 10px; }
-    .header-banner { background: linear-gradient(135deg, #0d6efd, #0043a8); color: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
-    .card-custom { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: white; padding: 15px; margin-bottom: 15px; }
-    .item-row { background: #fff; padding: 15px; border-radius: 12px; border-left: 5px solid #0d6efd; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    /* ── CSS Variables for Light/Dark Mode ── */
+    :root {
+      --bg: #f0f2f5;
+      --card-bg: #ffffff;
+      --text-primary: #1a1a2e;
+      --text-secondary: #444;
+      --text-muted: #666;
+      --text-label: #333;
+      --border-color: rgba(0,0,0,0.1);
+      --input-bg: #f8f9ff;
+      --input-border: #e0e0e0;
+      --item-row-bg: #ffffff;
+      --header-text: #ffffff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0e1017;
+        --card-bg: #181b26;
+        --text-primary: #e8ecf4;
+        --text-secondary: #c8cfe0;
+        --text-muted: #8892a4;
+        --text-label: #c0c8d8;
+        --border-color: rgba(255,255,255,0.08);
+        --input-bg: #1e2232;
+        --input-border: rgba(255,255,255,0.15);
+        --item-row-bg: #1e2232;
+        --header-text: #ffffff;
+      }
+    }
+    body { font-family: 'Sarabun', sans-serif; background-color: var(--bg); padding: 10px; color: var(--text-primary); transition: background 0.3s, color 0.3s; }
+    label, .small { color: var(--text-label) !important; }
+    .form-control, .form-select { background-color: var(--input-bg) !important; color: var(--text-primary) !important; border-color: var(--input-border) !important; }
+    .form-control::placeholder { color: var(--text-muted) !important; }
+    .header-banner { background: linear-gradient(135deg, #0d6efd, #0043a8); color: var(--header-text); padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+    .header-banner * { color: var(--header-text) !important; }
+    .card-custom { border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: var(--card-bg); padding: 15px; margin-bottom: 15px; }
+    /* ── Issue 2: Remove red/focus ring from item rows ── */
+    .item-row {
+      background: var(--item-row-bg);
+      padding: 15px; border-radius: 12px;
+      border-left: 5px solid #0d6efd;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      outline: none !important;
+    }
+    .item-row:focus { outline: none !important; box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important; }
+    .item-row * { outline: none; }
+    /* Issue 2: Search result items — no red ring, only selected gets highlight */
+    .search-result-item {
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 2px solid var(--border-color);
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: var(--card-bg);
+      outline: none !important;
+    }
+    .search-result-item:hover { border-color: #0d6efd; background: rgba(13,110,253,0.04); }
+    .search-result-item.selected { border-color: #0d6efd; background: rgba(13,110,253,0.08); }
+    .search-result-item input[type=checkbox] { width: 16px; height: 16px; accent-color: #0d6efd; cursor: pointer; flex-shrink: 0; }
+    /* Issue 4: Photo preview thumbnails */
+    #photoPreviewWrap {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
+      min-height: 0; transition: all 0.3s;
+    }
+    .photo-thumb {
+      position: relative; width: 72px; height: 72px;
+      border-radius: 10px; overflow: hidden;
+      border: 2px solid #0d6efd;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      flex-shrink: 0;
+    }
+    .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-thumb .del-thumb {
+      position: absolute; top: 2px; right: 2px;
+      background: rgba(220,53,69,0.85); color: #fff;
+      border: none; border-radius: 50%; width: 18px; height: 18px;
+      font-size: 11px; cursor: pointer; line-height: 18px; text-align: center; padding: 0;
+    }
     .loading-overlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index:9999; flex-direction: column; justify-content: center; align-items: center; color: white; }
     #loaderSuccess { display:none; margin-top:20px; background:#fff; color:#111; border-radius:16px; padding:20px 24px; max-width:280px; width:90%; text-align:center; }
     #loaderSuccess h5 { color:#198754; font-weight:700; margin-bottom:8px; }
@@ -29,6 +105,8 @@
       box-shadow: 0 20px 60px rgba(0,0,0,0.4);
       animation: slideUp 0.3s ease; max-height: 92vh; overflow-y: auto;
     }
+    #loginBox * { color: #1a1a2e; }
+    #loginBox .login-footer, #loginBox .login-subtitle { color: #666 !important; }
     @keyframes slideUp { from { transform: translateY(30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
     .login-logo { font-size: 48px; text-align: center; margin-bottom: 6px; }
     .login-title { font-size: 20px; font-weight: 700; text-align: center; color: #1a1a2e; margin-bottom: 4px; }
@@ -36,7 +114,7 @@
     .login-select {
       width: 100%; padding: 12px 14px; font-size: 15px; box-sizing: border-box;
       border: 2px solid #e0e0e0; border-radius: 12px;
-      background: #f8f9ff; appearance: none;
+      background: #f8f9ff; color: #1a1a2e; appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23666' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
       background-repeat: no-repeat; background-position: right 14px center; background-size: 18px;
       cursor: pointer; font-family: 'Sarabun', sans-serif;
@@ -71,7 +149,7 @@
     .pw-wrap { position: relative; margin-top: 4px; }
     .login-input {
       width: 100%; padding: 12px 42px 12px 14px; font-size: 15px; box-sizing: border-box;
-      border: 2px solid #e0e0e0; border-radius: 12px; background: #f8f9ff;
+      border: 2px solid #e0e0e0; border-radius: 12px; background: #f8f9ff; color: #1a1a2e;
       font-family: 'Sarabun', sans-serif; transition: border-color 0.2s, box-shadow 0.2s; outline: none;
     }
     .login-input:focus { border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,0.15); }
@@ -93,6 +171,26 @@
       border-radius: 10px; font-size: 14px; color: #0043a8; font-weight: 600;
       min-height: 40px; display: flex; align-items: center; gap: 8px;
     }
+    /* ── Search Select Modal ── */
+    #searchSelectModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.82); z-index:99998; justify-content:center; align-items:center; backdrop-filter:blur(6px); }
+    #searchSelectModal.show { display:flex !important; }
+    .ssm-box {
+      background: var(--card-bg); border-radius: 20px; padding: 0; width: 94%;
+      max-width: 500px; max-height: 85vh; display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4); animation: slideUp 0.3s ease;
+    }
+    .ssm-header {
+      padding: 16px 20px; border-bottom: 1px solid var(--border-color);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .ssm-header h5 { margin: 0; font-weight: 700; color: var(--text-primary); font-size: 16px; }
+    .ssm-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); line-height: 1; }
+    .ssm-info { padding: 10px 20px; background: rgba(13,110,253,0.06); border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-secondary); }
+    .ssm-items { overflow-y: auto; flex: 1; padding: 12px 16px; }
+    .ssm-actions { padding: 14px 20px; border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
+    .ssm-btn-cancel { flex: 1; padding: 12px; background: #e9ecef; color: #495057; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Sarabun', sans-serif; }
+    .ssm-btn-ok { flex: 2; padding: 12px; background: linear-gradient(135deg, #0d6efd, #0043a8); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Sarabun', sans-serif; }
+    .ssm-check-all { display: flex; align-items: center; gap: 8px; padding: 8px 4px; margin-bottom: 6px; font-size: 13px; font-weight: 700; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); cursor: pointer; }
   </style>
 </head>
 <body>
@@ -267,14 +365,18 @@
       </div>
     </div>
 
-    <!-- Photo Section -->
+    <!-- Photo Section — Issue 4: Photo mandatory with thumbnail preview -->
     <div class="mb-3">
-      <button class="btn-mandatory shadow-sm" onclick="document.getElementById('fileInputCamera').click()">📸 ถ่ายรูปบิล (Mandatory) *</button>
-      <button class="btn btn-outline-secondary w-100 btn-sm" onclick="document.getElementById('fileInputGallery').click()">🖼️ แนบรูปจากเครื่อง</button>
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <button class="btn-mandatory shadow-sm" style="flex:1; margin-bottom:0;" onclick="document.getElementById('fileInputCamera').click()">📸 ถ่ายรูปบิล *</button>
+        <button class="btn btn-outline-secondary btn-sm" style="flex:1; border-radius:10px; font-weight:bold;" onclick="document.getElementById('fileInputGallery').click()">🖼️ จากเครื่อง</button>
+      </div>
       <button class="btn btn-outline-success w-100 btn-sm mt-1" id="btnOCR" onclick="runOCRFromPhoto()" disabled>🔍 อ่านข้อมูลจากรูปบิล (OCR Auto-Fill)</button>
       <input type="file" id="fileInputCamera" accept="image/*" capture="environment" style="display:none" onchange="handleFile(this)" multiple>
       <input type="file" id="fileInputGallery" accept="image/*" style="display:none" onchange="handleFile(this)" multiple>
-      <div id="photoStatus" class="text-center mt-2 small text-danger fw-bold">⚠️ ยังไม่มีรูปบิล</div>
+      <!-- Photo thumbnail previews -->
+      <div id="photoPreviewWrap"></div>
+      <div id="photoStatus" class="text-center mt-2 small text-danger fw-bold">⚠️ ยังไม่มีรูปบิล (กรุณาถ่ายรูปก่อน Submit)</div>
     </div>
 
     <!-- Header Form -->
@@ -351,7 +453,7 @@
     <!-- Item List -->
     <div id="itemList"></div>
     <button class="btn btn-outline-primary w-100 mb-3 py-2 fw-bold btn-sm" onclick="addItemRow()">➕ เพิ่มรายการสินค้า</button>
-    <button class="btn btn-primary w-100 py-3 fw-bold mb-5 shadow-lg" onclick="submitAll()" id="btnSubmit">🚀 บันทึกข้อมูล (SAVE)</button>
+    <button class="btn btn-primary w-100 py-3 fw-bold mb-5 shadow-lg" onclick="submitAll()" id="btnSubmit" style="transition: opacity 0.3s;">🚀 บันทึกข้อมูล (SAVE)</button>
 
     <!-- Datalists -->
     <datalist id="duidList"></datalist>
@@ -703,19 +805,56 @@
 
 
     // ─────────────────────────────────────────────
-    // PHOTO HANDLING
+    // PHOTO HANDLING — Issue 4: With thumbnail preview
     // ─────────────────────────────────────────────
     async function handleFile(input) {
       if (!input.files || input.files.length === 0) return;
       updateProgress(null, "กำลังเตรียมรูปภาพ...");
       for (let f of Array.from(input.files)) {
-        try { photoArray.push(await compressImage(f)); } catch (e) {}
+        try {
+          const compressed = await compressImage(f);
+          photoArray.push(compressed);
+          addPhotoThumb(compressed, photoArray.length - 1);
+        } catch (e) { console.error('compress error:', e); }
       }
-      document.getElementById('photoStatus').innerText = '✅ พร้อมแล้ว (' + photoArray.length + ' รูป)';
-      document.getElementById('photoStatus').className = 'text-center mt-2 small text-success fw-bold';
+      updatePhotoStatus();
       document.getElementById('loader').style.display = 'none';
-      document.getElementById('btnOCR').disabled = false;
+      document.getElementById('btnOCR').disabled = (photoArray.length === 0);
       input.value = "";
+    }
+
+    function addPhotoThumb(dataUrl, index) {
+      var wrap = document.getElementById('photoPreviewWrap');
+      var div = document.createElement('div');
+      div.className = 'photo-thumb';
+      div.id = 'thumb_' + index;
+      div.innerHTML =
+        '<img src="' + dataUrl + '" alt="รูป ' + (index+1) + '">' +
+        '<button class="del-thumb" onclick="removePhoto(' + index + ')" title="ลบรูปนี้">✕</button>';
+      wrap.appendChild(div);
+    }
+
+    function removePhoto(index) {
+      photoArray.splice(index, 1);
+      // Re-render all thumbs
+      var wrap = document.getElementById('photoPreviewWrap');
+      wrap.innerHTML = '';
+      photoArray.forEach(function(d, i) { addPhotoThumb(d, i); });
+      updatePhotoStatus();
+      document.getElementById('btnOCR').disabled = (photoArray.length === 0);
+    }
+
+    function updatePhotoStatus() {
+      var el = document.getElementById('photoStatus');
+      if (photoArray.length > 0) {
+        el.innerText = '✅ มีรูปบิล ' + photoArray.length + ' รูป — พร้อม Submit';
+        el.className = 'text-center mt-2 small text-success fw-bold';
+        document.getElementById('btnSubmit').style.opacity = '1';
+      } else {
+        el.innerText = '⚠️ ยังไม่มีรูปบิล (กรุณาถ่ายรูปก่อน Submit)';
+        el.className = 'text-center mt-2 small text-danger fw-bold';
+        document.getElementById('btnSubmit').style.opacity = '0.7';
+      }
     }
 
     function compressImage(file) {
@@ -1018,7 +1157,7 @@
     }
 
     // ─────────────────────────────────────────────
-    // SEARCH BILL
+    // SEARCH BILL — Issue 3: Show select modal with checkboxes
     // ─────────────────────────────────────────────
     function searchBill() {
       var b = document.getElementById('billNo').value;
@@ -1034,30 +1173,18 @@
             document.getElementById('ownerReceiver').value    = res.data.ownerReceiver    || "";
             document.getElementById('locationWarehouse').value = res.data.locationWarehouse || "";
             document.getElementById('locationReceiver').value  = res.data.locationReceiver  || "";
-            document.getElementById('itemList').innerHTML     = "";
-            rowCount = 0;
-            res.data.items.forEach(function(item, index) {
-              addItemRow();
-              var id = rowCount;
-              setTimeout(function() {
-                if (!document.getElementById('model_' + id)) return;
-                if (item.type || item.itype) {
-                  document.getElementById('type_'  + id).value = item.type || item.itype || ''; onTypeChange(id);
-                }
-                document.getElementById('model_' + id).value = item.model || ''; onModelChange(id);
-                document.getElementById('code_'  + id).value = item.code  || ''; onCodeChange(id);
-                document.getElementById('desc_'  + id).value = item.desc  || item.description || '';
-                document.getElementById('qty_'   + id).value = item.qty   || 1;
-                document.getElementById('sn_'    + id).value = item.sn    || '';
-              }, 100 * (index + 1));
-            });
-            Toast.fire({icon: 'success', title: 'ดึงข้อมูลสำเร็จ!'});
+            // Issue 3: Show select modal instead of direct load
+            _searchSelectData = res.data;
+            showSearchSelectModal(res.data.items, 'Bill No: ' + b);
           } else {
             Swal.fire({icon: 'info', title: 'ไม่พบข้อมูล', text: res.message || ''});
           }
         })
         .searchByBillNo(b, document.getElementById('customer').value);
     }
+
+    // Issue 3: searchByDuid — show searchSelectModal with checkboxes
+    var _searchSelectData = null;
 
     function searchByDuid() {
       var d = document.getElementById('duid').value;
@@ -1067,50 +1194,143 @@
         .withSuccessHandler(function(res) {
           document.getElementById('loader').style.display = 'none';
           if (res.success) {
+            // Fill region/owners
             document.getElementById('region').value           = res.data.region;
             document.getElementById('ownerWarehouse').value   = res.data.ownerWarehouse   || "";
             document.getElementById('ownerReceiver').value    = res.data.ownerReceiver    || "";
             document.getElementById('locationWarehouse').value = res.data.locationWarehouse || "";
             document.getElementById('locationReceiver').value  = res.data.locationReceiver  || "";
-            document.getElementById('itemList').innerHTML     = "";
-            rowCount = 0;
-            var currentGroup = "";
-            res.data.items.forEach(function(item, index) {
-              var itemGroup = (item.billNo || "") + "|" + (item.transType || "");
-              if (itemGroup !== currentGroup) {
-                currentGroup = itemGroup;
-                var transBadge = "";
-                if (item.transType) {
-                  var badgeClass = item.transType.toUpperCase() === "IN" ? "bg-success" 
-                                 : item.transType.toUpperCase() === "OUT" ? "bg-danger" 
-                                 : "bg-info text-dark";
-                  transBadge = ' <span class="badge ' + badgeClass + ' ms-2">' + item.transType + '</span>';
-                }
-                var billHeader = document.createElement('div');
-                billHeader.className = 'alert alert-secondary py-1 mt-3 mb-2 small fw-bold text-dark d-flex align-items-center';
-                billHeader.innerHTML = '🧾 Bill No: <span class="text-primary ms-1">' + (item.billNo || "-") + '</span>' + transBadge;
-                document.getElementById('itemList').appendChild(billHeader);
-              }
-              addItemRow();
-              var id = rowCount;
-              setTimeout(function() {
-                if (!document.getElementById('model_' + id)) return;
-                if (item.type || item.itype) {
-                  document.getElementById('type_'  + id).value = item.type || item.itype || ''; onTypeChange(id);
-                }
-                document.getElementById('model_' + id).value = item.model || ''; onModelChange(id);
-                document.getElementById('code_'  + id).value = item.code  || ''; onCodeChange(id);
-                document.getElementById('desc_'  + id).value = item.desc  || item.description || '';
-                document.getElementById('qty_'   + id).value = item.qty   || 1;
-                document.getElementById('sn_'    + id).value = item.sn    || '';
-              }, 100 * (index + 1));
-            });
-            Toast.fire({icon: 'success', title: 'ดึงข้อมูล DUID สำเร็จ!'});
+            // Show select modal instead of direct load
+            _searchSelectData = res.data;
+            showSearchSelectModal(res.data.items, 'DUID: ' + d);
           } else {
             Swal.fire({icon: 'info', title: 'ไม่พบข้อมูล', text: res.message || ''});
           }
         })
         .searchDuidForUI(d, document.getElementById('customer').value);
+    }
+
+    // Issue 3: showSearchSelectModal — with checkboxes, no red ring
+    function showSearchSelectModal(items, headerInfo) {
+      var modal = document.getElementById('searchSelectModal');
+      document.getElementById('ssmHeaderInfo').innerText = headerInfo;
+      var container = document.getElementById('ssmItems');
+      container.innerHTML = '';
+
+      if (!items || items.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted,#888);">ไม่พบรายการ</div>';
+        modal.classList.add('show');
+        return;
+      }
+
+      // Check-all row
+      var checkAll = document.createElement('label');
+      checkAll.className = 'ssm-check-all';
+      checkAll.innerHTML =
+        '<input type="checkbox" id="ssmCheckAll" onchange="toggleAllItems(this)" style="width:16px;height:16px;accent-color:#0d6efd;cursor:pointer;">' +
+        '<span>เลือกทั้งหมด (' + items.length + ' รายการ)</span>';
+      container.appendChild(checkAll);
+
+      // Group by billNo
+      var currentBill = '';
+      items.forEach(function(item, idx) {
+        var bill = (item.billNo || '-');
+        if (bill !== currentBill) {
+          currentBill = bill;
+          var grpLabel = document.createElement('div');
+          grpLabel.style.cssText = 'font-size:11px;font-weight:700;color:#0d6efd;padding:8px 4px 4px;margin-top:4px;';
+          var transType = item.transType || '';
+          var badgeColor = transType.toUpperCase()==='IN' ? '#198754' : transType.toUpperCase()==='OUT' ? '#dc3545' : '#0dcaf0';
+          grpLabel.innerHTML = '🧾 Bill No: <strong>' + bill + '</strong>' +
+            (transType ? ' <span style="background:' + badgeColor + ';color:#fff;padding:1px 7px;border-radius:20px;font-size:10px;margin-left:6px;">' + transType + '</span>' : '');
+          container.appendChild(grpLabel);
+        }
+
+        var div = document.createElement('div');
+        div.className = 'search-result-item';
+        div.style.cssText = 'outline:none !important;';
+        var checkId = 'ssm_chk_' + idx;
+        div.innerHTML =
+          '<div style="display:flex;align-items:center;gap:10px;">' +
+            '<input type="checkbox" id="' + checkId + '" data-idx="' + idx + '" class="ssm-item-check" checked ' +
+              'onchange="onItemCheckChange(this)" style="width:18px;height:18px;accent-color:#0d6efd;cursor:pointer;flex-shrink:0;">' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-size:13px;font-weight:700;color:var(--text-primary,#1a1a2e);">' + (item.model || '-') + '</div>' +
+              '<div style="font-size:11px;color:var(--text-muted,#666);margin-top:2px;">' +
+                '📦 ' + (item.desc || item.description || '-') +
+                ' | Code: ' + (item.code || '-') +
+                ' | Qty: ' + (item.qty || 1) +
+                (item.sn ? ' | SN: ' + item.sn : '') +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        // Click on row toggles checkbox (not just the checkbox itself)
+        div.addEventListener('click', function(e) {
+          if (e.target.type !== 'checkbox') {
+            var chk = div.querySelector('.ssm-item-check');
+            chk.checked = !chk.checked;
+            onItemCheckChange(chk);
+          }
+        });
+        container.appendChild(div);
+      });
+
+      modal.classList.add('show');
+    }
+
+    function onItemCheckChange(chk) {
+      var div = chk.closest('.search-result-item');
+      if (div) {
+        div.classList.toggle('selected', chk.checked);
+      }
+      // Update check-all state
+      var all = document.querySelectorAll('.ssm-item-check');
+      var checked = document.querySelectorAll('.ssm-item-check:checked');
+      var chkAll = document.getElementById('ssmCheckAll');
+      if (chkAll) {
+        chkAll.indeterminate = (checked.length > 0 && checked.length < all.length);
+        chkAll.checked = (checked.length === all.length);
+      }
+    }
+
+    function toggleAllItems(chkAll) {
+      document.querySelectorAll('.ssm-item-check').forEach(function(chk) {
+        chk.checked = chkAll.checked;
+        var div = chk.closest('.search-result-item');
+        if (div) div.classList.toggle('selected', chk.checked);
+      });
+    }
+
+    function confirmSearchSelection() {
+      var checked = document.querySelectorAll('.ssm-item-check:checked');
+      if (checked.length === 0) {
+        Swal.fire({icon:'warning', title:'กรุณาเลือกอย่างน้อย 1 รายการ'}); return;
+      }
+      var items = (_searchSelectData && _searchSelectData.items) ? _searchSelectData.items : [];
+      document.getElementById('searchSelectModal').classList.remove('show');
+      document.getElementById('itemList').innerHTML = '';
+      rowCount = 0;
+      var selectedItems = [];
+      checked.forEach(function(chk) {
+        var idx = parseInt(chk.getAttribute('data-idx'));
+        if (!isNaN(idx) && items[idx]) selectedItems.push(items[idx]);
+      });
+      selectedItems.forEach(function(item, index) {
+        addItemRow();
+        var id = rowCount;
+        setTimeout(function() {
+          if (!document.getElementById('model_' + id)) return;
+          if (item.type || item.itype) {
+            document.getElementById('type_'  + id).value = item.type || item.itype || ''; onTypeChange(id);
+          }
+          document.getElementById('model_' + id).value = item.model || ''; onModelChange(id);
+          document.getElementById('code_'  + id).value = item.code  || ''; onCodeChange(id);
+          document.getElementById('desc_'  + id).value = item.desc  || item.description || '';
+          document.getElementById('qty_'   + id).value = item.qty   || 1;
+          document.getElementById('sn_'    + id).value = item.sn    || '';
+        }, 100 * (index + 1));
+      });
+      Toast.fire({icon: 'success', title: 'โหลด ' + selectedItems.length + ' รายการที่เลือกแล้ว!'});
     }
 
     // ─────────────────────────────────────────────
@@ -1525,21 +1745,20 @@
       addItemRow();
     };
   </script>
-  <!-- ?? Search Select Modal -->
-  <div id="searchSelectModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.82); z-index:99998; justify-content:center; align-items:center; backdrop-filter:blur(6px);">
-    <div style="background:#fff; border-radius:20px; padding:24px; width:94%; max-width:500px; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.4); animation:slideUp 0.3s ease;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <h5 style="margin:0; font-weight:700; color:#1a1a2e; font-size:16px;">?? ���͡��¡�÷���ͧ��ù����</h5>
-        <button onclick="document.getElementById('searchSelectModal').style.display='none'" style="background:none; border:none; font-size:22px; cursor:pointer; color:#666; line-height:1;">&times;</button>
+  <!-- 📋 Search Select Modal — Issue 3: Fixed encoding + Checkbox selection -->
+  <div id="searchSelectModal">
+    <div class="ssm-box">
+      <div class="ssm-header">
+        <h5>📋 เลือกรายการที่ต้องการ</h5>
+        <button class="ssm-close" onclick="document.getElementById('searchSelectModal').classList.remove('show')">&times;</button>
       </div>
-      <div style="background:#f0f4ff; border-radius:10px; padding:12px; margin-bottom:12px; font-size:13px; line-height:1.6;">
-        <b>�����������:</b> <span id="ssmHeaderInfo" style="color:#0d6efd; font-weight:700;"></span>
+      <div class="ssm-info">
+        <b>ข้อมูลจาก:</b> <span id="ssmHeaderInfo" style="color:#0d6efd; font-weight:700;"></span>
       </div>
-      <div id="ssmItems" style="overflow-y:auto; flex:1; margin-bottom:16px; border:1px solid #dee2e6; border-radius:10px; padding:10px; background:#fafafa;">
-      </div>
-      <div style="display:flex; gap:10px;">
-        <button onclick="document.getElementById('searchSelectModal').style.display='none'" style="flex:1; padding:12px; background:#e9ecef; color:#495057; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif;">¡��ԡ</button>
-        <button onclick="confirmSearchSelection()" style="flex:2; padding:12px; background:linear-gradient(135deg,#0d6efd,#0043a8); color:white; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif;">?? ����ҷ�����͡</button>
+      <div id="ssmItems" class="ssm-items"></div>
+      <div class="ssm-actions">
+        <button class="ssm-btn-cancel" onclick="document.getElementById('searchSelectModal').classList.remove('show')">ยกเลิก</button>
+        <button class="ssm-btn-ok" onclick="confirmSearchSelection()">✅ โหลดรายการที่เลือก</button>
       </div>
     </div>
   </div>
