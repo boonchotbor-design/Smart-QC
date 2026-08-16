@@ -5682,7 +5682,14 @@ function applyF() {
   const r = document.getElementById('txReg')?.value || 'ALL';
   const ty = document.getElementById('txType')?.value || 'ALL';
   
-  txFiltered = [...TX].reverse(); // Show newest updates first
+  // Issue: Sort by Date descending (newest top), fallback to reverse insertion for same date
+  txFiltered = [...TX].reverse().sort((a,b) => {
+    const da = new Date(a.date);
+    const db = new Date(b.date);
+    const ta = isNaN(da.getTime()) ? 0 : da.getTime();
+    const tb = isNaN(db.getTime()) ? 0 : db.getTime();
+    return tb - ta;
+  });
   
   if (c !== 'ALL') txFiltered = txFiltered.filter(t => t.customer === c);
   if (r !== 'ALL') txFiltered = txFiltered.filter(t => t.region === r);
