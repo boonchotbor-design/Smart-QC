@@ -5743,7 +5743,13 @@ function addItemRow(itype='',model='',code='',desc='',qty=1,sn=''){
     <div class="item-row-hdr"><span class="item-row-num">สินค้า #${n}</span><button class="del-item" onclick="delItem(${n})">ลบรายการ</button></div>
     <div class="frow"><div class="fg"><label class="fl">ประเภท (Type)</label><select class="fi" id="itype${n}" onchange="updateModelOptions(${n})"></select></div><div class="fg"><label class="fl">Model</label><select class="fi" id="imodel${n}" onchange="fillItemCode(${n})"></select></div></div>
     <div class="frow"><div class="fg"><label class="fl">Item Code</label><input class="fi" id="icode${n}" value="${code}" placeholder="รหัสสินค้า" style="color:var(--blue)"></div><div class="fg"><label class="fl">Item Description</label><input class="fi" id="idesc${n}" value="${desc}" placeholder="รายละเอียดสินค้า"></div></div>
-    <div class="frow"><div class="fg"><label class="fl">SN</label><div style="display:flex;gap:5px"><input class="fi" id="isn${n}" value="${sn}" placeholder="Serial Number"><button class="fbtn-scan">📷 Scan</button></div></div><div class="fg"><label class="fl">จำนวน</label><div style="display:flex;gap:5px"><input class="fi" id="iqty${n}" type="number" value="${qty}" min="1" style="flex:1"><button class="del-item" style="background:rgba(255,77,106,.12)" onclick="delItem(${n})">ลบรายการ</button></div></div></div>`;
+    <div class="frow"><div class="fg"><label class="fl">SN</label><div style="display:flex;gap:5px"><input class="fi" id="isn${n}" value="${sn}" placeholder="Serial Number"><button class="fbtn-scan" type="button" onclick="scanSN(${n})">📷 Scan</button></div></div><div class="fg"><label class="fl">จำนวน</label><div style="display:flex;gap:5px"><input class="fi" id="iqty${n}" type="number" value="${qty}" min="1" style="flex:1"><button class="del-item" style="background:rgba(255,77,106,.12)" onclick="delItem(${n})">ลบรายการ</button></div></div></div>`;
+  // hidden camera input for this row
+  var camInput = document.createElement('input');
+  camInput.type = 'file'; camInput.accept = 'image/*'; camInput.capture = 'environment';
+  camInput.style.display = 'none'; camInput.id = 'camInput'+n;
+  camInput.addEventListener('change', function(){ handleScanPhoto(this, n); });
+  document.body.appendChild(camInput);
   document.getElementById('itemRows').appendChild(row);
 
   // Populate Type options initially based on Customer
@@ -5753,6 +5759,50 @@ function addItemRow(itype='',model='',code='',desc='',qty=1,sn=''){
   
   updateModelOptions(n, model);
   updateItemCount();
+}
+
+function scanSN(n) {
+  // Try native BarcodeDetector API first (Chrome on Android)
+  if ('BarcodeDetector' in window) {
+    var camInput = document.getElementById('camInput'+n);
+    if(camInput) camInput.click();
+  } else {
+    // Fallback: open camera via file input
+    var camInput = document.getElementById('camInput'+n);
+    if(camInput) camInput.click();
+  }
+}
+
+async function handleScanPhoto(input, n) {
+  const file = input.files[0];
+  if (!file) return;
+  const snField = document.getElementById('isn'+n);
+  if (!snField) return;
+  
+  if ('BarcodeDetector' in window) {
+    try {
+      const bd = new BarcodeDetector({ formats: ['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','data_matrix','pdf417','aztec'] });
+      const img = await createImageBitmap(file);
+      const results = await bd.detect(img);
+      if (results && results.length > 0) {
+        snField.value = results[0].rawValue;
+        snField.focus();
+        showToast('✅ สแกน SN สำเร็จ: ' + results[0].rawValue, 'ok');
+        input.value = '';
+        return;
+      } else {
+        showToast('⚠️ ไม่พบ Barcode ในรูป — กรุณาลองใหม่', 'warn');
+        input.value = '';
+        return;
+      }
+    } catch(e) {
+      // fallthrough to manual entry
+    }
+  }
+  
+  // No BarcodeDetector: show toast and let user type
+  showToast('⚠️ Browser นี้ไม่รองรับ Auto Scan — กรุณาพิมพ์ SN ด้วยตัวเอง', 'warn');
+  input.value = '';
 }
 
 function updateModelOptions(n, defaultModel='') {
