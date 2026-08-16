@@ -5816,9 +5816,9 @@ function handleRowClick(e,idx,safeT){if(e.target.type==='checkbox'||e.target.tag
 // Issue 2: highlight only, no red ring
 function highlightRow(idx){const chk=document.getElementById('chk-'+idx);const row=document.getElementById('srow-'+idx);if(row){if(chk&&chk.checked){row.classList.add('highlighted');}else{row.classList.remove('highlighted');}}}
 function toggleAllChecks(){const checks=document.querySelectorAll('.row-check');const anyUnchecked=[...checks].some(c=>!c.checked);checks.forEach((c,i)=>{c.checked=anyUnchecked;highlightRow(i);});}
-function prefillSelectedRows(){const res=window.lastSearchResult;if(!res||!res.length)return;const checkboxes=document.querySelectorAll('.row-check:checked');if(!checkboxes.length){showToast('⚠️ กรุณาเลือกอย่างน้อย 1 รายการ','warn');return}const selectedItems=Array.from(checkboxes).map(cb=>res[parseInt(cb.value)]);const first=selectedItems[0];openM('IN');setTimeout(()=>{document.getElementById('m-duid').value=first.duid||'';document.getElementById('m-bill').value=first.bill||'';document.getElementById('m-reg').value=first.region||'ER';document.getElementById('m-cus').value=first.customer||'AIS';document.getElementById('m-ownerW').value=first.ownerW||'';document.getElementById('m-ownerR').value=first.ownerR||'';document.getElementById('m-locW').value=first.locW||'';document.getElementById('m-locR').value=first.locR||'';document.getElementById('itemRows').innerHTML='';itemRowCount=0;selectedItems.forEach(t=>{addItemRowPrefilled(t.itype||'',t.model||'',t.code||'',t.desc||'',t.qty||1,t.sn||'');});showToast(`✅ โหลดข้อมูลครบ ${selectedItems.length} รายการ`,'ok');},150);}
+function prefillSelectedRows(){const res=window.lastSearchResult;if(!res||!res.length)return;const checkboxes=document.querySelectorAll('.row-check:checked');if(!checkboxes.length){showToast('⚠️ กรุณาเลือกอย่างน้อย 1 รายการ','warn');return}const selectedItems=Array.from(checkboxes).map(cb=>res[parseInt(cb.value)]);const first=selectedItems[0];openM('IN');setTimeout(()=>{document.getElementById('m-duid').value=first.duid||'';if(document.getElementById('m-bill'))if(document.getElementById('m-bill'))document.getElementById('m-bill').value=first.bill||'';document.getElementById('m-reg').value=first.region||'ER';document.getElementById('m-cus').value=first.customer||'AIS';document.getElementById('m-ownerW').value=first.ownerW||'';document.getElementById('m-ownerR').value=first.ownerR||'';document.getElementById('m-locW').value=first.locW||'';document.getElementById('m-locR').value=first.locR||'';document.getElementById('itemRows').innerHTML='';itemRowCount=0;selectedItems.forEach(t=>{addItemRowPrefilled(t.itype||'',t.model||'',t.code||'',t.desc||'',t.qty||1,t.sn||'');});showToast(`✅ โหลดข้อมูลครบ ${selectedItems.length} รายการ`,'ok');},150);}
 function prefillAllFromRows(){const res=window.lastSearchResult;if(!res||!res.length)return;const first=res[0];openM('IN');setTimeout(()=>{document.getElementById('m-duid').value=first.duid||'';document.getElementById('m-bill').value=first.bill||'';document.getElementById('m-reg').value=first.region||'ER';document.getElementById('m-cus').value=first.customer||'AIS';document.getElementById('m-ownerW').value=first.ownerW||'';document.getElementById('m-ownerR').value=first.ownerR||'';document.getElementById('m-locW').value=first.locW||'';document.getElementById('m-locR').value=first.locR||'';document.getElementById('itemRows').innerHTML='';itemRowCount=0;res.forEach(t=>{addItemRowPrefilled(t.itype||'',t.model||'',t.code||'',t.desc||'',t.qty||1,t.sn||'');});showToast(`✅ โหลดข้อมูลครบ ${res.length} รายการ`, 'ok');}, 150);}
-function prefillFromRow(encoded){const t=JSON.parse(decodeURIComponent(encoded));openM(t.type||'IN');setTimeout(()=>{document.getElementById('m-duid').value=t.duid||'';document.getElementById('m-bill').value=t.bill||'';document.getElementById('m-reg').value=t.region||'ER';document.getElementById('m-cus').value=t.customer||'AIS';document.getElementById('m-ownerW').value=t.ownerW||'';document.getElementById('m-ownerR').value=t.ownerR||'';document.getElementById('m-locW').value=t.locW||'';document.getElementById('m-locR').value=t.locR||'';addItemRowPrefilled(t.itype||'',t.model||'',t.code||'',t.desc||'',t.qty||1,t.sn||'');showToast('✅ โหลดข้อมูลเดิมสำเร็จ — เลือก Type แล้วกดบันทึก','ok');},100);}
+function prefillFromRow(encoded){const t=JSON.parse(decodeURIComponent(encoded));openM(t.type||'IN');setTimeout(()=>{document.getElementById('m-duid').value=t.duid||'';if(document.getElementById('m-bill'))if(document.getElementById('m-bill'))document.getElementById('m-bill').value=t.bill||'';document.getElementById('m-reg').value=t.region||'ER';document.getElementById('m-cus').value=t.customer||'AIS';document.getElementById('m-ownerW').value=t.ownerW||'';document.getElementById('m-ownerR').value=t.ownerR||'';document.getElementById('m-locW').value=t.locW||'';document.getElementById('m-locR').value=t.locR||'';addItemRowPrefilled(t.itype||'',t.model||'',t.code||'',t.desc||'',t.qty||1,t.sn||'');showToast('✅ โหลดข้อมูลเดิมสำเร็จ — เลือก Type แล้วกดบันทึก','ok');},100);}
 
 // ════ MODAL ════
 // Issue 4: modal photo state
@@ -5833,7 +5833,7 @@ function openM(type){
   document.querySelectorAll('.tp').forEach(b=>b.className='tp');
   const activeBtn=[...document.querySelectorAll('.tp')].find(b=>b.textContent.includes(type));
   if(activeBtn)activeBtn.classList.add(TYPE_CLS[type]||'active-in');
-  ['m-duid','m-bill','m-ownerW','m-ownerR','m-locW','m-locR'].forEach(id=>document.getElementById(id).value='');
+  ['m-duid','m-bill','m-ownerW','m-ownerR','m-locW','m-locR'].forEach(id=>{let el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('m-cus').value='AIS';
   document.getElementById('m-reg').value='ER';
   document.getElementById('itemRows').innerHTML='';itemRowCount=0;
@@ -6112,7 +6112,7 @@ function confirmSearchSelection() {
   
   const first = selectedItems[0];
   document.getElementById('m-duid').value = first.duid || document.getElementById('m-duid').value;
-  document.getElementById('m-bill').value = first.bill || document.getElementById('m-bill').value;
+  if(document.getElementById('m-bill'))document.getElementById('m-bill').value = first.bill || document.getElementById('m-bill').value;
   document.getElementById('m-cus').value = first.customer || document.getElementById('m-cus').value || 'AIS';
   document.getElementById('m-reg').value = first.region || document.getElementById('m-reg').value || 'ER';
   document.getElementById('m-ownerW').value = first.ownerW || '';
@@ -6139,7 +6139,7 @@ function searchByDuid(){
   }else showToast('⚠️ ไม่พบ DUID นี้ — กรอกเป็นรายการใหม่ได้เลย','warn');
 }
 function searchByBill(){
-  const bill=document.getElementById('m-bill').value.trim().toLowerCase();
+  const elBill=document.getElementById('m-bill'); const bill=elBill?elBill.value.trim().toLowerCase():'';
   if(!bill){showToast('⚠️ กรุณากรอก Bill No.','warn');return}
   const found=TX.filter(t=>(t.bill||'').toLowerCase()===bill);
   if(found.length){
@@ -6149,7 +6149,7 @@ function searchByBill(){
 
 // ════ SUBMIT ════
 function submitM(){
-  const duid=document.getElementById('m-duid').value.trim(),bill=document.getElementById('m-bill').value.trim();
+  const duid=document.getElementById('m-duid').value.trim(),elBill=document.getElementById('m-bill'),bill=elBill?elBill.value.trim():'';
   if(!duid){document.getElementById('m-duid').classList.add('err');showToast('⚠️ กรุณากรอก DUID','warn');return}
   document.getElementById('m-duid').classList.remove('err');
   // Issue 4: Require photo before submit
