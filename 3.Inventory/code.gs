@@ -1624,3 +1624,27 @@ function importBulkData(rows, customer, userEmail, userName) {
   }
 }
 
+
+function getUsersDB() {
+  try {
+    var root = DriveApp.getFolderById(ROOT_FOLDER_ID);
+    var files = root.getFilesByName('inv_users_db.json');
+    if (files.hasNext()) {
+      return files.next().getBlob().getDataAsString();
+    }
+  } catch(e) {}
+  return '{}';
+}
+
+function saveUsersDB(usersJson) {
+  try {
+    var root = DriveApp.getFolderById(ROOT_FOLDER_ID);
+    var files = root.getFilesByName('inv_users_db.json');
+    if (files.hasNext()) {
+      files.next().setContent(usersJson);
+    } else {
+      root.createFile('inv_users_db.json', usersJson, MimeType.PLAIN_TEXT);
+    }
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}

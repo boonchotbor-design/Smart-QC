@@ -9741,8 +9741,9 @@ function submitM(){
   const cus=document.getElementById('m-cus').value||'AIS';
   const reg=document.getElementById('m-reg').value||'ER';
 
-  const userEmail = localStorage.getItem('inv_user_email') || 'Unknown (Web)';
-  const userName  = localStorage.getItem('inv_user_name')  || 'Web User';
+// Remove problematic top-level variable reads from localStorage
+  const userEmail = safeGetItem('inv_user_email') || 'Unknown (Web)';
+  const userName  = safeGetItem('inv_user_name')  || 'Web User';
 
   const header = {
     duid:              duid,
@@ -10007,22 +10008,57 @@ async function sha256(pw){
   const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-function getLocalUsers(){try{return JSON.parse(localStorage.getItem('inv_users')||'{}');}catch(e){return{};}}
-function saveLocalUsers(u){localStorage.setItem('inv_users',JSON.stringify(u));}
+function safeGetItem(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function safeSetItem(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+function safeRemoveItem(k){try{localStorage.removeItem(k);}catch(e){}}
+
+var _usersCache = null;
+var _isGAS = false;
+function checkIsGAS(){ return typeof google !== 'undefined' && typeof google.script !== 'undefined'; }
+
+function getLocalUsers(){
+  if(_usersCache) return _usersCache;
+  try{return JSON.parse(safeGetItem('inv_users')||'{}');}catch(e){return{};}
+}
+function saveLocalUsers(u){
+  _usersCache = u;
+  safeSetItem('inv_users',JSON.stringify(u));
+  if(_isGAS){
+    try{ google.script.run.saveUsersDB(JSON.stringify(u)); }catch(e){}
+  }
+}
+
+function loadUsersFromServer(cb){
+  if(!_isGAS){ cb(getLocalUsers()); return; }
+  try{
+    google.script.run
+      .withSuccessHandler(function(raw){
+        try{ _usersCache = JSON.parse(raw||'{}'); }catch(e){ _usersCache={}; }
+        try{ var local=JSON.parse(safeGetItem('inv_users')||'{}'); Object.assign(_usersCache,local); }catch(e){}
+        cb(_usersCache);
+      })
+      .withFailureHandler(function(){
+        _usersCache = getLocalUsers();
+        cb(_usersCache);
+      })
+      .getUsersDB();
+  }catch(e){ _usersCache=getLocalUsers(); cb(_usersCache); }
+}
 
 function loadCurrentUser(){
-  const savedEmail=localStorage.getItem('inv_user_email')||'';
-  const savedName =localStorage.getItem('inv_user_name') ||'';
-  const users=getLocalUsers();
-  if(savedEmail&&savedName&&users[savedEmail]){
-    currentUserEmail=savedEmail;
-    currentUserName=savedName;
-    updateSbUser();
-  } else {
-    localStorage.removeItem('inv_user_email');
-    localStorage.removeItem('inv_user_name');
-    showLoginModal('login');
-  }
+  loadUsersFromServer(function(users){
+    const savedEmail=safeGetItem('inv_user_email')||'';
+    const savedName =safeGetItem('inv_user_name') ||'';
+    if(savedEmail&&savedName&&users[savedEmail]){
+      currentUserEmail=savedEmail;
+      currentUserName=savedName;
+      updateSbUser();
+    } else {
+      safeRemoveItem('inv_user_email');
+      safeRemoveItem('inv_user_name');
+      showLoginModal('login');
+    }
+  });
 }
 
 function updateSbUser(){
@@ -10074,18 +10110,19 @@ async function doLogin(){
   const pw=(document.getElementById('loginPassword').value||'');
   if(!email){showAlert('loginAlert','⚠️ กรุณาเลือก Email ก่อน');return;}
   if(!pw){showAlert('loginAlert','⚠️ กรุณากรอก Password');return;}
-  const users=getLocalUsers();
-  if(!users[email]){showAlert('loginAlert','❌ Email นี้ยังไม่มีบัญชี กรุณาลงทะเบียนก่อน');setTimeout(()=>switchLoginTab('register'),1500);return;}
-  const btn=document.getElementById('btnDoLogin');btn.disabled=true;btn.innerText='⏳ กำลังตรวจสอบ...';
-  const hashed=await sha256(pw);
-  if(hashed!==users[email].hash){showAlert('loginAlert','❌ Password ไม่ถูกต้อง กรุณาลองใหม่');btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';document.getElementById('loginPassword').value='';return;}
-  currentUserEmail=email;currentUserName=users[email].name;
-  localStorage.setItem('inv_user_email',currentUserEmail);
-  localStorage.setItem('inv_user_name',currentUserName);
-  document.getElementById('loginModal').classList.remove('show');
-  btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';
-  updateSbUser();
-  showToast('✅ ยินดีต้อนรับ '+currentUserName,'ok');
+  const btn=document.getElementById('btnDoLogin');btn.disabled=true;btn.innerText='⏳ กำลังตรวจสอบข้อมูลเซิร์ฟเวอร์...';
+  loadUsersFromServer(async function(users){
+    if(!users[email]){showAlert('loginAlert','❌ Email นี้ยังไม่มีบัญชี กรุณาลงทะเบียนก่อน');btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';setTimeout(()=>switchLoginTab('register'),1500);return;}
+    const hashed=await sha256(pw);
+    if(hashed!==users[email].hash){showAlert('loginAlert','❌ Password ไม่ถูกต้อง กรุณาลองใหม่');btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';document.getElementById('loginPassword').value='';return;}
+    currentUserEmail=email;currentUserName=users[email].name;
+    safeSetItem('inv_user_email',currentUserEmail);
+    safeSetItem('inv_user_name',currentUserName);
+    document.getElementById('loginModal').classList.remove('show');
+    btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';
+    updateSbUser();
+    showToast('✅ ยินดีต้อนรับ '+currentUserName,'ok');
+  });
 }
 
 async function doRegister(){
@@ -10101,20 +10138,21 @@ async function doRegister(){
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showAlert('registerAlert','⚠️ รูปแบบ Email ไม่ถูกต้อง');return;}
   if(pw.length<6){showAlert('registerAlert','⚠️ Password ต้องมีอย่างน้อย 6 ตัวอักษร');return;}
   if(pw!==pwConf){showAlert('registerAlert','❌ Password ไม่ตรงกัน กรุณาลองใหม่');return;}
-  const users=getLocalUsers();
-  if(users[email]){showAlert('registerAlert','⚠️ Email นี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบ');setTimeout(()=>switchLoginTab('login'),1500);return;}
-  const btn=document.getElementById('btnDoRegister');btn.disabled=true;btn.innerText='⏳ กำลังบันทึก...';
-  const hashed=await sha256(pw);
-  const fullName=firstName+' '+lastName;
-  users[email]={name:fullName,hash:hashed,createdAt:new Date().toISOString()};
-  saveLocalUsers(users);
-  currentUserEmail=email;currentUserName=fullName;
-  localStorage.setItem('inv_user_email',currentUserEmail);
-  localStorage.setItem('inv_user_name',currentUserName);
-  document.getElementById('loginModal').classList.remove('show');
-  btn.disabled=false;btn.innerText='📝 ลงทะเบียน & เข้าสู่ระบบ';
-  updateSbUser();
-  showToast('✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ '+fullName,'ok');
+  const btn=document.getElementById('btnDoRegister');btn.disabled=true;btn.innerText='⏳ กำลังตรวจสอบข้อมูลเซิร์ฟเวอร์...';
+  loadUsersFromServer(async function(users){
+    if(users[email]){showAlert('registerAlert','⚠️ Email นี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบ');btn.disabled=false;btn.innerText='📝 ลงทะเบียน & เข้าสู่ระบบ';setTimeout(()=>switchLoginTab('login'),1500);return;}
+    const hashed=await sha256(pw);
+    const fullName=firstName+' '+lastName;
+    users[email]={name:fullName,hash:hashed,createdAt:new Date().toISOString()};
+    saveLocalUsers(users); // saves to Drive if GAS
+    currentUserEmail=email;currentUserName=fullName;
+    safeSetItem('inv_user_email',currentUserEmail);
+    safeSetItem('inv_user_name',currentUserName);
+    document.getElementById('loginModal').classList.remove('show');
+    btn.disabled=false;btn.innerText='📝 ลงทะเบียน & เข้าสู่ระบบ';
+    updateSbUser();
+    showToast('✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ '+fullName,'ok');
+  });
 }
 
 async function doReset(){
@@ -10140,25 +10178,56 @@ async function doReset(){
 
 function promptChangeUser(){
   if(!confirm('ออกจากระบบ ('+currentUserName+') ?'))return;
-  localStorage.removeItem('inv_user_email');
-  localStorage.removeItem('inv_user_name');
+  safeRemoveItem('inv_user_email');
+  safeRemoveItem('inv_user_name');
   currentUserEmail='';currentUserName='';
   showLoginModal('login');
 }
 
 // ════ INIT ════
-document.addEventListener('DOMContentLoaded',()=>{
-  const d=new Date();document.getElementById('pgSub').textContent='วันที่ '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
-  document.getElementById('duidQ')?.addEventListener('keydown',e=>{if(e.key==='Enter')srchDuid();});
+function initDashboard() {
+  _isGAS = checkIsGAS();
+  const d=new Date();
+  var pgSubEl = document.getElementById('pgSub');
+  if(pgSubEl) pgSubEl.textContent='วันที่ '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
+  if(document.getElementById('duidQ')) document.getElementById('duidQ').addEventListener('keydown',e=>{if(e.key==='Enter')srchDuid();});
   document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap')&&!e.target.closest('.fbtn-srch')&&!e.target.closest('.fi')){hideDrop('duid');hideDrop('bill');}});
+  
   // ─── Load user session first ───
   loadCurrentUser();
+  
   // ─── Then load data ───
-  const isGAS=typeof google!=='undefined'&&typeof google.script!=='undefined';
-  if(isGAS){showImportBar('🔗 กำลังดึงข้อมูลจาก GAS...');syncFromGAS();}
-  else{TX=[...MOCK];refreshDash(TX);showImportBar('📦 Demo Mode — กด 🔄 Sync เพื่อดึงข้อมูลจริงจากระบบ');}
+  if(_isGAS){
+    showImportBar('🔗 กำลังดึงข้อมูลจาก GAS...');
+    syncFromGAS();
+  } else {
+    TX=[...MOCK];refreshDash(TX);
+    showImportBar('📦 Demo Mode — กด 🔄 Sync เพื่อดึงข้อมูลจริงจากระบบ');
+  }
+}
+
+if(document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDashboard);
+} else {
+  initDashboard();
+}
+
+window.addEventListener('load', function(){
+  var pgSubEl = document.getElementById('pgSub');
+  if(pgSubEl && pgSubEl.textContent === 'กำลังโหลด...'){
+    initDashboard();
+  }
 });
-function syncFromGAS(){if(typeof google==='undefined'||!google.script){return}google.script.run.withSuccessHandler(function(data){if(!data.success)return;TX=data.recent||[];refreshDash(TX);showImportBar(`🔗 GAS Live: ${TX.length} รายการ`);}).getDashboardData();}
+
+function syncFromGAS(){
+  if(!_isGAS) return;
+  google.script.run.withSuccessHandler(function(data){
+    if(!data.success)return;
+    TX=data.recent||[];
+    refreshDash(TX);
+    showImportBar(`🔗 GAS Live: ${TX.length} รายการ`);
+  }).getDashboardData();
+}
 
 // ════ MOCK STATUS CALCULATION ════
 function recalculateAllStatusJS() {
@@ -10288,8 +10357,8 @@ function confirmImport() {
   showProg(true, 'กำลัง Import ข้อมูล...', 50);
   
   if (typeof google !== 'undefined' && google.script) {
-    var userEmail = localStorage.getItem('inv_user_email') || 'Unknown (Web)';
-    var userName  = localStorage.getItem('inv_user_name')  || 'Web User';
+    var userEmail = safeGetItem('inv_user_email') || 'Unknown (Web)';
+    var userName  = safeGetItem('inv_user_name')  || 'Web User';
     
     google.script.run.withSuccessHandler(function(res) {
       if (res.success) {
