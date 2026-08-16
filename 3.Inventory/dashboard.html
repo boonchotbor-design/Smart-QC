@@ -241,6 +241,24 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
 .login-divider{border:none;border-top:1px solid #eee;margin:14px 0}
 .login-footer{font-size:11px;color:#999;text-align:center}
 .name-row{display:flex;gap:8px}.name-row>div{flex:1}
+
+/* Import History & Process */
+.ph-card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); padding: 24px; max-width: 800px; margin: 0 auto 20px auto; text-align: center; }
+.ph-icon { width: 60px; height: 60px; background: rgba(0, 194, 138, 0.15); color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 16px auto; }
+.ph-title { font-size: 24px; font-weight: 700; color: var(--primary); margin-bottom: 12px; }
+.ph-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+.ph-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+@media(max-width:540px){ .ph-stats { grid-template-columns: repeat(2, 1fr); } }
+.ph-stat-box { background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 10px; }
+.ph-stat-num { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+.ph-stat-lbl { font-size: 11px; color: var(--muted); }
+.ph-log-list { text-align: left; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; max-height: 400px; overflow-y: auto; }
+.ph-log-item { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 12px; display: flex; gap: 10px; align-items: flex-start; }
+.ph-log-item:last-child { border-bottom: none; }
+.ph-history-card { background: var(--card); border-radius: 10px; border: 1px solid var(--border); padding: 16px; margin-bottom: 12px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
+.ph-history-card:hover { border-color: var(--primary); background: rgba(0, 194, 138, 0.05); }
+.ph-history-card h3 { font-size: 16px; margin-bottom: 4px; color: var(--text); }
+.ph-history-card p { font-size: 12px; color: var(--muted); }
 </style>
 
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -363,6 +381,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
     <div class="nav-sec">รายงาน</div>
     <a class="ni" onclick="pg('region',this)"><span class="ni-ic">🗺️</span>สรุปตาม Region</a>
     <a class="ni" onclick="pg('print',this)"><span class="ni-ic">🖨️</span>Print ใบเบิก (Teloneer)</a>
+    <a class="ni" onclick="pg('history',this); loadHistoryPage();"><span class="ni-ic">📜</span>ประวัติ Import</a>
   </nav>
   <div class="sb-foot"><span class="ldot"></span>Smart Inventory V.7.4.0</div>
 </nav>
@@ -6699,6 +6718,7 @@ function confirmImport() {
           showProg(false);
           showToast(res.message, 'ok');
           syncFromGAS();
+          logImportAndShowResult(importRows);
           
           // Upload evidence photo
           const dummyHeader = { region: 'IMPORT', duid: 'CSV_' + new Date().getTime() };
@@ -6722,7 +6742,7 @@ function confirmImport() {
         recalculateAllStatusJS();
         refreshDash(TX);
         showProg(false);
-        showToast('✅ Import (Mock Offline) สำเร็จ! ' + parsed.length + ' รายการ', 'ok');
+        logImportAndShowResult(importRows);
       }, 500);
     }
   };
