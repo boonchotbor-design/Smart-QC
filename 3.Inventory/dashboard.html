@@ -6360,11 +6360,41 @@ function printAll(){const bills=[...new Set(TX.map(t=>(t.bill||'?')+'|'+t.custom
 // ════ DATE HELPER ════
 function fmtDate(d){
   if(!d) return '-';
-  const dt = new Date(d);
-  if(isNaN(dt.getTime())) return String(d).substring(0,10);
+  let s = String(d).trim();
+  
+  // If it's a corrupted string saved from before, just return it but we know it sorts to 0
+  if (s.includes('46301') && s.includes('/')) return s;
+
+  let dt;
+  if (!isNaN(s) && Number(s) > 40000 && Number(s) < 60000) {
+    dt = new Date(Math.round((Number(s) - 25569) * 86400 * 1000));
+  } else if (s.includes('/')) {
+    const p = s.split('/');
+    if(p.length === 3) {
+      // Check if it's MM/DD/YYYY from Google Sheets locale
+      // If p[0] > 12, it must be DD/MM/YYYY. If p[0] <= 12, it could be either.
+      // But if the user types DD/MM/YYYY, Google Sheets US locale flips it.
+      // Let's just trust DD/MM/YYYY parsing.
+      let yyyy = parseInt(p[2], 10);
+      if(yyyy > 2500) yyyy -= 543;
+      dt = new Date(yyyy, parseInt(p[1], 10)-1, parseInt(p[0], 10));
+    }
+  }
+  
+  // If we couldn't parse it with slashes, try native
+  if (!dt || isNaN(dt.getTime())) {
+     dt = new Date(s);
+     // Google Sheets might send an ISO string or a Date string that gets natively parsed.
+     // If it parsed successfully natively, and it's from a Thai user, it might be flipped.
+     // But let's just format it as DD/MM/YYYY.
+  }
+
+  if (isNaN(dt.getTime())) return s.substring(0,10);
+  
   const dd = String(dt.getDate()).padStart(2,'0');
   const mm = String(dt.getMonth()+1).padStart(2,'0');
-  const yyyy = dt.getFullYear();
+  let yyyy = dt.getFullYear();
+  if (yyyy > 3000) return s.substring(0,10); // Return raw if corrupted
   return dd+'/'+mm+'/'+yyyy;
 }
 
