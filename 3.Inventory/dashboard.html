@@ -165,8 +165,8 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
 .sync-live{background:rgba(0,194,138,.15);color:var(--primary)}.sync-demo{background:rgba(255,217,77,.12);color:var(--yellow)}
 /* Mobile */
 #sbov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999}
-@media(max-width:900px){#sb{transform:translateX(-100%)}#sb.open{transform:translateX(0)}#main{margin-left:0}#hbg{display:flex}#sbov.show{display:block}.dash-row{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}.mg{grid-template-columns:repeat(3,1fr)}.imp-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}}
-@media(max-width:540px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.content{padding:12px}.imp-grid{grid-template-columns:1fr}.tb-right .tbtn span{display:none}}
+@media(max-width:900px){#sb{transform:translateX(-100%)}#sb.open{transform:translateX(0)}#main{margin-left:0}#hbg{display:flex}#sbov.show{display:block}.dash-row{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mg{grid-template-columns:repeat(3,1fr)}.imp-grid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}}
+@media(max-width:540px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.content{padding:12px}.imp-grid{grid-template-columns:1fr}.tb-right .tbtn span{display:none}}
 /* ── Issue 2: Remove red/focus ring on search rows ── */
 .srch-row{outline:none !important;}
 .srch-row:focus{outline:none !important;box-shadow:none !important;}
@@ -572,6 +572,10 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
         <input type="file" id="importFileInput" accept=".csv,.txt" style="display:none" onchange="previewImport(this)">
         <button onclick="document.getElementById('importFileInput').click()" style="width:100%; padding:10px; margin-bottom:8px; background:var(--card2); border:1px solid var(--border); border-radius:10px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:12px; color:var(--text); transition:all .2s;" onmouseover="this.style.background='rgba(0,194,138,.1)';this.style.borderColor='var(--primary)'" onmouseout="this.style.background='var(--card2)';this.style.borderColor='var(--border)'">📂 เลือกไฟล์ CSV</button>
         <div id="importPreviewBox" style="display:none;">
+          <div style="margin-bottom:10px; background:var(--card); padding:10px; border-radius:8px; border:1px dashed var(--primary);">
+            <label style="font-size:12px; font-weight:700; color:var(--text); display:block; margin-bottom:5px;">📸 แนบรูปหลักฐานการ Import <span style="color:red">*</span></label>
+            <input type="file" id="importEvidencePhoto" accept="image/*" style="font-size:11px; color:var(--muted); width:100%;">
+          </div>
           <div style="font-size:12px; font-weight:700; margin-bottom:6px; color:var(--blue);">📊 Preview: <span id="importRowCount">0</span> รายการ</div>
           <div id="importPreviewTable" style="overflow-x:auto; max-height:200px; border-radius:8px; border:1px solid var(--border); margin-bottom:10px; background:var(--card2)"></div>
           <button id="btnConfirmImport" onclick="confirmImport()" style="width:100%; padding:12px; background:linear-gradient(135deg,var(--primary),var(--pd)); color:white; border:none; border-radius:10px; font-size:13px; font-weight:800; cursor:pointer; font-family:'Sarabun',sans-serif;">🚀 Confirm Import</button>
@@ -591,7 +595,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
 </div>
 
 <!-- ════ FORM MODAL (app.html style) ════ -->
-<div class="ov" id="modal" onclick="if(event.target===this)closeM()">
+<div class="ov" id="modal" onclick="if(event.target===this)confirmCloseM()">
   <div class="mbox">
     <div class="fhdr">
       <span id="mIcon" style="font-size:24px">📥</span>
@@ -628,7 +632,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
       <div class="frow full">
         <div class="fg"><label class="fl req" style="color:var(--red)">DUID (Mandatory)</label>
           <div class="ac-wrap">
-            <input class="fi err" id="m-duid" placeholder="ค้นหาหรือกรอก DUID" oninput="liveSearchField('duid')" onkeydown="if(event.key==='Enter')searchByDuid()">
+            <input class="fi err" id="m-duid" placeholder="ค้นหาหรือกรอก DUID" oninput="liveSearchField('duid')" onblur="autoFillFromDUID()" onkeydown="if(event.key==='Enter')searchByDuid()">
             <div class="ac-drop" id="duid-drop"></div>
           </div>
         </div>
@@ -663,7 +667,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
       <button class="add-item-btn" onclick="addItemRow()">➕ เพิ่มรายการสินค้า</button>
     </div>
     <div class="factions">
-      <button class="bcanc" onclick="closeM()">ยกเลิก</button>
+      <button class="bcanc" onclick="confirmCloseM()">ยกเลิก</button>
       <button class="bsave" id="mSaveBtn" onclick="submitM()"><span id="mSaveIcon">🚀</span> <span id="mSaveText">บันทึก IN</span></button>
     </div>
   </div>
@@ -5660,7 +5664,7 @@ function applyF() {
   const r = document.getElementById('txReg')?.value || 'ALL';
   const ty = document.getElementById('txType')?.value || 'ALL';
   
-  txFiltered = [...TX];
+  txFiltered = [...TX].reverse(); // Show newest updates first
   
   if (c !== 'ALL') txFiltered = txFiltered.filter(t => t.customer === c);
   if (r !== 'ALL') txFiltered = txFiltered.filter(t => t.region === r);
@@ -5676,17 +5680,7 @@ function applyF() {
     );
   }
 
-  // Sort by date (newest first)
-  const parseD = s => {
-    if(!s) return 0;
-    const str = String(s).trim().split(' ')[0];
-    if(str.includes('/')) {
-      const p = str.split('/');
-      if(p.length === 3) return new Date(parseInt(p[2], 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10)).getTime() || 0;
-    }
-    return 0;
-  };
-  txFiltered.sort((a,b) => parseD(b.date) - parseD(a.date));
+
   
   txPage = 0;
   renderTable();
@@ -5732,6 +5726,13 @@ function openM(type){
 }
 function switchType(type,btn){curAction=type;document.getElementById('mIcon').textContent=M_ICONS[type]||'📦';document.getElementById('mTitle').textContent=`บันทึกรายการ ${type}`;document.getElementById('mSaveIcon').textContent=M_ICONS[type]||'🚀';document.getElementById('mSaveText').textContent=`บันทึก ${type}`;document.querySelectorAll('.tp').forEach(b=>b.className='tp');btn.classList.add(TYPE_CLS[type]||'active-in');}
 function closeM(){document.getElementById('modal').classList.remove('show');}
+function confirmCloseM(){
+  const duid = document.getElementById('m-duid')?.value || '';
+  if (duid || itemRowCount > 0) {
+    if (!confirm('คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการปิดหน้าต่างนี้ใช่หรือไม่?')) return;
+  }
+  closeM();
+}
 
 // ════ ITEM ROWS ════
 function addItemRow(itype='',model='',code='',desc='',qty=1,sn=''){
@@ -5741,8 +5742,8 @@ function addItemRow(itype='',model='',code='',desc='',qty=1,sn=''){
   row.className='item-row';row.id=`ir${n}`;
   row.innerHTML=`
     <div class="item-row-hdr"><span class="item-row-num">สินค้า #${n}</span><button class="del-item" onclick="delItem(${n})">ลบรายการ</button></div>
-    <div class="frow"><div class="fg"><label class="fl">ประเภท (Type)</label><select class="fi" id="itype${n}" onchange="updateModelOptions(${n})"></select></div><div class="fg"><label class="fl">Model</label><select class="fi" id="imodel${n}" onchange="fillItemCode(${n})"></select></div></div>
-    <div class="frow"><div class="fg"><label class="fl">Item Code</label><input class="fi" id="icode${n}" value="${code}" placeholder="รหัสสินค้า" style="color:var(--blue)"></div><div class="fg"><label class="fl">Item Description</label><input class="fi" id="idesc${n}" value="${desc}" placeholder="รายละเอียดสินค้า"></div></div>
+    <div class="frow"><div class="fg"><label class="fl">ประเภท (Type)</label><input class="fi" id="itype${n}" list="dl-itype${n}" oninput="updateModelOptions(${n})" placeholder="พิมพ์หรือเลือก"><datalist id="dl-itype${n}"></datalist></div><div class="fg"><label class="fl">Model</label><input class="fi" id="imodel${n}" list="dl-imodel${n}" oninput="fillItemCode(${n})" placeholder="พิมพ์หรือเลือก"><datalist id="dl-imodel${n}"></datalist></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Item Code</label><input class="fi" id="icode${n}" value="${code}" placeholder="รหัสสินค้า" oninput="fillItemDetailsFromCode(${n})" style="color:var(--blue)"></div><div class="fg"><label class="fl">Item Description</label><input class="fi" id="idesc${n}" value="${desc}" placeholder="รายละเอียดสินค้า"></div></div>
     <div class="frow"><div class="fg"><label class="fl">SN</label><div style="display:flex;gap:5px"><input class="fi" id="isn${n}" value="${sn}" placeholder="Serial Number"><button class="fbtn-scan" type="button" onclick="scanSN(${n})">📷 Scan</button></div></div><div class="fg"><label class="fl">จำนวน</label><div style="display:flex;gap:5px"><input class="fi" id="iqty${n}" type="number" value="${qty}" min="1" style="flex:1"><button class="del-item" style="background:rgba(255,77,106,.12)" onclick="delItem(${n})">ลบรายการ</button></div></div></div>`;
   // hidden camera input for this row
   var camInput = document.createElement('input');
@@ -5755,7 +5756,8 @@ function addItemRow(itype='',model='',code='',desc='',qty=1,sn=''){
   // Populate Type options initially based on Customer
   const bom = getActiveBOM();
   const types = [...new Set(bom.map(x=>x.type).filter(x=>x))];
-  document.getElementById('itype'+n).innerHTML = '<option value="">-- เลือกประเภท --</option>' + types.map(t=>`<option${t===itype?' selected':''}>${t}</option>`).join('');
+  document.getElementById('dl-itype'+n).innerHTML = types.map(t=>`<option value="${t}"></option>`).join('');
+  document.getElementById('itype'+n).value = itype;
   
   updateModelOptions(n, model);
   updateItemCount();
@@ -5805,6 +5807,18 @@ async function handleScanPhoto(input, n) {
   input.value = '';
 }
 
+function fillItemDetailsFromCode(n) {
+  const code = document.getElementById('icode'+n).value;
+  if (!code) return;
+  const bom = getActiveBOM();
+  const match = bom.find(b => b.code === code);
+  if (match) {
+    document.getElementById('imodel'+n).value = match.model || '';
+    document.getElementById('idesc'+n).value = match.desc || '';
+    document.getElementById('itype'+n).value = match.type || '';
+  }
+}
+
 function updateModelOptions(n, defaultModel='') {
   const bom = getActiveBOM();
   const typeSel = document.getElementById('itype'+n);
@@ -5814,7 +5828,8 @@ function updateModelOptions(n, defaultModel='') {
   const filtered = selType ? bom.filter(x => x.type === selType) : bom;
   
   const currentModel = defaultModel || modelSel.value;
-  modelSel.innerHTML = '<option value="">-- เลือก --</option>' + filtered.map(m => `<option ${m.model===currentModel ? 'selected':''}>${m.model}</option>`).join('');
+  document.getElementById('dl-imodel'+n).innerHTML = filtered.map(m => `<option value="${m.model}"></option>`).join('');
+  modelSel.value = currentModel;
   fillItemCode(n, true);
 }
 
@@ -5827,7 +5842,8 @@ function onCustomerChange() {
     
     const bom = getActiveBOM();
     const types = [...new Set(bom.map(x=>x.type).filter(x=>x))];
-    document.getElementById('itype'+n).innerHTML = '<option value="">-- เลือกประเภท --</option>' + types.map(t=>`<option${t===curType?' selected':''}>${t}</option>`).join('');
+    document.getElementById('dl-itype'+n).innerHTML = types.map(t=>`<option value="${t}"></option>`).join('');
+    document.getElementById('itype'+n).value = curType;
     
     updateModelOptions(n, curModel);
   });
@@ -6558,6 +6574,7 @@ function openImportExport(customer) {
   document.getElementById('importExportModal').style.display = 'flex';
   switchIETab('import');
   document.getElementById('importFileInput').value = '';
+  if(document.getElementById('importEvidencePhoto')) document.getElementById('importEvidencePhoto').value = '';
   document.getElementById('importPreviewBox').style.display = 'none';
   importRows = [];
 }
@@ -6633,40 +6650,58 @@ function previewImport(input) {
 }
 function confirmImport() {
   if (importRows.length === 0) { showToast('ไม่มีข้อมูล','warn'); return; }
+  const photoInput = document.getElementById('importEvidencePhoto');
+  if (!photoInput || photoInput.files.length === 0) {
+    showToast('⚠️ กรุณาแนบรูปหลักฐานการ Import ก่อนกดยืนยัน', 'warn');
+    return;
+  }
+  
   if (!confirm('ยืนยัน Import ' + importRows.length + ' รายการ?')) return;
   closeImportExport();
   showProg(true, 'กำลัง Import ข้อมูล...', 50);
   
-  if (typeof google !== 'undefined' && google.script) {
-    var userEmail = safeGetItem('inv_user_email') || 'Unknown (Web)';
-    var userName  = safeGetItem('inv_user_name')  || 'Web User';
+  const file = photoInput.files[0];
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64 = e.target.result;
     
-    google.script.run.withSuccessHandler(function(res) {
-      if (res.success) {
+    if (typeof google !== 'undefined' && google.script) {
+      var userEmail = safeGetItem('inv_user_email') || 'Unknown (Web)';
+      var userName  = safeGetItem('inv_user_name')  || 'Web User';
+      
+      google.script.run.withSuccessHandler(function(res) {
+        if (res.success) {
+          showProg(false);
+          showToast(res.message, 'ok');
+          syncFromGAS();
+          
+          // Upload evidence photo
+          const dummyHeader = { region: 'IMPORT', duid: 'CSV_' + new Date().getTime() };
+          google.script.run.uploadPhotoOnly(dummyHeader, base64, 1, userEmail, userName);
+          
+        } else {
+          showProg(false);
+          showToast(res.message, 'err');
+        }
+      }).saveImportData(importRows, ieCurrentCustomer, userEmail, userName);
+    } else {
+      // Offline mock fallback
+      const parsed = importRows.map((r, i) => ({
+        no: TX.length + i + 1,
+        duid: r.duid, region: r.region, type: r.transType, itype: r.itemType, date: r.date,
+        bill: r.bill, model: r.model, code: r.code, desc: r.desc, qty: r.qty, sn: r.sn,
+        status: 'Pending', customer: ieCurrentCustomer
+      }));
+      setTimeout(() => {
+        TX = [...parsed, ...TX];
+        recalculateAllStatusJS();
+        refreshDash(TX);
         showProg(false);
-        showToast(res.message, 'ok');
-        syncFromGAS();
-      } else {
-        showProg(false);
-        showToast(res.message, 'err');
-      }
-    }).saveImportData(importRows, ieCurrentCustomer, userEmail, userName);
-  } else {
-    // Fallback for offline testing
-    const parsed = importRows.map((r, i) => ({
-      no: TX.length + i + 1,
-      duid: r.duid, region: r.region, type: r.transType, itype: r.itemType, date: r.date,
-      bill: r.bill, model: r.model, code: r.code, desc: r.desc, qty: r.qty, sn: r.sn,
-      status: 'Pending', customer: ieCurrentCustomer
-    }));
-    setTimeout(() => {
-      TX = [...parsed, ...TX];
-      recalculateAllStatusJS();
-      refreshDash(TX);
-      showProg(false);
-      showToast('✅ Import (Mock Offline) สำเร็จ! ' + parsed.length + ' รายการ', 'ok');
-    }, 500);
-  }
+        showToast('✅ Import (Mock Offline) สำเร็จ! ' + parsed.length + ' รายการ', 'ok');
+      }, 500);
+    }
+  };
+  reader.readAsDataURL(file);
 }
 function doExport() {
   closeImportExport();
