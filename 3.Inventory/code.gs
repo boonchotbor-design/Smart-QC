@@ -1529,6 +1529,148 @@ function exportSheetData(customer) {
 }
 
 // ─────────────────────────────────────────────
+// UPSERT IMPORT — Update if duplicate, Insert if new — V.7.4.0
+// Match key: DUID + BILL NO + ITEM CODE + SN
+// ─────────────────────────────────────────────
+
+function saveImportDataUpdate(rows, customer, userEmail, userName) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+    if (!rows || rows.length === 0)
+      return { success: false, message: "❌ ไม่มีข้อมูลที่จะ Update" };
+
+    var ss        = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheetName = "INOUT_HW_" + (customer || "AIS").toString().trim().toUpperCase();
+    var sheet     = ss.getSheetByName(sheetName);
+    if (!sheet) return { success: false, message: "❌ ไม่พบ Sheet: " + sheetName };
+
+    var dateStr  = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
+    var lastRow  = sheet.getLastRow();
+    var allData  = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 25).getValues() : [];
+    var hRow     = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var h        = hRow.map(function(v){ return String(v||"").trim().toUpperCase(); });
+
+    function hIdx(names, def) {
+      for (var i = 0; i < names.length; i++) {
+        var p = h.indexOf(names[i]);
+        if (p > -1) return p;
+      }
+      return def;
+    }
+
+    var idx = {
+      duid:  hIdx(["DUID"], 1),
+      region:hIdx(["REGION"], 2),
+      type:  hIdx(["IN/OUT"], 3),
+      itype: hIdx(["TYPE","ITYPE"], 4),
+      date:  hIdx(["DATE"], 5),
+      bill:  hIdx(["BILL NO.","BILL NO","BILL"], 6),
+      model: hIdx(["MODEL"], 7),
+      code:  hIdx(["ITEM CODE","CODE"], 8),
+      desc:  hIdx(["ITEM DESCRIPTION","DESCRIPTION","DESC"], 9),
+      qty:   hIdx(["QTY","QUANTITY"], 10),
+      sn:    hIdx(["SN","SERIAL NO","SERIAL"], 11),
+      status:hIdx(["STATUS"], 21),
+      email: 23,
+      uname: 24
+    };
+
+    var updatedCount = 0;
+    var insertedRows = [];
+    var duidSet      = {};
+
+    rows.forEach(function(row) {
+      var cleanDuid = String(row.duid || "").trim();
+      var cleanBill = String(row.bill || "").trim();
+      var cleanCode = String(row.code || "").trim();
+      var cleanSN   = String(row.sn   || "").trim();
+      if (!cleanDuid) return;
+
+      var foundRowIdx = -1;
+      for (var r = 0; r < allData.length; r++) {
+        var rDuid = String(allData[r][idx.duid] || "").trim().toLowerCase();
+        var rBill = String(allData[r][idx.bill] || "").trim().toLowerCase();
+        var rCode = String(allData[r][idx.code] || "").trim().toLowerCase();
+        var rSN   = String(allData[r][idx.sn]   || "").trim().toLowerCase();
+        var snMatch = (cleanSN === "" || rSN === cleanSN.toLowerCase());
+        if (rDuid === cleanDuid.toLowerCase() && rBill === cleanBill.toLowerCase() &&
+            rCode === cleanCode.toLowerCase() && snMatch) {
+          foundRowIdx = r;
+          break;
+        }
+      }
+
+      if (foundRowIdx !== -1) {
+        var sheetRow    = foundRowIdx + 2;
+        var cleanRegion = String(row.region || "").trim().toUpperCase() ||
+                          String(allData[foundRowIdx][idx.region] || "").trim().toUpperCase() || "ER";
+        sheet.getRange(sheetRow, idx.region + 1).setValue(cleanRegion);
+        sheet.getRange(sheetRow, idx.type   + 1).setValue(String(row.transType || row.type || "").trim().toUpperCase());
+        sheet.getRange(sheetRow, idx.itype  + 1).setValue(String(row.itemType  || row.itype || "").trim());
+        sheet.getRange(sheetRow, idx.date   + 1).setValue(row.date || dateStr);
+        sheet.getRange(sheetRow, idx.model  + 1).setValue(String(row.model || "").trim());
+        sheet.getRange(sheetRow, idx.desc   + 1).setValue(String(row.desc  || "").trim());
+        sheet.getRange(sheetRow, idx.qty    + 1).setValue(Number(row.qty)  || 1);
+        sheet.getRange(sheetRow, idx.sn     + 1).setValue(cleanSN);
+        sheet.getRange(sheetRow, idx.email  + 1).setValue(userEmail || "Import");
+        sheet.getRange(sheetRow, idx.uname  + 1).setValue(userName  || "Import");
+        updatedCount++;
+        duidSet[cleanDuid] = true;
+      } else {
+        var cleanRegion2 = String(row.region || "").trim().toUpperCase() || "ER";
+        var newRow = new Array(25).fill("");
+        newRow[idx.duid]   = cleanDuid;
+        newRow[idx.region] = cleanRegion2;
+        newRow[idx.type]   = String(row.transType || row.type || "").trim().toUpperCase();
+        newRow[idx.itype]  = String(row.itemType  || row.itype || "").trim();
+        newRow[idx.date]   = row.date || dateStr;
+        newRow[idx.bill]   = cleanBill;
+        newRow[idx.model]  = String(row.model || "").trim();
+        newRow[idx.code]   = cleanCode;
+        newRow[idx.desc]   = String(row.desc  || "").trim();
+        newRow[idx.qty]    = Number(row.qty)  || 1;
+        newRow[idx.sn]     = cleanSN;
+        newRow[idx.status] = "Pending";
+        newRow[idx.email]  = userEmail || "Import";
+        newRow[idx.uname]  = userName  || "Import";
+        insertedRows.push(newRow);
+        duidSet[cleanDuid] = true;
+      }
+    });
+
+    if (insertedRows.length > 0) {
+      sheet.insertRowsAfter(1, insertedRows.length);
+      sheet.getRange(2, 1, insertedRows.length, 25).setValues(insertedRows.slice().reverse());
+    }
+
+    SpreadsheetApp.flush();
+
+    Object.keys(duidSet).forEach(function(duid) {
+      updateDuidStatus(duid, (customer || "AIS").toUpperCase());
+    });
+
+    logAuditEntry(
+      "UPSERT_IMPORT", userEmail, userName, sheetName, "-", "-",
+      "Update " + updatedCount + " + Insert " + insertedRows.length + " รายการ | Customer: " + customer
+    );
+
+    return {
+      success:  true,
+      updated:  updatedCount,
+      inserted: insertedRows.length,
+      message:  "✅ อัพเดต " + updatedCount + " รายการ + เพิ่มใหม่ " + insertedRows.length + " รายการ เข้า " + sheetName
+    };
+
+  } catch (e) {
+    logToSheet("UPSERT_IMPORT_ERROR", e.toString());
+    return { success: false, message: "❌ Update ผิดพลาด: " + e.toString() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ─────────────────────────────────────────────
 // BULK IMPORT DATA (Dashboard)
 // ─────────────────────────────────────────────
 

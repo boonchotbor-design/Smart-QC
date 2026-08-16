@@ -615,6 +615,20 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
           </div>
           <div style="font-size:12px; font-weight:700; margin-bottom:6px; color:var(--blue);">📊 Preview: <span id="importRowCount">0</span> รายการ</div>
           <div id="importPreviewTable" style="overflow-x:auto; max-height:200px; border-radius:8px; border:1px solid var(--border); margin-bottom:10px; background:var(--card2)"></div>
+          <!-- Import Mode Toggle -->
+          <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <button id="btnModeInsert" onclick="setImportMode('insert')"
+              style="flex:1; padding:10px; border-radius:10px; border:2px solid var(--primary); background:var(--primary); color:white; font-weight:800; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:12px; transition:all .2s;">
+              ➕ Insert (เพิ่มใหม่)
+            </button>
+            <button id="btnModeUpdate" onclick="setImportMode('update')"
+              style="flex:1; padding:10px; border-radius:10px; border:2px solid var(--border); background:var(--card2); color:var(--muted); font-weight:800; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:12px; transition:all .2s;">
+              🔄 Update (แก้ไขของเดิม)
+            </button>
+          </div>
+          <div id="importModeHint" style="font-size:11px; color:var(--muted); margin-bottom:8px; padding:8px; background:var(--card2); border-radius:8px; border:1px solid var(--border);">
+            📌 <b>Insert:</b> เพิ่มข้อมูลใหม่ทั้งหมด
+          </div>
           <button id="btnConfirmImport" onclick="confirmImport()" style="width:100%; padding:12px; background:linear-gradient(135deg,var(--primary),var(--pd)); color:white; border:none; border-radius:10px; font-size:13px; font-weight:800; cursor:pointer; font-family:'Sarabun',sans-serif;">🚀 Confirm Import</button>
         </div>
       </div>
@@ -6769,6 +6783,34 @@ function previewImport(input) {
   };
   reader.readAsText(input.files[0], 'UTF-8');
 }
+var _importMode = 'insert'; // 'insert' | 'update'
+
+function setImportMode(mode) {
+  _importMode = mode;
+  const btnInsert = document.getElementById('btnModeInsert');
+  const btnUpdate = document.getElementById('btnModeUpdate');
+  const hint      = document.getElementById('importModeHint');
+  if (mode === 'insert') {
+    btnInsert.style.background = 'var(--primary)';
+    btnInsert.style.borderColor = 'var(--primary)';
+    btnInsert.style.color = 'white';
+    btnUpdate.style.background = 'var(--card2)';
+    btnUpdate.style.borderColor = 'var(--border)';
+    btnUpdate.style.color = 'var(--muted)';
+    hint.innerHTML = '📌 <b>Insert:</b> เพิ่มข้อมูลใหม่ทั้งหมด (ไม่ตรวจสอบซ้ำ)';
+    document.getElementById('btnConfirmImport').textContent = '🚀 Confirm Import (Insert)';
+  } else {
+    btnUpdate.style.background = 'var(--orange, #f59e0b)';
+    btnUpdate.style.borderColor = 'var(--orange, #f59e0b)';
+    btnUpdate.style.color = 'white';
+    btnInsert.style.background = 'var(--card2)';
+    btnInsert.style.borderColor = 'var(--border)';
+    btnInsert.style.color = 'var(--muted)';
+    hint.innerHTML = '🔄 <b>Update:</b> ตรวจสอบ DUID + BILL + Item Code + SN หากซ้ำจะ <b style="color:var(--orange,#f59e0b)">แก้ไขของเดิม</b> ถ้าไม่ซ้ำจะเพิ่มใหม่';
+    document.getElementById('btnConfirmImport').textContent = '🔄 Confirm Update (Upsert)';
+  }
+}
+
 function confirmImport() {
   if (importRows.length === 0) { showToast('ไม่มีข้อมูล','warn'); return; }
   const photoInput = document.getElementById('importEvidencePhoto');
@@ -6777,9 +6819,10 @@ function confirmImport() {
     return;
   }
   
-  if (!confirm('ยืนยัน Import ' + importRows.length + ' รายการ?')) return;
+  const modeLabel = _importMode === 'update' ? 'Update (Upsert)' : 'Insert';
+  if (!confirm('ยืนยัน ' + modeLabel + ' ' + importRows.length + ' รายการ?')) return;
   closeImportExport();
-  showProg(true, 'กำลัง Import ข้อมูล...', 50);
+  showProg(true, 'กำลัง ' + modeLabel + ' ข้อมูล...', 50);
   
   const file = photoInput.files[0];
   const reader = new FileReader();
@@ -6793,7 +6836,12 @@ function confirmImport() {
       google.script.run.withSuccessHandler(function(res) {
         if (res.success) {
           showProg(false);
-          showToast(res.message, 'ok');
+          // Show detail for upsert
+          var msg = res.message;
+          if (res.updated !== undefined) {
+            msg = '✅ Update ' + res.updated + ' รายการ | เพิ่มใหม่ ' + res.inserted + ' รายการ';
+          }
+          showToast(msg, 'ok');
           syncFromGAS();
           logImportAndShowResult(importRows);
           
@@ -6805,7 +6853,7 @@ function confirmImport() {
           showProg(false);
           showToast(res.message, 'err');
         }
-      }).saveImportData(importRows, ieCurrentCustomer, userEmail, userName);
+      })[_importMode === 'update' ? 'saveImportDataUpdate' : 'saveImportData'](importRows, ieCurrentCustomer, userEmail, userName);
     } else {
       // Offline mock fallback
       const parsed = importRows.map((r, i) => ({
