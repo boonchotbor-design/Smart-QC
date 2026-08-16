@@ -197,6 +197,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
   body, html { margin: 0; padding: 0; background: #fff; color: #000; width: 100%; }
   #printDoc { display: block !important; width: 100%; margin: 0; padding: 0; }
   .tp-page, .pd-page { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+  table td, table th, .tp-table td, .pd-table td { color: #000 !important; }
   @page { margin: 15mm; }
 }
 #printDoc{display:none;font-family:'Sarabun','TH Sarabun New',sans-serif;font-size:13px;color:#000;background:#fff}
@@ -5674,6 +5675,18 @@ function applyF() {
       (t.desc||'').toLowerCase().includes(q)
     );
   }
+
+  // Sort by date (newest first)
+  const parseD = s => {
+    if(!s) return 0;
+    const str = String(s).trim().split(' ')[0];
+    if(str.includes('/')) {
+      const p = str.split('/');
+      if(p.length === 3) return new Date(parseInt(p[2], 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10)).getTime() || 0;
+    }
+    return 0;
+  };
+  txFiltered.sort((a,b) => parseD(b.date) - parseD(a.date));
   
   txPage = 0;
   renderTable();
