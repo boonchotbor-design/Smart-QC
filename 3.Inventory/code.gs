@@ -527,6 +527,29 @@ function getProjectData() {
   } catch (e) { return []; }
 }
 
+function saveBOMData(customer, data) {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var s = ss.getSheetByName(customer === "AIS" ? "BOM AIS" : "BOM TRUE");
+    if (!s) return { success: false, error: "Sheet not found" };
+
+    var lastRow = s.getLastRow();
+    if (lastRow > 1) {
+      s.getRange(2, 1, lastRow - 1, 4).clearContent();
+    }
+
+    if (data && data.length > 0) {
+      var values = data.map(function(item) {
+        return [item.type || "", item.model || "", item.code || "", item.desc || ""];
+      });
+      s.getRange(2, 1, values.length, 4).setValues(values);
+    }
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
 // ─────────────────────────────────────────────
 // SEARCH
 // ─────────────────────────────────────────────

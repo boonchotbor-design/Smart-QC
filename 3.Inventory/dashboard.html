@@ -534,9 +534,12 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
     <!-- BOM Manager -->
     <div class="page" id="page-bom">
       <div class="tc">
-        <div class="t-hdr">
+        <div class="t-hdr" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
           <div class="c-title">📝 จัดการ BOM <span id="bomTitleCus" style="color:var(--primary);font-weight:900">AIS</span></div>
+          <div style="display:flex; gap:8px;">
+            <button id="btnSyncBom" class="tbtn" style="background:var(--blue);color:white;border-color:var(--blue);" onclick="syncBOMToSheet()">🔄 Sync To Sheet</button>
           <button class="tbtn g" onclick="addBomRow()">➕ เพิ่มรายการ (Add New)</button>
+          </div>
         </div>
         <!-- Search + Stats -->
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
@@ -5496,6 +5499,32 @@ function deleteBomItem(idx) {
   bomFilterAndRender();
   toast('ลบรายการแล้ว', 'r');
 }
+
+function syncBOMToSheet() {
+  const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
+  const btn = document.getElementById('btnSyncBom');
+  const ogHtml = btn.innerHTML;
+  btn.innerHTML = '🔄 กำลัง Sync...';
+  btn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(res => {
+      btn.innerHTML = ogHtml;
+      btn.disabled = false;
+      if (res && res.success) {
+        toast('✅ Sync ข้อมูล BOM ไปยัง Google Sheet สำเร็จ', 'g');
+      } else {
+        alert('เกิดข้อผิดพลาดในการ Sync: ' + (res.error || 'Unknown'));
+      }
+    })
+    .withFailureHandler(err => {
+      btn.innerHTML = ogHtml;
+      btn.disabled = false;
+      alert('Network Error: ' + err.message);
+    })
+    .saveBOMData(curBomCustomer, bom);
+}
+
 function addBomRow() {
   const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
   bom.unshift({type: '', model: '', code: '', desc: ''});
