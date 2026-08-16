@@ -5706,27 +5706,43 @@ function applyF() {
     if (!dStr) return 0;
     let s = String(dStr).trim();
     
-    // Check if the string actually literally contains "46301" as a year (from old corrupted saves)
-    if (s.includes('46301')) return 0; // Send to bottom
-    if (s.includes('45758')) return 0; // Send to bottom
+    if (s.includes('46301') || s.includes('45758')) return 0; 
 
-    // Check if it's an Excel serial date (e.g. 46301 or 46301.0)
+    // ULTIMATE HACK: Detect Google Sheets US Locale corruption!
+    // If Google Sheets sends a JS Date string (e.g. "Mon Dec 07 2026..."), 
+    // it means the user typed a day <= 12 and Sheets flipped it thinking it was MM/DD.
+    // Example: User typed 12/07/2026 (July 12). Sheets parsed it as Dec 7.
+    // String(Date) becomes "Mon Dec 07 2026...".
+    // To get the user's REAL intent, we just parse it, and then FLIP the month and day!
+    if (s.includes(' GMT') && s.length > 20) {
+       const dt = new Date(s);
+       if (!isNaN(dt.getTime())) {
+          // dt is Dec 7. Month=11, Date=7.
+          // We want July 12. Month=6, Date=12.
+          const wrongMonth = dt.getMonth(); // 11 (Dec)
+          const wrongDate = dt.getDate(); // 7
+          // The user actually typed wrongDate / (wrongMonth+1) / Year
+          // Which means Day = wrongMonth+1, Month = wrongDate-1
+          const realDay = wrongMonth + 1; // 12
+          const realMonth = wrongDate - 1; // 6 (July)
+          return new Date(dt.getFullYear(), realMonth, realDay).getTime();
+       }
+    }
+
     if (!isNaN(s) && Number(s) > 40000 && Number(s) < 60000) {
       return new Date(Math.round((Number(s) - 25569) * 86400 * 1000)).getTime();
     }
     const p = s.split('/');
     if (p.length === 3) {
-      // Assuming DD/MM/YYYY
       const dd = parseInt(p[0], 10);
       const mm = parseInt(p[1], 10) - 1;
       let yyyy = parseInt(p[2], 10);
       if (yyyy > 2500) yyyy -= 543;
-      if (yyyy > 3000) return 0; // Invalid future year, send to bottom
+      if (yyyy > 3000) return 0; 
       return new Date(yyyy, mm, dd).getTime();
     }
-    // Fallback to native parser
     const dt = new Date(s);
-    if (!isNaN(dt.getTime()) && dt.getFullYear() > 3000) return 0; // Send corrupted future dates to bottom
+    if (!isNaN(dt.getTime()) && dt.getFullYear() > 3000) return 0; 
     return isNaN(dt.getTime()) ? 0 : dt.getTime();
   }
 
@@ -6361,40 +6377,44 @@ function printAll(){const bills=[...new Set(TX.map(t=>(t.bill||'?')+'|'+t.custom
 function fmtDate(d){
   if(!d) return '-';
   let s = String(d).trim();
-  
-  // If it's a corrupted string saved from before, just return it but we know it sorts to 0
   if (s.includes('46301') && s.includes('/')) return s;
 
   let dt;
-  if (!isNaN(s) && Number(s) > 40000 && Number(s) < 60000) {
-    dt = new Date(Math.round((Number(s) - 25569) * 86400 * 1000));
-  } else if (s.includes('/')) {
-    const p = s.split('/');
-    if(p.length === 3) {
-      // Check if it's MM/DD/YYYY from Google Sheets locale
-      // If p[0] > 12, it must be DD/MM/YYYY. If p[0] <= 12, it could be either.
-      // But if the user types DD/MM/YYYY, Google Sheets US locale flips it.
-      // Let's just trust DD/MM/YYYY parsing.
-      let yyyy = parseInt(p[2], 10);
-      if(yyyy > 2500) yyyy -= 543;
-      dt = new Date(yyyy, parseInt(p[1], 10)-1, parseInt(p[0], 10));
+  let flipped = false;
+
+  // ULTIMATE HACK for Display too!
+  if (s.includes(' GMT') && s.length > 20) {
+       const temp = new Date(s);
+       if (!isNaN(temp.getTime())) {
+          const wrongMonth = temp.getMonth();
+          const wrongDate = temp.getDate();
+          const realDay = wrongMonth + 1;
+          const realMonth = wrongDate - 1;
+          dt = new Date(temp.getFullYear(), realMonth, realDay);
+          flipped = true;
+       }
+  }
+
+  if (!flipped) {
+    if (!isNaN(s) && Number(s) > 40000 && Number(s) < 60000) {
+      dt = new Date(Math.round((Number(s) - 25569) * 86400 * 1000));
+    } else if (s.includes('/')) {
+      const p = s.split('/');
+      if(p.length === 3) {
+        let yyyy = parseInt(p[2], 10);
+        if(yyyy > 2500) yyyy -= 543;
+        dt = new Date(yyyy, parseInt(p[1], 10)-1, parseInt(p[0], 10));
+      }
     }
   }
   
-  // If we couldn't parse it with slashes, try native
-  if (!dt || isNaN(dt.getTime())) {
-     dt = new Date(s);
-     // Google Sheets might send an ISO string or a Date string that gets natively parsed.
-     // If it parsed successfully natively, and it's from a Thai user, it might be flipped.
-     // But let's just format it as DD/MM/YYYY.
-  }
-
+  if (!dt || isNaN(dt.getTime())) dt = new Date(s);
   if (isNaN(dt.getTime())) return s.substring(0,10);
   
   const dd = String(dt.getDate()).padStart(2,'0');
   const mm = String(dt.getMonth()+1).padStart(2,'0');
   let yyyy = dt.getFullYear();
-  if (yyyy > 3000) return s.substring(0,10); // Return raw if corrupted
+  if (yyyy > 3000) return s.substring(0,10); 
   return dd+'/'+mm+'/'+yyyy;
 }
 
