@@ -5704,10 +5704,15 @@ function applyF() {
   // Helper to parse DD/MM/YYYY format explicitly and Excel Serial Dates
   function parseDateStrict(dStr) {
     if (!dStr) return 0;
-    const s = String(dStr).trim();
-    // Check if it's an Excel serial date (e.g. 46301)
-    if (/^\d{5}$/.test(s)) {
-      return new Date(Math.round((parseInt(s, 10) - 25569) * 86400 * 1000)).getTime();
+    let s = String(dStr).trim();
+    
+    // Check if the string actually literally contains "46301" as a year (from old corrupted saves)
+    if (s.includes('46301')) return 0; // Send to bottom
+    if (s.includes('45758')) return 0; // Send to bottom
+
+    // Check if it's an Excel serial date (e.g. 46301 or 46301.0)
+    if (!isNaN(s) && Number(s) > 40000 && Number(s) < 60000) {
+      return new Date(Math.round((Number(s) - 25569) * 86400 * 1000)).getTime();
     }
     const p = s.split('/');
     if (p.length === 3) {
@@ -5716,10 +5721,12 @@ function applyF() {
       const mm = parseInt(p[1], 10) - 1;
       let yyyy = parseInt(p[2], 10);
       if (yyyy > 2500) yyyy -= 543;
+      if (yyyy > 3000) return 0; // Invalid future year, send to bottom
       return new Date(yyyy, mm, dd).getTime();
     }
     // Fallback to native parser
     const dt = new Date(s);
+    if (!isNaN(dt.getTime()) && dt.getFullYear() > 3000) return 0; // Send corrupted future dates to bottom
     return isNaN(dt.getTime()) ? 0 : dt.getTime();
   }
 
