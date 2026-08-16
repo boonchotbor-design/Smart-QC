@@ -615,7 +615,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
           </div>
           <div style="font-size:12px; font-weight:700; margin-bottom:6px; color:var(--blue);">📊 Preview: <span id="importRowCount">0</span> รายการ</div>
           <div id="importPreviewTable" style="overflow-x:auto; max-height:200px; border-radius:8px; border:1px solid var(--border); margin-bottom:10px; background:var(--card2)"></div>
-          <!-- Import Mode Toggle -->
+          <!-- Import Mode Toggle V.7.4.0 -->
           <div style="display:flex; gap:8px; margin-bottom:10px;">
             <button id="btnModeInsert" onclick="setImportMode('insert')"
               style="flex:1; padding:10px; border-radius:10px; border:2px solid var(--primary); background:var(--primary); color:white; font-weight:800; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:12px; transition:all .2s;">
@@ -627,7 +627,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
             </button>
           </div>
           <div id="importModeHint" style="font-size:11px; color:var(--muted); margin-bottom:8px; padding:8px; background:var(--card2); border-radius:8px; border:1px solid var(--border);">
-            📌 <b>Insert:</b> เพิ่มข้อมูลใหม่ทั้งหมด
+            📌 <b>Insert:</b> เพิ่มข้อมูลใหม่ทั้งหมด (ไม่ตรวจสอบซ้ำ)
           </div>
           <button id="btnConfirmImport" onclick="confirmImport()" style="width:100%; padding:12px; background:linear-gradient(135deg,var(--primary),var(--pd)); color:white; border:none; border-radius:10px; font-size:13px; font-weight:800; cursor:pointer; font-family:'Sarabun',sans-serif;">🚀 Confirm Import</button>
         </div>
@@ -670,18 +670,6 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
       </div>
       <!-- Bill No. -->
       <div class="frow full">
-        <div class="fg"><label class="fl req">Bill No.</label>
-          <div style="display:flex;gap:6px">
-            <input class="fi" id="m-bill" placeholder="เลขที่บิล" oninput="liveSearchField('bill')" onkeydown="if(event.key==='Enter')searchByBill()">
-            <button class="fbtn-scan" onclick="searchByBill()">🔍 Scan/ค้นหา</button>
-          </div>
-          <div class="ac-wrap"><div class="ac-drop" id="bill-drop"></div></div>
-        </div>
-      </div>
-      <button class="fbtn-srch" onclick="searchByBill()">🔵 ค้นหาข้อมูลเดิมจาก Bill No.</button>
-      <!-- DUID -->
-      <div class="frow full">
-        <div class="fg"><label class="fl req" style="color:var(--red)">DUID (Mandatory)</label>
           <div class="ac-wrap">
             <input class="fi err" id="m-duid" placeholder="ค้นหาหรือกรอก DUID" oninput="liveSearchField('duid')" onblur="autoFillFromDUID()" onkeydown="if(event.key==='Enter')searchByDuid()">
             <div class="ac-drop" id="duid-drop"></div>
