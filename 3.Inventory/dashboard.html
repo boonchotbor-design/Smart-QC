@@ -5701,12 +5701,28 @@ function applyF() {
   const r = document.getElementById('txReg')?.value || 'ALL';
   const ty = document.getElementById('txType')?.value || 'ALL';
   
+  // Helper to parse DD/MM/YYYY format explicitly
+  function parseDateStrict(dStr) {
+    if (!dStr) return 0;
+    const p = String(dStr).split('/');
+    if (p.length === 3) {
+      // Assuming DD/MM/YYYY
+      const dd = parseInt(p[0], 10);
+      const mm = parseInt(p[1], 10) - 1;
+      let yyyy = parseInt(p[2], 10);
+      // Handle Thai Buddhist year if they use it by mistake (e.g. 2569)
+      if (yyyy > 2500) yyyy -= 543;
+      return new Date(yyyy, mm, dd).getTime();
+    }
+    // Fallback to native parser
+    const dt = new Date(dStr);
+    return isNaN(dt.getTime()) ? 0 : dt.getTime();
+  }
+
   // Issue: Sort by Date descending (newest top), fallback to reverse insertion for same date
   txFiltered = [...TX].reverse().sort((a,b) => {
-    const da = new Date(a.date);
-    const db = new Date(b.date);
-    const ta = isNaN(da.getTime()) ? 0 : da.getTime();
-    const tb = isNaN(db.getTime()) ? 0 : db.getTime();
+    const ta = parseDateStrict(a.date);
+    const tb = parseDateStrict(b.date);
     return tb - ta;
   });
   
