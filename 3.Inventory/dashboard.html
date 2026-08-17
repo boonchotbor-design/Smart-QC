@@ -6737,8 +6737,15 @@ function syncFromGAS(){
   google.script.run.withSuccessHandler(function(data){
     if(!data.success)return;
     TX=data.recent||[];
+    recalculateAllStatusJS();
     refreshDash(TX);
-    showImportBar(`🔗 GAS Live: ${TX.length} รายการ`);
+    // ✅ FIX: อัปเดตวันที่ใน header ทุกครั้งที่ Sync
+    var pgSubEl = document.getElementById('pgSub');
+    if(pgSubEl){
+      var d=new Date();
+      pgSubEl.textContent='วันที่ '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
+    }
+    showImportBar(`🔗 GAS Live: ${TX.length} รายการ | อัปเดต: ${new Date().toLocaleTimeString('th-TH')}`);
   }).getDashboardData();
   
   google.script.run.withSuccessHandler(function(data){
@@ -6750,7 +6757,12 @@ function syncFromGAS(){
   }).getBOMData("TRUE");
 }
 
-// ════ MOCK STATUS CALCULATION ════
+// ════ STATUS CALCULATION V.7.4.1 ════
+// กฎ: จับคู่ 3 คู่อิสระ ต่อ DUID
+//   IN  ↔ OUT         → ทั้งคู่ต้องมี และ QTY เท่ากัน
+//   STR/IN ↔ STR/OUT  → ทั้งคู่ต้องมี และ QTY เท่ากัน
+//   DISMANTLE ↔ RETURN → ทั้งคู่ต้องมี และ QTY เท่ากัน
+// Grouping Key: DUID + Region + Item Code + QTY
 function recalculateAllStatusJS() {
   const duidMap = {};
   TX.forEach(r => {
@@ -6759,31 +6771,52 @@ function recalculateAllStatusJS() {
     if(!duidMap[d]) duidMap[d] = [];
     duidMap[d].push(r);
   });
-  
+
   Object.keys(duidMap).forEach(d => {
     const records = duidMap[d];
+    if(!records.length) return;
+
+    // Group by Region + Item Code (ไม่รวม QTY ใน key เพราะ sum qty ต่อ group)
     const groupMap = {};
     records.forEach(r => {
-      const key = (r.model||'') + '|' + (r.code||'');
-      if(!groupMap[key]) groupMap[key] = {IN:0, OUT:0, STR_IN:0, STR_OUT:0, DISMANTLE:0, RETURN:0};
+      const key = (r.region||'').toUpperCase() + '|' + (r.code||'').trim();
+      if(!groupMap[key]) groupMap[key] = {
+        hasIN:false, hasOUT:false,
+        hasStrIn:false, hasStrOut:false,
+        hasDis:false, hasRet:false,
+        inQty:0, outQty:0,
+        strInQty:0, strOutQty:0,
+        disQty:0, retQty:0
+      };
+      const g = groupMap[key];
       const t = (r.type||'').toUpperCase();
       const q = parseInt(r.qty)||0;
-      if(t === 'IN') groupMap[key].IN += q;
-      else if(t === 'OUT') groupMap[key].OUT += q;
-      else if(t === 'STR/IN') groupMap[key].STR_IN += q;
-      else if(t === 'STR/OUT') groupMap[key].STR_OUT += q;
-      else if(t === 'DISMANTLE') groupMap[key].DISMANTLE += q;
-      else if(t === 'RETURN') groupMap[key].RETURN += q;
+      if     (t==='IN')        { g.inQty    +=q; g.hasIN    =true; }
+      else if(t==='OUT')       { g.outQty   +=q; g.hasOUT   =true; }
+      else if(t==='STR/IN')    { g.strInQty +=q; g.hasStrIn =true; }
+      else if(t==='STR/OUT')   { g.strOutQty+=q; g.hasStrOut=true; }
+      else if(t==='DISMANTLE') { g.disQty   +=q; g.hasDis   =true; }
+      else if(t==='RETURN')    { g.retQty   +=q; g.hasRet   =true; }
     });
-    
-    let isAllClosed = true;
-    for(let key in groupMap) {
+
+    let allClosed = true;
+    for(let key in groupMap){
       const g = groupMap[key];
-      if (g.IN !== g.OUT) isAllClosed = false;
-      if (g.STR_IN !== g.STR_OUT) isAllClosed = false;
-      if (g.DISMANTLE !== g.RETURN) isAllClosed = false;
+      // คู่ IN↔OUT: ถ้ามีฝั่งใดฝั่งหนึ่ง ต้องมีทั้งคู่และ QTY เท่ากัน
+      if(g.hasIN || g.hasOUT){
+        if(!(g.hasIN && g.hasOUT && g.inQty === g.outQty)){ allClosed=false; break; }
+      }
+      // คู่ STR/IN↔STR/OUT
+      if(g.hasStrIn || g.hasStrOut){
+        if(!(g.hasStrIn && g.hasStrOut && g.strInQty === g.strOutQty)){ allClosed=false; break; }
+      }
+      // คู่ DISMANTLE↔RETURN
+      if(g.hasDis || g.hasRet){
+        if(!(g.hasDis && g.hasRet && g.disQty === g.retQty)){ allClosed=false; break; }
+      }
     }
-    const finalStatus = isAllClosed ? 'Closed' : 'On Process';
+
+    const finalStatus = allClosed ? 'Closed' : 'On Process';
     records.forEach(r => r.status = finalStatus);
   });
 }
