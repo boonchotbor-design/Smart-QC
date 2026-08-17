@@ -6681,6 +6681,14 @@ function syncFromGAS(){
     refreshDash(TX);
     showImportBar(`🔗 GAS Live: ${TX.length} รายการ`);
   }).getDashboardData();
+  
+  google.script.run.withSuccessHandler(function(data){
+    if(data && data.length) { BOM_AIS = data; }
+  }).getBOMData("AIS");
+
+  google.script.run.withSuccessHandler(function(data){
+    if(data && data.length) { BOM_TRUE = data; }
+  }).getBOMData("TRUE");
 }
 
 // ════ MOCK STATUS CALCULATION ════
