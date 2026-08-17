@@ -1174,10 +1174,17 @@ function uploadPhotoOnly(h, b, p, userEmail, userName) {
     var root       = DriveApp.getFolderById(ROOT_FOLDER_ID);
     var regionName = String(h.region || "Unknown_Region").trim() || "Unknown_Region";
     var duidName   = String(h.duid   || "Unknown_DUID").trim()   || "Unknown_DUID";
-    var typeName   = String(h.type   || "Other").trim().replace("/", "_") || "Other";
+    var typeName   = String(h.type   || "Other").trim() || "Other";
 
     var regF  = getOrCreateSubFolder(root,  regionName);
     var duidF = getOrCreateSubFolder(regF,  duidName);
+    
+    // สร้าง 6 Folder มาตรฐาน ภายใต้ DUID เสมอ
+    var stdTypes = ["IN", "OUT", "DISMANTLE", "RETURN", "STR/IN", "STR/OUT"];
+    for (var i = 0; i < stdTypes.length; i++) {
+      getOrCreateSubFolder(duidF, stdTypes[i]);
+    }
+    
     var typeF = getOrCreateSubFolder(duidF, typeName);
 
     var blob = Utilities.newBlob(
