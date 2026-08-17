@@ -659,6 +659,11 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
     <div class="fhdr">
       <span id="mIcon" style="font-size:24px">📥</span>
       <div class="fhdr-title" id="mTitle">บันทึกรายการ IN</div>
+      <!-- Action Buttons in Header -->
+      <div style="display:flex;gap:8px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:5px 8px;background:rgba(255,255,255,0.04);margin-right:8px">
+        <button class="bcanc" style="flex:none;padding:7px 16px;font-size:12px" onclick="confirmCloseM()">ยกเลิก</button>
+        <button class="bsave" id="mSaveBtn" style="flex:none;padding:7px 16px;font-size:12px;border-radius:8px" onclick="submitM()"><span id="mSaveIcon">🚀</span> <span id="mSaveText">บันทึก IN</span></button>
+      </div>
       <button class="fhdr-close" onclick="closeM()">✕</button>
     </div>
     <!-- Type selector -->
@@ -712,10 +717,6 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
         <div id="itemRows"></div>
       </div>
       <button class="add-item-btn" onclick="addItemRow()">➕ เพิ่มรายการสินค้า</button>
-    </div>
-    <div class="factions">
-      <button class="bcanc" onclick="confirmCloseM()">ยกเลิก</button>
-      <button class="bsave" id="mSaveBtn" onclick="submitM()"><span id="mSaveIcon">🚀</span> <span id="mSaveText">บันทึก IN</span></button>
     </div>
   </div>
 </div>
