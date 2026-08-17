@@ -978,36 +978,28 @@
       div.className = 'item-row shadow-sm';
       div.id = 'row_' + rowCount;
       div.innerHTML =
-        '<div class="d-flex gap-2">' +
-          '<div style="min-width:44px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:22px;gap:6px">' +
-            '<button class="btn btn-sm" style="background:#6366f1;color:white;border-radius:10px;width:40px;height:40px;font-size:16px;padding:0;border:none" title="ค้นหา Item Code" onclick="openItemSearch(' + rowCount + ')">🔍</button>' +
-            '<button class="btn btn-sm" style="background:#e74c3c;color:white;border-radius:10px;width:40px;height:40px;font-size:16px;padding:0;border:none" title="ลบรายการ" onclick="document.getElementById(\'row_' + rowCount + '\').remove()">🗑️</button>' +
-          '</div>' +
-          '<div class="flex-grow-1">' +
-            '<div class="row g-2">' +
-              '<div class="col-12"><label class="small fw-bold">ประเภท (Type)</label>' +
-                '<input type="text" id="type_'  + rowCount + '" class="form-control form-control-sm" list="typeData_' + rowCount + '" oninput="onTypeChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
-                '<datalist id="typeData_' + rowCount + '"></datalist></div>' +
-              '<div class="col-12"><label class="small fw-bold text-primary">Model</label>' +
-                '<input type="text" id="model_' + rowCount + '" class="form-control form-control-sm" list="modelData_' + rowCount + '" oninput="onModelChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
-                '<datalist id="modelData_' + rowCount + '"></datalist></div>' +
-              '<div class="col-12"><label class="small fw-bold">Item Code</label>' +
-                '<div class="input-group input-group-sm">' +
-                  '<input type="text" id="code_' + rowCount + '" class="form-control form-control-sm" list="codeData_' + rowCount + '" oninput="onCodeChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
-                  '<button class="btn btn-outline-secondary" type="button" onclick="openItemSearch(' + rowCount + ')" title="ค้นหา Item Code">🔍</button>' +
-                '</div>' +
-                '<datalist id="codeData_' + rowCount + '"></datalist></div>' +
-              '<div class="col-12"><label class="small fw-bold">Item Description</label>' +
-                '<input type="text" id="desc_'  + rowCount + '" class="form-control form-control-sm" list="descData_' + rowCount + '" oninput="onDescChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
-                '<datalist id="descData_' + rowCount + '"></datalist></div>' +
-              '<div class="col-12"><label class="small fw-bold">SN</label>' +
-                '<div class="input-group input-group-sm">' +
-                  '<input type="text" id="sn_' + rowCount + '" class="form-control form-control-sm" placeholder="SN">' +
-                  '<button class="btn btn-outline-primary" type="button" onclick="triggerNativeScanner(\'sn\',' + rowCount + ')">📷 Scan</button>' +
-                '</div></div>' +
-              '<div class="col-12"><label class="small fw-bold">จำนวน</label>' +
-                '<input type="number" id="qty_' + rowCount + '" class="form-control form-control-sm" value="1"></div>' +
-            '</div>' +
+        '<div class="row g-2">' +
+          '<div class="col-12"><label class="small fw-bold">ประเภท (Type)</label>' +
+            '<input type="text" id="type_'  + rowCount + '" class="form-control form-control-sm" list="typeData_' + rowCount + '" oninput="onTypeChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
+            '<datalist id="typeData_' + rowCount + '"></datalist></div>' +
+          '<div class="col-12"><label class="small fw-bold text-primary">Model</label>' +
+            '<input type="text" id="model_' + rowCount + '" class="form-control form-control-sm" list="modelData_' + rowCount + '" oninput="onModelChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
+            '<datalist id="modelData_' + rowCount + '"></datalist></div>' +
+          '<div class="col-12"><label class="small fw-bold">Item Code</label>' +
+            '<input type="text" id="code_'  + rowCount + '" class="form-control form-control-sm" list="codeData_' + rowCount + '" oninput="onCodeChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
+            '<datalist id="codeData_' + rowCount + '"></datalist></div>' +
+          '<div class="col-12"><label class="small fw-bold">Item Description</label>' +
+            '<input type="text" id="desc_'  + rowCount + '" class="form-control form-control-sm" list="descData_' + rowCount + '" oninput="onDescChange(' + rowCount + ')" placeholder="เลือกหรือพิมพ์เอง">' +
+            '<datalist id="descData_' + rowCount + '"></datalist></div>' +
+          '<div class="col-12"><label class="small fw-bold">SN</label>' +
+            '<div class="input-group input-group-sm">' +
+              '<input type="text" id="sn_' + rowCount + '" class="form-control form-control-sm" placeholder="SN">' +
+              '<button class="btn btn-outline-primary" type="button" onclick="triggerNativeScanner(\'sn\',' + rowCount + ')">📷 Scan</button>' +
+            '</div></div>' +
+          '<div class="col-6"><label class="small fw-bold">จำนวน</label>' +
+            '<input type="number" id="qty_' + rowCount + '" class="form-control form-control-sm" value="1"></div>' +
+          '<div class="col-6 d-flex align-items-end">' +
+            '<button class="btn btn-danger btn-sm w-100" onclick="document.getElementById(\'row_' + rowCount + '\').remove()">ลบรายการ</button>' +
           '</div>' +
         '</div>';
       document.getElementById('itemList').appendChild(div);
@@ -1027,12 +1019,8 @@
     }
 
     function onModelChange(id) {
-      var val = document.getElementById('model_' + id).value.trim();
-      if (!val) return;
-      var vl = val.toLowerCase();
-      // exact match first, then partial
-      var filtered = bomData.filter(function(i) { return i.model.toLowerCase() === vl; });
-      if (!filtered.length) filtered = bomData.filter(function(i) { return i.model.toLowerCase().indexOf(vl) !== -1; });
+      var val = document.getElementById('model_' + id).value; if (!val) return;
+      var filtered = bomData.filter(function(i) { return i.model === val; });
       if (filtered.length > 0) {
         updateRowDropdowns(id, filtered);
         var uC = [...new Set(filtered.map(function(i) { return i.code; }))];
@@ -1045,12 +1033,8 @@
     }
 
     function onCodeChange(id) {
-      var val = document.getElementById('code_' + id).value.trim();
-      if (!val) return;
-      var vl = val.toLowerCase();
-      // exact match first, then partial
-      var f = bomData.find(function(i) { return i.code.toLowerCase() === vl; });
-      if (!f) f = bomData.find(function(i) { return i.code.toLowerCase().indexOf(vl) !== -1; });
+      var val = document.getElementById('code_' + id).value; if (!val) return;
+      var f = bomData.find(function(i) { return i.code === val; });
       if (f) {
         document.getElementById('desc_'  + id).value = f.desc;
         document.getElementById('model_' + id).value = f.model;
@@ -1059,11 +1043,8 @@
     }
 
     function onDescChange(id) {
-      var val = document.getElementById('desc_' + id).value.trim();
-      if (!val) return;
-      var vl = val.toLowerCase();
-      var f = bomData.find(function(i) { return i.desc.toLowerCase() === vl; });
-      if (!f) f = bomData.find(function(i) { return i.desc.toLowerCase().indexOf(vl) !== -1; });
+      var val = document.getElementById('desc_' + id).value; if (!val) return;
+      var f = bomData.find(function(i) { return i.desc === val; });
       if (f) {
         document.getElementById('code_'  + id).value = f.code;
         document.getElementById('model_' + id).value = f.model;
@@ -1072,11 +1053,8 @@
     }
 
     function onTypeChange(id) {
-      var val = document.getElementById('type_' + id).value.trim();
-      if (!val) return;
-      var vl = val.toLowerCase();
-      var filtered = bomData.filter(function(i) { return i.type.toLowerCase() === vl; });
-      if (!filtered.length) filtered = bomData.filter(function(i) { return i.type.toLowerCase().indexOf(vl) !== -1; });
+      var val = document.getElementById('type_' + id).value; if (!val) return;
+      var filtered = bomData.filter(function(i) { return i.type === val; });
       updateRowDropdowns(id, filtered);
     }
 
@@ -1084,51 +1062,6 @@
       document.querySelectorAll('[id^="model_"]').forEach(function(el) {
         updateRowDropdowns(el.id.split('_')[1]);
       });
-    }
-
-    // ── Item Search Modal ──
-    var _itemSearchRowId = null;
-    function openItemSearch(id) {
-      _itemSearchRowId = id;
-      var modelVal = document.getElementById('model_' + id) ? document.getElementById('model_' + id).value : '';
-      document.getElementById('itemSearchInput').value = modelVal;
-      renderItemSearchResults(modelVal);
-      document.getElementById('itemSearchModal').style.display = 'flex';
-      document.getElementById('itemSearchInput').focus();
-    }
-    function closeItemSearch() {
-      document.getElementById('itemSearchModal').style.display = 'none';
-    }
-    function renderItemSearchResults(q) {
-      var ql = (q || '').toLowerCase().trim();
-      var list = ql ? bomData.filter(function(i) {
-        return i.model.toLowerCase().indexOf(ql) !== -1 ||
-               i.code.toLowerCase().indexOf(ql) !== -1 ||
-               i.desc.toLowerCase().indexOf(ql) !== -1;
-      }) : bomData;
-      var html = list.slice(0, 80).map(function(i, idx) {
-        return '<div onclick="selectItemFromSearch(\'' + (i.code||'').replace(/'/g,"\\'")
-          + '\',\'' + (i.model||'').replace(/'/g,"\\'")
-          + '\',\'' + (i.desc||'').replace(/'/g,"\\'")
-          + '\',\'' + (i.type||'').replace(/'/g,"\\'") + '\')"
-          style="padding:10px 14px;border-bottom:1px solid #2a2d3e;cursor:pointer;transition:background .15s"
-          onmouseover="this.style.background=\'#2a2d3e\'" onmouseout="this.style.background=\'\'">'
-          + '<div style="font-weight:700;color:#a78bfa;font-size:13px">' + (i.code||'-') + '</div>'
-          + '<div style="color:#e2e8f0;font-size:12px">' + (i.model||'-') + '</div>'
-          + '<div style="color:#94a3b8;font-size:11px">' + (i.desc||'-') + '</div>'
-          + '</div>';
-      }).join('');
-      document.getElementById('itemSearchList').innerHTML = html || '<div style="padding:20px;color:#94a3b8;text-align:center">ไม่พบรายการ</div>';
-    }
-    function selectItemFromSearch(code, model, desc, type) {
-      var id = _itemSearchRowId;
-      if (id !== null) {
-        if (document.getElementById('code_'  + id)) document.getElementById('code_'  + id).value = code;
-        if (document.getElementById('model_' + id)) document.getElementById('model_' + id).value = model;
-        if (document.getElementById('desc_'  + id)) document.getElementById('desc_'  + id).value = desc;
-        if (document.getElementById('type_'  + id)) document.getElementById('type_'  + id).value = type;
-      }
-      closeItemSearch();
     }
 
     // ─────────────────────────────────────────────
@@ -1829,36 +1762,7 @@
       </div>
     </div>
   </div>
-
-<!-- ══ Item Code Search Modal ══ -->
-<div id="itemSearchModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);align-items:flex-end;justify-content:center">
-  <div style="background:#1e2235;border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,0.5)">
-    <!-- Header -->
-    <div style="padding:16px 18px 12px;border-bottom:1px solid #2a2d3e;display:flex;align-items:center;gap:10px">
-      <span style="font-size:20px">🔍</span>
-      <div style="flex:1">
-        <div style="font-weight:700;color:#e2e8f0;font-size:15px">ค้นหา Item Code</div>
-        <div style="font-size:11px;color:#64748b">พิมพ์ Model / Code / Description</div>
-      </div>
-      <button onclick="closeItemSearch()" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;line-height:1">✕</button>
-    </div>
-    <!-- Search Input -->
-    <div style="padding:12px 16px;border-bottom:1px solid #2a2d3e">
-      <input id="itemSearchInput" type="text" placeholder="🔎  พิมพ์เพื่อค้นหา..."
-        oninput="renderItemSearchResults(this.value)"
-        style="width:100%;padding:10px 14px;background:#0f1120;border:1.5px solid #6366f1;border-radius:12px;color:#e2e8f0;font-size:14px;font-family:'Sarabun',sans-serif;outline:none">
-    </div>
-    <!-- Results List -->
-    <div id="itemSearchList" style="overflow-y:auto;flex:1;padding:4px 0"></div>
-    <!-- Cancel -->
-    <div style="padding:12px 16px;border-top:1px solid #2a2d3e">
-      <button onclick="closeItemSearch()" style="width:100%;padding:11px;background:#2a2d3e;color:#94a3b8;border:none;border-radius:12px;font-size:14px;font-family:'Sarabun',sans-serif;cursor:pointer">ยกเลิก</button>
-    </div>
-  </div>
-</div>
-
 </body>
-
 </html>
 
 
