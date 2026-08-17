@@ -5864,9 +5864,9 @@ function addItemRow(itype='',model='',code='',desc='',qty=1,sn=''){
   const row=document.createElement('div');
   row.className='item-row';row.id=`ir${n}`;
   row.innerHTML=`
-    <div class="item-row-hdr"><span class="item-row-num">สินค้า #${n}</span><div style="display:flex;gap:6px;align-items:center"><button class="fbtn-scan" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;padding:4px 10px;font-size:12px" onclick="openDashItemSearch(${n})">🔍 ค้นหา Item</button><button class="del-item" onclick="delItem(${n})">ลบรายการ</button></div></div>
+    <div class="item-row-hdr"><span class="item-row-num">สินค้า #${n}</span><button class="del-item" onclick="delItem(${n})">ลบรายการ</button></div>
     <div class="frow"><div class="fg"><label class="fl">ประเภท (Type)</label><input class="fi" id="itype${n}" list="dl-itype${n}" oninput="updateModelOptions(${n})" placeholder="พิมพ์หรือเลือก"><datalist id="dl-itype${n}"></datalist></div><div class="fg"><label class="fl">Model</label><input class="fi" id="imodel${n}" list="dl-imodel${n}" oninput="fillItemCode(${n})" placeholder="พิมพ์หรือเลือก"><datalist id="dl-imodel${n}"></datalist></div></div>
-    <div class="frow"><div class="fg"><label class="fl">Item Code</label><div style="display:flex;gap:4px"><input class="fi" id="icode${n}" value="${code}" placeholder="รหัสสินค้า" oninput="fillItemDetailsFromCode(${n})" style="color:var(--blue);flex:1"><button class="fbtn-scan" style="padding:4px 8px;font-size:13px" onclick="openDashItemSearch(${n})" title="ค้นหา Item Code">🔍</button></div></div><div class="fg"><label class="fl">Item Description</label><input class="fi" id="idesc${n}" value="${desc}" placeholder="รายละเอียดสินค้า"></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Item Code</label><input class="fi" id="icode${n}" value="${code}" placeholder="รหัสสินค้า" oninput="fillItemDetailsFromCode(${n})" style="color:var(--blue)"></div><div class="fg"><label class="fl">Item Description</label><input class="fi" id="idesc${n}" value="${desc}" placeholder="รายละเอียดสินค้า"></div></div>
     <div class="frow"><div class="fg"><label class="fl">SN</label><div style="display:flex;gap:5px"><input class="fi" id="isn${n}" value="${sn}" placeholder="Serial Number"><button class="fbtn-scan" type="button" onclick="scanSN(${n})">📷 Scan</button></div></div><div class="fg"><label class="fl">จำนวน</label><div style="display:flex;gap:5px"><input class="fi" id="iqty${n}" type="number" value="${qty}" min="1" style="flex:1"><button class="del-item" style="background:rgba(255,77,106,.12)" onclick="delItem(${n})">ลบรายการ</button></div></div></div>`;
   // hidden camera input for this row
   var camInput = document.createElement('input');
@@ -5931,28 +5931,24 @@ async function handleScanPhoto(input, n) {
 }
 
 function fillItemDetailsFromCode(n) {
-  const code = (document.getElementById('icode'+n).value || '').trim();
+  const code = document.getElementById('icode'+n).value;
   if (!code) return;
-  const cl = code.toLowerCase();
   const bom = getActiveBOM();
-  // exact match first, then partial
-  let match = bom.find(b => b.code.toLowerCase() === cl);
-  if (!match) match = bom.find(b => b.code.toLowerCase().indexOf(cl) !== -1);
+  const match = bom.find(b => b.code === code);
   if (match) {
     document.getElementById('imodel'+n).value = match.model || '';
-    document.getElementById('idesc'+n).value  = match.desc  || '';
-    document.getElementById('itype'+n).value  = match.type  || '';
+    document.getElementById('idesc'+n).value = match.desc || '';
+    document.getElementById('itype'+n).value = match.type || '';
   }
 }
 
 function updateModelOptions(n, defaultModel='') {
   const bom = getActiveBOM();
-  const typeSel  = document.getElementById('itype'+n);
+  const typeSel = document.getElementById('itype'+n);
   const modelSel = document.getElementById('imodel'+n);
   if(!typeSel || !modelSel) return;
-  const selType = (typeSel.value || '').toLowerCase();
-  // case-insensitive type filter
-  const filtered = selType ? bom.filter(x => x.type.toLowerCase() === selType || x.type.toLowerCase().indexOf(selType) !== -1) : bom;
+  const selType = typeSel.value;
+  const filtered = selType ? bom.filter(x => x.type === selType) : bom;
   
   const currentModel = defaultModel || modelSel.value;
   document.getElementById('dl-imodel'+n).innerHTML = filtered.map(m => `<option value="${m.model}"></option>`).join('');
@@ -5978,21 +5974,17 @@ function onCustomerChange() {
 
 function addItemRowPrefilled(it,m,c,d,q,s){addItemRow(it,m,c,d,q,s);}
 function fillItemCode(n, fromTypeChange=false){
-  const sel = document.getElementById('imodel'+n);
-  const val = (sel.value || '').trim();
-  const vl  = val.toLowerCase();
+  const sel=document.getElementById('imodel'+n);
   const bom = getActiveBOM();
-  // exact match first, then partial
-  let m = bom.find(x => x.model.toLowerCase() === vl);
-  if (!m && vl) m = bom.find(x => x.model.toLowerCase().indexOf(vl) !== -1);
+  const m = bom.find(x=>x.model===sel.value);
   if(m){
-    document.getElementById('icode'+n).value = m.code;
-    document.getElementById('idesc'+n).value = m.desc;
+    document.getElementById('icode'+n).value=m.code;
+    document.getElementById('idesc'+n).value=m.desc;
     const tSel = document.getElementById('itype'+n);
     if(!tSel.value) { tSel.value = m.type; updateModelOptions(n, m.model); }
   } else if (!fromTypeChange) {
-    document.getElementById('icode'+n).value = '';
-    document.getElementById('idesc'+n).value = '';
+    document.getElementById('icode'+n).value='';
+    document.getElementById('idesc'+n).value='';
   }
 }
 function delItem(n){const el=document.getElementById('ir'+n);if(el)el.remove();updateItemCount();}
@@ -6689,14 +6681,6 @@ function syncFromGAS(){
     refreshDash(TX);
     showImportBar(`🔗 GAS Live: ${TX.length} รายการ`);
   }).getDashboardData();
-  
-  google.script.run.withSuccessHandler(function(data){
-    if(data && data.length) { BOM_AIS = data; }
-  }).getBOMData("AIS");
-
-  google.script.run.withSuccessHandler(function(data){
-    if(data && data.length) { BOM_TRUE = data; }
-  }).getBOMData("TRUE");
 }
 
 // ════ MOCK STATUS CALCULATION ════
@@ -6979,88 +6963,5 @@ function logoutUser() {
     </div>
   </div>
 </div>
-<!-- ══ Dashboard Item Code Search Modal ══ -->
-<div id="dashItemSearchModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);align-items:flex-end;justify-content:center">
-  <div style="background:#1e2235;border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,0.5)">
-    <!-- Header -->
-    <div style="padding:16px 18px 12px;border-bottom:1px solid #2a2d3e;display:flex;align-items:center;gap:10px">
-      <span style="font-size:20px">🔍</span>
-      <div style="flex:1">
-        <div style="font-weight:700;color:#e2e8f0;font-size:15px">ค้นหา Item Code / Model</div>
-        <div style="font-size:11px;color:#64748b">พิมพ์ Model / Code / Description เพื่อค้นหา</div>
-      </div>
-      <button onclick="closeDashItemSearch()" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;line-height:1">✕</button>
-    </div>
-    <!-- Search Input -->
-    <div style="padding:12px 16px;border-bottom:1px solid #2a2d3e">
-      <input id="dashItemSearchInput" type="text" placeholder="🔎  พิมพ์เพื่อค้นหา..."
-        oninput="renderDashItemSearch(this.value)"
-        style="width:100%;padding:10px 14px;background:#0f1120;border:1.5px solid #6366f1;border-radius:12px;color:#e2e8f0;font-size:14px;font-family:'Sarabun',sans-serif;outline:none;box-sizing:border-box">
-    </div>
-    <!-- Results List -->
-    <div id="dashItemSearchList" style="overflow-y:auto;flex:1;padding:4px 0"></div>
-    <!-- Cancel -->
-    <div style="padding:12px 16px;border-top:1px solid #2a2d3e">
-      <button onclick="closeDashItemSearch()" style="width:100%;padding:11px;background:#2a2d3e;color:#94a3b8;border:none;border-radius:12px;font-size:14px;font-family:'Sarabun',sans-serif;cursor:pointer">ยกเลิก</button>
-    </div>
-  </div>
-</div>
-
-<script>
-var _dashItemSearchRowId = null;
-
-function openDashItemSearch(n) {
-  _dashItemSearchRowId = n;
-  var modelVal = document.getElementById('imodel'+n) ? document.getElementById('imodel'+n).value : '';
-  document.getElementById('dashItemSearchInput').value = modelVal;
-  renderDashItemSearch(modelVal);
-  document.getElementById('dashItemSearchModal').style.display = 'flex';
-  setTimeout(function(){ document.getElementById('dashItemSearchInput').focus(); }, 100);
-}
-
-function closeDashItemSearch() {
-  document.getElementById('dashItemSearchModal').style.display = 'none';
-}
-
-function renderDashItemSearch(q) {
-  var bom = getActiveBOM();
-  var ql = (q || '').toLowerCase().trim();
-  var list = ql ? bom.filter(function(i) {
-    return i.model.toLowerCase().indexOf(ql) !== -1 ||
-           i.code.toLowerCase().indexOf(ql)  !== -1 ||
-           i.desc.toLowerCase().indexOf(ql)  !== -1;
-  }) : bom;
-
-  var html = list.slice(0, 100).map(function(i) {
-    var cs = (i.code  || '').replace(/'/g, "\\'");
-    var ms = (i.model || '').replace(/'/g, "\\'");
-    var ds = (i.desc  || '').replace(/'/g, "\\'");
-    var ts = (i.type  || '').replace(/'/g, "\\'");
-    return '<div onclick="selectDashItem(\'' + cs + '\',\'' + ms + '\',\'' + ds + '\',\'' + ts + '\')"'
-      + ' style="padding:10px 16px;border-bottom:1px solid #2a2d3e;cursor:pointer;transition:background .15s"'
-      + ' onmouseover="this.style.background=\'#2a2d3e\'" onmouseout="this.style.background=\'\'">'
-      + '<div style="font-weight:700;color:#a78bfa;font-size:13px">' + (i.code  || '-') + '</div>'
-      + '<div style="color:#e2e8f0;font-size:12px">'                  + (i.model || '-') + '</div>'
-      + '<div style="color:#94a3b8;font-size:11px">'                  + (i.desc  || '-') + '</div>'
-      + '</div>';
-  }).join('');
-
-  document.getElementById('dashItemSearchList').innerHTML =
-    html || '<div style="padding:24px;color:#94a3b8;text-align:center">ไม่พบรายการ</div>';
-}
-
-function selectDashItem(code, model, desc, type) {
-  var n = _dashItemSearchRowId;
-  if (n !== null) {
-    if (document.getElementById('icode'  + n)) document.getElementById('icode'  + n).value = code;
-    if (document.getElementById('imodel' + n)) document.getElementById('imodel' + n).value = model;
-    if (document.getElementById('idesc'  + n)) document.getElementById('idesc'  + n).value = desc;
-    if (document.getElementById('itype'  + n)) document.getElementById('itype'  + n).value = type;
-  }
-  closeDashItemSearch();
-}
-</script>
-
 </body>
-
 </html>
