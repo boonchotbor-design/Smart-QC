@@ -537,6 +537,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
         <div class="t-hdr" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
           <div class="c-title">📝 จัดการ BOM <span id="bomTitleCus" style="color:var(--primary);font-weight:900">AIS</span></div>
           <div style="display:flex; gap:8px;">
+            <button id="btnFetchBom" class="tbtn" style="background:var(--card2);color:var(--text);border-color:var(--border);" onclick="fetchBOMFromSheet()">📥 โหลดข้อมูล (Fetch)</button>
             <button id="btnSyncBom" class="tbtn" style="background:var(--blue);color:white;border-color:var(--blue);" onclick="syncBOMToSheet()">🔄 Sync To Sheet</button>
           <button class="tbtn g" onclick="addBomRow()">➕ เพิ่มรายการ (Add New)</button>
           </div>
@@ -5524,6 +5525,37 @@ function syncBOMToSheet() {
       alert('Network Error: ' + err.message);
     })
     .saveBOMData(curBomCustomer, bom);
+}
+
+function fetchBOMFromSheet() {
+  const btn = document.getElementById('btnFetchBom');
+  if(!btn) return;
+  const ogHtml = btn.innerHTML;
+  btn.innerHTML = '📥 กำลังโหลด...';
+  btn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(res => {
+      btn.innerHTML = ogHtml;
+      btn.disabled = false;
+      if (res && res.length) {
+        if(curBomCustomer === 'TRUE') {
+          BOM_TRUE = res;
+        } else {
+          BOM_AIS = res;
+        }
+        bomFilterAndRender();
+        toast('✅ โหลดข้อมูลล่าสุดจาก Google Sheet สำเร็จ', 'g');
+      } else {
+        alert('เกิดข้อผิดพลาดในการดึงข้อมูล หรือข้อมูลว่างเปล่า');
+      }
+    })
+    .withFailureHandler(err => {
+      btn.innerHTML = ogHtml;
+      btn.disabled = false;
+      alert('Network Error: ' + err.message);
+    })
+    .getBOMData(curBomCustomer);
 }
 
 function addBomRow() {
