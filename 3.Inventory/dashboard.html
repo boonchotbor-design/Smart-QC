@@ -23,6 +23,10 @@ body.light-mode .c-title{color:#181b26}
 body.light-mode .k-lbl{color:#555e6c}
 body.light-mode .ai-m{color:#555e6c}
 body.light-mode .ai-t{color:#555e6c}
+/* Dark Gray Mode */
+body.gray-mode{--dark:#202124;--card:#292a2d;--card2:#35363a;--border:rgba(255,255,255,0.1);--text:#e8eaed;--muted:#9aa0a6}
+/* Colorful Mode */
+body.color-mode{--dark:#1a0b2e;--card:#2b124c;--card2:#3c1874;--border:rgba(255,255,255,0.15);--text:#f4eeff;--muted:#b5a0e5}
 body{font-family:'Sarabun',sans-serif;background:var(--dark);color:var(--text);display:flex;min-height:100vh;overflow-x:hidden;transition:background 0.3s, color 0.3s;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-weight:400;letter-spacing:0.01em}
 .tbtn, .mc, .tc, .cc, .ac, .kc, .ni, #sb, .topbar { transition: background 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s; }
 /* Sidebar */
@@ -679,6 +683,20 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
       </div>
       <!-- Bill No. -->
       <div class="frow full">
+        <div class="fg">
+          <label class="fl req" style="color:var(--red);">BILL NO.</label>
+          <div style="display:flex; gap:6px;">
+            <input class="fi" id="m-bill" placeholder="เลขที่บิล" onkeydown="if(event.key==='Enter')searchByBill()">
+            <button class="fbtn-scan" onclick="searchByBill()">🔍 Scan/ค้นหา</button>
+          </div>
+        </div>
+      </div>
+      <button class="fbtn-srch" onclick="searchByBill()" style="margin-bottom:12px;">🔵 ค้นหาข้อมูลเดิมจาก Bill No.</button>
+
+      <!-- DUID -->
+      <div class="frow full">
+        <div class="fg">
+          <label class="fl req" style="color:var(--red);">DUID (MANDATORY)</label>
           <div class="ac-wrap">
             <input class="fi err" id="m-duid" placeholder="ค้นหาหรือกรอก DUID" oninput="liveSearchField('duid')" onblur="autoFillFromDUID()" onkeydown="if(event.key==='Enter')searchByDuid()">
             <div class="ac-drop" id="duid-drop"></div>
@@ -6964,24 +6982,33 @@ function doExport() {
   a.click();
 }
 
+const THEMES = ['dark', 'light', 'gray', 'color'];
+const THEME_ICONS = { 'dark': '☀️', 'light': '🌙', 'gray': '🌚', 'color': '🌈' };
+const THEME_LABELS = { 'dark': 'สลับโหมด (Dark)', 'light': 'สลับโหมด (Light)', 'gray': 'สลับโหมด (Gray)', 'color': 'สลับโหมด (Color)' };
+
 function toggleLightMode() {
-  document.body.classList.toggle('light-mode');
+  let cur = localStorage.getItem('inv_theme') || 'dark';
+  let idx = THEMES.indexOf(cur);
+  if (idx === -1) idx = 0;
+  let next = THEMES[(idx + 1) % THEMES.length];
+  setTheme(next);
+}
+
+function setTheme(theme) {
+  document.body.classList.remove('light-mode', 'gray-mode', 'color-mode');
+  if (theme !== 'dark') document.body.classList.add(theme + '-mode');
+  localStorage.setItem('inv_theme', theme);
   const btn = document.getElementById('lightModeBtn');
-  if (document.body.classList.contains('light-mode')) {
-    localStorage.setItem('inv_theme', 'light');
-    btn.textContent = '🌙';
-  } else {
-    localStorage.setItem('inv_theme', 'dark');
-    btn.textContent = '☀️';
+  if (btn) {
+    btn.textContent = THEME_ICONS[theme] || '☀️';
+    btn.title = THEME_LABELS[theme] || 'สลับโหมด';
   }
 }
 
 // Load theme on startup
 window.addEventListener('DOMContentLoaded', () => {
-  if (localStorage.getItem('inv_theme') === 'light') {
-    document.body.classList.add('light-mode');
-    document.getElementById('lightModeBtn').textContent = '🌙';
-  }
+  let cur = localStorage.getItem('inv_theme') || 'dark';
+  setTheme(cur);
 });
 
 function logoutUser() {
