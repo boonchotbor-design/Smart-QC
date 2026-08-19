@@ -6779,7 +6779,9 @@ function recalculateAllStatusJS() {
     // Group by Region + Item Code (ไม่รวม QTY ใน key เพราะ sum qty ต่อ group)
     const groupMap = {};
     records.forEach(r => {
-      const key = (r.region||'').toUpperCase() + '|' + (r.code||'').trim();
+      const rawCode = (r.code||'').trim().toLowerCase();
+      const normCode = rawCode.replace(/^lth/, '').replace(/-[a-z]$/, '');
+      const key = (r.region||'').toUpperCase() + '|' + normCode;
       if(!groupMap[key]) groupMap[key] = {
         hasIN:false, hasOUT:false,
         hasStrIn:false, hasStrOut:false,

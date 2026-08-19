@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.6.8.1)
+# 📦 Inventory Smart System (V.6.8.2)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI) and Telegram Bot with AI OCR capabilities.
 
@@ -35,6 +35,10 @@ Project Context: A Google Apps Script application for managing hardware inventor
 ### 🐞 Bug Fixing
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
+
+## 🐞 Bug Fixes & Stability (V.6.8.2)
+- **Status Calculation Fix**: Normalized `Item Code` (removed `LTH` prefix and `-N`/`-D` suffixes) in `computeDuidStatus` inside `code.gs`. This ensures that IN and OUT records balance correctly even if the Item Code was recorded slightly differently (e.g., `LTH25033335-N` vs `25033335`).
+- **Version Sync**: Synchronized all versions to V.6.8.2.
 
 ## 🐞 Bug Fixes & Stability (V.6.8.1)
 - **Telegram Group Notification**: Updated default Telegram Destination ID to `-5188878406` (Inventory-Recode Group) to ensure notifications are routed correctly to the group instead of the user's personal ID.

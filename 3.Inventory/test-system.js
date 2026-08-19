@@ -1,5 +1,5 @@
 /**
- * 🧪 Test System V.6.8.1
+ * 🧪 Test System V.6.8.2
  * สคริปต์สำหรับทดสอบระบบแจ้งเตือนและการค้นหา (LINE & Telegram)
  * วิธีใช้งาน:
  * 1. ติดตั้ง axios: npm install axios

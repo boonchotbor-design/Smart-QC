@@ -1046,7 +1046,10 @@ function computeDuidStatus(data, idx, target) {
     var qty   = Number(data[i][idx.qty])  || 0;
     var model = String(idx.model !== undefined ? (data[i][idx.model] || "") : "").trim().toLowerCase();
     var code  = String(idx.code  !== undefined ? (data[i][idx.code]  || "") : "").trim().toLowerCase();
-    var groupKey = model + "|" + code;
+    
+    // V.7.3.1: Normalize code to handle differences like 'LTH25033335-N' vs '25033335'
+    var normCode = code.replace(/^lth/, '').replace(/-[a-z]$/, '');
+    var groupKey = model + "|" + normCode;
 
     if (!groups[groupKey]) {
       groups[groupKey] = {
