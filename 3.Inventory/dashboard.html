@@ -6776,12 +6776,14 @@ function recalculateAllStatusJS() {
     const records = duidMap[d];
     if(!records.length) return;
 
-    // Group by Region + Item Code (ไม่รวม QTY ใน key เพราะ sum qty ต่อ group)
+    // Group by Model + Item Code (ไม่รวม QTY ใน key เพราะ sum qty ต่อ group)
     const groupMap = {};
     records.forEach(r => {
+      const model = (r.model||'').trim().toLowerCase();
       const rawCode = (r.code||'').trim().toLowerCase();
       const normCode = rawCode.replace(/^lth/, '').replace(/-[a-z]$/, '');
-      const key = (r.region||'').toUpperCase() + '|' + normCode;
+      const key = model + '|' + normCode;
+      
       if(!groupMap[key]) groupMap[key] = {
         hasIN:false, hasOUT:false,
         hasStrIn:false, hasStrOut:false,
@@ -6791,7 +6793,7 @@ function recalculateAllStatusJS() {
         disQty:0, retQty:0
       };
       const g = groupMap[key];
-      const t = (r.type||'').toUpperCase();
+      const t = (r.type||'').trim().toUpperCase();
       const q = parseInt(r.qty)||0;
       if     (t==='IN')        { g.inQty    +=q; g.hasIN    =true; }
       else if(t==='OUT')       { g.outQty   +=q; g.hasOUT   =true; }
