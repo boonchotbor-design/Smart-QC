@@ -1,5 +1,5 @@
-/*
- * 🚀 Inventory Smart System - V.7.3.0
+﻿/*
+ * Inventory Smart System - V.7.4.1
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
@@ -943,6 +943,7 @@ function getDuidStatus(duid, customer) {
     var h   = data[0].map(function(v) { return String(v || "").toUpperCase(); });
     var idx = {
       duid:   Math.max(h.indexOf("DUID"), 1),
+      region: Math.max(h.indexOf("REGION"), 2),
       type:   Math.max(h.indexOf("IN/OUT"), 3),
       model:  Math.max(h.indexOf("MODEL"), 7),
       code:   Math.max(h.indexOf("ITEM CODE"), 8),
@@ -995,6 +996,7 @@ function updateDuidStatus(duid, customer) {
     var h    = data[0].map(function(v) { return String(v || "").toUpperCase(); });
     var idx  = {
       duid:   Math.max(h.indexOf("DUID"), 1),
+      region: Math.max(h.indexOf("REGION"), 2),
       type:   Math.max(h.indexOf("IN/OUT"), 3),
       model:  Math.max(h.indexOf("MODEL"), 7),
       code:   Math.max(h.indexOf("ITEM CODE"), 8),
@@ -1042,14 +1044,14 @@ function computeDuidStatus(data, idx, target) {
     matchingRows.push(i + 1);
     hasAnyData = true;
 
-    var type  = String(data[i][idx.type]  || "").toUpperCase().trim();
-    var qty   = Number(data[i][idx.qty])  || 0;
-    var model = String(idx.model !== undefined ? (data[i][idx.model] || "") : "").trim().toLowerCase();
-    var code  = String(idx.code  !== undefined ? (data[i][idx.code]  || "") : "").trim().toLowerCase();
+    var type   = String(data[i][idx.type]  || "").toUpperCase().trim();
+    var qty    = Number(data[i][idx.qty])  || 0;
+    var region = String(idx.region !== undefined ? (data[i][idx.region] || "") : "").trim().toLowerCase();
+    var code   = String(idx.code  !== undefined ? (data[i][idx.code]  || "") : "").trim().toLowerCase();
     
-    // V.7.3.1: Normalize code to handle differences like 'LTH25033335-N' vs '25033335'
-    var normCode = code.replace(/^lth/, '').replace(/-[a-z]$/, '');
-    var groupKey = model + "|" + normCode;
+    // V.7.4.1: Grouping Key: Region + Item Code
+    var normCode = code.replace(/^lth/, "").replace(/-[a-z]$/, "");
+    var groupKey = region + "|" + normCode;
 
     if (!groups[groupKey]) {
       groups[groupKey] = {
@@ -1129,6 +1131,7 @@ function recalculateAllDuidStatuses() {
     var h   = data[0].map(function(v) { return String(v || "").toUpperCase(); });
     var idx = {
       duid:   Math.max(h.indexOf("DUID"), 1),
+      region: Math.max(h.indexOf("REGION"), 2),
       type:   Math.max(h.indexOf("IN/OUT"), 3),
       model:  Math.max(h.indexOf("MODEL"), 7),
       code:   Math.max(h.indexOf("ITEM CODE"), 8),

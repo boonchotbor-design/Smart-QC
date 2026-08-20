@@ -6776,13 +6776,13 @@ function recalculateAllStatusJS() {
     const records = duidMap[d];
     if(!records.length) return;
 
-    // Group by Model + Item Code (ไม่รวม QTY ใน key เพราะ sum qty ต่อ group)
+    // Group by Region + Item Code (ไม่รวม QTY ใน key เพราะ sum qty ต่อ group)
     const groupMap = {};
     records.forEach(r => {
-      const model = (r.model||'').trim().toLowerCase();
+      const region = (r.region||'').trim().toLowerCase();
       const rawCode = (r.code||'').trim().toLowerCase();
       const normCode = rawCode.replace(/^lth/, '').replace(/-[a-z]$/, '');
-      const key = model + '|' + normCode;
+      const key = region + '|' + normCode;
       
       if(!groupMap[key]) groupMap[key] = {
         hasIN:false, hasOUT:false,
