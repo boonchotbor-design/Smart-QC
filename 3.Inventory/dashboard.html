@@ -6261,7 +6261,7 @@ function submitM(){
           showToast(`✅ บันทึกสำเร็จ! ${curAction} · ${duid} · ${gasItems.length} รายการ`,'ok');
           // Sync ข้อมูลล่าสุดจาก GAS
           google.script.run.withSuccessHandler(function(data){
-            if(data && data.success){ TX=data.recent||TX; refreshDash(TX); }
+            if(data && data.success){ TX=data.recent||TX; recalculateAllStatusJS(); refreshDash(TX); }
           }).getDashboardData();
         } else {
           showToast('❌ บันทึกไม่สำเร็จ: '+(res&&res.message||'Unknown Error'),'err');
@@ -6762,7 +6762,7 @@ function syncFromGAS(){
 //   IN  ↔ OUT         → ทั้งคู่ต้องมี และ QTY เท่ากัน
 //   STR/IN ↔ STR/OUT  → ทั้งคู่ต้องมี และ QTY เท่ากัน
 //   DISMANTLE ↔ RETURN → ทั้งคู่ต้องมี และ QTY เท่ากัน
-// Grouping Key: DUID + Region + Item Code + QTY
+// Grouping Key: Region + Item Code (V.7.4.1)
 function recalculateAllStatusJS() {
   const duidMap = {};
   TX.forEach(r => {
@@ -6776,12 +6776,12 @@ function recalculateAllStatusJS() {
     const records = duidMap[d];
     if(!records.length) return;
 
-    // Group by Region + Item Code (ไม่รวม QTY ใน key เพราะ sum qty ต่อ group)
+    // Group by Region + Item Code (V.7.4.1)
     const groupMap = {};
     records.forEach(r => {
       const region = (r.region||'').trim().toLowerCase();
       const rawCode = (r.code||'').trim().toLowerCase();
-      const normCode = rawCode.replace(/^lth/, '').replace(/-[a-z]$/, '');
+      const normCode = rawCode.replace(/^lth/, '').replace(/-[a-z]$/i, '');
       const key = region + '|' + normCode;
       
       if(!groupMap[key]) groupMap[key] = {
@@ -6804,23 +6804,26 @@ function recalculateAllStatusJS() {
     });
 
     let allClosed = true;
+    const unbalanced = [];
     for(let key in groupMap){
       const g = groupMap[key];
       // คู่ IN↔OUT: ถ้ามีฝั่งใดฝั่งหนึ่ง ต้องมีทั้งคู่และ QTY เท่ากัน
       if(g.hasIN || g.hasOUT){
-        if(!(g.hasIN && g.hasOUT && g.inQty === g.outQty)){ allClosed=false; break; }
+        if(!(g.hasIN && g.hasOUT && g.inQty === g.outQty)){ allClosed=false; unbalanced.push('IN/OUT:'+key+' in='+g.inQty+' out='+g.outQty); }
       }
       // คู่ STR/IN↔STR/OUT
       if(g.hasStrIn || g.hasStrOut){
-        if(!(g.hasStrIn && g.hasStrOut && g.strInQty === g.strOutQty)){ allClosed=false; break; }
+        if(!(g.hasStrIn && g.hasStrOut && g.strInQty === g.strOutQty)){ allClosed=false; unbalanced.push('STR:'+key); }
       }
       // คู่ DISMANTLE↔RETURN
       if(g.hasDis || g.hasRet){
-        if(!(g.hasDis && g.hasRet && g.disQty === g.retQty)){ allClosed=false; break; }
+        if(!(g.hasDis && g.hasRet && g.disQty === g.retQty)){ allClosed=false; unbalanced.push('DIS/RET:'+key+' dis='+g.disQty+' ret='+g.retQty); }
       }
     }
 
     const finalStatus = allClosed ? 'Closed' : 'On Process';
+    // DEBUG: แสดง DUID ที่ยังไม่ Closed พร้อมสาเหตุ
+    if(!allClosed && unbalanced.length) console.log('[STATUS DEBUG] DUID='+d+' → '+finalStatus+' | Unbalanced: '+unbalanced.join(', '));
     records.forEach(r => r.status = finalStatus);
   });
 }
