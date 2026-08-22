@@ -6741,6 +6741,7 @@ function syncFromGAS(){
     TX=data.recent||[];
     recalculateAllStatusJS();
     refreshDash(TX);
+
     // ✅ FIX: อัปเดตวันที่ใน header ทุกครั้งที่ Sync
     var pgSubEl = document.getElementById('pgSub');
     if(pgSubEl){
@@ -6748,6 +6749,20 @@ function syncFromGAS(){
       pgSubEl.textContent='วันที่ '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
     }
     showImportBar(`🔗 GAS Live: ${TX.length} รายการ | อัปเดต: ${new Date().toLocaleTimeString('th-TH')}`);
+
+    // ✅ V.7.4.3: Push status ที่ recalculate แล้วกลับไป save ใน Sheet
+    // สร้าง map: { duid: { customer, rows:[{rowIndex, status}] } }
+    const statusUpdates = {};
+    TX.forEach((r, i) => {
+      if(!r.duid) return;
+      const key = r.duid.toUpperCase() + '|' + (r.customer||'AIS').toUpperCase();
+      if(!statusUpdates[key]) statusUpdates[key] = { duid: r.duid, customer: (r.customer||'AIS').toUpperCase() };
+    });
+    // เรียก GAS ให้ recalculate ใน Sheet ด้วย logic ล่าสุด
+    google.script.run.withSuccessHandler(function(res){
+      if(res && res.msg) showImportBar(`🔗 GAS Live: ${TX.length} รายการ | อัปเดต: ${new Date().toLocaleTimeString('th-TH')} ✅ Status sync`);
+    }).recalculateAllDuidStatuses();
+
   }).getDashboardData();
   
   google.script.run.withSuccessHandler(function(data){

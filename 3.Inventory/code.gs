@@ -1007,19 +1007,18 @@ function updateDuidStatus(duid, customer) {
     var target = duid.trim();
     var result = computeDuidStatus(data, idx, target);
 
-    if (result.matchingRows.length > 0) {
+    // V.7.4.3: ใช้ rowStatusMap เขียน status แบบ per-row
+    if (Object.keys(result.rowStatusMap).length > 0) {
       var statusRange  = sheet.getRange(1, idx.status + 1, data.length, 1);
       var statusValues = statusRange.getValues();
-      result.matchingRows.forEach(function(r) {
-        if (statusValues[r - 1]) statusValues[r - 1][0] = result.status;
+      Object.keys(result.rowStatusMap).forEach(function(rowNum) {
+        var ri = parseInt(rowNum) - 1;
+        if (statusValues[ri]) statusValues[ri][0] = result.rowStatusMap[rowNum];
       });
       statusRange.setValues(statusValues);
     }
 
-    logToSheet("STATUS_UPDATE", "DUID: " + duid + " (" + customer + ") → " + result.status +
-      " | IN:" + result.inQty + " OUT:" + result.outQty +
-      " | STR/IN:" + result.strInQty + " STR/OUT:" + result.strOutQty +
-      " | DIS:" + result.dismantleQty + " RET:" + result.returnQty);
+    logToSheet("STATUS_UPDATE", "DUID: " + duid + " (" + customer + ") → " + result.overallStatus);
 
   } catch (e) {
     logToSheet("STATUS_ERROR", e.toString());
@@ -1169,7 +1168,7 @@ function recalculateAllDuidStatuses() {
   var msg = "Recalculate เสร็จสิ้น:\n" + summary.join("\n");
   logToSheet("RECALCULATE_ALL", msg);
   Logger.log(msg);
-  return msg;
+  return { success: true, msg: msg };
 }
 
 // ─────────────────────────────────────────────
