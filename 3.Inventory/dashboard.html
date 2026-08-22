@@ -5758,6 +5758,7 @@ function saveTx(idx) {
 function deleteTx(idx) {
   if(confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?')) {
     TX.splice(idx, 1);
+    recalculateAllStatusJS();
     applyF();
     refreshDash(TX);
   }
@@ -5776,6 +5777,7 @@ function addTx() {
   document.getElementById('txCus').value = 'ALL';
   document.getElementById('txReg').value = 'ALL';
   document.getElementById('txType').value = 'ALL';
+  recalculateAllStatusJS();
   applyF();
   refreshDash(TX);
 }
@@ -6776,13 +6778,12 @@ function recalculateAllStatusJS() {
     const records = duidMap[d];
     if(!records.length) return;
 
-    // Group by Region + Item Code (V.7.4.1)
+    // Group by Item Code only (V.7.4.2)
     const groupMap = {};
     records.forEach(r => {
-      const region = (r.region||'').trim().toLowerCase();
       const rawCode = (r.code||'').trim().toLowerCase();
       const normCode = rawCode.replace(/^lth/, '').replace(/-[a-z]$/i, '');
-      const key = region + '|' + normCode;
+      const key = normCode;
       
       if(!groupMap[key]) groupMap[key] = {
         hasIN:false, hasOUT:false,

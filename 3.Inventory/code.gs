@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Inventory Smart System - V.7.4.1
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
@@ -1049,9 +1049,9 @@ function computeDuidStatus(data, idx, target) {
     var region = String(idx.region !== undefined ? (data[i][idx.region] || "") : "").trim().toLowerCase();
     var code   = String(idx.code  !== undefined ? (data[i][idx.code]  || "") : "").trim().toLowerCase();
     
-    // V.7.4.1: Grouping Key: Region + Item Code
+    // V.7.4.2: Grouping Key: Item Code only (DUID + ITEM CODE)
     var normCode = code.replace(/^lth/, "").replace(/-[a-z]$/, "");
-    var groupKey = region + "|" + normCode;
+    var groupKey = normCode;
 
     if (!groups[groupKey]) {
       groups[groupKey] = {
