@@ -6763,8 +6763,9 @@ function syncFromGAS(){
 // กฎ: จับคู่ 3 คู่อิสระ ต่อ DUID
 //   IN  ↔ OUT         → ทั้งคู่ต้องมี และ QTY เท่ากัน
 //   STR/IN ↔ STR/OUT  → ทั้งคู่ต้องมี และ QTY เท่ากัน
-//   DISMANTLE ↔ RETURN → ทั้งคู่ต้องมี และ QTY เท่ากัน
-// Grouping Key: Region + Item Code (V.7.4.1)
+// V.7.4.3: Status แบบ Granular ระดับ Item Code Group
+// Closed = IN⇔OUT (และ/หรือ STR, DIS) ครบทั้งคู่ + QTY เท่ากัน
+// Open   = ยังไม่มีคู่ หรือ QTY ไม่เท่ากัน
 function recalculateAllStatusJS() {
   const duidMap = {};
   TX.forEach(r => {
@@ -6804,28 +6805,40 @@ function recalculateAllStatusJS() {
       else if(t==='RETURN')    { g.retQty   +=q; g.hasRet   =true; }
     });
 
-    let allClosed = true;
-    const unbalanced = [];
+    // Pass 2: คำนวณ status ของแต่ละ group
+    const groupStatus = {};
+    let overallClosed = true;
     for(let key in groupMap){
       const g = groupMap[key];
-      // คู่ IN↔OUT: ถ้ามีฝั่งใดฝั่งหนึ่ง ต้องมีทั้งคู่และ QTY เท่ากัน
+      let closed = true;
+      // IN⇔OUT: ถ้ามีฝั่งใดฝั่งหนึ่ง ต้องมีทั้งคู่ + QTY เท่ากัน
       if(g.hasIN || g.hasOUT){
-        if(!(g.hasIN && g.hasOUT && g.inQty === g.outQty)){ allClosed=false; unbalanced.push('IN/OUT:'+key+' in='+g.inQty+' out='+g.outQty); }
+        if(!(g.hasIN && g.hasOUT && g.inQty === g.outQty)) closed = false;
       }
-      // คู่ STR/IN↔STR/OUT
+      // STR/IN⇔STR/OUT
       if(g.hasStrIn || g.hasStrOut){
-        if(!(g.hasStrIn && g.hasStrOut && g.strInQty === g.strOutQty)){ allClosed=false; unbalanced.push('STR:'+key); }
+        if(!(g.hasStrIn && g.hasStrOut && g.strInQty === g.strOutQty)) closed = false;
       }
-      // คู่ DISMANTLE↔RETURN
+      // DISMANTLE⇔RETURN
       if(g.hasDis || g.hasRet){
-        if(!(g.hasDis && g.hasRet && g.disQty === g.retQty)){ allClosed=false; unbalanced.push('DIS/RET:'+key+' dis='+g.disQty+' ret='+g.retQty); }
+        if(!(g.hasDis && g.hasRet && g.disQty === g.retQty)) closed = false;
       }
+      groupStatus[key] = closed ? 'Closed' : 'Open';
+      if(!closed) overallClosed = false;
     }
 
-    const finalStatus = allClosed ? 'Closed' : 'On Process';
-    // DEBUG: แสดง DUID ที่ยังไม่ Closed พร้อมสาเหตุ
-    if(!allClosed && unbalanced.length) console.log('[STATUS DEBUG] DUID='+d+' → '+finalStatus+' | Unbalanced: '+unbalanced.join(', '));
-    records.forEach(r => r.status = finalStatus);
+    // Pass 3: เขียน status ลงทุก record ตาม group ของมัน
+    records.forEach(r => {
+      const rawCode = (r.code||'').trim().toLowerCase();
+      const normCode = rawCode.replace(/^lth/, '').replace(/-[a-z]$/i, '') || '__unknown__';
+      r.status = groupStatus[normCode] || 'Open';
+    });
+
+    // DEBUG: log DUID ที่ยังไม่ Closed ทั้งหมด
+    if(!overallClosed) {
+      const openGroups = Object.keys(groupStatus).filter(k => groupStatus[k]==='Open');
+      console.log('[STATUS DEBUG] DUID='+d+' → On Process | Open groups: '+openGroups.join(', '));
+    }
   });
 }
 

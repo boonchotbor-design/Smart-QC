@@ -1031,27 +1031,29 @@ function updateDuidStatus(duid, customer) {
  * V.7.3.0: จับคู่ตาม Model + Item Code (แต่ละ item group อิสระจากกัน)
  * กฎ: IN↔OUT, STR/IN↔STR/OUT, DISMANTLE↔RETURN ต้องมีทั้งคู่ และ qty เท่ากัน
  */
+// V.7.4.3: computeDuidStatus — คืน rowStatusMap (rowIndex → 'Closed'|'Open'|'Pending')
+// แทนที่จะเป็น status เดียวต่อ DUID ตอนนี้แต่ละแถวได้ Status ตาม Item Code Group ของตัวเอง
 function computeDuidStatus(data, idx, target) {
   var targetLower  = target.trim().toLowerCase();
   var matchingRows = [];
   var hasAnyData   = false;
 
-  // V.7.3.0: Group by "model|itemcode" — จับคู่ Balance แยกตามรายการสินค้า
-  var groups = {};
+  // Pass 1: สร้าง groups ตาม Item Code
+  var groups = {};           // groupKey → balance counters
+  var rowGroupKeys = {};    // rowIndex (1-based) → groupKey
 
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][idx.duid] || "").trim().toLowerCase() !== targetLower) continue;
-    matchingRows.push(i + 1);
+    var rowNum = i + 1;
+    matchingRows.push(rowNum);
     hasAnyData = true;
 
-    var type   = String(data[i][idx.type]  || "").toUpperCase().trim();
-    var qty    = Number(data[i][idx.qty])  || 0;
-    var region = String(idx.region !== undefined ? (data[i][idx.region] || "") : "").trim().toLowerCase();
-    var code   = String(idx.code  !== undefined ? (data[i][idx.code]  || "") : "").trim().toLowerCase();
-    
-    // V.7.4.2: Grouping Key: Item Code only (DUID + ITEM CODE)
+    var type = String(data[i][idx.type] || "").toUpperCase().trim();
+    var qty  = Number(data[i][idx.qty]) || 0;
+    var code = String(idx.code !== undefined ? (data[i][idx.code] || "") : "").trim().toLowerCase();
     var normCode = code.replace(/^lth/, "").replace(/-[a-z]$/, "");
-    var groupKey = normCode;
+    var groupKey = normCode || "__unknown__";
+    rowGroupKeys[rowNum] = groupKey;
 
     if (!groups[groupKey]) {
       groups[groupKey] = {
@@ -1063,7 +1065,6 @@ function computeDuidStatus(data, idx, target) {
         dismantleQty: 0, returnQty: 0
       };
     }
-
     var g = groups[groupKey];
     if      (type === "IN")        { g.inQty        += qty; g.hasIn        = true; }
     else if (type === "OUT")       { g.outQty       += qty; g.hasOut       = true; }
@@ -1073,38 +1074,36 @@ function computeDuidStatus(data, idx, target) {
     else if (type === "RETURN")    { g.returnQty    += qty; g.hasReturn    = true; }
   }
 
-  var status;
-  var inQty = 0, outQty = 0, strInQty = 0, strOutQty = 0, dismantleQty = 0, returnQty = 0;
-
   if (!hasAnyData) {
-    status = "Pending";
-  } else {
-    var allGroupsBalanced = true;
-    var gKeys = Object.keys(groups);
-
-    for (var k = 0; k < gKeys.length; k++) {
-      var g = groups[gKeys[k]];
-      // รวม totals สำหรับ logging
-      inQty        += g.inQty;        outQty       += g.outQty;
-      strInQty     += g.strInQty;     strOutQty    += g.strOutQty;
-      dismantleQty += g.dismantleQty; returnQty    += g.returnQty;
-
-      // ตรวจ balance ของ group นี้ (Model+Code เดียวกัน)
-      var inOutBalanced  = (!g.hasIn  && !g.hasOut)     || (g.hasIn  && g.hasOut  && g.inQty  === g.outQty);
-      var strBalanced    = (!g.hasStrIn && !g.hasStrOut) || (g.hasStrIn && g.hasStrOut && g.strInQty === g.strOutQty);
-      var disRetBalanced = (!g.hasDismantle && !g.hasReturn) || (g.hasDismantle && g.hasReturn && g.dismantleQty === g.returnQty);
-
-      if (!(inOutBalanced && strBalanced && disRetBalanced)) allGroupsBalanced = false;
-    }
-
-    status = allGroupsBalanced ? "Closed" : "On Process";
+    return { rowStatusMap: {}, matchingRows: [], overallStatus: "Pending" };
   }
 
+  // Pass 2: คำนวณ status ของแต่ละ group
+  var groupStatusMap = {};
+  var allClosed = true;
+  var gKeys = Object.keys(groups);
+  for (var k = 0; k < gKeys.length; k++) {
+    var gk = gKeys[k];
+    var g  = groups[gk];
+    var inOutOk  = (!g.hasIn  && !g.hasOut)       || (g.hasIn  && g.hasOut  && g.inQty  === g.outQty);
+    var strOk    = (!g.hasStrIn && !g.hasStrOut)   || (g.hasStrIn && g.hasStrOut && g.strInQty === g.strOutQty);
+    var disRetOk = (!g.hasDismantle && !g.hasReturn) || (g.hasDismantle && g.hasReturn && g.dismantleQty === g.returnQty);
+    var balanced = inOutOk && strOk && disRetOk;
+    groupStatusMap[gk] = balanced ? "Closed" : "Open";
+    if (!balanced) allClosed = false;
+  }
+
+  // Pass 3: แมป rowIndex → status ตาม group ของมัน
+  var rowStatusMap = {};
+  matchingRows.forEach(function(r) {
+    var gk = rowGroupKeys[r] || "__unknown__";
+    rowStatusMap[r] = groupStatusMap[gk] || "Open";
+  });
+
   return {
-    status: status, matchingRows: matchingRows,
-    inQty: inQty, outQty: outQty,
-    strInQty: strInQty, strOutQty: strOutQty,
-    dismantleQty: dismantleQty, returnQty: returnQty
+    rowStatusMap: rowStatusMap,
+    matchingRows: matchingRows,
+    overallStatus: allClosed ? "Closed" : "On Process"
   };
 }
 
@@ -1152,10 +1151,12 @@ function recalculateAllDuidStatuses() {
 
     Object.keys(duidSet).forEach(function(duid) {
       var result = computeDuidStatus(data, idx, duid);
-      result.matchingRows.forEach(function(r) {
-        var oldVal = statusValues[r - 1][0];
-        if (oldVal !== result.status) {
-          statusValues[r - 1][0] = result.status;
+      // V.7.4.3: เขียน status แบบ per-row ตาม rowStatusMap
+      Object.keys(result.rowStatusMap).forEach(function(rowNum) {
+        var ri = parseInt(rowNum) - 1;
+        var newStatus = result.rowStatusMap[rowNum];
+        if (statusValues[ri][0] !== newStatus) {
+          statusValues[ri][0] = newStatus;
           changedCount++;
         }
       });
