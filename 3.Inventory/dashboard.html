@@ -342,17 +342,25 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
     <!-- TAB: RESET -->
     <div id="tabReset" style="display:none">
       <label class="login-label">📧 Email ที่ใช้ลงทะเบียน *</label>
-      <input type="email" id="resetEmail" class="login-input" style="margin-top:4px" placeholder="กรอก Email ของคุณ" oninput="clearAlert('resetAlert')">
-      
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <input type="email" id="resetEmail" class="login-input" style="margin-top:0" placeholder="กรอก Email ของคุณ" oninput="clearAlert('resetAlert')">
+        <button class="btn-login" id="btnRequestOtp" onclick="requestOtp()" style="margin-top:0;width:auto;padding:0 14px;font-size:12px;white-space:nowrap;border-radius:10px;height:45px;">ขอ OTP</button>
+      </div>
+
+      <div id="otpInputGroup" style="display:none;margin-top:10px;">
+        <label class="login-label" style="margin-top:0;color:#0d6efd;">🔑 กรอกรหัส OTP 6 หลัก *</label>
+        <input type="text" id="resetOtp" class="login-input" style="margin-top:4px;font-size:18px;font-weight:700;text-align:center;letter-spacing:6px;" placeholder="XXXXXX" maxlength="6">
+      </div>
+
       <label class="login-label">🔒 ตั้ง Password ใหม่ *</label>
-      <div class="pw-wrap">
+      <div class="pw-wrap" style="margin-top:4px;">
         <input type="password" id="resetPassword" class="login-input" placeholder="อย่างน้อย 6 ตัวอักษร">
         <span class="pw-toggle" onclick="togglePw('resetPassword',this)">👁️</span>
       </div>
-      
+
       <div id="resetAlert" class="login-alert"></div>
-      <button class="btn-login" id="btnDoReset" onclick="doReset()">🔄 รีเซ็ตรหัสผ่าน</button>
-      
+      <button class="btn-login" id="btnDoReset" onclick="doReset()" style="margin-top:15px;" disabled>🔄 ยืนยันและรีเซ็ตรหัสผ่าน</button>
+
       <div style="text-align:center;margin-top:10px;font-size:12px;color:#888">
         จำรหัสได้แล้ว? <a href="#" onclick="switchLoginTab('login');return false;" style="color:#0d6efd;font-weight:700">เข้าสู่ระบบ</a>
       </div>
@@ -6560,19 +6568,17 @@ function loadUsersFromServer(cb){
 }
 
 function loadCurrentUser(){
-  loadUsersFromServer(function(users){
-    const savedEmail=safeGetItem('inv_user_email')||'';
-    const savedName =safeGetItem('inv_user_name') ||'';
-    if(savedEmail&&savedName&&users[savedEmail]){
-      currentUserEmail=savedEmail;
-      currentUserName=savedName;
-      updateSbUser();
-    } else {
-      safeRemoveItem('inv_user_email');
-      safeRemoveItem('inv_user_name');
-      showLoginModal('login');
-    }
-  });
+  const savedEmail=safeGetItem('inv_user_email')||'';
+  const savedName =safeGetItem('inv_user_name') ||'';
+  if(savedEmail&&savedName){
+    currentUserEmail=savedEmail;
+    currentUserName=savedName;
+    updateSbUser();
+  } else {
+    safeRemoveItem('inv_user_email');
+    safeRemoveItem('inv_user_name');
+    showLoginModal('login');
+  }
 }
 
 function updateSbUser(){
@@ -6594,8 +6600,12 @@ function showLoginModal(tab){
   if(document.getElementById('pwStrengthBar'))document.getElementById('pwStrengthBar').style.width='0%';
   if(document.getElementById('pwStrengthText')){document.getElementById('pwStrengthText').innerText='— ความปลอดภัย Password —';document.getElementById('pwStrengthText').style.color='#aaa';}
   clearAlert('registerAlert');
+  // Reset OTP fields
   if(document.getElementById('resetEmail'))document.getElementById('resetEmail').value='';
+  if(document.getElementById('resetOtp'))document.getElementById('resetOtp').value='';
   if(document.getElementById('resetPassword'))document.getElementById('resetPassword').value='';
+  if(document.getElementById('otpInputGroup'))document.getElementById('otpInputGroup').style.display='none';
+  if(document.getElementById('btnDoReset'))document.getElementById('btnDoReset').disabled=true;
   clearAlert('resetAlert');
   switchLoginTab(tab||'login');
 }
@@ -6618,27 +6628,39 @@ function togglePw(inputId,btn){const inp=document.getElementById(inputId);if(inp
 function onRegEmailChange(){const sel=document.getElementById('regEmailSelect').value;document.getElementById('regCustomEmailWrap').style.display=(sel==='__new__')?'block':'none';}
 function checkPwStrength(pw){const bar=document.getElementById('pwStrengthBar'),txt=document.getElementById('pwStrengthText');let score=0;if(pw.length>=6)score++;if(pw.length>=10)score++;if(/[A-Z]/.test(pw))score++;if(/[0-9]/.test(pw))score++;if(/[^A-Za-z0-9]/.test(pw))score++;const levels=[{pct:'0%',color:'#e0e0e0',label:'— ความปลอดภัย Password —',txtColor:'#aaa'},{pct:'25%',color:'#e74c3c',label:'🔴 อ่อนแอมาก',txtColor:'#e74c3c'},{pct:'45%',color:'#e67e22',label:'🟠 อ่อน',txtColor:'#e67e22'},{pct:'65%',color:'#f1c40f',label:'🟡 ปานกลาง',txtColor:'#b8860b'},{pct:'85%',color:'#2ecc71',label:'🟢 แข็งแกร่ง',txtColor:'#1a7f40'},{pct:'100%',color:'#0d6efd',label:'💪 แข็งแกร่งมาก',txtColor:'#0043a8'}];const lv=levels[Math.min(score,5)];if(bar){bar.style.width=pw.length===0?'0%':lv.pct;bar.style.background=lv.color;}if(txt){txt.innerText=lv.label;txt.style.color=lv.txtColor;}}
 
+// ── DO LOGIN V.7.4.0 (Server-side verify)
 async function doLogin(){
   clearAlert('loginAlert');
-  const email=(document.getElementById('loginEmail').value||'').trim();
+  const email=(document.getElementById('loginEmail').value||'').trim().toLowerCase();
   const pw=(document.getElementById('loginPassword').value||'');
-  if(!email){showAlert('loginAlert','⚠️ กรุณาเลือก Email ก่อน');return;}
+  if(!email){showAlert('loginAlert','⚠️ กรุณากรอก Email ก่อน');return;}
   if(!pw){showAlert('loginAlert','⚠️ กรุณากรอก Password');return;}
-  const btn=document.getElementById('btnDoLogin');btn.disabled=true;btn.innerText='⏳ กำลังตรวจสอบข้อมูลเซิร์ฟเวอร์...';
-  loadUsersFromServer(async function(users){
-    if(!users[email]){showAlert('loginAlert','❌ Email นี้ยังไม่มีบัญชี กรุณาลงทะเบียนก่อน');btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';setTimeout(()=>switchLoginTab('register'),1500);return;}
-    const hashed=await sha256(pw);
-    if(hashed!==users[email].hash){showAlert('loginAlert','❌ Password ไม่ถูกต้อง กรุณาลองใหม่');btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';document.getElementById('loginPassword').value='';return;}
-    currentUserEmail=email;currentUserName=users[email].name;
-    safeSetItem('inv_user_email',currentUserEmail);
-    safeSetItem('inv_user_name',currentUserName);
-    document.getElementById('loginModal').classList.remove('show');
-    btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';
-    updateSbUser();
-    showToast('✅ ยินดีต้อนรับ '+currentUserName,'ok');
-  });
+  const btn=document.getElementById('btnDoLogin');btn.disabled=true;btn.innerText='⏳ กำลังตรวจสอบ...';
+  const hashed=await sha256(pw);
+  google.script.run
+    .withSuccessHandler(function(res){
+      btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';
+      if(!res.success){
+        showAlert('loginAlert',res.message||'❌ เกิดข้อผิดพลาด');
+        document.getElementById('loginPassword').value='';
+        if(res.message&&res.message.indexOf('ลงทะเบียน')>-1)setTimeout(()=>switchLoginTab('register'),1800);
+        return;
+      }
+      currentUserEmail=email;currentUserName=res.name||email;
+      safeSetItem('inv_user_email',currentUserEmail);
+      safeSetItem('inv_user_name',currentUserName);
+      document.getElementById('loginModal').classList.remove('show');
+      updateSbUser();
+      showToast('✅ ยินดีต้อนรับ '+currentUserName,'ok');
+    })
+    .withFailureHandler(function(err){
+      btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';
+      showAlert('loginAlert','❌ ไม่สามารถเชื่อมต่อ Server: '+(err.message||err));
+    })
+    .loginUserOnServer(email,hashed);
 }
 
+// ── DO REGISTER V.7.4.0 (Server-side save)
 async function doRegister(){
   clearAlert('registerAlert');
   const firstName=(document.getElementById('regFirstName').value||'').trim();
@@ -6652,42 +6674,90 @@ async function doRegister(){
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showAlert('registerAlert','⚠️ รูปแบบ Email ไม่ถูกต้อง');return;}
   if(pw.length<6){showAlert('registerAlert','⚠️ Password ต้องมีอย่างน้อย 6 ตัวอักษร');return;}
   if(pw!==pwConf){showAlert('registerAlert','❌ Password ไม่ตรงกัน กรุณาลองใหม่');return;}
-  const btn=document.getElementById('btnDoRegister');btn.disabled=true;btn.innerText='⏳ กำลังตรวจสอบข้อมูลเซิร์ฟเวอร์...';
-  loadUsersFromServer(async function(users){
-    if(users[email]){showAlert('registerAlert','⚠️ Email นี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบ');btn.disabled=false;btn.innerText='📝 ลงทะเบียน & เข้าสู่ระบบ';setTimeout(()=>switchLoginTab('login'),1500);return;}
-    const hashed=await sha256(pw);
-    const fullName=firstName+' '+lastName;
-    users[email]={name:fullName,hash:hashed,createdAt:new Date().toISOString()};
-    saveLocalUsers(users); // saves to Drive if GAS
-    currentUserEmail=email;currentUserName=fullName;
-    safeSetItem('inv_user_email',currentUserEmail);
-    safeSetItem('inv_user_name',currentUserName);
-    document.getElementById('loginModal').classList.remove('show');
-    btn.disabled=false;btn.innerText='📝 ลงทะเบียน & เข้าสู่ระบบ';
-    updateSbUser();
-    showToast('✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ '+fullName,'ok');
-  });
+  const btn=document.getElementById('btnDoRegister');btn.disabled=true;btn.innerText='⏳ กำลังบันทึก...';
+  const hashed=await sha256(pw);
+  const fullName=firstName+' '+lastName;
+  google.script.run
+    .withSuccessHandler(function(res){
+      btn.disabled=false;btn.innerText='📝 ลงทะเบียน & เข้าสู่ระบบ';
+      if(!res.success){
+        showAlert('registerAlert',res.message||'❌ เกิดข้อผิดพลาด');
+        if(res.message&&res.message.indexOf('ลงทะเบียนไปแล้ว')>-1)setTimeout(()=>switchLoginTab('login'),1800);
+        return;
+      }
+      currentUserEmail=email;currentUserName=fullName;
+      safeSetItem('inv_user_email',currentUserEmail);
+      safeSetItem('inv_user_name',currentUserName);
+      document.getElementById('loginModal').classList.remove('show');
+      updateSbUser();
+      showToast('✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ '+fullName,'ok');
+    })
+    .withFailureHandler(function(err){
+      btn.disabled=false;btn.innerText='📝 ลงทะเบียน & เข้าสู่ระบบ';
+      showAlert('registerAlert','❌ ไม่สามารถเชื่อมต่อ Server: '+(err.message||err));
+    })
+    .registerUserOnServer(email,fullName,hashed);
 }
 
+// ── REQUEST OTP V.7.4.0
+function requestOtp(){
+  clearAlert('resetAlert');
+  const email=(document.getElementById('resetEmail').value||'').trim().toLowerCase();
+  if(!email){showAlert('resetAlert','⚠️ กรุณากรอก Email ที่ลงทะเบียนก่อน');return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showAlert('resetAlert','⚠️ รูปแบบ Email ไม่ถูกต้อง');return;}
+  const btn=document.getElementById('btnRequestOtp');btn.disabled=true;btn.innerText='⏳ ส่ง...';
+  google.script.run
+    .withSuccessHandler(function(res){
+      btn.disabled=false;btn.innerText='ขอ OTP';
+      if(!res.success){showAlert('resetAlert',res.message||'❌ เกิดข้อผิดพลาด');return;}
+      document.getElementById('otpInputGroup').style.display='block';
+      document.getElementById('btnDoReset').disabled=false;
+      document.getElementById('resetOtp').focus();
+      showAlert('resetAlert',res.message,'ok');
+      // countdown 5 นาที
+      var countdown=300;btn.disabled=true;
+      var timer=setInterval(function(){
+        countdown--;btn.innerText='ส่งใหม่ ('+countdown+'s)';
+        if(countdown<=0){clearInterval(timer);btn.disabled=false;btn.innerText='ขอ OTP';}
+      },1000);
+    })
+    .withFailureHandler(function(err){
+      btn.disabled=false;btn.innerText='ขอ OTP';
+      showAlert('resetAlert','❌ ไม่สามารถเชื่อมต่อ Server: '+(err.message||err));
+    })
+    .requestResetOtp(email);
+}
+
+// ── DO RESET PASSWORD V.7.4.0 (OTP verify)
 async function doReset(){
   clearAlert('resetAlert');
   const email=(document.getElementById('resetEmail').value||'').trim().toLowerCase();
+  const otp=(document.getElementById('resetOtp').value||'').trim();
   const pw=document.getElementById('resetPassword').value||'';
-  if(!email){showAlert('resetAlert','⚠️ กรุณาเลือก Email');return;}
+  if(!email){showAlert('resetAlert','⚠️ กรุณากรอก Email');return;}
+  if(!otp||otp.length!==6){showAlert('resetAlert','⚠️ กรุณากรอกรหัส OTP 6 หลัก');return;}
   if(pw.length<6){showAlert('resetAlert','⚠️ Password ต้องมีอย่างน้อย 6 ตัวอักษร');return;}
-  const users=getLocalUsers();
-  if(!users[email]){showAlert('resetAlert','❌ ไม่พบบัญชีนี้ในระบบ กรุณาลงทะเบียนใหม่');setTimeout(()=>switchLoginTab('register'),1500);return;}
-  const btn=document.getElementById('btnDoReset');btn.disabled=true;btn.innerText='⏳ กำลังบันทึก...';
+  const btn=document.getElementById('btnDoReset');btn.disabled=true;btn.innerText='⏳ กำลังยืนยัน...';
   const hashed=await sha256(pw);
-  users[email].hash=hashed;
-  saveLocalUsers(users);
-  showAlert('resetAlert','✅ รีเซ็ตรหัสผ่านสำเร็จ!','ok');
-  setTimeout(()=>{
-    btn.disabled=false;btn.innerText='🔄 รีเซ็ตรหัสผ่าน';
-    document.getElementById('loginEmail').value=email;
-    document.getElementById('loginPassword').value='';
-    switchLoginTab('login');
-  },1500);
+  google.script.run
+    .withSuccessHandler(function(res){
+      btn.disabled=false;btn.innerText='🔄 ยืนยันและรีเซ็ตรหัสผ่าน';
+      if(!res.success){showAlert('resetAlert',res.message||'❌ เกิดข้อผิดพลาด');return;}
+      showAlert('resetAlert','✅ รีเซ็ตรหัสผ่านสำเร็จ! กำลังเข้าสู่ระบบ...','ok');
+      setTimeout(()=>{
+        document.getElementById('loginEmail').value=email;
+        document.getElementById('loginPassword').value='';
+        document.getElementById('otpInputGroup').style.display='none';
+        document.getElementById('resetOtp').value='';
+        document.getElementById('btnDoReset').disabled=true;
+        switchLoginTab('login');
+      },1800);
+    })
+    .withFailureHandler(function(err){
+      btn.disabled=false;btn.innerText='🔄 ยืนยันและรีเซ็ตรหัสผ่าน';
+      showAlert('resetAlert','❌ ไม่สามารถเชื่อมต่อ Server: '+(err.message||err));
+    })
+    .verifyOtpAndResetPassword(email,otp,hashed);
 }
 
 function promptChangeUser(){
@@ -7081,9 +7151,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function logoutUser() {
-  if(confirm('คุณต้องการออกจากระบบใช่หรือไม่? (การออกระบบจะเปิดหน้าต่าง Logout ของ Google)')) {
-    window.location.href = 'https://accounts.google.com/Logout';
-  }
+  promptChangeUser();
 }
 
 </script>

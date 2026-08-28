@@ -213,7 +213,7 @@
     </div>
   </div>
 
-  <!-- 🔐 Login Modal — Password + Register V.7.2.0 -->
+  <!-- 🔐 Login Modal — Password + Register V.7.4.0 -->
   <div id="loginModal">
     <div id="loginBox">
       <div class="login-logo">📦</div>
@@ -287,23 +287,31 @@
       <!-- ─── TAB: RESET PASSWORD ─── -->
       <div id="tabReset" style="display:none;">
         <label class="login-label">📧 Email ที่ใช้ลงทะเบียน *</label>
-        <input type="email" id="resetEmail" class="login-input" style="margin-top:4px;" placeholder="กรอก Email ของคุณ" oninput="clearAlert('resetAlert')">
+        <div style="display:flex; gap:8px; margin-top:4px;">
+          <input type="email" id="resetEmail" class="login-input" style="margin-top:0;" placeholder="กรอก Email ของคุณ" oninput="clearAlert('resetAlert')">
+          <button class="btn btn-secondary" id="btnRequestOtp" onclick="requestOtp()" style="padding:0 12px; font-size:12px; font-weight:700; white-space:nowrap; border-radius:10px; border:1px solid #ccc; height:45px;">ขอ OTP</button>
+        </div>
+        
+        <div id="otpInputGroup" style="display:none; margin-top:10px;">
+          <label class="login-label" style="margin-top:0; color:#0d6efd;">🔑 กรอกรหัส OTP 6 หลัก *</label>
+          <input type="text" id="resetOtp" class="login-input" style="margin-top:4px; font-size:16px; font-weight:700; text-align:center; letter-spacing:4px;" placeholder="XXXXXX" maxlength="6">
+        </div>
         
         <label class="login-label">🔒 ตั้ง Password ใหม่ *</label>
-        <div class="pw-wrap">
+        <div class="pw-wrap" style="margin-top:4px;">
           <input type="password" id="resetPassword" class="login-input" placeholder="อย่างน้อย 6 ตัวอักษร">
           <span class="pw-toggle" onclick="togglePw('resetPassword',this)">👁️</span>
         </div>
         
         <div id="resetAlert" class="login-alert"></div>
-        <button class="btn-login" id="btnDoReset" onclick="doReset()">🔄 รีเซ็ตรหัสผ่าน</button>
+        <button class="btn-login" id="btnDoReset" onclick="doReset()" style="margin-top:15px;" disabled>🔄 ยืนยันและรีเซ็ตรหัสผ่าน</button>
         
         <div style="text-align:center; margin-top:10px; font-size:12px; color:#888;">
           จำรหัสได้แล้ว? <a href="#" onclick="switchLoginTab('login'); return false;" style="color:#0d6efd; font-weight:700;">เข้าสู่ระบบ</a>
         </div>
       </div>
       <hr class="login-divider">
-      <div class="login-footer">🔒 Smart Inventory V.7.3.0 | ข้อมูลถูกเข้ารหัสและบันทึกในอุปกรณ์ของคุณ</div>
+      <div class="login-footer">🔒 Smart Inventory V.7.4.0 | ระบบความปลอดภัยยืนยัน OTP ทาง Email</div>
     </div>
   </div>
 
@@ -552,7 +560,7 @@
     }
 
     // ─────────────────────────────────────────────
-    // 🔐 LOAD CURRENT USER — V.7.2.0
+    // 🔐 LOAD CURRENT USER — V.7.4.0 (Server-side auth)
     // ─────────────────────────────────────────────
     function loadCurrentUser() {
       var dev = detectDevice();
@@ -561,9 +569,7 @@
       var savedEmail = localStorage.getItem('inv_user_email') || "";
       var savedName  = localStorage.getItem('inv_user_name')  || "";
 
-      // ต้องมี session และ user ต้อง register แล้ว
-      var users = getLocalUsers();
-      if (savedEmail && savedName && users[savedEmail]) {
+      if (savedEmail && savedName) {
         currentUserEmail = savedEmail;
         currentUserName  = savedName;
         updateUserBadge();
@@ -601,7 +607,10 @@
       clearAlert('registerAlert');
       // Reset reset tab
       if(document.getElementById('resetEmail')) document.getElementById('resetEmail').value = "";
+      if(document.getElementById('resetOtp'))   document.getElementById('resetOtp').value   = "";
       if(document.getElementById('resetPassword')) document.getElementById('resetPassword').value = "";
+      if(document.getElementById('otpInputGroup')) document.getElementById('otpInputGroup').style.display = 'none';
+      if(document.getElementById('btnDoReset'))    document.getElementById('btnDoReset').disabled = true;
       clearAlert('resetAlert');
       switchLoginTab(tab || 'login');
     }
@@ -668,7 +677,7 @@
     }
 
     // ─────────────────────────────────────────────
-    // 🔑 DO LOGIN
+    // 🔑 DO LOGIN — V.7.4.0 (Server-side verify)
     // ─────────────────────────────────────────────
     async function doLogin() {
       clearAlert('loginAlert');
@@ -678,39 +687,42 @@
       if (!email) { showAlert('loginAlert', '⚠️ กรุณากรอก Email ก่อน'); return; }
       if (!pw)    { showAlert('loginAlert', '⚠️ กรุณากรอก Password'); return; }
 
-      var users = getLocalUsers();
-      if (!users[email]) {
-        showAlert('loginAlert', '❌ Email นี้ยังไม่มีบัญชี กรุณาลงทะเบียนก่อน');
-        setTimeout(function() { switchLoginTab('register'); }, 1500);
-        return;
-      }
-
       document.getElementById('btnDoLogin').disabled = true;
       document.getElementById('btnDoLogin').innerText = '⏳ กำลังตรวจสอบ...';
 
       var hashed = await hashPassword(pw);
-      if (hashed !== users[email].hash) {
-        showAlert('loginAlert', '❌ Password ไม่ถูกต้อง กรุณาลองใหม่');
-        document.getElementById('btnDoLogin').disabled = false;
-        document.getElementById('btnDoLogin').innerText = '🔑 เข้าสู่ระบบ';
-        document.getElementById('loginPassword').value = "";
-        return;
-      }
 
-      // ✅ Login สำเร็จ
-      currentUserEmail = email;
-      currentUserName  = users[email].name;
-      localStorage.setItem('inv_user_email', currentUserEmail);
-      localStorage.setItem('inv_user_name',  currentUserName);
-      document.getElementById('loginModal').classList.remove('show');
-      document.getElementById('btnDoLogin').disabled = false;
-      document.getElementById('btnDoLogin').innerText = '🔑 เข้าสู่ระบบ';
-      updateUserBadge();
-      Toast.fire({ icon: 'success', title: '✅ เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับ ' + currentUserName });
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('btnDoLogin').disabled = false;
+          document.getElementById('btnDoLogin').innerText = '🔑 เข้าสู่ระบบ';
+          if (!res.success) {
+            showAlert('loginAlert', res.message || '❌ เกิดข้อผิดพลาด');
+            document.getElementById('loginPassword').value = "";
+            if (res.message && res.message.indexOf('ลงทะเบียน') > -1) {
+              setTimeout(function() { switchLoginTab('register'); }, 1800);
+            }
+            return;
+          }
+          // ✅ Login สำเร็จ
+          currentUserEmail = email;
+          currentUserName  = res.name || email;
+          localStorage.setItem('inv_user_email', currentUserEmail);
+          localStorage.setItem('inv_user_name',  currentUserName);
+          document.getElementById('loginModal').classList.remove('show');
+          updateUserBadge();
+          Toast.fire({ icon: 'success', title: '✅ เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับ ' + currentUserName });
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('btnDoLogin').disabled = false;
+          document.getElementById('btnDoLogin').innerText = '🔑 เข้าสู่ระบบ';
+          showAlert('loginAlert', '❌ ไม่สามารถเชื่อมต่อ Server: ' + (err.message || err));
+        })
+        .loginUserOnServer(email, hashed);
     }
 
     // ─────────────────────────────────────────────
-    // 📝 DO REGISTER
+    // 📝 DO REGISTER — V.7.4.0 (Server-side save)
     // ─────────────────────────────────────────────
     async function doRegister() {
       clearAlert('registerAlert');
@@ -731,68 +743,132 @@
       if (pw.length < 6) { showAlert('registerAlert', '⚠️ Password ต้องมีอย่างน้อย 6 ตัวอักษร'); return; }
       if (pw !== pwConf)  { showAlert('registerAlert', '❌ Password ไม่ตรงกัน กรุณาลองใหม่'); return; }
 
-      var users = getLocalUsers();
-      if (users[email]) {
-        showAlert('registerAlert', '⚠️ Email นี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบ');
-        setTimeout(function() { switchLoginTab('login'); }, 1500);
-        return;
-      }
-
       document.getElementById('btnDoRegister').disabled = true;
       document.getElementById('btnDoRegister').innerText = '⏳ กำลังบันทึก...';
 
       var hashed   = await hashPassword(pw);
       var fullName = firstName + " " + lastName;
 
-      users[email] = { name: fullName, hash: hashed, createdAt: new Date().toISOString() };
-      saveLocalUsers(users);
-      // อัปเดต EMAIL_NAME_MAP สำหรับ session นี้
-      EMAIL_NAME_MAP[email] = fullName;
-
-      currentUserEmail = email;
-      currentUserName  = fullName;
-      localStorage.setItem('inv_user_email', currentUserEmail);
-      localStorage.setItem('inv_user_name',  currentUserName);
-      document.getElementById('loginModal').classList.remove('show');
-      document.getElementById('btnDoRegister').disabled = false;
-      document.getElementById('btnDoRegister').innerText = '📝 ลงทะเบียน & เข้าสู่ระบบ';
-      updateUserBadge();
-      Toast.fire({ icon: 'success', title: '✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ ' + fullName });
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('btnDoRegister').disabled = false;
+          document.getElementById('btnDoRegister').innerText = '📝 ลงทะเบียน & เข้าสู่ระบบ';
+          if (!res.success) {
+            showAlert('registerAlert', res.message || '❌ เกิดข้อผิดพลาด');
+            if (res.message && res.message.indexOf('ลงทะเบียนไปแล้ว') > -1) {
+              setTimeout(function() { switchLoginTab('login'); }, 1800);
+            }
+            return;
+          }
+          // ✅ Register สำเร็จ
+          EMAIL_NAME_MAP[email] = fullName;
+          currentUserEmail = email;
+          currentUserName  = fullName;
+          localStorage.setItem('inv_user_email', currentUserEmail);
+          localStorage.setItem('inv_user_name',  currentUserName);
+          document.getElementById('loginModal').classList.remove('show');
+          updateUserBadge();
+          Toast.fire({ icon: 'success', title: '✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ ' + fullName });
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('btnDoRegister').disabled = false;
+          document.getElementById('btnDoRegister').innerText = '📝 ลงทะเบียน & เข้าสู่ระบบ';
+          showAlert('registerAlert', '❌ ไม่สามารถเชื่อมต่อ Server: ' + (err.message || err));
+        })
+        .registerUserOnServer(email, fullName, hashed);
     }
 
     // ─────────────────────────────────────────────
-    // 🔄 DO RESET PASSWORD
+    // 📨 REQUEST OTP — V.7.4.0
+    // ─────────────────────────────────────────────
+    function requestOtp() {
+      clearAlert('resetAlert');
+      var email = (document.getElementById('resetEmail').value || "").trim().toLowerCase();
+      if (!email) { showAlert('resetAlert', '⚠️ กรุณากรอก Email ที่ลงทะเบียนก่อน'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showAlert('resetAlert', '⚠️ รูปแบบ Email ไม่ถูกต้อง'); return;
+      }
+
+      var btn = document.getElementById('btnRequestOtp');
+      btn.disabled = true;
+      btn.innerText = '⏳ ส่ง...';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.innerText = 'ขอ OTP';
+          if (!res.success) {
+            showAlert('resetAlert', res.message || '❌ เกิดข้อผิดพลาด');
+            return;
+          }
+          // แสดง OTP input และ unlock ปุ่ม reset
+          document.getElementById('otpInputGroup').style.display = 'block';
+          document.getElementById('btnDoReset').disabled = false;
+          document.getElementById('resetOtp').focus();
+          showAlert('resetAlert', res.message, 'ok');
+          // countdown 5 นาที
+          var countdown = 300;
+          btn.disabled = true;
+          var timer = setInterval(function() {
+            countdown--;
+            btn.innerText = 'ส่งใหม่ (' + countdown + 's)';
+            if (countdown <= 0) {
+              clearInterval(timer);
+              btn.disabled = false;
+              btn.innerText = 'ขอ OTP';
+            }
+          }, 1000);
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.innerText = 'ขอ OTP';
+          showAlert('resetAlert', '❌ ไม่สามารถเชื่อมต่อ Server: ' + (err.message || err));
+        })
+        .requestResetOtp(email);
+    }
+
+    // ─────────────────────────────────────────────
+    // 🔄 DO RESET PASSWORD — V.7.4.0 (OTP verify)
     // ─────────────────────────────────────────────
     async function doReset() {
       clearAlert('resetAlert');
       var email = (document.getElementById('resetEmail').value || "").trim().toLowerCase();
+      var otp   = (document.getElementById('resetOtp').value || "").trim();
       var pw    = document.getElementById('resetPassword').value || "";
 
-      if (!email) { showAlert('resetAlert', '⚠️ กรุณาเลือก Email'); return; }
+      if (!email) { showAlert('resetAlert', '⚠️ กรุณากรอก Email'); return; }
+      if (!otp || otp.length !== 6) { showAlert('resetAlert', '⚠️ กรุณากรอกรหัส OTP 6 หลัก'); return; }
       if (pw.length < 6) { showAlert('resetAlert', '⚠️ Password ต้องมีอย่างน้อย 6 ตัวอักษร'); return; }
 
-      var users = getLocalUsers();
-      if (!users[email]) {
-        showAlert('resetAlert', '❌ ไม่พบบัญชีนี้ในระบบ กรุณาลงทะเบียนใหม่');
-        setTimeout(function() { switchLoginTab('register'); }, 1500);
-        return;
-      }
-
       document.getElementById('btnDoReset').disabled = true;
-      document.getElementById('btnDoReset').innerText = '⏳ กำลังบันทึก...';
+      document.getElementById('btnDoReset').innerText = '⏳ กำลังยืนยัน...';
 
       var hashed = await hashPassword(pw);
-      users[email].hash = hashed;
-      saveLocalUsers(users);
 
-      showAlert('resetAlert', '✅ รีเซ็ตรหัสผ่านสำเร็จ!', 'ok');
-      setTimeout(function() {
-        document.getElementById('btnDoReset').disabled = false;
-        document.getElementById('btnDoReset').innerText = '🔄 รีเซ็ตรหัสผ่าน';
-        document.getElementById('loginEmail').value = email;
-        document.getElementById('loginPassword').value = "";
-        switchLoginTab('login');
-      }, 1500);
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('btnDoReset').disabled = false;
+          document.getElementById('btnDoReset').innerText = '🔄 ยืนยันและรีเซ็ตรหัสผ่าน';
+          if (!res.success) {
+            showAlert('resetAlert', res.message || '❌ เกิดข้อผิดพลาด');
+            return;
+          }
+          showAlert('resetAlert', '✅ รีเซ็ตรหัสผ่านสำเร็จ! กำลังเข้าสู่ระบบ...', 'ok');
+          setTimeout(function() {
+            document.getElementById('loginEmail').value = email;
+            document.getElementById('loginPassword').value = "";
+            document.getElementById('otpInputGroup').style.display = 'none';
+            document.getElementById('resetOtp').value = "";
+            document.getElementById('btnDoReset').disabled = true;
+            switchLoginTab('login');
+          }, 1800);
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('btnDoReset').disabled = false;
+          document.getElementById('btnDoReset').innerText = '🔄 ยืนยันและรีเซ็ตรหัสผ่าน';
+          showAlert('resetAlert', '❌ ไม่สามารถเชื่อมต่อ Server: ' + (err.message || err));
+        })
+        .verifyOtpAndResetPassword(email, otp, hashed);
     }
 
     function promptChangeUser() {

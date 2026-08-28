@@ -1826,3 +1826,163 @@ function saveUsersDB(usersJson) {
     return { success: true };
   } catch(e) { return { success: false, error: e.message }; }
 }
+
+/**
+ * 🔐 Server-side Authentication & OTP Password Reset System — V.7.4.0
+ * ====================================================================
+ */
+
+// ตรวจสอบความถูกต้องของการ Login (ใช้ทดแทนการตรวจสอบที่ Client ฝั่งเดียว)
+function loginUserOnServer(email, passwordHash) {
+  if (!email || !passwordHash) {
+    return { success: false, message: "⚠️ ข้อมูลไม่ครบถ้วน" };
+  }
+  email = email.toLowerCase().trim();
+  
+  try {
+    var usersJson = getUsersDB();
+    var users = JSON.parse(usersJson || '{}');
+    if (!users[email]) {
+      return { success: false, message: "❌ ไม่พบบัญชีผู้ใช้นี้ กรุณาลงทะเบียน" };
+    }
+    if (users[email].hash !== passwordHash) {
+      return { success: false, message: "❌ รหัสผ่านไม่ถูกต้อง" };
+    }
+    return { success: true, name: users[email].name, message: "✅ เข้าสู่ระบบสำเร็จ" };
+  } catch(e) {
+    return { success: false, message: "❌ เกิดข้อผิดพลาดบนเซิร์ฟเวอร์: " + e.toString() };
+  }
+}
+
+// ลงทะเบียนบัญชีบนเซิร์ฟเวอร์
+function registerUserOnServer(email, name, passwordHash) {
+  if (!email || !name || !passwordHash) {
+    return { success: false, message: "⚠️ ข้อมูลไม่ครบถ้วน" };
+  }
+  email = email.toLowerCase().trim();
+  name = name.trim();
+  
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000); // รอคิวเพื่อกันชนกัน
+    
+    var usersJson = getUsersDB();
+    var users = JSON.parse(usersJson || '{}');
+    if (users[email]) {
+      return { success: false, message: "⚠️ อีเมลนี้ลงทะเบียนไปแล้ว" };
+    }
+    
+    users[email] = {
+      name: name,
+      hash: passwordHash,
+      createdAt: new Date().toISOString()
+    };
+    
+    var saveRes = saveUsersDB(JSON.stringify(users));
+    if (saveRes.success) {
+      return { success: true, message: "✅ ลงทะเบียนผู้ใช้ใหม่สำเร็จ" };
+    } else {
+      return { success: false, message: "❌ ไม่สามารถบันทึกฐานข้อมูลได้: " + saveRes.error };
+    }
+  } catch(e) {
+    return { success: false, message: "❌ เกิดข้อผิดพลาด: " + e.toString() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ขอรหัส OTP สำหรับรีเซ็ตรหัสผ่าน (กรณีลืมรหัสผ่าน)
+function requestResetOtp(email) {
+  if (!email) {
+    return { success: false, message: "⚠️ กรุณากรอกอีเมลที่ลงทะเบียน" };
+  }
+  email = email.toLowerCase().trim();
+  
+  try {
+    var usersJson = getUsersDB();
+    var users = JSON.parse(usersJson || '{}');
+    if (!users[email]) {
+      return { success: false, message: "❌ ไม่พบบัญชีผู้ใช้นี้ในระบบ กรุณาลงทะเบียนก่อน" };
+    }
+    
+    // สร้าง OTP 6 หลัก
+    var otp = "";
+    for (var i = 0; i < 6; i++) {
+      otp += Math.floor(Math.random() * 10).toString();
+    }
+    
+    // บันทึก OTP ใน CacheService (อายุ 5 นาที / 300 วินาที)
+    var cache = CacheService.getScriptCache();
+    var cacheKey = "otp_" + email.replace(/[@.]/g, "_");
+    cache.put(cacheKey, otp, 300);
+    
+    // ส่งอีเมลหาผู้ใช้ด้วย OTP
+    var subject = "📦 Smart Inventory - รหัส OTP สำหรับรีเซ็ตรหัสผ่าน";
+    var body = "สวัสดีคุณ " + users[email].name + ",\n\n" +
+               "คุณได้ทำรายการขอรีเซ็ตรหัสผ่านสำหรับระบบ Smart Inventory\n" +
+               "รหัส OTP ของคุณคือ:\n\n" +
+               "🔑 " + otp + "\n\n" +
+               "รหัสนี้มีอายุการใช้งาน 5 นาที\n" +
+               "หากคุณไม่ได้ส่งคำขอนี้ โปรดมองข้ามอีเมลฉบับนี้ไปเพื่อความปลอดภัย\n\n" +
+               "ด้วยความเคารพ,\n" +
+               "ทีมงาน Smart Inventory System";
+               
+    MailApp.sendEmail(email, subject, body);
+    
+    return { success: true, message: "📨 ส่งรหัส OTP ไปยังอีเมล " + email + " สำเร็จแล้ว กรุณาตรวจสอบกล่องจดหมายของคุณ (เช็คถังขยะ/Spam ด้วย)" };
+  } catch(e) {
+    return { success: false, message: "❌ ไม่สามารถส่งอีเมลได้: " + e.toString() };
+  }
+}
+
+// ยืนยัน OTP และตั้งรหัสผ่านใหม่
+function verifyOtpAndResetPassword(email, otp, newPasswordHash) {
+  if (!email || !otp || !newPasswordHash) {
+    return { success: false, message: "⚠️ ข้อมูลไม่ครบถ้วน" };
+  }
+  email = email.toLowerCase().trim();
+  otp = otp.trim();
+  
+  try {
+    var cache = CacheService.getScriptCache();
+    var cacheKey = "otp_" + email.replace(/[@.]/g, "_");
+    var storedOtp = cache.get(cacheKey);
+    
+    if (!storedOtp) {
+      return { success: false, message: "❌ รหัส OTP หมดอายุการใช้งาน (เกิน 5 นาที) หรือไม่เคยถูกขอ กรุณาส่งคำขอใหม่อีกครั้ง" };
+    }
+    
+    if (storedOtp !== otp) {
+      return { success: false, message: "❌ รหัส OTP ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง" };
+    }
+    
+    // OTP ถูกต้อง ดำเนินการอัปเดตรหัสผ่านใหม่
+    var lock = LockService.getScriptLock();
+    try {
+      lock.waitLock(10000);
+      
+      var usersJson = getUsersDB();
+      var users = JSON.parse(usersJson || '{}');
+      if (!users[email]) {
+        return { success: false, message: "❌ ไม่พบบัญชีผู้ใช้งานนี้ในระบบแล้ว" };
+      }
+      
+      // อัปเดตรหัสผ่าน
+      users[email].hash = newPasswordHash;
+      users[email].updatedAt = new Date().toISOString();
+      
+      var saveRes = saveUsersDB(JSON.stringify(users));
+      if (saveRes.success) {
+        // ลบ OTP ออกจาก cache
+        cache.remove(cacheKey);
+        return { success: true, message: "✅ รีเซ็ตรหัสผ่านสำเร็จและบันทึกข้อมูลเรียบร้อยแล้ว!" };
+      } else {
+        return { success: false, message: "❌ ไม่สามารถบันทึกรหัสผ่านใหม่ได้: " + saveRes.error };
+      }
+    } finally {
+      lock.releaseLock();
+    }
+  } catch(e) {
+    return { success: false, message: "❌ เกิดข้อผิดพลาดในการตรวจสอบ OTP: " + e.toString() };
+  }
+}
