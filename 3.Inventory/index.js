@@ -275,6 +275,12 @@ app.post('/webhook', lineJsonParser, multiLineMiddleware, async (req, res) => {
         `📦 ${bot.name} V.7.1.3\n━━━━━━━━━━━━━━━\n` +
         `🔍 ค้นหา DUID:\nพิมพ์: DUID: [รหัส]\nเช่น: DUID: Ph26_CapEx_Mod\n\n` +
         `📋 คำสั่ง:\n• DUID: [รหัส] — ค้นหาข้อมูล\n• สถานะ — เมนูนี้\n• /id — Group/User ID`;
+    } else if (text.length >= 3) {
+      // Fallback: ถ้าพิมพ์ข้อความทั่วไป (ความยาว >= 3) ให้ลองค้นหาแบบตรงๆ เหมือน Telegram
+      const result = await searchDuidFromGAS(text);
+      if (result) {
+        replyText = result;
+      }
     }
 
     if (!replyText) continue;
