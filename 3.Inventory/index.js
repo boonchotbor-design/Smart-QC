@@ -90,23 +90,27 @@ app.get('/', (req, res) => {
 // Check All Bots Status (bot check ทุกตัว)
 // ─────────────────────────────────────────────
 async function checkAllBotsStatus() {
-  const results = [];
-  for (const bot of LINE_CONFIGS) {
-    if (!bot.token) continue;
+  const promises = LINE_CONFIGS.map(async (bot) => {
+    if (!bot.token) return null;
     try {
       await axios.get('https://api.line.me/v2/bot/info', { headers: { Authorization: 'Bearer ' + bot.token } });
-      results.push({ name: bot.name, status: '✅ OK' });
+      return { name: bot.name, status: '✅ OK' };
     } catch (e) {
-      results.push({ name: bot.name, status: '❌ ERROR' });
+      return { name: bot.name, status: '❌ ERROR' };
     }
-  }
-  try {
-    const tRes = await axios.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe`);
-    results.push({ name: 'Telegram Bot', status: `✅ OK (${tRes.data.result.username})` });
-  } catch (e) {
-    results.push({ name: 'Telegram Bot', status: '❌ ERROR' });
-  }
-  return results;
+  });
+
+  const telegramPromise = (async () => {
+    try {
+      const tRes = await axios.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe`);
+      return { name: 'Telegram Bot', status: `✅ OK (${tRes.data.result.username})` };
+    } catch (e) {
+      return { name: 'Telegram Bot', status: '❌ ERROR' };
+    }
+  })();
+
+  const allResults = await Promise.all([...promises, telegramPromise]);
+  return allResults.filter(Boolean);
 }
 
 app.get('/bots-status', async (req, res) => {
@@ -238,9 +242,9 @@ const multiLineMiddleware = (req, res, next) => {
 };
 
 app.post('/webhook', lineJsonParser, multiLineMiddleware, async (req, res) => {
-  res.status(200).json({ status: 'ok' }); // ตอบ 200 ทันที
-
-  if (!req.body || !Array.isArray(req.body.events)) return;
+  if (!req.body || !Array.isArray(req.body.events)) {
+    return res.status(200).json({ status: 'ok' });
+  }
 
   const bot = req.matchedBot || LINE_CONFIGS[0];
   const replyClient = new messagingApi.MessagingApiClient({ channelAccessToken: bot.token });
@@ -285,6 +289,8 @@ app.post('/webhook', lineJsonParser, multiLineMiddleware, async (req, res) => {
       console.error(`Reply Error (${bot.name}):`, err.message);
     }
   }
+  
+  res.status(200).json({ status: 'ok' }); // ย้ายมาตอบ 200 ตอนจบการทำงาน
 });
 
 // ─────────────────────────────────────────────
