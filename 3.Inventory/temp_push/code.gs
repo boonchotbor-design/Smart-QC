@@ -1,5 +1,5 @@
 /*
- * Inventory Smart System - V.7.4.4
+ * Inventory Smart System - V.7.4.1
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
@@ -12,8 +12,6 @@
  *              getDuidStatus: normalize target เป็น lowercase ก่อนเปรียบเทียบ
  *              app.html: เพิ่ม DUID threshold จาก 3 → 5 ตัว ลด false call
  * V.7.1.2: Fixed multiple bots sending duplicate push messages issue by adding failover break.
- * V.7.4.4: Auto-normalize Date to DD/MM/YYYY on export, chart, and Sheet;
- *          Fix daily chart 0-count bug; Sort UI descending by date/time matching Google Sheet top-row recording.
  */
 
 var SPREADSHEET_ID      = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -1009,18 +1007,19 @@ function updateDuidStatus(duid, customer) {
     var target = duid.trim();
     var result = computeDuidStatus(data, idx, target);
 
-    // V.7.4.3: ใช้ rowStatusMap เขียน status แบบ per-row
-    if (Object.keys(result.rowStatusMap).length > 0) {
+    if (result.matchingRows.length > 0) {
       var statusRange  = sheet.getRange(1, idx.status + 1, data.length, 1);
       var statusValues = statusRange.getValues();
-      Object.keys(result.rowStatusMap).forEach(function(rowNum) {
-        var ri = parseInt(rowNum) - 1;
-        if (statusValues[ri]) statusValues[ri][0] = result.rowStatusMap[rowNum];
+      result.matchingRows.forEach(function(r) {
+        if (statusValues[r - 1]) statusValues[r - 1][0] = result.status;
       });
       statusRange.setValues(statusValues);
     }
 
-    logToSheet("STATUS_UPDATE", "DUID: " + duid + " (" + customer + ") → " + result.overallStatus);
+    logToSheet("STATUS_UPDATE", "DUID: " + duid + " (" + customer + ") → " + result.status +
+      " | IN:" + result.inQty + " OUT:" + result.outQty +
+      " | STR/IN:" + result.strInQty + " STR/OUT:" + result.strOutQty +
+      " | DIS:" + result.dismantleQty + " RET:" + result.returnQty);
 
   } catch (e) {
     logToSheet("STATUS_ERROR", e.toString());
@@ -1032,29 +1031,27 @@ function updateDuidStatus(duid, customer) {
  * V.7.3.0: จับคู่ตาม Model + Item Code (แต่ละ item group อิสระจากกัน)
  * กฎ: IN↔OUT, STR/IN↔STR/OUT, DISMANTLE↔RETURN ต้องมีทั้งคู่ และ qty เท่ากัน
  */
-// V.7.4.3: computeDuidStatus — คืน rowStatusMap (rowIndex → 'Closed'|'Open'|'Pending')
-// แทนที่จะเป็น status เดียวต่อ DUID ตอนนี้แต่ละแถวได้ Status ตาม Item Code Group ของตัวเอง
 function computeDuidStatus(data, idx, target) {
   var targetLower  = target.trim().toLowerCase();
   var matchingRows = [];
   var hasAnyData   = false;
 
-  // Pass 1: สร้าง groups ตาม Item Code
-  var groups = {};           // groupKey → balance counters
-  var rowGroupKeys = {};    // rowIndex (1-based) → groupKey
+  // V.7.3.0: Group by "model|itemcode" — จับคู่ Balance แยกตามรายการสินค้า
+  var groups = {};
 
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][idx.duid] || "").trim().toLowerCase() !== targetLower) continue;
-    var rowNum = i + 1;
-    matchingRows.push(rowNum);
+    matchingRows.push(i + 1);
     hasAnyData = true;
 
-    var type = String(data[i][idx.type] || "").toUpperCase().trim();
-    var qty  = Number(data[i][idx.qty]) || 0;
-    var code = String(idx.code !== undefined ? (data[i][idx.code] || "") : "").trim().toLowerCase();
+    var type   = String(data[i][idx.type]  || "").toUpperCase().trim();
+    var qty    = Number(data[i][idx.qty])  || 0;
+    var region = String(idx.region !== undefined ? (data[i][idx.region] || "") : "").trim().toLowerCase();
+    var code   = String(idx.code  !== undefined ? (data[i][idx.code]  || "") : "").trim().toLowerCase();
+    
+    // V.7.4.2: Grouping Key: Item Code only (DUID + ITEM CODE)
     var normCode = code.replace(/^lth/, "").replace(/-[a-z]$/, "");
-    var groupKey = normCode || "__unknown__";
-    rowGroupKeys[rowNum] = groupKey;
+    var groupKey = normCode;
 
     if (!groups[groupKey]) {
       groups[groupKey] = {
@@ -1066,6 +1063,7 @@ function computeDuidStatus(data, idx, target) {
         dismantleQty: 0, returnQty: 0
       };
     }
+
     var g = groups[groupKey];
     if      (type === "IN")        { g.inQty        += qty; g.hasIn        = true; }
     else if (type === "OUT")       { g.outQty       += qty; g.hasOut       = true; }
@@ -1075,36 +1073,38 @@ function computeDuidStatus(data, idx, target) {
     else if (type === "RETURN")    { g.returnQty    += qty; g.hasReturn    = true; }
   }
 
+  var status;
+  var inQty = 0, outQty = 0, strInQty = 0, strOutQty = 0, dismantleQty = 0, returnQty = 0;
+
   if (!hasAnyData) {
-    return { rowStatusMap: {}, matchingRows: [], overallStatus: "Pending" };
-  }
+    status = "Pending";
+  } else {
+    var allGroupsBalanced = true;
+    var gKeys = Object.keys(groups);
 
-  // Pass 2: คำนวณ status ของแต่ละ group
-  var groupStatusMap = {};
-  var allClosed = true;
-  var gKeys = Object.keys(groups);
-  for (var k = 0; k < gKeys.length; k++) {
-    var gk = gKeys[k];
-    var g  = groups[gk];
-    var inOutOk  = (!g.hasIn  && !g.hasOut)       || (g.hasIn  && g.hasOut  && g.inQty  === g.outQty);
-    var strOk    = (!g.hasStrIn && !g.hasStrOut)   || (g.hasStrIn && g.hasStrOut && g.strInQty === g.strOutQty);
-    var disRetOk = (!g.hasDismantle && !g.hasReturn) || (g.hasDismantle && g.hasReturn && g.dismantleQty === g.returnQty);
-    var balanced = inOutOk && strOk && disRetOk;
-    groupStatusMap[gk] = balanced ? "Closed" : "Open";
-    if (!balanced) allClosed = false;
-  }
+    for (var k = 0; k < gKeys.length; k++) {
+      var g = groups[gKeys[k]];
+      // รวม totals สำหรับ logging
+      inQty        += g.inQty;        outQty       += g.outQty;
+      strInQty     += g.strInQty;     strOutQty    += g.strOutQty;
+      dismantleQty += g.dismantleQty; returnQty    += g.returnQty;
 
-  // Pass 3: แมป rowIndex → status ตาม group ของมัน
-  var rowStatusMap = {};
-  matchingRows.forEach(function(r) {
-    var gk = rowGroupKeys[r] || "__unknown__";
-    rowStatusMap[r] = groupStatusMap[gk] || "Open";
-  });
+      // ตรวจ balance ของ group นี้ (Model+Code เดียวกัน)
+      var inOutBalanced  = (!g.hasIn  && !g.hasOut)     || (g.hasIn  && g.hasOut  && g.inQty  === g.outQty);
+      var strBalanced    = (!g.hasStrIn && !g.hasStrOut) || (g.hasStrIn && g.hasStrOut && g.strInQty === g.strOutQty);
+      var disRetBalanced = (!g.hasDismantle && !g.hasReturn) || (g.hasDismantle && g.hasReturn && g.dismantleQty === g.returnQty);
+
+      if (!(inOutBalanced && strBalanced && disRetBalanced)) allGroupsBalanced = false;
+    }
+
+    status = allGroupsBalanced ? "Closed" : "On Process";
+  }
 
   return {
-    rowStatusMap: rowStatusMap,
-    matchingRows: matchingRows,
-    overallStatus: allClosed ? "Closed" : "On Process"
+    status: status, matchingRows: matchingRows,
+    inQty: inQty, outQty: outQty,
+    strInQty: strInQty, strOutQty: strOutQty,
+    dismantleQty: dismantleQty, returnQty: returnQty
   };
 }
 
@@ -1152,46 +1152,23 @@ function recalculateAllDuidStatuses() {
 
     Object.keys(duidSet).forEach(function(duid) {
       var result = computeDuidStatus(data, idx, duid);
-      // V.7.4.3: เขียน status แบบ per-row ตาม rowStatusMap
-      Object.keys(result.rowStatusMap).forEach(function(rowNum) {
-        var ri = parseInt(rowNum) - 1;
-        var newStatus = result.rowStatusMap[rowNum];
-        if (statusValues[ri][0] !== newStatus) {
-          statusValues[ri][0] = newStatus;
+      result.matchingRows.forEach(function(r) {
+        var oldVal = statusValues[r - 1][0];
+        if (oldVal !== result.status) {
+          statusValues[r - 1][0] = result.status;
           changedCount++;
         }
       });
     });
 
     statusRange.setValues(statusValues);
-
-    // V.7.4.4: ตรวจสอบและ normalize วันที่ในชีทให้เป็น DD/MM/YYYY เสมอ
-    var dateCol = h.indexOf("DATE");
-    if (dateCol > -1) {
-      var dateRange = sheet.getRange(1, dateCol + 1, data.length, 1);
-      var dateValues = dateRange.getValues();
-      var dateFixed = 0;
-      for (var dr = 1; dr < dateValues.length; dr++) {
-        var rawD = dateValues[dr][0];
-        var cleanD = formatToDDMMYYYY(rawD);
-        if (rawD instanceof Date || (typeof rawD === "string" && (rawD.indexOf(" GMT") > -1 || (cleanD && cleanD !== rawD && rawD.length > 10)))) {
-          dateValues[dr][0] = cleanD;
-          dateFixed++;
-        }
-      }
-      if (dateFixed > 0) {
-        dateRange.setValues(dateValues);
-        summary.push(sheetName + ": ปรับรูปแบบวันที่เป็น DD/MM/YYYY " + dateFixed + " แถว");
-      }
-    }
-
-    summary.push(sheetName + ": " + Object.keys(duidSet).length + " DUID, แก้ไข Status " + changedCount + " แถว");
+    summary.push(sheetName + ": " + Object.keys(duidSet).length + " DUID, แก้ไข " + changedCount + " แถว");
   });
 
   var msg = "Recalculate เสร็จสิ้น:\n" + summary.join("\n");
   logToSheet("RECALCULATE_ALL", msg);
   Logger.log(msg);
-  return { success: true, msg: msg };
+  return msg;
 }
 
 // ─────────────────────────────────────────────
@@ -1287,58 +1264,7 @@ function testOcrEngine() {
 }
 
 // ─────────────────────────────────────────────
-// DATE FORMATTING HELPER — V.7.4.4
-// แปลง Date object / GMT string / Excel serial / ISO ให้เป็น DD/MM/YYYY เสมอ
-// ─────────────────────────────────────────────
-
-function formatToDDMMYYYY(val) {
-  if (!val) return "";
-  if (val instanceof Date) {
-    if (isNaN(val.getTime())) return "";
-    return Utilities.formatDate(val, "GMT+7", "dd/MM/yyyy");
-  }
-  var s = String(val).trim();
-  if (!s) return "";
-
-  // Excel serial number (e.g. 46301)
-  var num = Number(s);
-  if (!isNaN(num) && num > 30000 && num < 70000) {
-    var dExcel = new Date(Math.round((num - 25569) * 86400 * 1000));
-    if (!isNaN(dExcel.getTime())) {
-      return Utilities.formatDate(dExcel, "GMT+7", "dd/MM/yyyy");
-    }
-  }
-
-  // Already DD/MM/YYYY or D/M/YYYY (ignore trailing time if any)
-  if (s.indexOf("/") > -1) {
-    var parts = s.split(/\s+/);
-    var slashParts = parts[0].split("/");
-    if (slashParts.length === 3) {
-      var d = parseInt(slashParts[0], 10);
-      var m = parseInt(slashParts[1], 10);
-      var y = parseInt(slashParts[2], 10);
-      if (y > 2500) y -= 543;
-      if (!isNaN(d) && !isNaN(m) && !isNaN(y) && y >= 1900 && y <= 2200) {
-        return ("0" + d).slice(-2) + "/" + ("0" + m).slice(-2) + "/" + y;
-      }
-    }
-  }
-
-  // JS Date string or ISO (e.g. "Tue Sep 08 2026 00:00:00 GMT+0700 (เวลาอินโดจีน)")
-  var dt = new Date(s);
-  if (!isNaN(dt.getTime())) {
-    var yyyy = dt.getFullYear();
-    if (yyyy > 2500) yyyy -= 543;
-    if (yyyy >= 1900 && yyyy <= 2200) {
-      return Utilities.formatDate(dt, "GMT+7", "dd/MM/yyyy");
-    }
-  }
-
-  return s;
-}
-
-// ─────────────────────────────────────────────
-// DASHBOARD DATA API — V.7.4.4
+// DASHBOARD DATA API — V.7.2.0
 // เรียกจาก dashboard_demo.html ผ่าน google.script.run
 // คืนข้อมูลสรุป KPI, รายการล่าสุด, สรุปตาม Region
 // ─────────────────────────────────────────────
@@ -1385,13 +1311,12 @@ function getDashboardData() {
         var row = data[i];
         if (!row[idx.duid]) continue;
         allRows.push({
-          _sheetOrder: allRows.length,
           no:       row[idx.runNo]  || (i),
           duid:     String(row[idx.duid]   || ""),
           region:   String(row[idx.region] || ""),
           type:     String(row[idx.type]   || ""),
           itype:    String(row[idx.itype]  || ""),
-          date:     formatToDDMMYYYY(row[idx.date]),
+          date:     String(row[idx.date]   || ""),
           bill:     String(row[idx.bill]   || ""),
           model:    String(row[idx.model]  || ""),
           code:     String(row[idx.code]   || ""),
@@ -1539,7 +1464,7 @@ function saveImportData(rows, customer, userEmail, userName) {
       newRow[2]  = cleanRegion || "ER";
       newRow[3]  = String(row.transType || row.type || "").trim().toUpperCase(); // IN/OUT
       newRow[4]  = String(row.itemType  || row.itype || "").trim();               // TYPE
-      newRow[5]  = formatToDDMMYYYY(row.date) || dateStr;
+      newRow[5]  = row.date || dateStr;
       newRow[6]  = cleanBill;
       newRow[7]  = String(row.model     || "").trim();
       newRow[8]  = String(row.code      || "").trim();
@@ -1628,23 +1553,9 @@ function exportSheetData(customer) {
     if (data.length < 1) return { success: true, headers: [], rows: [] };
 
     var headers = data[0].map(function(h) { return String(h || ""); });
-    var dateColIdx = -1;
-    for (var c = 0; c < headers.length; c++) {
-      var hName = String(headers[c] || "").trim().toUpperCase();
-      if (hName === "DATE" || hName === "DATE/TIME" || hName === "DATETIME") {
-        dateColIdx = c;
-        break;
-      }
-    }
-
-    var rows = [];
+    var rows    = [];
     for (var i = 1; i < data.length; i++) {
-      rows.push(data[i].map(function(v, cIdx) {
-        if (cIdx === dateColIdx || v instanceof Date) {
-          return formatToDDMMYYYY(v);
-        }
-        return String(v || "");
-      }));
+      rows.push(data[i].map(function(v) { return String(v || ""); }));
     }
     return { success: true, headers: headers, rows: rows };
   } catch (e) {
@@ -1733,7 +1644,7 @@ function saveImportDataUpdate(rows, customer, userEmail, userName) {
         sheet.getRange(sheetRow, idx.region + 1).setValue(cleanRegion);
         sheet.getRange(sheetRow, idx.type   + 1).setValue(String(row.transType || row.type || "").trim().toUpperCase());
         sheet.getRange(sheetRow, idx.itype  + 1).setValue(String(row.itemType  || row.itype || "").trim());
-        sheet.getRange(sheetRow, idx.date   + 1).setValue(formatToDDMMYYYY(row.date) || dateStr);
+        sheet.getRange(sheetRow, idx.date   + 1).setValue(row.date || dateStr);
         sheet.getRange(sheetRow, idx.model  + 1).setValue(String(row.model || "").trim());
         sheet.getRange(sheetRow, idx.desc   + 1).setValue(String(row.desc  || "").trim());
         sheet.getRange(sheetRow, idx.qty    + 1).setValue(Number(row.qty)  || 1);
@@ -1749,7 +1660,7 @@ function saveImportDataUpdate(rows, customer, userEmail, userName) {
         newRow[idx.region] = cleanRegion2;
         newRow[idx.type]   = String(row.transType || row.type || "").trim().toUpperCase();
         newRow[idx.itype]  = String(row.itemType  || row.itype || "").trim();
-        newRow[idx.date]   = formatToDDMMYYYY(row.date) || dateStr;
+        newRow[idx.date]   = row.date || dateStr;
         newRow[idx.bill]   = cleanBill;
         newRow[idx.model]  = String(row.model || "").trim();
         newRow[idx.code]   = cleanCode;
@@ -1914,164 +1825,4 @@ function saveUsersDB(usersJson) {
     }
     return { success: true };
   } catch(e) { return { success: false, error: e.message }; }
-}
-
-/**
- * 🔐 Server-side Authentication & OTP Password Reset System — V.7.4.0
- * ====================================================================
- */
-
-// ตรวจสอบความถูกต้องของการ Login (ใช้ทดแทนการตรวจสอบที่ Client ฝั่งเดียว)
-function loginUserOnServer(email, passwordHash) {
-  if (!email || !passwordHash) {
-    return { success: false, message: "⚠️ ข้อมูลไม่ครบถ้วน" };
-  }
-  email = email.toLowerCase().trim();
-  
-  try {
-    var usersJson = getUsersDB();
-    var users = JSON.parse(usersJson || '{}');
-    if (!users[email]) {
-      return { success: false, message: "❌ ไม่พบบัญชีผู้ใช้นี้ กรุณาลงทะเบียน" };
-    }
-    if (users[email].hash !== passwordHash) {
-      return { success: false, message: "❌ รหัสผ่านไม่ถูกต้อง" };
-    }
-    return { success: true, name: users[email].name, message: "✅ เข้าสู่ระบบสำเร็จ" };
-  } catch(e) {
-    return { success: false, message: "❌ เกิดข้อผิดพลาดบนเซิร์ฟเวอร์: " + e.toString() };
-  }
-}
-
-// ลงทะเบียนบัญชีบนเซิร์ฟเวอร์
-function registerUserOnServer(email, name, passwordHash) {
-  if (!email || !name || !passwordHash) {
-    return { success: false, message: "⚠️ ข้อมูลไม่ครบถ้วน" };
-  }
-  email = email.toLowerCase().trim();
-  name = name.trim();
-  
-  var lock = LockService.getScriptLock();
-  try {
-    lock.waitLock(10000); // รอคิวเพื่อกันชนกัน
-    
-    var usersJson = getUsersDB();
-    var users = JSON.parse(usersJson || '{}');
-    if (users[email]) {
-      return { success: false, message: "⚠️ อีเมลนี้ลงทะเบียนไปแล้ว" };
-    }
-    
-    users[email] = {
-      name: name,
-      hash: passwordHash,
-      createdAt: new Date().toISOString()
-    };
-    
-    var saveRes = saveUsersDB(JSON.stringify(users));
-    if (saveRes.success) {
-      return { success: true, message: "✅ ลงทะเบียนผู้ใช้ใหม่สำเร็จ" };
-    } else {
-      return { success: false, message: "❌ ไม่สามารถบันทึกฐานข้อมูลได้: " + saveRes.error };
-    }
-  } catch(e) {
-    return { success: false, message: "❌ เกิดข้อผิดพลาด: " + e.toString() };
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-// ขอรหัส OTP สำหรับรีเซ็ตรหัสผ่าน (กรณีลืมรหัสผ่าน)
-function requestResetOtp(email) {
-  if (!email) {
-    return { success: false, message: "⚠️ กรุณากรอกอีเมลที่ลงทะเบียน" };
-  }
-  email = email.toLowerCase().trim();
-  
-  try {
-    var usersJson = getUsersDB();
-    var users = JSON.parse(usersJson || '{}');
-    if (!users[email]) {
-      return { success: false, message: "❌ ไม่พบบัญชีผู้ใช้นี้ในระบบ กรุณาลงทะเบียนก่อน" };
-    }
-    
-    // สร้าง OTP 6 หลัก
-    var otp = "";
-    for (var i = 0; i < 6; i++) {
-      otp += Math.floor(Math.random() * 10).toString();
-    }
-    
-    // บันทึก OTP ใน CacheService (อายุ 5 นาที / 300 วินาที)
-    var cache = CacheService.getScriptCache();
-    var cacheKey = "otp_" + email.replace(/[@.]/g, "_");
-    cache.put(cacheKey, otp, 300);
-    
-    // ส่งอีเมลหาผู้ใช้ด้วย OTP
-    var subject = "📦 Smart Inventory - รหัส OTP สำหรับรีเซ็ตรหัสผ่าน";
-    var body = "สวัสดีคุณ " + users[email].name + ",\n\n" +
-               "คุณได้ทำรายการขอรีเซ็ตรหัสผ่านสำหรับระบบ Smart Inventory\n" +
-               "รหัส OTP ของคุณคือ:\n\n" +
-               "🔑 " + otp + "\n\n" +
-               "รหัสนี้มีอายุการใช้งาน 5 นาที\n" +
-               "หากคุณไม่ได้ส่งคำขอนี้ โปรดมองข้ามอีเมลฉบับนี้ไปเพื่อความปลอดภัย\n\n" +
-               "ด้วยความเคารพ,\n" +
-               "ทีมงาน Smart Inventory System";
-               
-    MailApp.sendEmail(email, subject, body);
-    
-    return { success: true, message: "📨 ส่งรหัส OTP ไปยังอีเมล " + email + " สำเร็จแล้ว กรุณาตรวจสอบกล่องจดหมายของคุณ (เช็คถังขยะ/Spam ด้วย)" };
-  } catch(e) {
-    return { success: false, message: "❌ ไม่สามารถส่งอีเมลได้: " + e.toString() };
-  }
-}
-
-// ยืนยัน OTP และตั้งรหัสผ่านใหม่
-function verifyOtpAndResetPassword(email, otp, newPasswordHash) {
-  if (!email || !otp || !newPasswordHash) {
-    return { success: false, message: "⚠️ ข้อมูลไม่ครบถ้วน" };
-  }
-  email = email.toLowerCase().trim();
-  otp = otp.trim();
-  
-  try {
-    var cache = CacheService.getScriptCache();
-    var cacheKey = "otp_" + email.replace(/[@.]/g, "_");
-    var storedOtp = cache.get(cacheKey);
-    
-    if (!storedOtp) {
-      return { success: false, message: "❌ รหัส OTP หมดอายุการใช้งาน (เกิน 5 นาที) หรือไม่เคยถูกขอ กรุณาส่งคำขอใหม่อีกครั้ง" };
-    }
-    
-    if (storedOtp !== otp) {
-      return { success: false, message: "❌ รหัส OTP ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง" };
-    }
-    
-    // OTP ถูกต้อง ดำเนินการอัปเดตรหัสผ่านใหม่
-    var lock = LockService.getScriptLock();
-    try {
-      lock.waitLock(10000);
-      
-      var usersJson = getUsersDB();
-      var users = JSON.parse(usersJson || '{}');
-      if (!users[email]) {
-        return { success: false, message: "❌ ไม่พบบัญชีผู้ใช้งานนี้ในระบบแล้ว" };
-      }
-      
-      // อัปเดตรหัสผ่าน
-      users[email].hash = newPasswordHash;
-      users[email].updatedAt = new Date().toISOString();
-      
-      var saveRes = saveUsersDB(JSON.stringify(users));
-      if (saveRes.success) {
-        // ลบ OTP ออกจาก cache
-        cache.remove(cacheKey);
-        return { success: true, message: "✅ รีเซ็ตรหัสผ่านสำเร็จและบันทึกข้อมูลเรียบร้อยแล้ว!" };
-      } else {
-        return { success: false, message: "❌ ไม่สามารถบันทึกรหัสผ่านใหม่ได้: " + saveRes.error };
-      }
-    } finally {
-      lock.releaseLock();
-    }
-  } catch(e) {
-    return { success: false, message: "❌ เกิดข้อผิดพลาดในการตรวจสอบ OTP: " + e.toString() };
-  }
 }

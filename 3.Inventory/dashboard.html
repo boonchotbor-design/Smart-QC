@@ -5608,13 +5608,14 @@ function cSb(){document.getElementById('sb').classList.remove('open');document.g
 
 // ════ KPI ════
 function countUp(el,n,dur=700){if(!el)return;let s=0,step=Math.max(1,Math.ceil(n/(dur/16)));const t=setInterval(()=>{s=Math.min(s+step,n);el.textContent=s;if(s>=n)clearInterval(t)},16)}
-function calcKPI(data){const d=new Date(),ts=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`,tR=data.filter(r=>r.date===ts);return{inToday:tR.filter(r=>/^(IN|STR\/IN)$/i.test(r.type||'')).length,outToday:tR.filter(r=>/^(OUT|DISMANTLE)$/i.test(r.type||'')).length,pending:data.filter(r=>r.status==='Pending'||r.status==='On Process').length,activeDuid:new Set(data.map(r=>r.duid)).size};}
+function calcKPI(data){const d=new Date(),ts=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`,tR=data.filter(r=>fmtDate(r.date)===ts);return{inToday:tR.filter(r=>/^(IN|STR\/IN)$/i.test(r.type||'')).length,outToday:tR.filter(r=>/^(OUT|DISMANTLE)$/i.test(r.type||'')).length,pending:data.filter(r=>r.status==='Pending'||r.status==='On Process').length,activeDuid:new Set(data.map(r=>r.duid)).size};}
 function loadKPIs(data){const k=calcKPI(data);pending=k.pending;document.getElementById('nbPending').textContent=k.pending||'-';setTimeout(()=>countUp(document.getElementById('kIn'),k.inToday),120);setTimeout(()=>countUp(document.getElementById('kOut'),k.outToday),240);setTimeout(()=>countUp(document.getElementById('kDuid'),k.activeDuid),360);setTimeout(()=>countUp(document.getElementById('kPend'),k.pending),480);}
 function renderTypeMini(data){document.getElementById('typeMini').innerHTML=TYPE_DEFS.map(td=>{const cnt=data.filter(r=>(r.type||'').toUpperCase()===td.type.toUpperCase()).length;return`<div style="background:var(--card);border:1px solid var(--border);border-radius:11px;padding:11px 8px;text-align:center;cursor:pointer;transition:transform .2s" onclick="setFAndGo('${td.type}')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''"><div style="font-size:20px;margin-bottom:4px">${td.icon}</div><div style="font-size:18px;font-weight:800;color:${td.color}">${cnt}</div><div style="font-size:9px;color:var(--muted);margin-top:2px">${td.type}</div></div>`;}).join('');}
 function setFAndGo(type){curF=type;pg('transactions',document.querySelectorAll('.ni')[1]);document.querySelectorAll('.ft').forEach(b=>b.classList.remove('active'));applyF();}
 
 // ════ CHARTS ════
-function drawLineChart(data){if(lChInst)lChInst.destroy();const labels=[],d0=[],d1=[],d2=[],d3=[],d4=[],d5=[];for(let i=6;i>=0;i--){const dt=new Date(Date.now()-i*86400000),lbl=`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;labels.push(lbl);const day=data.filter(r=>(r.date||'').startsWith(lbl));d0.push(day.filter(r=>/^IN$/i.test(r.type||'')).length);d1.push(day.filter(r=>/^STR\/IN$/i.test(r.type||'')).length);d2.push(day.filter(r=>/^OUT$/i.test(r.type||'')).length);d3.push(day.filter(r=>/^DISMANTLE$/i.test(r.type||'')).length);d4.push(day.filter(r=>/^STR\/OUT$/i.test(r.type||'')).length);d5.push(day.filter(r=>/^RETURN$/i.test(r.type||'')).length);}const mk=(label,data,color)=>({label,data,borderColor:color,backgroundColor:color+'22',tension:.4,fill:true,pointRadius:4,pointBackgroundColor:color,borderWidth:2});lChInst=new Chart(document.getElementById('lineChart').getContext('2d'),{type:'line',data:{labels,datasets:[mk('IN',d0,'#00c28a'),mk('STR/IN',d1,'#4d9fff'),mk('OUT',d2,'#ff4d6a'),mk('DISMANTLE',d3,'#b26dff'),mk('STR/OUT',d4,'#ff9f4d'),mk('RETURN',d5,'#ffd94d')]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'Sarabun',size:10}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'Sarabun'},stepSize:1},beginAtZero:true}}}});}
+function drawLineChart(data){if(lChInst)lChInst.destroy();const labels=[],d0=[],d1=[],d2=[],d3=[],d4=[],d5=[];for(let i=6;i>=0;i--){const dt=new Date(Date.now()-i*86400000),lbl=`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;labels.push(lbl);// V.7.4.4: match both DD/MM prefix and full DD/MM/YYYY string after normalization
+const day=data.filter(r=>{const fd=fmtDate(r.date||'');return fd.startsWith(lbl+'/') || fd===lbl;});d0.push(day.filter(r=>/^IN$/i.test(r.type||'')).length);d1.push(day.filter(r=>/^STR\/IN$/i.test(r.type||'')).length);d2.push(day.filter(r=>/^OUT$/i.test(r.type||'')).length);d3.push(day.filter(r=>/^DISMANTLE$/i.test(r.type||'')).length);d4.push(day.filter(r=>/^STR\/OUT$/i.test(r.type||'')).length);d5.push(day.filter(r=>/^RETURN$/i.test(r.type||'')).length);}const mk=(label,data,color)=>({label,data,borderColor:color,backgroundColor:color+'22',tension:.4,fill:true,pointRadius:4,pointBackgroundColor:color,borderWidth:2});lChInst=new Chart(document.getElementById('lineChart').getContext('2d'),{type:'line',data:{labels,datasets:[mk('IN',d0,'#00c28a'),mk('STR/IN',d1,'#4d9fff'),mk('OUT',d2,'#ff4d6a'),mk('DISMANTLE',d3,'#b26dff'),mk('STR/OUT',d4,'#ff9f4d'),mk('RETURN',d5,'#ffd94d')]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'Sarabun',size:10}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'Sarabun'},stepSize:1},beginAtZero:true}}}});}
 function drawRgChart(){if(rChInst)rChInst.destroy();const map={};TX.forEach(r=>{const rg=r.region||'?';map[rg]=(map[rg]||0)+1});const labels=Object.keys(map),vals=Object.values(map),colors=labels.map(l=>(RGCOL[l]||'#888')+'cc');rChInst=new Chart(document.getElementById('rgChart').getContext('2d'),{type:'bar',data:{labels,datasets:[{label:'รายการ',data:vals,backgroundColor:colors,borderColor:labels.map(l=>RGCOL[l]||'#888'),borderWidth:2,borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'Sarabun',size:12,weight:'bold'}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'Sarabun'}},beginAtZero:true}}}});}
 function renderActivity(data){document.getElementById('actList').innerHTML=data.slice(0,8).map((t,i)=>`<div class="ai"><span class="ab ${BADGE[t.type]||'b-in'}">${t.type}</span><div class="ai-info"><div class="ai-d">${t.duid}</div><div class="ai-m">${t.model||'-'} · ${t.code||''} · ${t.customer} · ${t.region}</div></div><div class="ai-t">${TAGO[i]||''}</div></div>`).join('');}
 function renderRgMini(data){const map={};data.forEach(r=>{const rg=r.region||'?';map[rg]=(map[rg]||0)+1});document.getElementById('rgMini').innerHTML=Object.entries(map).map(([r,n])=>`<div class="mc" onclick="setFAndGo('${r}')"><div class="m-lbl">${r}</div><div class="m-val" style="color:${RGCOL[r]||'#888'}">${n}</div><div class="m-sub">รายการ</div><div class="r-bar" style="background:${RGCOL[r]||'#888'}"></div></div>`).join('');}
@@ -5798,56 +5799,55 @@ function applyF() {
   const r = document.getElementById('txReg')?.value || 'ALL';
   const ty = document.getElementById('txType')?.value || 'ALL';
   
-  // Helper to parse DD/MM/YYYY format explicitly and Excel Serial Dates
+  // V.7.4.4: Clean parseDateStrict — GAS now always returns DD/MM/YYYY
   function parseDateStrict(dStr) {
     if (!dStr) return 0;
     let s = String(dStr).trim();
-    
-    if (s.includes('46301') || s.includes('45758')) return 0; 
-
-    // ULTIMATE HACK: Detect Google Sheets US Locale corruption!
-    // If Google Sheets sends a JS Date string (e.g. "Mon Dec 07 2026..."), 
-    // it means the user typed a day <= 12 and Sheets flipped it thinking it was MM/DD.
-    // Example: User typed 12/07/2026 (July 12). Sheets parsed it as Dec 7.
-    // String(Date) becomes "Mon Dec 07 2026...".
-    // To get the user's REAL intent, we just parse it, and then FLIP the month and day!
-    if (s.includes(' GMT') && s.length > 20) {
-       const dt = new Date(s);
-       if (!isNaN(dt.getTime())) {
-          // dt is Dec 7. Month=11, Date=7.
-          // We want July 12. Month=6, Date=12.
-          const wrongMonth = dt.getMonth(); // 11 (Dec)
-          const wrongDate = dt.getDate(); // 7
-          // The user actually typed wrongDate / (wrongMonth+1) / Year
-          // Which means Day = wrongMonth+1, Month = wrongDate-1
-          const realDay = wrongMonth + 1; // 12
-          const realMonth = wrongDate - 1; // 6 (July)
-          return new Date(dt.getFullYear(), realMonth, realDay).getTime();
-       }
+    if (!s) return 0;
+    // Excel serial number
+    if (!isNaN(s) && Number(s) > 30000 && Number(s) < 70000) {
+      return Math.round((Number(s) - 25569) * 86400 * 1000);
     }
-
-    if (!isNaN(s) && Number(s) > 40000 && Number(s) < 60000) {
-      return new Date(Math.round((Number(s) - 25569) * 86400 * 1000)).getTime();
+    // DD/MM/YYYY (canonical format after GAS normalization)
+    if (s.includes('/')) {
+      const parts = s.split(/\s+/);
+      const p = parts[0].split('/');
+      if (p.length === 3) {
+        const dd = parseInt(p[0], 10);
+        const mm = parseInt(p[1], 10) - 1;
+        let yyyy = parseInt(p[2], 10);
+        if (yyyy > 2500) yyyy -= 543;
+        if (!isNaN(dd) && !isNaN(mm) && !isNaN(yyyy) && yyyy >= 1900 && yyyy <= 2200) {
+          // Add HH:MM if present for same-day ordering
+          let hh = 0, min = 0;
+          if (parts[1]) {
+            const tp = parts[1].split(':');
+            hh = parseInt(tp[0]||0,10); min = parseInt(tp[1]||0,10);
+          }
+          return new Date(yyyy, mm, dd, hh, min).getTime();
+        }
+      }
     }
-    const p = s.split('/');
-    if (p.length === 3) {
-      const dd = parseInt(p[0], 10);
-      const mm = parseInt(p[1], 10) - 1;
-      let yyyy = parseInt(p[2], 10);
-      if (yyyy > 2500) yyyy -= 543;
-      if (yyyy > 3000) return 0; 
-      return new Date(yyyy, mm, dd).getTime();
-    }
+    // Fallback: ISO or other parseable string (e.g. GMT strings left over)
     const dt = new Date(s);
-    if (!isNaN(dt.getTime()) && dt.getFullYear() > 3000) return 0; 
-    return isNaN(dt.getTime()) ? 0 : dt.getTime();
+    if (!isNaN(dt.getTime())) {
+      let y = dt.getFullYear();
+      if (y > 2500) y -= 543;
+      if (y >= 1900 && y <= 2200) return dt.getTime();
+    }
+    return 0;
   }
 
-  // Issue: Sort by Date descending (newest top), fallback to reverse insertion for same date
-  txFiltered = [...TX].reverse().sort((a,b) => {
+  // V.7.4.4: Sort by date desc, then by _sheetOrder desc (top rows of sheet = newest)
+  txFiltered = [...TX].sort((a,b) => {
     const ta = parseDateStrict(a.date);
     const tb = parseDateStrict(b.date);
-    return tb - ta;
+    if (tb !== ta) return tb - ta;
+    // Same date: higher _sheetOrder = inserted earlier (sheet stores newest at top)
+    // So lower _sheetOrder = closer to top = newer → sort ascending by _sheetOrder
+    const oa = (a._sheetOrder !== undefined) ? a._sheetOrder : 999999;
+    const ob = (b._sheetOrder !== undefined) ? b._sheetOrder : 999999;
+    return oa - ob;
   });
   
   if (c !== 'ALL') txFiltered = txFiltered.filter(t => t.customer === c);
@@ -5864,8 +5864,6 @@ function applyF() {
     );
   }
 
-
-  
   txPage = 0;
   renderTable();
 }
@@ -6271,7 +6269,7 @@ function submitM(){
           showToast(`✅ บันทึกสำเร็จ! ${curAction} · ${duid} · ${gasItems.length} รายการ`,'ok');
           // Sync ข้อมูลล่าสุดจาก GAS
           google.script.run.withSuccessHandler(function(data){
-            if(data && data.success){ TX=data.recent||TX; recalculateAllStatusJS(); refreshDash(TX); }
+            if(data && data.success){ TX=(data.recent||TX).map(function(r,i){ r._sheetOrder=i; return r; }); recalculateAllStatusJS(); refreshDash(TX); }
           }).getDashboardData();
         } else {
           showToast('❌ บันทึกไม่สำเร็จ: '+(res&&res.message||'Unknown Error'),'err');
@@ -6370,7 +6368,8 @@ async function syncFromURL(){
     const apiUrl=url+(url.includes('?')?'&':'?')+'export=dashboard';
     const res=await fetch(apiUrl);const dt=await res.json();
     if(!dt.success){showToast('❌ '+dt.message,'err');showProg(false);document.getElementById('syncStatus').textContent='❌ Sync ล้มเหลว: '+dt.message;return}
-    TX=dt.recent||[];isLiveData=true;
+    TX=(dt.recent||[]).map(function(r,i){ r._sheetOrder=i; return r; });isLiveData=true;
+    recalculateAllStatusJS();
     refreshDash(TX);
     showImportBar(`🌐 Live Data: ${TX.length} รายการ | ${new Date().toLocaleTimeString('th-TH')}`);
     showProg(false);showToast(`✅ Sync สำเร็จ! ${TX.length} รายการ`,'ok');
@@ -6478,49 +6477,53 @@ function buildPrintPage(rows,billNo,customer){
 function printBill(billNo,customer){let rows=billNo?TX.filter(t=>t.bill===billNo&&t.customer===customer):TX.filter(t=>t.customer===customer);if(!rows.length){showToast('⚠️ ไม่พบรายการ','warn');return}document.getElementById('printDoc').innerHTML=buildPrintPage(rows,billNo,customer);window.print();}
 function printAll(){const bills=[...new Set(TX.map(t=>(t.bill||'?')+'|'+t.customer))];let html='';bills.forEach(b=>{const[bill,cus]=b.split('|'),rows=TX.filter(t=>t.bill===bill&&t.customer===cus);if(rows.length)html+=buildPrintPage(rows,bill,cus);});document.getElementById('printDoc').innerHTML=html;window.print();}
 
-// ════ DATE HELPER ════
+// ════ DATE HELPER V.7.4.4 ════
+// GAS now normalizes all dates to DD/MM/YYYY before sending.
+// This function handles legacy GMT strings, Excel serial, and ISO as fallback.
 function fmtDate(d){
   if(!d) return '-';
   let s = String(d).trim();
-  if (s.includes('46301') && s.includes('/')) return s;
+  if(!s) return '-';
 
-  let dt;
-  let flipped = false;
-
-  // ULTIMATE HACK for Display too!
-  if (s.includes(' GMT') && s.length > 20) {
-       const temp = new Date(s);
-       if (!isNaN(temp.getTime())) {
-          const wrongMonth = temp.getMonth();
-          const wrongDate = temp.getDate();
-          const realDay = wrongMonth + 1;
-          const realMonth = wrongDate - 1;
-          dt = new Date(temp.getFullYear(), realMonth, realDay);
-          flipped = true;
-       }
+  // Excel serial number (e.g. 46301)
+  const num = Number(s);
+  if (!isNaN(num) && num > 30000 && num < 70000) {
+    const dExcel = new Date(Math.round((num - 25569) * 86400 * 1000));
+    if (!isNaN(dExcel.getTime())) {
+      return String(dExcel.getDate()).padStart(2,'0') + '/' + String(dExcel.getMonth()+1).padStart(2,'0') + '/' + dExcel.getFullYear();
+    }
   }
 
-  if (!flipped) {
-    if (!isNaN(s) && Number(s) > 40000 && Number(s) < 60000) {
-      dt = new Date(Math.round((Number(s) - 25569) * 86400 * 1000));
-    } else if (s.includes('/')) {
-      const p = s.split('/');
-      if(p.length === 3) {
-        let yyyy = parseInt(p[2], 10);
-        if(yyyy > 2500) yyyy -= 543;
-        dt = new Date(yyyy, parseInt(p[1], 10)-1, parseInt(p[0], 10));
+  // DD/MM/YYYY or D/M/YYYY (canonical — ignore trailing time)
+  if (s.includes('/')) {
+    const parts = s.split(/\s+/);
+    const p = parts[0].split('/');
+    if (p.length === 3) {
+      const dd = parseInt(p[0], 10);
+      const mm = parseInt(p[1], 10);
+      let yyyy = parseInt(p[2], 10);
+      if (yyyy > 2500) yyyy -= 543;
+      if (!isNaN(dd) && !isNaN(mm) && !isNaN(yyyy) && yyyy >= 1900 && yyyy <= 2200) {
+        return String(dd).padStart(2,'0') + '/' + String(mm).padStart(2,'0') + '/' + yyyy;
       }
     }
   }
-  
-  if (!dt || isNaN(dt.getTime())) dt = new Date(s);
-  if (isNaN(dt.getTime())) return s.substring(0,10);
-  
-  const dd = String(dt.getDate()).padStart(2,'0');
-  const mm = String(dt.getMonth()+1).padStart(2,'0');
-  let yyyy = dt.getFullYear();
-  if (yyyy > 3000) return s.substring(0,10); 
-  return dd+'/'+mm+'/'+yyyy;
+
+  // ISO (YYYY-MM-DD) or JS Date string (Tue Sep 08 2026 GMT+0700...)
+  const dt = new Date(s);
+  if (!isNaN(dt.getTime())) {
+    let yyyy = dt.getFullYear();
+    if (yyyy > 2500) yyyy -= 543;
+    if (yyyy >= 1900 && yyyy <= 2200) {
+      // Use UTC date for ISO strings to avoid timezone shift
+      const useUTC = s.includes('T') && s.includes('Z');
+      const dayVal = useUTC ? dt.getUTCDate() : dt.getDate();
+      const monVal = useUTC ? dt.getUTCMonth()+1 : dt.getMonth()+1;
+      const yrVal  = useUTC ? dt.getUTCFullYear() : yyyy;
+      return String(dayVal).padStart(2,'0') + '/' + String(monVal).padStart(2,'0') + '/' + yrVal;
+    }
+  }
+  return s.substring(0,10);
 }
 
 // ════ LOGIN SYSTEM ════
@@ -6808,7 +6811,7 @@ function syncFromGAS(){
   if(!_isGAS) return;
   google.script.run.withSuccessHandler(function(data){
     if(!data.success)return;
-    TX=data.recent||[];
+    TX=(data.recent||[]).map(function(r,i){ r._sheetOrder=i; return r; });
     recalculateAllStatusJS();
     refreshDash(TX);
 
@@ -7108,7 +7111,8 @@ function doExport() {
   const headers = ['NO','DUID','REGION','TYPE','DATE','BILL NO','MODEL','ITEM CODE','DESCRIPTION','QTY','SN','STATUS'];
   var csvRows = [headers.join(',')];
   rows.forEach(r => {
-    csvRows.push([r.no, r.duid, r.region, r.type, r.date, r.bill, r.model, r.code, r.desc, r.qty, r.sn, r.status].map(v => {
+    // V.7.4.4: format date as DD/MM/YYYY to avoid GMT string in CSV
+    csvRows.push([r.no, r.duid, r.region, r.type, fmtDate(r.date), r.bill, r.model, r.code, r.desc, r.qty, r.sn, r.status].map(v => {
       let s = String(v||'').replace(/"/g, '""');
       return (s.includes(',')||s.includes('\n')||s.includes('"')) ? '"'+s+'"' : s;
     }).join(','));
@@ -7119,6 +7123,7 @@ function doExport() {
   var a = document.createElement('a'); a.href = url;
   a.download = 'Export_INOUT_' + ieCurrentCustomer + '.csv';
   a.click();
+  URL.revokeObjectURL(url);
 }
 
 const THEMES = ['dark', 'light', 'gray', 'color'];
