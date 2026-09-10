@@ -385,7 +385,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
     <a class="ni" onclick="openBomPage('TRUE',this)"><span class="ni-ic">📘</span>BOM TRUE</a>
     <div class="nav-sec">หน้าหลัก</div>
     <a class="ni active" onclick="pg('dashboard',this)"><span class="ni-ic">🏠</span>Dashboard</a>
-    <a class="ni" onclick="pg('transactions',this)"><span class="ni-ic">📋</span>รายการทั้งหมด<span class="n-badge" id="nbPending">-</span></a>
+    <a class="ni" onclick="curStatusF='ALL';pg('transactions',this)"><span class="ni-ic">📋</span>รายการทั้งหมด<span class="n-badge" id="nbPending">-</span></a>
     <a class="ni" onclick="pg('import',this)"><span class="ni-ic">📂</span>Import / Sync ข้อมูล</a>
     <a class="ni" onclick="pg('search',this)"><span class="ni-ic">🔍</span>ค้นหา DUID / Bill</a>
     <div class="nav-sec">บันทึกข้อมูล</div>
@@ -422,7 +422,20 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
         <div class="kc kg"><div class="k-ic" style="background:rgba(0,194,138,.15)">📥</div><div class="k-lbl">IN + STR/IN</div><div class="k-val" id="kIn">0</div><div class="k-sub" style="color:var(--primary)">▲ ยอดรับเข้าวันนี้</div></div>
         <div class="kc kr"><div class="k-ic" style="background:rgba(255,77,106,.15)">📤</div><div class="k-lbl">OUT + DISMANTLE</div><div class="k-val" id="kOut">0</div><div class="k-sub" style="color:var(--red)">▼ ยอดนำออกวันนี้</div></div>
         <div class="kc kb"><div class="k-ic" style="background:rgba(77,159,255,.15)">🏷️</div><div class="k-lbl">DUID Active</div><div class="k-val" id="kDuid">0</div><div class="k-sub" style="color:var(--blue)">รายการในระบบ</div></div>
-        <div class="kc kp"><div class="k-ic" style="background:rgba(178,109,255,.15)">⏳</div><div class="k-lbl">รอดำเนินการ</div><div class="k-val" id="kPend">0</div><div class="k-sub" style="color:var(--purple)">Pending / On Process</div></div>
+        <div class="kc kp" style="cursor:pointer" onclick="filterByStatus('Open')" title="คลิกเพื่อดู OPEN (หรือคลิก Closed เพื่อดู Closed)">
+          <div class="k-ic" style="background:rgba(0,194,138,.12)">📂</div>
+          <div class="k-lbl">OPEN / CLOSED</div>
+          <div style="display:flex;align-items:baseline;gap:8px;line-height:1">
+            <span class="k-val" id="kOpen" style="color:var(--primary);cursor:pointer" onclick="event.stopPropagation();filterByStatus('Open')" title="คลิกเพื่อดู OPEN">0</span>
+            <span style="font-size:16px;font-weight:800;color:var(--muted)">/</span>
+            <span class="k-val" id="kClosed" style="color:var(--red);font-size:20px;cursor:pointer" onclick="event.stopPropagation();filterByStatus('Closed')" title="คลิกเพื่อดู CLOSED">0</span>
+          </div>
+          <div class="k-sub" style="display:flex;gap:6px;margin-top:6px">
+            <span style="color:var(--primary);cursor:pointer" onclick="event.stopPropagation();filterByStatus('Open')">✅ Open</span>
+            <span style="color:var(--muted)">/</span>
+            <span style="color:var(--red);cursor:pointer" onclick="event.stopPropagation();filterByStatus('Closed')">❌ Closed</span>
+          </div>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:16px" id="typeMini"></div>
       <div class="dash-row">
@@ -5608,10 +5621,12 @@ function cSb(){document.getElementById('sb').classList.remove('open');document.g
 
 // ════ KPI ════
 function countUp(el,n,dur=700){if(!el)return;let s=0,step=Math.max(1,Math.ceil(n/(dur/16)));const t=setInterval(()=>{s=Math.min(s+step,n);el.textContent=s;if(s>=n)clearInterval(t)},16)}
-function calcKPI(data){const d=new Date(),ts=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`,tR=data.filter(r=>fmtDate(r.date)===ts);return{inToday:tR.filter(r=>/^(IN|STR\/IN)$/i.test(r.type||'')).length,outToday:tR.filter(r=>/^(OUT|DISMANTLE)$/i.test(r.type||'')).length,pending:data.filter(r=>r.status==='Pending'||r.status==='On Process').length,activeDuid:new Set(data.map(r=>r.duid)).size};}
-function loadKPIs(data){const k=calcKPI(data);pending=k.pending;document.getElementById('nbPending').textContent=k.pending||'-';setTimeout(()=>countUp(document.getElementById('kIn'),k.inToday),120);setTimeout(()=>countUp(document.getElementById('kOut'),k.outToday),240);setTimeout(()=>countUp(document.getElementById('kDuid'),k.activeDuid),360);setTimeout(()=>countUp(document.getElementById('kPend'),k.pending),480);}
+function calcKPI(data){const d=new Date(),ts=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`,tR=data.filter(r=>fmtDate(r.date)===ts);return{inToday:tR.filter(r=>/^(IN|STR\/IN)$/i.test(r.type||'')).length,outToday:tR.filter(r=>/^(OUT|DISMANTLE)$/i.test(r.type||'')).length,openCount:data.filter(r=>r.status==='Open').length,closedCount:data.filter(r=>r.status==='Closed').length,activeDuid:new Set(data.map(r=>r.duid)).size};}
+function loadKPIs(data){const k=calcKPI(data);pending=k.openCount;document.getElementById('nbPending').textContent=k.openCount||'-';setTimeout(()=>countUp(document.getElementById('kIn'),k.inToday),120);setTimeout(()=>countUp(document.getElementById('kOut'),k.outToday),240);setTimeout(()=>countUp(document.getElementById('kDuid'),k.activeDuid),360);setTimeout(()=>countUp(document.getElementById('kOpen'),k.openCount),480);setTimeout(()=>countUp(document.getElementById('kClosed'),k.closedCount),560);}
 function renderTypeMini(data){document.getElementById('typeMini').innerHTML=TYPE_DEFS.map(td=>{const cnt=data.filter(r=>(r.type||'').toUpperCase()===td.type.toUpperCase()).length;return`<div style="background:var(--card);border:1px solid var(--border);border-radius:11px;padding:11px 8px;text-align:center;cursor:pointer;transition:transform .2s" onclick="setFAndGo('${td.type}')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''"><div style="font-size:20px;margin-bottom:4px">${td.icon}</div><div style="font-size:18px;font-weight:800;color:${td.color}">${cnt}</div><div style="font-size:9px;color:var(--muted);margin-top:2px">${td.type}</div></div>`;}).join('');}
 function setFAndGo(type){curF=type;pg('transactions',document.querySelectorAll('.ni')[1]);document.querySelectorAll('.ft').forEach(b=>b.classList.remove('active'));applyF();}
+let curStatusF='ALL';
+function filterByStatus(status){curStatusF=status||'ALL';const qEl=document.getElementById('txQ');if(qEl)qEl.value='';pg('transactions',document.querySelectorAll('.ni')[1]);applyF();}
 
 // ════ CHARTS ════
 function drawLineChart(data){if(lChInst)lChInst.destroy();const labels=[],d0=[],d1=[],d2=[],d3=[],d4=[],d5=[];for(let i=6;i>=0;i--){const dt=new Date(Date.now()-i*86400000),lbl=`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;labels.push(lbl);// V.7.4.4: match both DD/MM prefix and full DD/MM/YYYY string after normalization
@@ -5850,6 +5865,9 @@ function applyF() {
   if (c !== 'ALL') txFiltered = txFiltered.filter(t => t.customer === c);
   if (r !== 'ALL') txFiltered = txFiltered.filter(t => t.region === r);
   if (ty !== 'ALL') txFiltered = txFiltered.filter(t => (t.type||'').toUpperCase() === ty);
+  if (typeof curStatusF !== 'undefined' && curStatusF !== 'ALL') {
+    txFiltered = txFiltered.filter(t => (t.status||'').toLowerCase() === curStatusF.toLowerCase());
+  }
   
   if (q) {
     txFiltered = txFiltered.filter(t => 
