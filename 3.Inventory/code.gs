@@ -1,5 +1,5 @@
 /*
- * Inventory Smart System - V.7.4.4
+ * Inventory Smart System - V.7.5.0
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
@@ -419,7 +419,11 @@ function saveMainData(header, items, userEmail, userName) {
 
     if (allRows.length > 0) {
       sheet.insertRowsAfter(1, allRows.length);
-      sheet.getRange(2, 1, allRows.length, 25).setValues(allRows);
+      var dataRange = sheet.getRange(2, 1, allRows.length, 25);
+      dataRange.setValues(allRows);
+      // V.7.5.0: Force date column (col 6) to plain text to prevent
+      // Google Sheets US-locale from auto-converting DD/MM/YYYY strings.
+      sheet.getRange(2, 6, allRows.length, 1).setNumberFormat('@');
     }
 
     SpreadsheetApp.flush();
@@ -1295,6 +1299,20 @@ function formatToDDMMYYYY(val) {
   if (!val) return "";
   if (val instanceof Date) {
     if (isNaN(val.getTime())) return "";
+    // V.7.5.1: Detect Google Sheets US-locale misinterpretation:
+    // e.g. we saved "10/09/2026" (DD/MM/YYYY) but GS read it as Oct 9 (MM/DD).
+    // Heuristic: if the date is in the same year but month > current month
+    // AND the "day" value <= current month, it is likely swapped.
+    var now = new Date();
+    var valY  = val.getFullYear();
+    var valM  = val.getMonth() + 1; // 1-12
+    var valD  = val.getDate();
+    var nowY  = now.getFullYear();
+    var nowM  = now.getMonth() + 1;
+    if (valY === nowY && valM > nowM && valD <= nowM) {
+      // Swap: real day = valM, real month = valD
+      return ("0" + valM).slice(-2) + "/" + ("0" + valD).slice(-2) + "/" + valY;
+    }
     return Utilities.formatDate(val, "GMT+7", "dd/MM/yyyy");
   }
   var s = String(val).trim();
@@ -1309,17 +1327,27 @@ function formatToDDMMYYYY(val) {
     }
   }
 
-  // Already DD/MM/YYYY or D/M/YYYY (ignore trailing time if any)
+  // Slash format — V.7.5.0: Robust DD/MM/YYYY detection
+  // Google Sheets US-locale may store our DD/MM/YYYY as MM/DD/YYYY text.
+  // Rules:
+  //   p0 > 12 => definitely DD/MM/YYYY (day cannot be a month)
+  //   p1 > 12 => definitely MM/DD/YYYY => swap to DD/MM
+  //   both <= 12 => ambiguous; treat as MM/DD/YYYY (US locale) => swap to DD/MM
+  //                 because Google Sheets en-US auto-formats dates as MM/DD.
   if (s.indexOf("/") > -1) {
     var parts = s.split(/\s+/);
     var slashParts = parts[0].split("/");
     if (slashParts.length === 3) {
-      var d = parseInt(slashParts[0], 10);
-      var m = parseInt(slashParts[1], 10);
-      var y = parseInt(slashParts[2], 10);
+      var p0 = parseInt(slashParts[0], 10);
+      var p1 = parseInt(slashParts[1], 10);
+      var y  = parseInt(slashParts[2], 10);
       if (y > 2500) y -= 543;
-      if (!isNaN(d) && !isNaN(m) && !isNaN(y) && y >= 1900 && y <= 2200) {
-        return ("0" + d).slice(-2) + "/" + ("0" + m).slice(-2) + "/" + y;
+      if (!isNaN(p0) && !isNaN(p1) && !isNaN(y) && y >= 1900 && y <= 2200) {
+        var dd, mm;
+        if (p0 > 12)      { dd = p0; mm = p1; }  // Definitely DD/MM/YYYY
+        else if (p1 > 12) { dd = p1; mm = p0; }  // Definitely MM/DD/YYYY -> swap
+        else              { dd = p1; mm = p0; }  // Both <=12: assume MM/DD (US locale) -> swap
+        return ("0" + dd).slice(-2) + "/" + ("0" + mm).slice(-2) + "/" + y;
       }
     }
   }

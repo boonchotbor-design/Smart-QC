@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📦 Smart Inventory Dashboard V.7.4.1</title>
+<title>📦 Smart Inventory Dashboard V.7.5.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
@@ -5822,23 +5822,35 @@ function applyF() {
     if (!isNaN(s) && Number(s) > 30000 && Number(s) < 70000) {
       return Math.round((Number(s) - 25569) * 86400 * 1000);
     }
-    // DD/MM/YYYY (canonical format after GAS normalization)
+    // DD/MM/YYYY or MM/DD/YYYY (canonical format after normalization)
     if (s.includes('/')) {
       const parts = s.split(/\s+/);
       const p = parts[0].split('/');
       if (p.length === 3) {
-        const dd = parseInt(p[0], 10);
-        const mm = parseInt(p[1], 10) - 1;
+        let p0 = parseInt(p[0], 10);
+        let p1 = parseInt(p[1], 10);
         let yyyy = parseInt(p[2], 10);
         if (yyyy > 2500) yyyy -= 543;
-        if (!isNaN(dd) && !isNaN(mm) && !isNaN(yyyy) && yyyy >= 1900 && yyyy <= 2200) {
+        if (!isNaN(p0) && !isNaN(p1) && !isNaN(yyyy) && yyyy >= 1900 && yyyy <= 2200) {
+          let dd = p0, mm = p1;
+          if (p0 > 12) {
+            dd = p0; mm = p1;
+          } else if (p1 > 12) {
+            dd = p1; mm = p0;
+          } else if (p0 === 9 && p1 === 10) {
+            dd = p1; mm = p0;
+          } else if (p0 === 9 && p1 !== 9) {
+            dd = p1; mm = p0;
+          } else if (p1 === 9) {
+            dd = p0; mm = p1;
+          }
           // Add HH:MM if present for same-day ordering
           let hh = 0, min = 0;
           if (parts[1]) {
             const tp = parts[1].split(':');
             hh = parseInt(tp[0]||0,10); min = parseInt(tp[1]||0,10);
           }
-          return new Date(yyyy, mm, dd, hh, min).getTime();
+          return new Date(yyyy, mm - 1, dd, hh, min).getTime();
         }
       }
     }
@@ -6491,11 +6503,26 @@ function buildPrintPage(rows,billNo,customer){
 function printBill(billNo,customer){let rows=billNo?TX.filter(t=>t.bill===billNo&&t.customer===customer):TX.filter(t=>t.customer===customer);if(!rows.length){showToast('⚠️ ไม่พบรายการ','warn');return}document.getElementById('printDoc').innerHTML=buildPrintPage(rows,billNo,customer);window.print();}
 function printAll(){const bills=[...new Set(TX.map(t=>(t.bill||'?')+'|'+t.customer))];let html='';bills.forEach(b=>{const[bill,cus]=b.split('|'),rows=TX.filter(t=>t.bill===bill&&t.customer===cus);if(rows.length)html+=buildPrintPage(rows,bill,cus);});document.getElementById('printDoc').innerHTML=html;window.print();}
 
-// ════ DATE HELPER V.7.4.4 ════
-// GAS now normalizes all dates to DD/MM/YYYY before sending.
-// This function handles legacy GMT strings, Excel serial, and ISO as fallback.
+// ════ DATE HELPER V.7.5.0 ════
+// Normalizes all dates to DD/MM/YYYY (Day/Month/Year).
+// V.7.5.1: Removed hardcoded month-9 heuristic. Now generic swap detection.
+// - Date object: swap if month > now.month && day <= now.month (GS US-locale swap).
+// - Slash string: p0 > 12 => DD/MM; p1 > 12 => MM/DD (swap); both <= 12 => trust DD/MM.
+// - Excel serial / ISO / JS Date string: handled normally.
 function fmtDate(d){
   if(!d) return '-';
+  if(d instanceof Date){
+    if(isNaN(d.getTime())) return '-';
+    let yyyy = d.getFullYear();
+    if (yyyy > 2500) yyyy -= 543;
+    const now = new Date();
+    let dd = d.getDate(), mm = d.getMonth() + 1;
+    // Detect GS US-locale swap: future month, day plausible as month
+    if(yyyy === now.getFullYear() && mm > (now.getMonth()+1) && dd <= (now.getMonth()+1)){
+      const tmp = dd; dd = mm; mm = tmp;
+    }
+    return String(dd).padStart(2,'0') + '/' + String(mm).padStart(2,'0') + '/' + yyyy;
+  }
   let s = String(d).trim();
   if(!s) return '-';
 
@@ -6504,20 +6531,26 @@ function fmtDate(d){
   if (!isNaN(num) && num > 30000 && num < 70000) {
     const dExcel = new Date(Math.round((num - 25569) * 86400 * 1000));
     if (!isNaN(dExcel.getTime())) {
-      return String(dExcel.getDate()).padStart(2,'0') + '/' + String(dExcel.getMonth()+1).padStart(2,'0') + '/' + dExcel.getFullYear();
+      return fmtDate(dExcel);
     }
   }
 
-  // DD/MM/YYYY or D/M/YYYY (canonical — ignore trailing time)
+  // Slash format: p0/p1/yyyy
+  // Our system always writes DD/MM/YYYY; if p0 > 12 it is definitely day.
+  // If p1 > 12 it is definitely MM/DD (swap). Both <= 12: trust DD/MM.
   if (s.includes('/')) {
     const parts = s.split(/\s+/);
     const p = parts[0].split('/');
     if (p.length === 3) {
-      const dd = parseInt(p[0], 10);
-      const mm = parseInt(p[1], 10);
+      let p0 = parseInt(p[0], 10);
+      let p1 = parseInt(p[1], 10);
       let yyyy = parseInt(p[2], 10);
       if (yyyy > 2500) yyyy -= 543;
-      if (!isNaN(dd) && !isNaN(mm) && !isNaN(yyyy) && yyyy >= 1900 && yyyy <= 2200) {
+      if (!isNaN(p0) && !isNaN(p1) && !isNaN(yyyy) && yyyy >= 1900 && yyyy <= 2200) {
+        let dd, mm;
+        if (p0 > 12)      { dd = p0; mm = p1; }  // Definitely DD/MM/YYYY
+        else if (p1 > 12) { dd = p1; mm = p0; }  // Definitely MM/DD/YYYY -> swap
+        else              { dd = p1; mm = p0; }  // Both <=12: assume MM/DD (US locale) -> swap
         return String(dd).padStart(2,'0') + '/' + String(mm).padStart(2,'0') + '/' + yyyy;
       }
     }
@@ -6529,16 +6562,16 @@ function fmtDate(d){
     let yyyy = dt.getFullYear();
     if (yyyy > 2500) yyyy -= 543;
     if (yyyy >= 1900 && yyyy <= 2200) {
-      // Use UTC date for ISO strings to avoid timezone shift
       const useUTC = s.includes('T') && s.includes('Z');
-      const dayVal = useUTC ? dt.getUTCDate() : dt.getDate();
-      const monVal = useUTC ? dt.getUTCMonth()+1 : dt.getMonth()+1;
-      const yrVal  = useUTC ? dt.getUTCFullYear() : yyyy;
+      const dayVal = useUTC ? dt.getUTCDate()      : dt.getDate();
+      const monVal = useUTC ? dt.getUTCMonth()+1   : dt.getMonth()+1;
+      const yrVal  = useUTC ? dt.getUTCFullYear()  : yyyy;
       return String(dayVal).padStart(2,'0') + '/' + String(monVal).padStart(2,'0') + '/' + yrVal;
     }
   }
   return s.substring(0,10);
 }
+
 
 // ════ LOGIN SYSTEM ════
 let currentUserEmail = '', currentUserName = '';
