@@ -1417,7 +1417,8 @@ function getDashboardData() {
     var outToday   = todayRows.filter(function(r) { return r.type.toUpperCase() === "OUT"; }).length;
     var disToday   = todayRows.filter(function(r) { return r.type.toUpperCase() === "DISMANTLE"; }).length;
     var strInToday = todayRows.filter(function(r) { return r.type.toUpperCase() === "STR/IN"; }).length;
-    var pendingCnt = allRows.filter(function(r) { return r.status === "Pending" || r.status === "On Process"; }).length;
+    var openCnt    = allRows.filter(function(r) { return /^(open|pending|on process)$/i.test(String(r.status || "").trim()); }).length;
+    var closedCnt  = allRows.filter(function(r) { return /^closed$/i.test(String(r.status || "").trim()); }).length;
     var duidSet    = {};
     allRows.forEach(function(r) { duidSet[r.duid] = true; });
     var activeDuid = Object.keys(duidSet).length;
@@ -1460,7 +1461,9 @@ function getDashboardData() {
         outToday:   outToday,
         disToday:   disToday,
         strInToday: strInToday,
-        pending:    pendingCnt,
+        pending:    openCnt,
+        openCount:  openCnt,
+        closedCount: closedCnt,
         activeDuid: activeDuid,
         total:      allRows.length
       },
