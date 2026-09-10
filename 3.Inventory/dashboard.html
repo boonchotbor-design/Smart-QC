@@ -5838,13 +5838,10 @@ function applyF() {
     return 0;
   }
 
-  // V.7.4.4: Sort by date desc, then by _sheetOrder desc (top rows of sheet = newest)
-  txFiltered = [...TX].sort((a,b) => {
-    const ta = parseDateStrict(a.date);
-    const tb = parseDateStrict(b.date);
-    if (tb !== ta) return tb - ta;
-    // Same date: higher _sheetOrder = inserted earlier (sheet stores newest at top)
-    // So lower _sheetOrder = closer to top = newer → sort ascending by _sheetOrder
+  // V.7.4.5: Sort by _sheetOrder ascending (= Google Sheet row order)
+  // _sheetOrder=0 → row 2 of sheet = most recently inserted record (saveMainData inserts at row 2)
+  // This makes UI match Google Sheet exactly: newest at top regardless of bill date
+  txFiltered = [...TX].sort((a, b) => {
     const oa = (a._sheetOrder !== undefined) ? a._sheetOrder : 999999;
     const ob = (b._sheetOrder !== undefined) ? b._sheetOrder : 999999;
     return oa - ob;
