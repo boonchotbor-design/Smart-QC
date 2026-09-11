@@ -208,11 +208,14 @@ app.post('/webhook', lineJsonParser, multiLineMiddleware, async (req, res) => {
         `📦 ${bot.name} V.7.1.0\n━━━━━━━━━━━━━━━\n` +
         `🔍 ค้นหา DUID:\nพิมพ์: DUID: [รหัส]\nเช่น: DUID: Ph26_CapEx_Mod\n\n` +
         `📋 คำสั่ง:\n• DUID: [รหัส] — ค้นหาข้อมูล\n• สถานะ — เมนูนี้\n• /id — Group/User ID`;
-    } else if (text.length >= 5) {
-      const result = await searchDuidFromGAS(text);
-      replyText = (result && !result.includes('<!DOCTYPE'))
-        ? result
-        : `📦 ${bot.name}\n━━━━━━━━━━━━━━━\nพิมพ์ DUID: [รหัส] เพื่อค้นหา\nหรือพิมพ์ "สถานะ" เพื่อดูเมนู`;
+    } else {
+      const isNoise = text.includes('@') || text.includes('\n') || text.startsWith('http') || text.length < 4 || text.length > 100;
+      if (!isNoise) {
+        const result = await searchDuidFromGAS(text);
+        if (result && !result.includes('❌ Not found') && !result.includes('❌ ไม่พบข้อมูล') && !result.includes('<!DOCTYPE')) {
+          replyText = result;
+        }
+      }
     }
 
     if (!replyText) continue;
@@ -285,9 +288,10 @@ app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) 
           { chat_id: currentChatId, text: `ℹ️ Chat ID: ${currentChatId}\nType: ${message.chat.type}` });
         return res.status(200).send('OK');
       }
-      if (txt.length >= 3) {
+      const isNoise = txt.includes('@') || txt.includes('\n') || txt.startsWith('http') || txt.length < 4 || txt.length > 100;
+      if (!isNoise) {
         const result = await searchDuidFromGAS(txt);
-        if (result && !result.includes('<!DOCTYPE')) {
+        if (result && !result.includes('<!DOCTYPE') && !result.includes('❌ Not found') && !result.includes('❌ ไม่พบข้อมูล')) {
           await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, { chat_id: currentChatId, text: result });
         }
       }

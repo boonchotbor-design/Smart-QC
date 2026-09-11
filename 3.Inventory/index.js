@@ -276,11 +276,16 @@ app.post('/webhook', lineJsonParser, multiLineMiddleware, async (req, res) => {
         `📦 ${bot.name} V.7.1.3\n━━━━━━━━━━━━━━━\n` +
         `🔍 ค้นหา DUID:\nพิมพ์: DUID: [รหัส]\nเช่น: DUID: Ph26_CapEx_Mod\n\n` +
         `📋 คำสั่ง:\n• DUID: [รหัส] — ค้นหาข้อมูล\n• สถานะ — เมนูนี้\n• /id — Group/User ID`;
-    } else if (text.length >= 3) {
-      // Fallback: ถ้าพิมพ์ข้อความทั่วไป (ความยาว >= 3) ให้ลองค้นหาแบบตรงๆ เหมือน Telegram
-      const result = await searchDuidFromGAS(text);
-      if (result) {
-        replyText = result;
+    } else {
+      // Direct DUID Search (เช่น ส่ง "CNAPM_2026 Capacity Expansion Modernize_EXP_ER")
+      // กรองข้อความรบกวน: มี @ (อีเมล/แท็ก), มีหลายบรรทัด, เป็นลิงก์, หรือสั้น/ยาวเกินไป
+      const isNoise = text.includes('@') || text.includes('\n') || text.startsWith('http') || text.length < 4 || text.length > 100;
+      if (!isNoise) {
+        const result = await searchDuidFromGAS(text);
+        // ตอบเฉพาะเมื่อ "พบข้อมูลจริงในระบบ" เท่านั้น! ถ้าไม่พบข้อมูลให้เงียบ ไม่ตอบกวนในกลุ่ม
+        if (result && !result.includes('❌ Not found') && !result.includes('❌ ไม่พบข้อมูล') && !result.includes('<!DOCTYPE')) {
+          replyText = result;
+        }
       }
     }
 
@@ -358,9 +363,10 @@ app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) 
           { chat_id: currentChatId, text: `ℹ️ Chat ID: ${currentChatId}\nType: ${message.chat.type}` });
         return res.status(200).send('OK');
       }
-      if (txt.length >= 3) {
+      const isNoise = txt.includes('@') || txt.includes('\n') || txt.startsWith('http') || txt.length < 4 || txt.length > 100;
+      if (!isNoise) {
         const result = await searchDuidFromGAS(txt);
-        if (result && !result.includes('<!DOCTYPE')) {
+        if (result && !result.includes('<!DOCTYPE') && !result.includes('❌ Not found') && !result.includes('❌ ไม่พบข้อมูล')) {
           await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, { chat_id: currentChatId, text: result });
         }
       }
