@@ -49,7 +49,7 @@ const app = express();
 // ─────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.json({
-    status: 'Alive', version: 'V.7.1.0',
+    status: 'Alive', version: 'V.7.5.4',
     bots: LINE_CONFIGS.map(b => b.name),
     gasUrl: GAS_WEB_APP_URL.substring(0, 60) + '...'
   });
@@ -60,7 +60,7 @@ app.get('/', (req, res) => {
 // ─────────────────────────────────────────────
 function formatNotificationMessage(header, items) {
   let msg =
-    `📦 TLN-Inventory V.7.1.0\n` +
+    `📦 TLN-Inventory V.7.5.4\n` +
     `━━━━━━━━━━━━━━━\n` +
     `✅ บันทึกข้อมูลใหม่\n` +
     `👤 โดย: ${header.userName || header.savedBy || '-'}\n` +

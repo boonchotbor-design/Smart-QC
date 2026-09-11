@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.7.5.3)
+# 📦 Inventory Smart System (V.7.5.4)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI & Dashboard) and Telegram Bot with AI OCR capabilities.
 
@@ -35,6 +35,11 @@ Project Context: A Google Apps Script application for managing hardware inventor
 ### 🐞 Bug Fixing
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
+
+## 🐞 Bug Fixes & Stability (V.7.5.4)
+- **Silent Bot on Non-DUID & Noise Suppression**: Added noise filtering in LINE and Telegram webhooks (`index.js` & `deploy/index.js`) to ignore messages containing `@` (mentions, emails), multiline texts, and URLs.
+- **Direct DUID Search with Zero-Spam Response**: Sending direct DUID strings (e.g. `CNAPM_2026 Capacity Expansion Modernize_EXP_ER`) queries GAS and replies with complete inventory reports when found, while suppressing `❌ Not found` / `❌ ไม่พบข้อมูล` responses during general chats so the bot never disturbs group conversations.
+- **Version Sync**: Synchronized all versions to V.7.5.4 across `index.js`, `deploy/index.js`, and documentation.
 
 ## 🐞 Bug Fixes & Stability (V.7.5.3)
 - **CSV Import LINE & Telegram Notification System**: Fixed critical bug where CSV imports did not send notifications to LINE and Telegram. Built `sendImportNotifications` in `code.gs` which groups imported rows by DUID/Bill and extracts complete details (DUID, Bill No, Region, Customer, Type, Owner Warehouse/Receiver, Location Warehouse/Receiver, and breakdown of Model, Serial Number, Quantity).
