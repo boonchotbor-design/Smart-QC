@@ -1,5 +1,5 @@
 /*
- * Inventory Smart System - V.7.5.0
+ * Inventory Smart System - V.7.5.2
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
@@ -14,6 +14,8 @@
  * V.7.1.2: Fixed multiple bots sending duplicate push messages issue by adding failover break.
  * V.7.4.4: Auto-normalize Date to DD/MM/YYYY on export, chart, and Sheet;
  *          Fix daily chart 0-count bug; Sort UI descending by date/time matching Google Sheet top-row recording.
+ * V.7.5.2: Fixed CSV Import not updating Google Sheets; Added IMPORT_LOG sheet & getImportHistory API;
+ *          Integrated Import History page (page-history) & recent import logs with success/failed tracking.
  */
 
 var SPREADSHEET_ID      = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -33,6 +35,12 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (e.parameter.export === "import_history" || e.parameter.action === "getImportHistory") {
+    var history = getImportHistory();
+    return ContentService.createTextOutput(JSON.stringify({ success: true, history: history }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (e.parameter.duid) {
     var result = searchByDuidOnly(e.parameter.duid);
     if (e.parameter.format === "text")
@@ -43,13 +51,13 @@ function doGet(e) {
 
   if (e.parameter.page === "dashboard") {
     return HtmlService.createTemplateFromFile('dashboard').evaluate()
-      .setTitle('Inventory Dashboard V.7.3.0')
+      .setTitle('Inventory Dashboard V.7.5.2')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-    .setTitle('Inventory Smart App V.7.3.0')
+    .setTitle('Inventory Smart App V.7.5.2')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -80,6 +88,18 @@ function doPost(e) {
       var result = saveMainData(data.header, data.items, userEmail, userName);
       logToSheet("SAVE_RESULT", "Success: " + result.success + (result.message ? ", Msg: " + result.message : ""));
       return jsonOut(result);
+    }
+
+    if (data.action === "import" || data.action === "saveImport") {
+      logToSheet("IMPORT_DATA", "Customer: " + data.customer + " | Rows: " + (data.rows ? data.rows.length : 0) + " | User: " + userEmail);
+      var result = saveImportData(data.rows, data.customer, userEmail, userName, data.fileName);
+      logToSheet("IMPORT_RESULT", "Success: " + result.success + (result.message ? ", Msg: " + result.message : ""));
+      return jsonOut(result);
+    }
+
+    if (data.action === "getImportHistory") {
+      var history = getImportHistory();
+      return jsonOut({ success: true, history: history });
     }
 
     if (data.action === "upload") {
@@ -1512,26 +1532,159 @@ function getDashboardData() {
 }
 
 // ─────────────────────────────────────────────
-// IMPORT DATA — V.7.3.0
+// IMPORT LOG & AUDIT SYSTEM — V.7.5.2
+// ─────────────────────────────────────────────
+
+function logImportEntry(entry) {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName("IMPORT_LOG");
+
+    if (!sheet) {
+      sheet = ss.insertSheet("IMPORT_LOG");
+      sheet.appendRow([
+        "Timestamp", "Customer", "File Name", "Total Rows",
+        "Success Count", "Failed Count", "Status", "DUIDs",
+        "User Email", "User Name", "Details"
+      ]);
+      sheet.setFrozenRows(1);
+      var header = sheet.getRange(1, 1, 1, 11);
+      header.setBackground("#00c28a").setFontColor("#ffffff").setFontWeight("bold");
+      sheet.setColumnWidths(1, 11, 140);
+      sheet.setColumnWidth(8, 220);
+      sheet.setColumnWidth(11, 280);
+    }
+
+    var timestamp = entry.timestamp || Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy HH:mm:ss");
+    sheet.insertRowAfter(1);
+    sheet.getRange(2, 1, 1, 11).setValues([[
+      timestamp,
+      entry.customer     || "AIS",
+      entry.fileName     || "CSV Import",
+      entry.totalRows    || 0,
+      entry.successCount || 0,
+      entry.failedCount  || 0,
+      entry.status       || "SUCCESS",
+      entry.duids        || "-",
+      entry.userEmail    || "Unknown",
+      entry.userName     || "Unknown",
+      entry.details      || "-"
+    ]]);
+  } catch (e) {
+    logToSheet("IMPORT_LOG_ERROR", e.toString());
+  }
+}
+
+function getImportHistory() {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName("IMPORT_LOG");
+    var logs = [];
+
+    if (sheet && sheet.getLastRow() > 1) {
+      var data = sheet.getRange(2, 1, Math.min(sheet.getLastRow() - 1, 100), 11).getValues();
+      for (var i = 0; i < data.length; i++) {
+        var row = data[i];
+        if (!row[0]) continue;
+        logs.push({
+          timestamp:    row[0] instanceof Date ? Utilities.formatDate(row[0], "GMT+7", "dd/MM/yyyy HH:mm:ss") : String(row[0]),
+          customer:     String(row[1] || "AIS"),
+          fileName:     String(row[2] || "CSV File"),
+          totalRows:    Number(row[3]) || 0,
+          successCount: Number(row[4]) || 0,
+          failedCount:  Number(row[5]) || 0,
+          status:       String(row[6] || "SUCCESS"),
+          duids:        String(row[7] || "-"),
+          userEmail:    String(row[8] || "-"),
+          userName:     String(row[9] || "-"),
+          details:      String(row[10] || "-")
+        });
+      }
+    }
+
+    // Fallback: ถ้าไม่มีข้อมูลใน IMPORT_LOG ให้ดึงจาก AUDIT_LOG
+    if (logs.length === 0) {
+      var auditSheet = ss.getSheetByName("AUDIT_LOG");
+      if (auditSheet && auditSheet.getLastRow() > 1) {
+        var aData = auditSheet.getRange(2, 1, Math.min(auditSheet.getLastRow() - 1, 50), 8).getValues();
+        for (var j = 0; j < aData.length; j++) {
+          var aRow = aData[j];
+          var action = String(aRow[3] || "").toUpperCase();
+          if (action === "IMPORT" || action === "IMPORT_CSV" || action === "UPSERT_IMPORT") {
+            logs.push({
+              timestamp:    aRow[0] instanceof Date ? Utilities.formatDate(aRow[0], "GMT+7", "dd/MM/yyyy HH:mm:ss") : String(aRow[0]),
+              customer:     String(aRow[4] || "").indexOf("TRUE") > -1 ? "TRUE" : "AIS",
+              fileName:     "CSV Upload",
+              totalRows:    1,
+              successCount: 1,
+              failedCount:  0,
+              status:       "SUCCESS",
+              duids:        String(aRow[5] || "-"),
+              userEmail:    String(aRow[1] || "-"),
+              userName:     String(aRow[2] || "-"),
+              details:      String(aRow[7] || "-")
+            });
+          }
+        }
+      }
+    }
+
+    return logs;
+  } catch (e) {
+    logToSheet("GET_IMPORT_HISTORY_ERROR", e.toString());
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────────
+// IMPORT DATA — V.7.5.2
 // รับ array of row objects จาก client, บันทึกลง sheet
 // ─────────────────────────────────────────────
 
-function saveImportData(rows, customer, userEmail, userName) {
+function saveImportData(rows, customer, userEmail, userName, fileName) {
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000);
-    if (!rows || rows.length === 0)
+    if (!rows || rows.length === 0) {
+      logImportEntry({
+        customer: customer || "AIS",
+        fileName: fileName || "CSV Upload",
+        totalRows: 0,
+        successCount: 0,
+        failedCount: 0,
+        status: "FAILED",
+        duids: "-",
+        userEmail: userEmail,
+        userName: userName,
+        details: "ไม่มีข้อมูลที่จะ Import"
+      });
       return { success: false, message: "❌ ไม่มีข้อมูลที่จะ Import" };
+    }
 
     var ss        = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheetName = "INOUT_HW_" + (customer || "AIS").toString().trim().toUpperCase();
     var sheet     = ss.getSheetByName(sheetName);
-    if (!sheet) return { success: false, message: "❌ ไม่พบ Sheet: " + sheetName };
+    if (!sheet) {
+      var errMsg = "ไม่พบ Sheet: " + sheetName;
+      logImportEntry({
+        customer: customer || "AIS",
+        fileName: fileName || "CSV Upload",
+        totalRows: rows.length,
+        successCount: 0,
+        failedCount: rows.length,
+        status: "FAILED",
+        duids: "-",
+        userEmail: userEmail,
+        userName: userName,
+        details: errMsg
+      });
+      return { success: false, message: "❌ " + errMsg };
+    }
 
     var dateStr    = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
     var duidSet    = {};
     var allRows    = [];
-    var internalNo = generateInternalNo(sheet, "ER");
+    var regionInternalMap = {};
 
     // หาเลข Running No สูงสุดของแต่ละ DUID ใน Sheet
     var lastRow = sheet.getLastRow();
@@ -1545,12 +1698,12 @@ function saveImportData(rows, customer, userEmail, userName) {
 
     rows.forEach(function(row) {
       var cleanDuid   = String(row.duid      || "").trim();
-      var cleanBill   = String(row.bill      || "").trim();
+      var cleanBill   = String(row.bill || row.billNo || "").trim();
       var cleanRegion = String(row.region    || "").trim().toUpperCase();
 
       var currentMax = duidMap[cleanDuid.toLowerCase()] || 0;
-      var newNo = currentMax + 1;
-      duidMap[cleanDuid.toLowerCase()] = newNo;
+      var newNo = (row.no !== undefined && row.no !== "" && !isNaN(Number(row.no))) ? Number(row.no) : (currentMax + 1);
+      if (newNo > currentMax) duidMap[cleanDuid.toLowerCase()] = newNo;
 
       // Region Fallback
       if (!cleanRegion || cleanRegion === "-") {
@@ -1564,11 +1717,17 @@ function saveImportData(rows, customer, userEmail, userName) {
         } catch (e) {}
       }
 
+      var reg = cleanRegion || "ER";
+      if (!regionInternalMap[reg]) {
+        regionInternalMap[reg] = generateInternalNo(sheet, reg);
+      }
+      var internalNo = regionInternalMap[reg];
+
       var newRow = new Array(25).fill("");
       newRow[0]  = newNo;
       newRow[1]  = cleanDuid;
-      newRow[2]  = cleanRegion || "ER";
-      newRow[3]  = String(row.transType || row.type || "").trim().toUpperCase(); // IN/OUT
+      newRow[2]  = reg;
+      newRow[3]  = String(row.transType || row.type || "IN").trim().toUpperCase(); // IN/OUT
       newRow[4]  = String(row.itemType  || row.itype || "").trim();               // TYPE
       newRow[5]  = formatToDDMMYYYY(row.date) || dateStr;
       newRow[6]  = cleanBill;
@@ -1576,11 +1735,15 @@ function saveImportData(rows, customer, userEmail, userName) {
       newRow[8]  = String(row.code      || "").trim();
       newRow[9]  = String(row.desc      || "").trim();
       newRow[10] = Number(row.qty)  || 1;
-      newRow[11] = String(row.sn    || "").trim();
-      newRow[21] = "Pending";
-      newRow[22] = internalNo;
-      newRow[23] = userEmail || "Import";
-      newRow[24] = userName  || "Import";
+      newRow[11] = String(row.sn    || "NA").trim();
+      newRow[12] = String(row.ownerWarehouse || row.ownerW || "").trim();
+      newRow[13] = String(row.ownerReceiver  || row.ownerR || "").trim();
+      newRow[14] = String(row.locationWarehouse || row.locW || "").trim();
+      newRow[15] = String(row.locationReceiver  || row.locR || "").trim();
+      newRow[21] = String(row.status || "Pending").trim();
+      newRow[22] = String(row.intNo || internalNo).trim();
+      newRow[23] = userEmail || String(row.userEmail || "Import").trim();
+      newRow[24] = userName  || String(row.userNm || row.user || "Import").trim();
 
       allRows.push(newRow);
       if (cleanDuid) duidSet[cleanDuid] = true;
@@ -1590,6 +1753,8 @@ function saveImportData(rows, customer, userEmail, userName) {
       sheet.insertRowsAfter(1, allRows.length);
       var reversedRows = allRows.slice().reverse();
       sheet.getRange(2, 1, reversedRows.length, 25).setValues(reversedRows);
+      // Force date column (col 6) plain text
+      sheet.getRange(2, 6, reversedRows.length, 1).setNumberFormat('@');
     }
 
     SpreadsheetApp.flush();
@@ -1599,10 +1764,25 @@ function saveImportData(rows, customer, userEmail, userName) {
       updateDuidStatus(duid, (customer || "AIS").toUpperCase());
     });
 
+    var duidListStr = Object.keys(duidSet).slice(0, 10).join(", ") + (Object.keys(duidSet).length > 10 ? "..." : "");
+
     logAuditEntry(
-      "IMPORT", userEmail, userName, sheetName, "-", "-",
-      "Import " + allRows.length + " รายการ | Customer: " + customer
+      "IMPORT_CSV", userEmail, userName, sheetName, duidListStr, "-",
+      "Import " + allRows.length + " รายการ | Customer: " + customer + " | File: " + (fileName || "CSV")
     );
+
+    logImportEntry({
+      customer: (customer || "AIS").toUpperCase(),
+      fileName: fileName || "CSV Upload",
+      totalRows: allRows.length,
+      successCount: allRows.length,
+      failedCount: 0,
+      status: "SUCCESS",
+      duids: duidListStr,
+      userEmail: userEmail || "Import",
+      userName: userName  || "Import",
+      details: "Import สำเร็จ " + allRows.length + " รายการ เข้า " + sheetName
+    });
 
     // ── แจ้งเตือนสรุปการ Import ──
     try {
@@ -1620,7 +1800,7 @@ function saveImportData(rows, customer, userEmail, userName) {
         locationReceiver: "-"
       };
       var importItems = [{
-        model: "รายการอัปโหลดจาก CSV",
+        model: "รายการอัปโหลดจาก CSV: " + (fileName || ""),
         sn: "N/A",
         qty: allRows.length
       }];
@@ -1637,6 +1817,18 @@ function saveImportData(rows, customer, userEmail, userName) {
 
   } catch (e) {
     logToSheet("IMPORT_ERROR", e.toString());
+    logImportEntry({
+      customer: (customer || "AIS").toUpperCase(),
+      fileName: fileName || "CSV Upload",
+      totalRows: (rows ? rows.length : 0),
+      successCount: 0,
+      failedCount: (rows ? rows.length : 0),
+      status: "FAILED",
+      duids: "-",
+      userEmail: userEmail || "Import",
+      userName: userName || "Import",
+      details: e.toString()
+    });
     return { success: false, message: "❌ Import ผิดพลาด: " + e.toString() };
   } finally {
     lock.releaseLock();
@@ -1716,20 +1908,24 @@ function saveImportDataUpdate(rows, customer, userEmail, userName) {
     }
 
     var idx = {
-      duid:  hIdx(["DUID"], 1),
-      region:hIdx(["REGION"], 2),
-      type:  hIdx(["IN/OUT"], 3),
-      itype: hIdx(["TYPE","ITYPE"], 4),
-      date:  hIdx(["DATE"], 5),
-      bill:  hIdx(["BILL NO.","BILL NO","BILL"], 6),
-      model: hIdx(["MODEL"], 7),
-      code:  hIdx(["ITEM CODE","CODE"], 8),
-      desc:  hIdx(["ITEM DESCRIPTION","DESCRIPTION","DESC"], 9),
-      qty:   hIdx(["QTY","QUANTITY"], 10),
-      sn:    hIdx(["SN","SERIAL NO","SERIAL"], 11),
-      status:hIdx(["STATUS"], 21),
-      email: 23,
-      uname: 24
+      duid:   hIdx(["DUID"], 1),
+      region: hIdx(["REGION"], 2),
+      type:   hIdx(["IN/OUT"], 3),
+      itype:  hIdx(["TYPE","ITYPE"], 4),
+      date:   hIdx(["DATE"], 5),
+      bill:   hIdx(["BILL NO.","BILL NO","BILL"], 6),
+      model:  hIdx(["MODEL"], 7),
+      code:   hIdx(["ITEM CODE","CODE"], 8),
+      desc:   hIdx(["ITEM DESCRIPTION","DESCRIPTION","DESC"], 9),
+      qty:    hIdx(["QTY","QUANTITY"], 10),
+      sn:     hIdx(["SN","SERIAL NO","SERIAL"], 11),
+      ownerW: hIdx(["OWNER WAREHOUSE","OWNER W","OWNERW"], 12),
+      ownerR: hIdx(["OWNER RECEIVER","OWNER R","OWNERR"], 13),
+      locW:   hIdx(["LOCATION WAREHOUSE","LOC W","LOCW"], 14),
+      locR:   hIdx(["LOCATION RECEIVER","LOC R","LOCR"], 15),
+      status: hIdx(["STATUS"], 21),
+      email:  23,
+      uname:  24
     };
 
     var updatedCount = 0;
@@ -1738,7 +1934,7 @@ function saveImportDataUpdate(rows, customer, userEmail, userName) {
 
     rows.forEach(function(row) {
       var cleanDuid = String(row.duid || "").trim();
-      var cleanBill = String(row.bill || "").trim();
+      var cleanBill = String(row.bill || row.billNo || "").trim();
       var cleanCode = String(row.code || "").trim();
       var cleanSN   = String(row.sn   || "").trim();
       if (!cleanDuid) return;
@@ -1768,7 +1964,11 @@ function saveImportDataUpdate(rows, customer, userEmail, userName) {
         sheet.getRange(sheetRow, idx.model  + 1).setValue(String(row.model || "").trim());
         sheet.getRange(sheetRow, idx.desc   + 1).setValue(String(row.desc  || "").trim());
         sheet.getRange(sheetRow, idx.qty    + 1).setValue(Number(row.qty)  || 1);
-        sheet.getRange(sheetRow, idx.sn     + 1).setValue(cleanSN);
+        sheet.getRange(sheetRow, idx.sn     + 1).setValue(cleanSN || "NA");
+        if (row.ownerW || row.ownerWarehouse) sheet.getRange(sheetRow, idx.ownerW + 1).setValue(String(row.ownerWarehouse || row.ownerW || "").trim());
+        if (row.ownerR || row.ownerReceiver)  sheet.getRange(sheetRow, idx.ownerR + 1).setValue(String(row.ownerReceiver  || row.ownerR || "").trim());
+        if (row.locW || row.locationWarehouse) sheet.getRange(sheetRow, idx.locW + 1).setValue(String(row.locationWarehouse || row.locW || "").trim());
+        if (row.locR || row.locationReceiver)  sheet.getRange(sheetRow, idx.locR + 1).setValue(String(row.locationReceiver  || row.locR || "").trim());
         sheet.getRange(sheetRow, idx.email  + 1).setValue(userEmail || "Import");
         sheet.getRange(sheetRow, idx.uname  + 1).setValue(userName  || "Import");
         updatedCount++;
@@ -1786,7 +1986,11 @@ function saveImportDataUpdate(rows, customer, userEmail, userName) {
         newRow[idx.code]   = cleanCode;
         newRow[idx.desc]   = String(row.desc  || "").trim();
         newRow[idx.qty]    = Number(row.qty)  || 1;
-        newRow[idx.sn]     = cleanSN;
+        newRow[idx.sn]     = cleanSN || "NA";
+        newRow[idx.ownerW] = String(row.ownerWarehouse || row.ownerW || "").trim();
+        newRow[idx.ownerR] = String(row.ownerReceiver  || row.ownerR || "").trim();
+        newRow[idx.locW]   = String(row.locationWarehouse || row.locW || "").trim();
+        newRow[idx.locR]   = String(row.locationReceiver  || row.locR || "").trim();
         newRow[idx.status] = "Pending";
         newRow[idx.email]  = userEmail || "Import";
         newRow[idx.uname]  = userName  || "Import";
@@ -1798,6 +2002,7 @@ function saveImportDataUpdate(rows, customer, userEmail, userName) {
     if (insertedRows.length > 0) {
       sheet.insertRowsAfter(1, insertedRows.length);
       sheet.getRange(2, 1, insertedRows.length, 25).setValues(insertedRows.slice().reverse());
+      sheet.getRange(2, 6, insertedRows.length, 1).setNumberFormat('@');
     }
 
     SpreadsheetApp.flush();
@@ -1806,10 +2011,25 @@ function saveImportDataUpdate(rows, customer, userEmail, userName) {
       updateDuidStatus(duid, (customer || "AIS").toUpperCase());
     });
 
+    var duidListStr = Object.keys(duidSet).slice(0, 10).join(", ") + (Object.keys(duidSet).length > 10 ? "..." : "");
+
     logAuditEntry(
-      "UPSERT_IMPORT", userEmail, userName, sheetName, "-", "-",
+      "UPSERT_IMPORT", userEmail, userName, sheetName, duidListStr, "-",
       "Update " + updatedCount + " + Insert " + insertedRows.length + " รายการ | Customer: " + customer
     );
+
+    logImportEntry({
+      customer: (customer || "AIS").toUpperCase(),
+      fileName: fileName || "CSV Upload",
+      totalRows: rows.length,
+      successCount: updatedCount + insertedRows.length,
+      failedCount: 0,
+      status: "SUCCESS",
+      duids: duidListStr,
+      userEmail: userEmail || "Import",
+      userName: userName  || "Import",
+      details: "Update " + updatedCount + " + Insert " + insertedRows.length + " รายการ"
+    });
 
     return {
       success:  true,
@@ -1820,6 +2040,18 @@ function saveImportDataUpdate(rows, customer, userEmail, userName) {
 
   } catch (e) {
     logToSheet("UPSERT_IMPORT_ERROR", e.toString());
+    logImportEntry({
+      customer: (customer || "AIS").toUpperCase(),
+      fileName: fileName || "CSV Upload",
+      totalRows: (rows ? rows.length : 0),
+      successCount: 0,
+      failedCount: (rows ? rows.length : 0),
+      status: "FAILED",
+      duids: "-",
+      userEmail: userEmail || "Import",
+      userName: userName || "Import",
+      details: e.toString()
+    });
     return { success: false, message: "❌ Update ผิดพลาด: " + e.toString() };
   } finally {
     lock.releaseLock();

@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📦 Smart Inventory Dashboard V.7.5.1</title>
+<title>📦 Smart Inventory Dashboard V.7.5.2</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
@@ -370,7 +370,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
 
 <div id="sbov" onclick="cSb()"></div>
 <nav id="sb">
-  <div class="sb-logo"><h2>📦 SmartStock</h2><p>Inventory V.7.5.1</p></div>
+  <div class="sb-logo"><h2>📦 SmartStock</h2><p>Inventory V.7.5.2</p></div>
   <div class="sb-user" style="cursor:pointer" title="ข้อมูลผู้ใช้">
     <div class="u-av" id="sbUserAv">??</div>
     <div class="u-info" style="flex:1" onclick="promptChangeUser()">
@@ -400,7 +400,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
     <a class="ni" onclick="pg('print',this)"><span class="ni-ic">🖨️</span>Print ใบเบิก (Teloneer)</a>
     <a class="ni" onclick="pg('history',this); loadHistoryPage();"><span class="ni-ic">📜</span>ประวัติ Import</a>
   </nav>
-  <div class="sb-foot"><span class="ldot"></span>Smart Inventory V.7.5.1</div>
+  <div class="sb-foot"><span class="ldot"></span>Smart Inventory V.7.5.2</div>
 </nav>
 
 <div id="main">
@@ -535,6 +535,21 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
           </div>
         </div>
         <div class="prog-wrap" id="progWrap"><div class="prog-bar"><div class="prog-fill" id="progFill"></div></div><div class="prog-text" id="progText">กำลังประมวลผล...</div></div>
+
+        <!-- Recent Import Card inside page-import -->
+        <div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">
+              <span>📜</span> ประวัติการ Import ล่าสุด
+            </div>
+            <button class="tbtn" onclick="pg('history', document.querySelector('.ni[onclick*=\'history\']')); loadHistoryPage();" style="font-size:11px;padding:4px 10px">
+              ดูประวัติทั้งหมด ➔
+            </button>
+          </div>
+          <div id="recentImportMiniList" style="overflow-x:auto">
+            <div style="font-size:11px;color:var(--muted);text-align:center;padding:12px">ยังไม่มีประวัติการ Import ล่าสุด</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -610,6 +625,96 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
         </div>
         <div id="printPreview" style="background:#fff;color:#000;padding:20px;border-radius:4px;overflow-x:auto;display:none;min-height:300px;box-shadow:inset 0 0 10px rgba(0,0,0,0.1)">
           <!-- Preview goes here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 📜 ประวัติ Import (Page History) -->
+    <div class="page" id="page-history">
+      <div class="tc">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <div>
+            <div class="c-title" style="margin-bottom:4px">📜 ประวัติการ Import ข้อมูล (Import History)</div>
+            <div style="font-size:12px;color:var(--muted)">บันทึกประวัติการนำเข้าไฟล์ CSV พร้อมสถานะสำเร็จและล้มเหลว ตรวจสอบย้อนหลังได้</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="tbtn" onclick="loadHistoryPage(true)" style="display:flex;align-items:center;gap:6px">
+              🔄 <span>รีเฟรชประวัติ</span>
+            </button>
+            <button class="tbtn b" onclick="pg('import', document.querySelectorAll('.ni')[3])" style="display:flex;align-items:center;gap:6px">
+              📂 <span>ไปหน้า Import CSV</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid" style="margin-bottom:18px">
+          <div class="kc kb">
+            <div class="k-ic" style="background:rgba(77,159,255,.15)">📂</div>
+            <div class="k-lbl">นำเข้าทั้งหมด</div>
+            <div class="k-val" id="histKpiTotal">0</div>
+            <div class="k-sub" style="color:var(--blue)">ครั้ง</div>
+          </div>
+          <div class="kc kg">
+            <div class="k-ic" style="background:rgba(0,194,138,.15)">✅</div>
+            <div class="k-lbl">สำเร็จ (Success)</div>
+            <div class="k-val" id="histKpiSuccess">0</div>
+            <div class="k-sub" style="color:var(--primary)">ครั้ง</div>
+          </div>
+          <div class="kc kr">
+            <div class="k-ic" style="background:rgba(255,77,106,.15)">❌</div>
+            <div class="k-lbl">ไม่สำเร็จ (Failed)</div>
+            <div class="k-val" id="histKpiFailed">0</div>
+            <div class="k-sub" style="color:var(--red)">ครั้ง</div>
+          </div>
+          <div class="kc kp">
+            <div class="k-ic" style="background:rgba(178,109,255,.15)">📦</div>
+            <div class="k-lbl">รายการสะสม</div>
+            <div class="k-val" id="histKpiItems">0</div>
+            <div class="k-sub" style="color:var(--purple)">รายการ</div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <div style="flex:1;min-width:220px">
+            <input class="fi" id="histSearchInput" placeholder="🔍 ค้นหาชื่อไฟล์, DUID, ผู้ใช้, รายละเอียด..." oninput="filterHistoryTable()" style="width:100%">
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select class="fi" id="histCustomerFilter" onchange="filterHistoryTable()" style="min-width:110px">
+              <option value="ALL">ลูกค้าทั้งหมด</option>
+              <option value="AIS">AIS</option>
+              <option value="TRUE">TRUE</option>
+            </select>
+            <select class="fi" id="histStatusFilter" onchange="filterHistoryTable()" style="min-width:120px">
+              <option value="ALL">สถานะทั้งหมด</option>
+              <option value="SUCCESS">✅ สำเร็จ</option>
+              <option value="FAILED">❌ ไม่สำเร็จ</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- History Table -->
+        <div style="overflow-x:auto;background:var(--card2);border:1px solid var(--border);border-radius:12px">
+          <table class="tb" style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02)">
+                <th style="padding:10px 14px;text-align:left;width:150px">วันที่ / เวลา</th>
+                <th style="padding:10px 14px;text-align:center;width:80px">ลูกค้า</th>
+                <th style="padding:10px 14px;text-align:left;width:180px">ชื่อไฟล์</th>
+                <th style="padding:10px 14px;text-align:center;width:100px">สถานะ</th>
+                <th style="padding:10px 14px;text-align:center;width:90px">จำนวน</th>
+                <th style="padding:10px 14px;text-align:left;width:200px">DUID</th>
+                <th style="padding:10px 14px;text-align:left;width:140px">ผู้ดำเนินการ</th>
+                <th style="padding:10px 14px;text-align:left">รายละเอียด / หมายเหตุ</th>
+              </tr>
+            </thead>
+            <tbody id="histTableBody">
+              <tr>
+                <td colspan="8" style="text-align:center;padding:30px;color:var(--muted)">กำลังโหลดประวัติการ Import...</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -5613,8 +5718,18 @@ const MOCK=[
 let TX=[...MOCK],curF='ALL',rChInst=null,lChInst=null,pending=0,curAction='IN',itemRowCount=0,isLiveData=false;
 
 // ════ NAV ════
-const PAGES={dashboard:'📊 Dashboard',transactions:'📋 รายการทั้งหมด',import:'📂 Import / Sync',search:'🔍 ค้นหา',region:'🗺️ Region',print:'🖨️ Print ใบเบิก',bom:'📝 จัดการ BOM'};
-function pg(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));document.getElementById('page-'+id)?.classList.add('active');if(el)el.classList.add('active');document.getElementById('pgTitle').textContent=PAGES[id]||id;cSb();if(id==='region')setTimeout(drawRgChart,100);}
+const PAGES={dashboard:'📊 Dashboard',transactions:'📋 รายการทั้งหมด',import:'📂 Import / Sync',search:'🔍 ค้นหา',region:'🗺️ Region',print:'🖨️ Print ใบเบิก',bom:'📝 จัดการ BOM',history:'📜 ประวัติ Import'};
+function pg(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id)?.classList.add('active');
+  if(el)el.classList.add('active');
+  document.getElementById('pgTitle').textContent=PAGES[id]||id;
+  cSb();
+  if(id==='region')setTimeout(drawRgChart,100);
+  if(id==='history')setTimeout(loadHistoryPage,50);
+  if(id==='import')setTimeout(renderRecentImportMini,50);
+}
 function tSb(){document.getElementById('sb').classList.toggle('open');document.getElementById('sbov').classList.toggle('show')}
 function cSb(){document.getElementById('sb').classList.remove('open');document.getElementById('sbov').classList.remove('show')}
 
@@ -6406,8 +6521,583 @@ async function syncFromURL(){
     document.getElementById('syncStatus').innerHTML='<span style="color:var(--red);font-weight:bold">❌ เชื่อมต่อไม่ได้ (ติด CORS Policy)</span> <br><span style="color:#fff">หากเปิดไฟล์จากเครื่องตัวเอง (file://) จะไม่สามารถดึงข้อมูลข้ามโดเมนได้<br><b>วิธีแก้:</b> ให้นำโค้ดหน้านี้ทั้งหมด ไปวางในไฟล์ <code>app.html</code> บน Google Apps Script แล้ว Deploy ใหม่ครับ</span>';
   }
 }
-function importCSV(input,forceCustomer){const file=input.files[0];if(!file)return;showProg(true,`กำลังอ่าน ${file.name}...`,20);const reader=new FileReader();reader.onload=e=>{try{showProg(true,'กำลังประมวลผล...',60);const rows=parseCSV(e.target.result);if(rows.length<2){showToast('❌ CSV ว่างหรือ format ผิด','err');showProg(false);return}const parsed=[],cus=forceCustomer||'AIS';for(let i=1;i<rows.length;i++){const r=rows[i];if(!r[1])continue;parsed.push({no:r[0]||i,duid:r[1]||'',region:r[2]||'',type:r[3]||'IN',itype:r[4]||'',date:r[5]||'',bill:r[6]||'',model:r[7]||'',code:r[8]||'',desc:r[9]||'',qty:+r[10]||0,sn:r[11]||'',ownerW:r[12]||'',ownerR:r[13]||'',locW:r[14]||'',locR:r[15]||'',status:r[21]||'Pending',intNo:r[22]||'',userNm:r[24]||'',customer:cus});}showProg(true,`สำเร็จ! ${parsed.length} รายการ`,100);setTimeout(()=>{TX=[...parsed,...TX.filter(t=>t.customer!==cus)];refreshDash(TX);showImportBar(`📁 ${cus}: ${parsed.length} รายการ | รวม ${TX.length} รายการ`);showProg(false);showToast(`✅ Import ${cus} สำเร็จ! ${parsed.length} รายการ`,'ok');},600);}catch(err){showToast('❌ อ่าน CSV ล้มเหลว: '+err.message,'err');showProg(false)}};reader.readAsText(file,'UTF-8');input.value='';}
-function parseCSV(text){const rows=[],lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');for(const line of lines){if(!line.trim())continue;const cols=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){inQ=!inQ}else if(c===','&&!inQ){cols.push(cur);cur=''}else{cur+=c}}cols.push(cur);rows.push(cols.map(c=>c.replace(/^"|"$/g,'').trim()));}return rows;}
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function parseCSV(text) {
+  const rows = [];
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const cols = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"' && inQ && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else if (c === '"') {
+        inQ = !inQ;
+      } else if (c === ',' && !inQ) {
+        cols.push(cur);
+        cur = '';
+      } else {
+        cur += c;
+      }
+    }
+    cols.push(cur);
+    rows.push(cols.map(c => c.replace(/^"|"$/g, '').trim()));
+  }
+  return rows;
+}
+
+function mapCSVHeaders(headerRow) {
+  const norm = headerRow.map(h => String(h || '').trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+  function findCol(keywords, defaultIndex) {
+    for (const kw of keywords) {
+      const idx = norm.findIndex(h => h === kw || h.includes(kw));
+      if (idx !== -1) return idx;
+    }
+    return defaultIndex;
+  }
+  return {
+    no: findCol(['no', 'runningno', 'ลำดับ'], 0),
+    duid: findCol(['duid'], 1),
+    region: findCol(['region', 'reg', 'ภาค'], 2),
+    type: findCol(['type', 'inout', 'transtype', 'ประเภท'], 3),
+    itype: findCol(['itype', 'itemtype', 'หมวดหมู่', 'category'], 4),
+    date: findCol(['date', 'datetime', 'วันที่'], 5),
+    bill: findCol(['billno', 'bill', 'pickinglist', 'won', 'เลขที่บิล'], 6),
+    model: findCol(['model', 'รุ่น'], 7),
+    code: findCol(['itemcode', 'code', 'partnumber', 'รหัสสินค้า'], 8),
+    desc: findCol(['itemdescription', 'description', 'desc', 'รายละเอียด'], 9),
+    qty: findCol(['qty', 'quantity', 'sumofreqqty', 'จำนวน'], 10),
+    sn: findCol(['sn', 'serial', 'serialno'], 11),
+    ownerW: findCol(['ownerwarehouse', 'ownerw', 'ผู้ส่ง'], 12),
+    ownerR: findCol(['ownerreceiver', 'ownerr', 'ผู้รับ'], 13),
+    locW: findCol(['locationwarehouse', 'locw', 'คลังต้นทาง'], 14),
+    locR: findCol(['locationreceiver', 'locr', 'คลังปลายทาง'], 15),
+    status: findCol(['status', 'สถานะ'], 16),
+    intNo: findCol(['intno', 'internalno'], 17),
+    userNm: findCol(['user', 'username', 'useremail', 'ผู้บันทึก'], 18)
+  };
+}
+
+let importHistoryCache = [];
+
+function recordClientImportLog(entry) {
+  try {
+    let logs = JSON.parse(safeGetItem('inv_import_history') || '[]');
+    logs.unshift(entry);
+    if (logs.length > 50) logs = logs.slice(0, 50);
+    localStorage.setItem('inv_import_history', JSON.stringify(logs));
+    importHistoryCache = logs;
+  } catch (e) {
+    console.warn('Cannot write import log to localStorage:', e);
+  }
+}
+
+function mergeLogs(serverLogs, localLogs) {
+  const seen = new Set();
+  const res = [];
+  [...(localLogs || []), ...(serverLogs || [])].forEach(item => {
+    const key = (item.timestamp || '') + '|' + (item.fileName || '') + '|' + (item.status || '');
+    if (!seen.has(key)) {
+      seen.add(key);
+      res.push(item);
+    }
+  });
+  return res;
+}
+
+async function importCSV(input, forceCustomer) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const cus = forceCustomer || 'AIS';
+  const fileName = file.name;
+  const uEmail = safeGetItem('inv_user_email') || 'Unknown (Web)';
+  const uName  = safeGetItem('inv_user_name')  || 'Web User';
+
+  showProg(true, `กำลังอ่านไฟล์ ${fileName}...`, 15);
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      showProg(true, 'กำลังวิเคราะห์รูปแบบข้อมูล CSV...', 35);
+      const rows = parseCSV(e.target.result);
+      if (rows.length < 2) {
+        showToast('❌ ไฟล์ CSV ว่างเปล่าหรือรูปแบบไม่ถูกต้อง', 'err');
+        showProg(false);
+        recordClientImportLog({
+          timestamp: new Date().toLocaleString('th-TH'),
+          customer: cus,
+          fileName: fileName,
+          totalRows: 0,
+          successCount: 0,
+          failedCount: 0,
+          status: 'FAILED',
+          duids: '-',
+          userEmail: uEmail,
+          userName: uName,
+          details: 'ไฟล์ว่างเปล่าหรือไม่มีข้อมูล'
+        });
+        loadHistoryPage();
+        renderRecentImportMini();
+        return;
+      }
+
+      const idx = mapCSVHeaders(rows[0]);
+      const parsed = [];
+      let lastDuid = '', lastRegion = '', lastType = 'IN', lastDate = '', lastBill = '';
+      let lastOwnerW = '', lastOwnerR = '', lastLocW = '', lastLocR = '', lastUser = '';
+
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        const duid = (r[idx.duid] || lastDuid || '').trim();
+        const code = (r[idx.code] || '').trim();
+        const desc = (r[idx.desc] || '').trim();
+        if (!duid && !code && !desc) continue;
+        if (r[idx.duid]) lastDuid = duid;
+
+        const region = (r[idx.region] || lastRegion || 'ER').trim().toUpperCase();
+        if (r[idx.region]) lastRegion = region;
+
+        const type = (r[idx.type] || lastType || 'IN').trim().toUpperCase();
+        if (r[idx.type]) lastType = type;
+
+        const bill = (r[idx.bill] || lastBill || duid).trim();
+        if (r[idx.bill]) lastBill = bill;
+
+        const date = (r[idx.date] || lastDate || '').trim();
+        if (r[idx.date]) lastDate = date;
+
+        const ownerW = (r[idx.ownerW] || lastOwnerW || '').trim();
+        if (r[idx.ownerW]) lastOwnerW = ownerW;
+
+        const ownerR = (r[idx.ownerR] || lastOwnerR || '').trim();
+        if (r[idx.ownerR]) lastOwnerR = ownerR;
+
+        const locW = (r[idx.locW] || lastLocW || '').trim();
+        if (r[idx.locW]) lastLocW = locW;
+
+        const locR = (r[idx.locR] || lastLocR || '').trim();
+        if (r[idx.locR]) lastLocR = locR;
+
+        const userNm = (r[idx.userNm] || lastUser || uName).trim();
+        if (r[idx.userNm]) lastUser = userNm;
+
+        parsed.push({
+          no: r[idx.no] || (parsed.length + 1),
+          duid: duid,
+          region: region,
+          type: type,
+          transType: type,
+          itype: (r[idx.itype] || '').trim(),
+          itemType: (r[idx.itype] || '').trim(),
+          date: date,
+          bill: bill,
+          billNo: bill,
+          model: (r[idx.model] || '').trim(),
+          code: code,
+          desc: desc,
+          qty: Number(r[idx.qty]) || 1,
+          sn: (r[idx.sn] || 'NA').trim(),
+          ownerW: ownerW,
+          ownerWarehouse: ownerW,
+          ownerR: ownerR,
+          ownerReceiver: ownerR,
+          locW: locW,
+          locationWarehouse: locW,
+          locR: locR,
+          locationReceiver: locR,
+          status: (r[idx.status] || 'Pending').trim(),
+          intNo: (r[idx.intNo] || '').trim(),
+          userNm: userNm,
+          userEmail: uEmail,
+          customer: cus
+        });
+      }
+
+      if (parsed.length === 0) {
+        showToast('❌ ไม่พบรายการสินค้าในไฟล์ CSV', 'err');
+        showProg(false);
+        return;
+      }
+
+      showProg(true, `กำลังบันทึกข้อมูล ${parsed.length} รายการ เข้า Google Sheets (${cus})...`, 60);
+
+      const duidSummary = Array.from(new Set(parsed.map(p => p.duid).filter(Boolean))).slice(0, 10).join(', ');
+
+      if (typeof google !== 'undefined' && google.script) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            showProg(false);
+            if (res && res.success) {
+              showToast(`✅ Import สำเร็จ! ${res.count || parsed.length} รายการ`, 'ok');
+              recordClientImportLog({
+                timestamp: new Date().toLocaleString('th-TH'),
+                customer: cus,
+                fileName: fileName,
+                totalRows: parsed.length,
+                successCount: res.count || parsed.length,
+                failedCount: 0,
+                status: 'SUCCESS',
+                duids: duidSummary,
+                userEmail: uEmail,
+                userName: uName,
+                details: res.message || `บันทึกเข้า Sheet INOUT_HW_${cus} สำเร็จ`
+              });
+              syncFromGAS();
+              loadHistoryPage();
+              renderRecentImportMini();
+            } else {
+              const errMsg = res ? res.message : 'Unknown error';
+              showToast(`❌ Import ล้มเหลว: ${errMsg}`, 'err');
+              recordClientImportLog({
+                timestamp: new Date().toLocaleString('th-TH'),
+                customer: cus,
+                fileName: fileName,
+                totalRows: parsed.length,
+                successCount: 0,
+                failedCount: parsed.length,
+                status: 'FAILED',
+                duids: duidSummary,
+                userEmail: uEmail,
+                userName: uName,
+                details: errMsg
+              });
+              loadHistoryPage();
+              renderRecentImportMini();
+            }
+          })
+          .withFailureHandler(function(err) {
+            showProg(false);
+            showToast(`❌ เกิดข้อผิดพลาดจาก GAS: ${err.message}`, 'err');
+            recordClientImportLog({
+              timestamp: new Date().toLocaleString('th-TH'),
+              customer: cus,
+              fileName: fileName,
+              totalRows: parsed.length,
+              successCount: 0,
+              failedCount: parsed.length,
+              status: 'FAILED',
+              duids: duidSummary,
+              userEmail: uEmail,
+              userName: uName,
+              details: err.message
+            });
+            loadHistoryPage();
+            renderRecentImportMini();
+          })
+          .saveImportData(parsed, cus, uEmail, uName, fileName);
+      } else {
+        const gasUrl = (document.getElementById('apiUrlInput')?.value || '').trim();
+        if (gasUrl) {
+          try {
+            const resp = await fetch(gasUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({
+                action: 'import',
+                customer: cus,
+                rows: parsed,
+                fileName: fileName,
+                userEmail: uEmail,
+                userName: uName
+              })
+            });
+            const res = await resp.json();
+            showProg(false);
+            if (res && res.success) {
+              showToast(`✅ Import สำเร็จ! ${res.count || parsed.length} รายการ`, 'ok');
+              recordClientImportLog({
+                timestamp: new Date().toLocaleString('th-TH'),
+                customer: cus,
+                fileName: fileName,
+                totalRows: parsed.length,
+                successCount: res.count || parsed.length,
+                failedCount: 0,
+                status: 'SUCCESS',
+                duids: duidSummary,
+                userEmail: uEmail,
+                userName: uName,
+                details: res.message
+              });
+              syncNow();
+              loadHistoryPage();
+              renderRecentImportMini();
+            } else {
+              showToast(`❌ Import ล้มเหลว: ${res ? res.message : 'Error'}`, 'err');
+              recordClientImportLog({
+                timestamp: new Date().toLocaleString('th-TH'),
+                customer: cus,
+                fileName: fileName,
+                totalRows: parsed.length,
+                successCount: 0,
+                failedCount: parsed.length,
+                status: 'FAILED',
+                duids: duidSummary,
+                userEmail: uEmail,
+                userName: uName,
+                details: res ? res.message : 'Error'
+              });
+              loadHistoryPage();
+              renderRecentImportMini();
+            }
+          } catch (postErr) {
+            showProg(false);
+            showToast(`❌ บันทึกไม่สำเร็จ: ${postErr.message}`, 'err');
+            recordClientImportLog({
+              timestamp: new Date().toLocaleString('th-TH'),
+              customer: cus,
+              fileName: fileName,
+              totalRows: parsed.length,
+              successCount: 0,
+              failedCount: parsed.length,
+              status: 'FAILED',
+              duids: duidSummary,
+              userEmail: uEmail,
+              userName: uName,
+              details: postErr.message
+            });
+            loadHistoryPage();
+            renderRecentImportMini();
+          }
+        } else {
+          showProg(false);
+          showToast(`⚠️ โหมดเดโม: แสดงผลเฉพาะในหน่วยความจำหน้าเว็บ`, 'warn');
+          TX = [...parsed, ...TX.filter(t => t.customer !== cus)];
+          refreshDash(TX);
+          showImportBar(`📁 ${cus}: ${parsed.length} รายการ (Local Demo)`);
+          recordClientImportLog({
+            timestamp: new Date().toLocaleString('th-TH'),
+            customer: cus,
+            fileName: fileName,
+            totalRows: parsed.length,
+            successCount: parsed.length,
+            failedCount: 0,
+            status: 'SUCCESS (Local)',
+            duids: duidSummary,
+            userEmail: uEmail,
+            userName: uName,
+            details: 'นำเข้าสำเร็จในหน่วยความจำเบราว์เซอร์ (Demo)'
+          });
+          loadHistoryPage();
+          renderRecentImportMini();
+        }
+      }
+    } catch (err) {
+      showProg(false);
+      showToast('❌ อ่านไฟล์ CSV ล้มเหลว: ' + err.message, 'err');
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+  input.value = '';
+}
+
+function loadHistoryPage(forceRefresh) {
+  const body = document.getElementById('histTableBody');
+  if (!body) return;
+
+  try {
+    const cached = JSON.parse(safeGetItem('inv_import_history') || '[]');
+    if (cached.length) importHistoryCache = cached;
+  } catch (e) {}
+
+  if (importHistoryCache.length > 0 && !forceRefresh) {
+    renderHistoryTable(importHistoryCache);
+    updateHistoryKPIs(importHistoryCache);
+  } else {
+    body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--muted)">⏳ กำลังดึงประวัติการ Import จากระบบ...</td></tr>';
+  }
+
+  if (typeof google !== 'undefined' && google.script) {
+    google.script.run
+      .withSuccessHandler(function(serverLogs) {
+        if (serverLogs && serverLogs.length) {
+          const merged = mergeLogs(serverLogs, importHistoryCache);
+          importHistoryCache = merged;
+          try { localStorage.setItem('inv_import_history', JSON.stringify(merged.slice(0, 50))); } catch (e) {}
+          renderHistoryTable(merged);
+          updateHistoryKPIs(merged);
+          renderRecentImportMini();
+        } else {
+          renderHistoryTable(importHistoryCache);
+          updateHistoryKPIs(importHistoryCache);
+        }
+      })
+      .withFailureHandler(function(err) {
+        console.warn('Failed to load server import logs:', err);
+        renderHistoryTable(importHistoryCache);
+        updateHistoryKPIs(importHistoryCache);
+      })
+      .getImportHistory();
+  } else {
+    const gasUrl = (document.getElementById('apiUrlInput')?.value || '').trim();
+    if (gasUrl) {
+      const fetchUrl = gasUrl + (gasUrl.includes('?') ? '&' : '?') + 'export=import_history';
+      fetch(fetchUrl)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.success && data.history) {
+            const merged = mergeLogs(data.history, importHistoryCache);
+            importHistoryCache = merged;
+            try { localStorage.setItem('inv_import_history', JSON.stringify(merged.slice(0, 50))); } catch (e) {}
+            renderHistoryTable(merged);
+            updateHistoryKPIs(merged);
+            renderRecentImportMini();
+          } else {
+            renderHistoryTable(importHistoryCache);
+            updateHistoryKPIs(importHistoryCache);
+          }
+        })
+        .catch(err => {
+          renderHistoryTable(importHistoryCache);
+          updateHistoryKPIs(importHistoryCache);
+        });
+    } else {
+      renderHistoryTable(importHistoryCache);
+      updateHistoryKPIs(importHistoryCache);
+    }
+  }
+}
+
+function renderHistoryTable(logs) {
+  const body = document.getElementById('histTableBody');
+  if (!body) return;
+
+  const q = (document.getElementById('histSearchInput')?.value || '').trim().toLowerCase();
+  const cusF = document.getElementById('histCustomerFilter')?.value || 'ALL';
+  const statusF = document.getElementById('histStatusFilter')?.value || 'ALL';
+
+  let filtered = (logs || []).filter(item => {
+    if (cusF !== 'ALL' && (item.customer || '').toUpperCase() !== cusF) return false;
+    if (statusF !== 'ALL') {
+      const isSuccess = (item.status || '').toUpperCase().includes('SUCCESS');
+      if (statusF === 'SUCCESS' && !isSuccess) return false;
+      if (statusF === 'FAILED' && isSuccess) return false;
+    }
+    if (q) {
+      const matchText = [
+        item.fileName, item.duids, item.userEmail, item.userName, item.details, item.timestamp
+      ].join(' ').toLowerCase();
+      if (!matchText.includes(q)) return false;
+    }
+    return true;
+  });
+
+  if (!filtered.length) {
+    body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:35px;color:var(--muted)">📭 ไม่พบข้อมูลประวัติการ Import</td></tr>';
+    return;
+  }
+
+  body.innerHTML = filtered.map(item => {
+    const isSuccess = (item.status || '').toUpperCase().includes('SUCCESS');
+    const badgeColor = isSuccess ? '#00c28a' : '#ff4d6a';
+    const badgeBg = isSuccess ? 'rgba(0,194,138,0.15)' : 'rgba(255,77,106,0.15)';
+    const statusText = isSuccess ? '✅ สำเร็จ' : '❌ ไม่สำเร็จ';
+    const cusBadge = item.customer === 'TRUE' ? '<span style="background:rgba(77,159,255,0.15);color:#4d9fff;padding:2px 6px;border-radius:4px;font-weight:700">TRUE</span>' : '<span style="background:rgba(0,194,138,0.15);color:#00c28a;padding:2px 6px;border-radius:4px;font-weight:700">AIS</span>';
+    
+    return `
+      <tr style="border-bottom:1px solid var(--border);transition:background .2s" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+        <td style="padding:10px 14px;color:var(--muted);white-space:nowrap">${item.timestamp || '-'}</td>
+        <td style="padding:10px 14px;text-align:center">${cusBadge}</td>
+        <td style="padding:10px 14px;font-weight:600;color:var(--text)">📄 ${escapeHtml(item.fileName || 'CSV File')}</td>
+        <td style="padding:10px 14px;text-align:center">
+          <span style="background:${badgeBg};color:${badgeColor};padding:3px 8px;border-radius:6px;font-weight:700;font-size:11px;display:inline-block">${statusText}</span>
+        </td>
+        <td style="padding:10px 14px;text-align:center;font-weight:700;color:${isSuccess ? 'var(--primary)' : 'var(--red)'}">
+          ${Number(item.successCount || item.totalRows || 0)} แถว
+        </td>
+        <td style="padding:10px 14px;color:var(--blue);font-family:monospace;font-size:11px" title="${escapeHtml(item.duids || '')}">
+          ${escapeHtml(item.duids && item.duids.length > 30 ? item.duids.substring(0, 30) + '...' : (item.duids || '-'))}
+        </td>
+        <td style="padding:10px 14px;color:var(--text);font-size:11px">
+          <div>${escapeHtml(item.userName || '-')}</div>
+          <div style="font-size:10px;color:var(--muted)">${escapeHtml(item.userEmail || '')}</div>
+        </td>
+        <td style="padding:10px 14px;color:var(--muted);font-size:11px">
+          ${escapeHtml(item.details || '-')}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function updateHistoryKPIs(logs) {
+  const total = (logs || []).length;
+  const success = (logs || []).filter(l => (l.status || '').toUpperCase().includes('SUCCESS')).length;
+  const failed = total - success;
+  let totalItems = 0;
+  (logs || []).forEach(l => {
+    if ((l.status || '').toUpperCase().includes('SUCCESS')) {
+      totalItems += Number(l.successCount || l.totalRows || 0);
+    }
+  });
+
+  const elTot = document.getElementById('histKpiTotal');
+  const elSuc = document.getElementById('histKpiSuccess');
+  const elFai = document.getElementById('histKpiFailed');
+  const elIte = document.getElementById('histKpiItems');
+
+  if (elTot) elTot.textContent = total;
+  if (elSuc) elSuc.textContent = success;
+  if (elFai) elFai.textContent = failed;
+  if (elIte) elIte.textContent = totalItems;
+}
+
+function filterHistoryTable() {
+  renderHistoryTable(importHistoryCache);
+}
+
+function renderRecentImportMini() {
+  const container = document.getElementById('recentImportMiniList');
+  if (!container) return;
+
+  const logs = (importHistoryCache || []).slice(0, 5);
+  if (!logs.length) {
+    container.innerHTML = '<div style="font-size:11px;color:var(--muted);text-align:center;padding:12px">ยังไม่มีประวัติการ Import ล่าสุด</div>';
+    return;
+  }
+
+  container.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:11px">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);color:var(--muted)">
+          <th style="text-align:left;padding:6px">เวลา</th>
+          <th style="text-align:center;padding:6px">ลูกค้า</th>
+          <th style="text-align:left;padding:6px">ชื่อไฟล์</th>
+          <th style="text-align:center;padding:6px">สถานะ</th>
+          <th style="text-align:center;padding:6px">จำนวน</th>
+          <th style="text-align:left;padding:6px">รายละเอียด</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${logs.map(l => {
+          const isSuc = (l.status || '').toUpperCase().includes('SUCCESS');
+          return `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04)">
+              <td style="padding:6px;color:var(--muted)">${l.timestamp || '-'}</td>
+              <td style="padding:6px;text-align:center"><span style="font-weight:700;color:${l.customer === 'TRUE' ? '#4d9fff' : '#00c28a'}">${l.customer || 'AIS'}</span></td>
+              <td style="padding:6px;font-weight:600">📄 ${escapeHtml(l.fileName || 'CSV')}</td>
+              <td style="padding:6px;text-align:center"><span style="color:${isSuc ? '#00c28a' : '#ff4d6a'};font-weight:700">${isSuc ? '✅ สำเร็จ' : '❌ ล้มเหลว'}</span></td>
+              <td style="padding:6px;text-align:center">${Number(l.successCount || l.totalRows || 0)}</td>
+              <td style="padding:6px;color:var(--muted)">${escapeHtml(l.details || '-')}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
 function clearData(){if(!confirm('รีเซ็ตกลับ Demo Mock Data?'))return;TX=[...MOCK];isLiveData=false;refreshDash(TX);showImportBar('📦 Demo Mock Data');document.getElementById('syncBadge').textContent='● Demo';document.getElementById('syncBadge').className='sync-badge sync-demo';showToast('🔄 รีเซ็ตสำเร็จ','ok');}
 
 // ════ REFRESH ════

@@ -1,11 +1,11 @@
-# 📦 Inventory Smart System (V.6.8.2)
+# 📦 Inventory Smart System (V.7.5.2)
 
-Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI) and Telegram Bot with AI OCR capabilities.
+Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI & Dashboard) and Telegram Bot with AI OCR capabilities.
 
 ## 🛠 Tech Stack
 - **Backend:** Google Apps Script (`code.gs`)
-- **Frontend:** HTML5, Bootstrap 5, JavaScript (`app.html`)
-- **Integration:** Telegram Bot API, Google Drive OCR
+- **Frontend:** HTML5, Bootstrap 5, Chart.js, Vanilla CSS, JavaScript (`app.html`, `dashboard.html`)
+- **Integration:** Telegram Bot API, LINE Bot SDK, Google Drive OCR
 - **Storage:** Google Sheets
 
 ## 🚀 Telegram Bot Setup (V.6.7.5)
@@ -15,7 +15,7 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - **Environment Variables:** ใน Vercel ต้องมี `TELEGRAM_BOT_TOKEN`, `TELEGRAM_DESTINATION_ID` และ `GAS_WEB_APP_URL`
 
 ## 🚀 Workflow
-1. **Research:** Analyze `code.gs` (logic) and `app.html` (UI) before changes.
+1. **Research:** Analyze `code.gs` (logic) and `dashboard.html` / `app.html` (UI) before changes.
 2. **Strategy:** Propose changes ensuring compatibility between Web App and Telegram Bot.
 3. **Execution:** Surgical edits using `replace` or `write_file`.
 4. **Validation:** Verify function logic and UI responsiveness.
@@ -36,7 +36,11 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
 
-## 🐞 Bug Fixes & Stability (V.6.8.2)
+## 🐞 Bug Fixes & Stability (V.7.5.2)
+- **CSV Import Update Fix**: Fixed issue where CSV import in `dashboard.html` only saved in-memory and never sent data to Google Sheets backend (`code.gs`). Hooked up `saveImportData` with dynamic column header mapping, DUID/Bill multi-item inheritance, and full 25-column recording (including Owner Warehouse/Receiver & Location Warehouse/Receiver).
+- **Import History & Audit Log System**: Created `IMPORT_LOG` sheet and `getImportHistory` API in `code.gs`. Added full `page-history` view in `dashboard.html` with KPI summary cards, filter/search controls, status badges (✅ สำเร็จ / ❌ ไม่สำเร็จ), and recent import logs directly in the Import panel.
+- **Standalone/CORS Web App Fallback**: Supported both direct `google.script.run` execution and external `fetch` POST (`action: "import"`, `action: "getImportHistory"`) so the system functions whether embedded in GAS or run standalone.
+- **Version Sync**: Synchronized all versions to V.7.5.2 across `code.gs`, `dashboard.html`, and documentation.
 - **Status Calculation Fix**: Normalized `Item Code` (removed `LTH` prefix and `-N`/`-D` suffixes) in `computeDuidStatus` inside `code.gs`. This ensures that IN and OUT records balance correctly even if the Item Code was recorded slightly differently (e.g., `LTH25033335-N` vs `25033335`).
 - **Version Sync**: Synchronized all versions to V.6.8.2.
 
