@@ -80,7 +80,7 @@ const app = express();
 // ─────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.json({
-    status: 'Alive', version: 'V.7.1.3',
+    status: 'Alive', version: 'V.7.5.3',
     bots: LINE_CONFIGS.map(b => ({ name: b.name, destId: b.destId })),
     gasUrl: GAS_WEB_APP_URL.substring(0, 60) + '...'
   });
@@ -123,10 +123,11 @@ app.get('/bots-status', async (req, res) => {
 // Format Notification Message
 // ─────────────────────────────────────────────
 function formatNotificationMessage(header, items) {
+  const title = header.actionTitle ? `✅ ${header.actionTitle}` : '✅ บันทึกข้อมูลใหม่';
   let msg =
-    `📦 TLN-Inventory V.7.1.3\n` +
+    `📦 TLN-Inventory V.7.5.3\n` +
     `━━━━━━━━━━━━━━━\n` +
-    `✅ บันทึกข้อมูลใหม่\n` +
+    `${title}\n` +
     `👤 โดย: ${header.userName || header.savedBy || '-'}\n` +
     `📊 DUID: ${header.duid || '-'}\n` +
     `👤 ลูกค้า: ${header.customer || '-'}\n` +

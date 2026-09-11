@@ -1699,8 +1699,12 @@
           Swal.fire({icon:'warning', title:'ไฟล์ว่างเปล่า', text:'กรุณาตรวจสอบ format ของไฟล์'});
           return;
         }
+        _appImportFileName = input.files[0] ? input.files[0].name : 'CSV Upload';
         var headerRow = parseCsvLine(lines[0]).map(function(h) { return h.trim().toUpperCase(); });
         importRows = [];
+        var lastDuid = '', lastRegion = '', lastType = 'IN', lastBill = '';
+        var lastOwnerW = '', lastOwnerR = '', lastLocW = '', lastLocR = '';
+
         for (var i = 1; i < lines.length; i++) {
           var cols = parseCsvLine(lines[i]);
           if (cols.length < 2) continue;
@@ -1711,18 +1715,45 @@
             }
             return '';
           }
+
+          var duid = getCol(['DUID','JOB ID']) || lastDuid;
+          if (duid) lastDuid = duid;
+          var region = getCol(['REGION','AREA']) || lastRegion || 'ER';
+          if (region) lastRegion = region;
+          var transType = getCol(['IN/OUT','INOUT','TRANSTYPE','TYPE']) || lastType || 'IN';
+          if (transType) lastType = transType;
+          var bill = getCol(['BILL NO.','BILL NO','BILL']) || lastBill || duid;
+          if (bill) lastBill = bill;
+          var ownerW = getCol(['OWNER WAREHOUSE','OWNER W','OWNERW','WH OWNER']) || lastOwnerW;
+          if (ownerW) lastOwnerW = ownerW;
+          var ownerR = getCol(['OWNER RECEIVER','OWNER R','OWNERR','REC OWNER']) || lastOwnerR;
+          if (ownerR) lastOwnerR = ownerR;
+          var locW = getCol(['LOCATION WAREHOUSE','LOC W','LOCW','LOCATION W']) || lastLocW;
+          if (locW) lastLocW = locW;
+          var locR = getCol(['LOCATION RECEIVER','LOC R','LOCR','LOCATION R']) || lastLocR;
+          if (locR) lastLocR = locR;
+
           importRows.push({
-            duid:      getCol(['DUID','JOB ID']),
-            region:    getCol(['REGION','AREA']),
-            transType: getCol(['IN/OUT','INOUT','TRANSTYPE','TYPE']),
+            duid:      duid,
+            region:    region,
+            transType: transType,
             itemType:  getCol(['ITYPE','ITEM TYPE','ITEMTYPE','TYPE']),
             date:      getCol(['DATE']),
-            bill:      getCol(['BILL NO.','BILL NO','BILL']),
+            bill:      bill,
+            billNo:    bill,
             model:     getCol(['MODEL']),
             code:      getCol(['ITEM CODE','CODE']),
             desc:      getCol(['DESCRIPTION','ITEM DESCRIPTION','DESC']),
             qty:       Number(getCol(['QTY','QUANTITY','SUM OF REQ.QTY'])) || 1,
-            sn:        getCol(['SERIAL','SN','SERIAL NO'])
+            sn:        getCol(['SERIAL','SN','SERIAL NO']) || 'NA',
+            ownerW:    ownerW,
+            ownerWarehouse: ownerW,
+            ownerR:    ownerR,
+            ownerReceiver: ownerR,
+            locW:      locW,
+            locationWarehouse: locW,
+            locR:      locR,
+            locationReceiver: locR
           });
         }
         importRows = importRows.filter(function(r) { return r.duid; });
@@ -1745,6 +1776,8 @@
       };
       reader.readAsText(input.files[0], 'UTF-8');
     }
+
+    var _appImportFileName = 'CSV Upload';
 
     // ― Confirm Import
     function confirmImport() {
@@ -1773,7 +1806,7 @@
             document.getElementById('loader').style.display = 'none';
             Swal.fire({icon:'error', title:'Error', text: err.message});
           })
-          .saveImportData(importRows, ieCurrentCustomer, currentUserEmail, currentUserName);
+          .saveImportData(importRows, ieCurrentCustomer, currentUserEmail, currentUserName, _appImportFileName);
       });
     }
 

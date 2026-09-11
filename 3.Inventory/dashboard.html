@@ -7705,8 +7705,10 @@ function parseCsvLine(line) {
   result.push(current);
   return result;
 }
+var _importFileName = 'CSV Upload';
 function previewImport(input) {
   if (!input.files || input.files.length === 0) return;
+  _importFileName = input.files[0].name || 'CSV Upload';
   var reader = new FileReader();
   reader.onload = function(e) {
     var text = e.target.result;
@@ -7715,6 +7717,9 @@ function previewImport(input) {
     if (lines.length < 2) { alert('ไฟล์ว่างเปล่า'); return; }
     var headerRow = parseCsvLine(lines[0]).map(function(h) { return h.trim().toUpperCase(); });
     importRows = [];
+    var lastDuid = '', lastRegion = '', lastType = 'IN', lastBill = '';
+    var lastOwnerW = '', lastOwnerR = '', lastLocW = '', lastLocR = '';
+
     for (var i = 1; i < lines.length; i++) {
       var cols = parseCsvLine(lines[i]);
       if (cols.length < 2) continue;
@@ -7724,14 +7729,52 @@ function previewImport(input) {
           if (idx > -1) return String(cols[idx] || '').trim();
         } return '';
       }
+
+      var duid = getCol(['DUID','JOB ID']) || lastDuid;
+      if (duid) lastDuid = duid;
+
+      var region = getCol(['REGION','AREA']) || lastRegion || 'ER';
+      if (region) lastRegion = region;
+
+      var transType = getCol(['IN/OUT','INOUT','TRANSTYPE','TYPE']) || lastType || 'IN';
+      if (transType) lastType = transType;
+
+      var bill = getCol(['BILL NO.','BILL NO','BILL']) || lastBill || duid;
+      if (bill) lastBill = bill;
+
+      var ownerW = getCol(['OWNER WAREHOUSE','OWNER W','OWNERW','WH OWNER']) || lastOwnerW;
+      if (ownerW) lastOwnerW = ownerW;
+
+      var ownerR = getCol(['OWNER RECEIVER','OWNER R','OWNERR','REC OWNER']) || lastOwnerR;
+      if (ownerR) lastOwnerR = ownerR;
+
+      var locW = getCol(['LOCATION WAREHOUSE','LOC W','LOCW','LOCATION W']) || lastLocW;
+      if (locW) lastLocW = locW;
+
+      var locR = getCol(['LOCATION RECEIVER','LOC R','LOCR','LOCATION R']) || lastLocR;
+      if (locR) lastLocR = locR;
+
       importRows.push({
-        duid: getCol(['DUID','JOB ID']), region: getCol(['REGION','AREA']),
-        transType: getCol(['IN/OUT','INOUT','TRANSTYPE','TYPE']), itemType: getCol(['ITYPE','ITEM TYPE','ITEMTYPE','TYPE']),
-        date: getCol(['DATE']), bill: getCol(['BILL NO.','BILL NO','BILL']),
-        model: getCol(['MODEL']), code: getCol(['ITEM CODE','CODE']),
+        duid: duid,
+        region: region,
+        transType: transType,
+        itemType: getCol(['ITYPE','ITEM TYPE','ITEMTYPE','TYPE']),
+        date: getCol(['DATE']),
+        bill: bill,
+        billNo: bill,
+        model: getCol(['MODEL']),
+        code: getCol(['ITEM CODE','CODE']),
         desc: getCol(['DESCRIPTION','ITEM DESCRIPTION','DESC']),
         qty: Number(getCol(['QTY','QUANTITY','SUM OF REQ.QTY'])) || 1,
-        sn: getCol(['SERIAL','SN','SERIAL NO'])
+        sn: getCol(['SERIAL','SN','SERIAL NO']) || 'NA',
+        ownerW: ownerW,
+        ownerWarehouse: ownerW,
+        ownerR: ownerR,
+        ownerReceiver: ownerR,
+        locW: locW,
+        locationWarehouse: locW,
+        locR: locR,
+        locationReceiver: locR
       });
     }
     importRows = importRows.filter(function(r) { return r.duid; });
@@ -7796,15 +7839,13 @@ function confirmImport() {
   const reader = new FileReader();
   reader.onload = function(e) {
     const base64 = e.target.result;
+    var userEmail = safeGetItem('inv_user_email') || 'Unknown (Web)';
+    var userName  = safeGetItem('inv_user_name')  || 'Web User';
     
     if (typeof google !== 'undefined' && google.script) {
-      var userEmail = safeGetItem('inv_user_email') || 'Unknown (Web)';
-      var userName  = safeGetItem('inv_user_name')  || 'Web User';
-      
       google.script.run.withSuccessHandler(function(res) {
         if (res.success) {
           showProg(false);
-          // Show detail for upsert
           var msg = res.message;
           if (res.updated !== undefined) {
             msg = '✅ Update ' + res.updated + ' รายการ | เพิ่มใหม่ ' + res.inserted + ' รายการ';
@@ -7821,22 +7862,50 @@ function confirmImport() {
           showProg(false);
           showToast(res.message, 'err');
         }
-      })[_importMode === 'update' ? 'saveImportDataUpdate' : 'saveImportData'](importRows, ieCurrentCustomer, userEmail, userName);
+      })[_importMode === 'update' ? 'saveImportDataUpdate' : 'saveImportData'](importRows, ieCurrentCustomer, userEmail, userName, _importFileName);
     } else {
-      // Offline mock fallback
-      const parsed = importRows.map((r, i) => ({
-        no: TX.length + i + 1,
-        duid: r.duid, region: r.region, type: r.transType, itype: r.itemType, date: r.date,
-        bill: r.bill, model: r.model, code: r.code, desc: r.desc, qty: r.qty, sn: r.sn,
-        status: 'Pending', customer: ieCurrentCustomer
-      }));
-      setTimeout(() => {
-        TX = [...parsed, ...TX];
-        recalculateAllStatusJS();
-        refreshDash(TX);
-        showProg(false);
-        logImportAndShowResult(importRows);
-      }, 500);
+      const gasUrl = (document.getElementById('apiUrlInput')?.value || '').trim();
+      if (gasUrl) {
+        fetch(gasUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: _importMode === 'update' ? 'saveImportUpdate' : 'import',
+            customer: ieCurrentCustomer,
+            rows: importRows,
+            fileName: _importFileName,
+            userEmail: userEmail,
+            userName: userName
+          })
+        }).then(function(r){ return r.json(); }).then(function(res) {
+          showProg(false);
+          if (res && res.success) {
+            showToast(res.message || '✅ Import สำเร็จ', 'ok');
+            syncNow();
+            logImportAndShowResult(importRows);
+          } else {
+            showToast('❌ ' + (res ? res.message : 'Error'), 'err');
+          }
+        }).catch(function(err) {
+          showProg(false);
+          showToast('❌ ' + err.message, 'err');
+        });
+      } else {
+        // Offline mock fallback
+        const parsed = importRows.map((r, i) => ({
+          no: TX.length + i + 1,
+          duid: r.duid, region: r.region, type: r.transType, itype: r.itemType, date: r.date,
+          bill: r.bill, model: r.model, code: r.code, desc: r.desc, qty: r.qty, sn: r.sn,
+          status: 'Pending', customer: ieCurrentCustomer
+        }));
+        setTimeout(() => {
+          TX = [...parsed, ...TX];
+          recalculateAllStatusJS();
+          refreshDash(TX);
+          showProg(false);
+          logImportAndShowResult(importRows);
+        }, 500);
+      }
     }
   };
   reader.readAsDataURL(file);

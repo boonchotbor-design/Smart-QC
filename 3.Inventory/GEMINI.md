@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.7.5.2)
+# 📦 Inventory Smart System (V.7.5.3)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI & Dashboard) and Telegram Bot with AI OCR capabilities.
 
@@ -35,6 +35,12 @@ Project Context: A Google Apps Script application for managing hardware inventor
 ### 🐞 Bug Fixing
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
+
+## 🐞 Bug Fixes & Stability (V.7.5.3)
+- **CSV Import LINE & Telegram Notification System**: Fixed critical bug where CSV imports did not send notifications to LINE and Telegram. Built `sendImportNotifications` in `code.gs` which groups imported rows by DUID/Bill and extracts complete details (DUID, Bill No, Region, Customer, Type, Owner Warehouse/Receiver, Location Warehouse/Receiver, and breakdown of Model, Serial Number, Quantity).
+- **Upsert (Update) Notification Support**: Integrated notification triggering into `saveImportDataUpdate` and added backend `doPost` action support for `saveImportUpdate` / `importUpdate`.
+- **Modal Import Warehouse & Receiver Extraction**: Updated `previewImport` in both `dashboard.html` and `app.html` to parse and inherit Warehouse/Receiver columns (`ownerWarehouse`, `ownerReceiver`, `locationWarehouse`, `locationReceiver`) and pass `fileName`.
+- **Version Sync**: Synchronized all versions to V.7.5.3 across `code.gs`, `index.js`, `dashboard.html`, `app.html`, and documentation.
 
 ## 🐞 Bug Fixes & Stability (V.7.5.2)
 - **CSV Import Update Fix**: Fixed issue where CSV import in `dashboard.html` only saved in-memory and never sent data to Google Sheets backend (`code.gs`). Hooked up `saveImportData` with dynamic column header mapping, DUID/Bill multi-item inheritance, and full 25-column recording (including Owner Warehouse/Receiver & Location Warehouse/Receiver).

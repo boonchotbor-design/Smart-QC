@@ -51,13 +51,13 @@ function doGet(e) {
 
   if (e.parameter.page === "dashboard") {
     return HtmlService.createTemplateFromFile('dashboard').evaluate()
-      .setTitle('Inventory Dashboard V.7.5.2')
+      .setTitle('Inventory Dashboard V.7.5.3')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-    .setTitle('Inventory Smart App V.7.5.2')
+    .setTitle('Inventory Smart App V.7.5.3')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -94,6 +94,13 @@ function doPost(e) {
       logToSheet("IMPORT_DATA", "Customer: " + data.customer + " | Rows: " + (data.rows ? data.rows.length : 0) + " | User: " + userEmail);
       var result = saveImportData(data.rows, data.customer, userEmail, userName, data.fileName);
       logToSheet("IMPORT_RESULT", "Success: " + result.success + (result.message ? ", Msg: " + result.message : ""));
+      return jsonOut(result);
+    }
+
+    if (data.action === "saveImportUpdate" || data.action === "importUpdate") {
+      logToSheet("IMPORT_UPDATE_DATA", "Customer: " + data.customer + " | Rows: " + (data.rows ? data.rows.length : 0) + " | User: " + userEmail);
+      var result = saveImportDataUpdate(data.rows, data.customer, userEmail, userName, data.fileName);
+      logToSheet("IMPORT_UPDATE_RESULT", "Success: " + result.success + (result.message ? ", Msg: " + result.message : ""));
       return jsonOut(result);
     }
 
@@ -1637,7 +1644,122 @@ function getImportHistory() {
 }
 
 // ─────────────────────────────────────────────
-// IMPORT DATA — V.7.5.2
+// IMPORT NOTIFICATION DISPATCHER — V.7.5.3
+// แยกส่งแจ้งเตือนตาม DUID / Bill เพื่อให้แสดงรายละเอียดครบถ้วน (DUID, Bill, Region, คลัง, ผู้รับ, Model, SN, Qty)
+// ─────────────────────────────────────────────
+function sendImportNotifications(rows, customer, userEmail, userName, fileName, isUpdate) {
+  try {
+    if (!rows || rows.length === 0) return;
+
+    var uName = userName || userEmail || "Web User";
+    var uEmail = userEmail || "Unknown";
+    var cus = (customer || "AIS").toUpperCase();
+
+    // จัดกลุ่มรายการตาม DUID
+    var groups = {};
+    var duidOrder = [];
+
+    rows.forEach(function(r) {
+      var d = String(r.duid || "").trim();
+      var key = d || "NO_DUID";
+      if (!groups[key]) {
+        groups[key] = [];
+        duidOrder.push(key);
+      }
+      groups[key].push(r);
+    });
+
+    // หากมี <= 5 DUIDs ส่งแจ้งเตือนทุก DUID
+    // หากมี > 5 DUIDs ส่ง 3 DUIDs แรกแบบละเอียด + ส่งสรุปรวม 1 ข้อความ เพื่อกัน Flood / HTTP 429
+    var maxIndividual = duidOrder.length <= 5 ? duidOrder.length : 3;
+
+    for (var k = 0; k < maxIndividual; k++) {
+      var duidKey = duidOrder[k];
+      var list = groups[duidKey];
+      var first = list[0] || {};
+
+      var reg = String(first.region || "").trim().toUpperCase();
+      if (!reg || reg === "-") {
+        try {
+          var projects = getProjectData();
+          var found = projects.find(function(p) {
+            return p.duid.toLowerCase() === duidKey.toLowerCase();
+          });
+          if (found && found.region && found.region !== "-") reg = found.region.toUpperCase();
+        } catch(e) {}
+      }
+      if (!reg || reg === "-") reg = "ER";
+
+      var bill = String(first.bill || first.billNo || duidKey).trim();
+      var transType = String(first.transType || first.type || "OUT").trim().toUpperCase();
+      var ownerW = String(first.ownerWarehouse || first.ownerW || "-").trim();
+      var ownerR = String(first.ownerReceiver  || first.ownerR || "-").trim();
+      var locW   = String(first.locationWarehouse || first.locW || "-").trim();
+      var locR   = String(first.locationReceiver  || first.locR || "-").trim();
+
+      var items = list.map(function(item) {
+        var m = String(item.model || item.desc || item.code || "-").trim();
+        return {
+          model: m,
+          sn: String(item.sn || "NA").trim(),
+          qty: Number(item.qty) || 1
+        };
+      });
+
+      var header = {
+        notificationId: Utilities.getUuid(),
+        userName: uName,
+        userEmail: uEmail,
+        customer: cus,
+        type: transType,
+        duid: duidKey !== "NO_DUID" ? duidKey : ("Import " + (fileName || "CSV")),
+        region: reg,
+        billNo: bill,
+        ownerWarehouse: ownerW,
+        ownerReceiver: ownerR,
+        locationWarehouse: locW,
+        locationReceiver: locR
+      };
+
+      notifyOnly(header, items);
+      Utilities.sleep(300); // เว้นระยะเล็กน้อยกัน Rate Limit
+    }
+
+    // หากมี DUIDs เกินกว่า maxIndividual ให้ส่งสรุปรายการที่เหลือ
+    if (duidOrder.length > maxIndividual) {
+      var remainingCount = duidOrder.length - maxIndividual;
+      var remainingRows = 0;
+      for (var m = maxIndividual; m < duidOrder.length; m++) {
+        remainingRows += groups[duidOrder[m]].length;
+      }
+      var summaryHeader = {
+        notificationId: Utilities.getUuid(),
+        userName: uName,
+        userEmail: uEmail,
+        customer: cus,
+        type: "BULK IMPORT",
+        duid: "อีก " + remainingCount + " DUIDs (" + remainingRows + " รายการ)",
+        region: "-",
+        billNo: fileName || "CSV Upload",
+        ownerWarehouse: "-",
+        ownerReceiver: "-",
+        locationWarehouse: "-",
+        locationReceiver: "-"
+      };
+      var summaryItems = [{
+        model: "รายการเพิ่มเติมจากไฟล์: " + (fileName || "CSV"),
+        sn: "NA",
+        qty: remainingRows
+      }];
+      notifyOnly(summaryHeader, summaryItems);
+    }
+  } catch (err) {
+    logToSheet("NOTIFY_IMPORT_ERROR", err.toString());
+  }
+}
+
+// ─────────────────────────────────────────────
+// IMPORT DATA — V.7.5.3
 // รับ array of row objects จาก client, บันทึกลง sheet
 // ─────────────────────────────────────────────
 
@@ -1784,30 +1906,8 @@ function saveImportData(rows, customer, userEmail, userName, fileName) {
       details: "Import สำเร็จ " + allRows.length + " รายการ เข้า " + sheetName
     });
 
-    // ── แจ้งเตือนสรุปการ Import ──
-    try {
-      var importHeader = {
-        userName: userName || userEmail || "Web User",
-        userEmail: userEmail || "Unknown",
-        customer: customer,
-        type: "BULK IMPORT (นำเข้าข้อมูล)",
-        duid: "MULTIPLE (" + Object.keys(duidSet).length + " DUIDs)",
-        region: "-",
-        billNo: "-",
-        ownerWarehouse: "-",
-        ownerReceiver: "-",
-        locationWarehouse: "-",
-        locationReceiver: "-"
-      };
-      var importItems = [{
-        model: "รายการอัปโหลดจาก CSV: " + (fileName || ""),
-        sn: "N/A",
-        qty: allRows.length
-      }];
-      notifyOnly(importHeader, importItems);
-    } catch (e) {
-      logToSheet("NOTIFY_IMPORT_ERROR", e.toString());
-    }
+    // ── แจ้งเตือน LINE + Telegram ตาม DUID และรายการจริง ──
+    sendImportNotifications(rows, customer, userEmail, userName, fileName, false);
 
     return {
       success: true,
@@ -1877,11 +1977,11 @@ function exportSheetData(customer) {
 }
 
 // ─────────────────────────────────────────────
-// UPSERT IMPORT — Update if duplicate, Insert if new — V.7.4.0
+// UPSERT IMPORT — Update if duplicate, Insert if new — V.7.5.3
 // Match key: DUID + BILL NO + ITEM CODE + SN
 // ─────────────────────────────────────────────
 
-function saveImportDataUpdate(rows, customer, userEmail, userName) {
+function saveImportDataUpdate(rows, customer, userEmail, userName, fileName) {
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000);
@@ -2030,6 +2130,9 @@ function saveImportDataUpdate(rows, customer, userEmail, userName) {
       userName: userName  || "Import",
       details: "Update " + updatedCount + " + Insert " + insertedRows.length + " รายการ"
     });
+
+    // ── แจ้งเตือน LINE + Telegram ตาม DUID และรายการจริง ──
+    sendImportNotifications(rows, customer, userEmail, userName, fileName, true);
 
     return {
       success:  true,
