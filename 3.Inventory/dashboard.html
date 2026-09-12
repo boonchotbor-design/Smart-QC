@@ -5947,18 +5947,10 @@ function applyF() {
         let yyyy = parseInt(p[2], 10);
         if (yyyy > 2500) yyyy -= 543;
         if (!isNaN(p0) && !isNaN(p1) && !isNaN(yyyy) && yyyy >= 1900 && yyyy <= 2200) {
-          let dd = p0, mm = p1;
-          if (p0 > 12) {
-            dd = p0; mm = p1;
-          } else if (p1 > 12) {
-            dd = p1; mm = p0;
-          } else if (p0 === 9 && p1 === 10) {
-            dd = p1; mm = p0;
-          } else if (p0 === 9 && p1 !== 9) {
-            dd = p1; mm = p0;
-          } else if (p1 === 9) {
-            dd = p0; mm = p1;
-          }
+          let dd, mm;
+          if (p0 > 12)      { dd = p0; mm = p1; }  // Definitely DD/MM/YYYY
+          else if (p1 > 12) { dd = p1; mm = p0; }  // Definitely MM/DD/YYYY -> swap
+          else              { dd = p0; mm = p1; }  // Both <= 12: trust DD/MM/YYYY
           // Add HH:MM if present for same-day ordering
           let hh = 0, min = 0;
           if (parts[1]) {
@@ -7759,7 +7751,11 @@ function previewImport(input) {
         region: region,
         transType: transType,
         itemType: getCol(['ITYPE','ITEM TYPE','ITEMTYPE','TYPE']),
-        date: getCol(['DATE']),
+        date: (function(rawD) {
+          if (!rawD) return today();
+          var fd = fmtDate(rawD);
+          return (fd && fd !== '-') ? fd : rawD;
+        })(getCol(['DATE'])),
         bill: bill,
         billNo: bill,
         model: getCol(['MODEL']),
@@ -7910,6 +7906,18 @@ function confirmImport() {
   };
   reader.readAsDataURL(file);
 }
+
+function downloadImportTemplate() {
+  const headers = ['DUID','REGION','IN/OUT','TYPE','DATE','BILL NO.','MODEL','ITEM CODE','DESCRIPTION','QTY','SERIAL'];
+  const example = ['DUID-001','ER','OUT','HW', today(), 'BILL-001','RRU3962','023115PK','MPE Site Materials','1','N/A'];
+  const csv = [headers.join(','), example.join(',')].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'Template_Import_' + (ieCurrentCustomer || 'AIS') + '.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
 function doExport() {
   closeImportExport();
   const rows = TX.filter(t => t.customer === ieCurrentCustomer);

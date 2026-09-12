@@ -446,11 +446,11 @@ function saveMainData(header, items, userEmail, userName) {
 
     if (allRows.length > 0) {
       sheet.insertRowsAfter(1, allRows.length);
+      // Force date column (col 6) to plain text BEFORE writing values to prevent
+      // Google Sheets US-locale from auto-converting DD/MM/YYYY strings into Date serials.
+      sheet.getRange(2, 6, allRows.length, 1).setNumberFormat('@');
       var dataRange = sheet.getRange(2, 1, allRows.length, 25);
       dataRange.setValues(allRows);
-      // V.7.5.0: Force date column (col 6) to plain text to prevent
-      // Google Sheets US-locale from auto-converting DD/MM/YYYY strings.
-      sheet.getRange(2, 6, allRows.length, 1).setNumberFormat('@');
     }
 
     SpreadsheetApp.flush();
@@ -1893,9 +1893,9 @@ function saveImportData(rows, customer, userEmail, userName, fileName) {
     if (allRows.length > 0) {
       sheet.insertRowsAfter(1, allRows.length);
       var reversedRows = allRows.slice().reverse();
-      sheet.getRange(2, 1, reversedRows.length, 25).setValues(reversedRows);
-      // Force date column (col 6) plain text
+      // Force date column (col 6) plain text BEFORE setting values to prevent auto-conversion
       sheet.getRange(2, 6, reversedRows.length, 1).setNumberFormat('@');
+      sheet.getRange(2, 1, reversedRows.length, 25).setValues(reversedRows);
     }
 
     SpreadsheetApp.flush();
@@ -2079,7 +2079,7 @@ function saveImportDataUpdate(rows, customer, userEmail, userName, fileName) {
         sheet.getRange(sheetRow, idx.region + 1).setValue(cleanRegion);
         sheet.getRange(sheetRow, idx.type   + 1).setValue(String(row.transType || row.type || "").trim().toUpperCase());
         sheet.getRange(sheetRow, idx.itype  + 1).setValue(String(row.itemType  || row.itype || "").trim());
-        sheet.getRange(sheetRow, idx.date   + 1).setValue(formatToDDMMYYYY(row.date) || dateStr);
+        sheet.getRange(sheetRow, idx.date   + 1).setNumberFormat('@').setValue(formatToDDMMYYYY(row.date) || dateStr);
         sheet.getRange(sheetRow, idx.model  + 1).setValue(String(row.model || "").trim());
         sheet.getRange(sheetRow, idx.desc   + 1).setValue(String(row.desc  || "").trim());
         sheet.getRange(sheetRow, idx.qty    + 1).setValue(Number(row.qty)  || 1);
@@ -2120,8 +2120,8 @@ function saveImportDataUpdate(rows, customer, userEmail, userName, fileName) {
 
     if (insertedRows.length > 0) {
       sheet.insertRowsAfter(1, insertedRows.length);
-      sheet.getRange(2, 1, insertedRows.length, 25).setValues(insertedRows.slice().reverse());
       sheet.getRange(2, 6, insertedRows.length, 1).setNumberFormat('@');
+      sheet.getRange(2, 1, insertedRows.length, 25).setValues(insertedRows.slice().reverse());
     }
 
     SpreadsheetApp.flush();
@@ -2231,7 +2231,7 @@ function importBulkData(rows, customer, userEmail, userName) {
       row[2]  = reg;
       row[3]  = String(item.transType || item.type || "").trim();
       row[4]  = String(item.itemType || item.itype || "").trim();
-      row[5]  = item.date ? item.date : dateStr;
+      row[5]  = formatToDDMMYYYY(item.date) || dateStr;
       row[6]  = String(item.bill || "").trim();
       row[7]  = String(item.model || "").trim();
       row[8]  = String(item.code || "").trim();
@@ -2254,6 +2254,7 @@ function importBulkData(rows, customer, userEmail, userName) {
     if (allRows.length > 0) {
       sheet.insertRowsAfter(1, allRows.length);
       var reversedRows = allRows.slice().reverse();
+      sheet.getRange(2, 6, reversedRows.length, 1).setNumberFormat('@');
       sheet.getRange(2, 1, reversedRows.length, 25).setValues(reversedRows);
     }
     

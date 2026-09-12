@@ -1663,7 +1663,9 @@
     // ― Download Template CSV
     function downloadImportTemplate() {
       var headers = ['DUID','REGION','IN/OUT','TYPE','DATE','BILL NO.','MODEL','ITEM CODE','DESCRIPTION','QTY','SERIAL'];
-      var example = ['DUID-001','ER','OUT','HW','09/08/2026','BILL-001','RRU3962','023115PK','MPE Site Materials','1','N/A'];
+      var d = new Date();
+      var todayStr = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+      var example = ['DUID-001','ER','OUT','HW', todayStr,'BILL-001','RRU3962','023115PK','MPE Site Materials','1','N/A'];
       var csv = [headers.join(','), example.join(',')].join('\n');
       var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
       var url  = URL.createObjectURL(blob);
@@ -1738,7 +1740,25 @@
             region:    region,
             transType: transType,
             itemType:  getCol(['ITYPE','ITEM TYPE','ITEMTYPE','TYPE']),
-            date:      getCol(['DATE']),
+            date:      (function(rawD) {
+              if (!rawD) {
+                var d = new Date();
+                return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+              }
+              if (rawD.indexOf('/') > -1) {
+                var p = rawD.trim().split(/\s+/)[0].split('/');
+                if (p.length === 3) {
+                  var p0 = parseInt(p[0], 10), p1 = parseInt(p[1], 10), y = parseInt(p[2], 10);
+                  if (y > 2500) y -= 543;
+                  if (!isNaN(p0) && !isNaN(p1) && !isNaN(y)) {
+                    var dd = (p1 > 12) ? p1 : p0;
+                    var mm = (p1 > 12) ? p0 : p1;
+                    return String(dd).padStart(2,'0') + '/' + String(mm).padStart(2,'0') + '/' + y;
+                  }
+                }
+              }
+              return rawD;
+            })(getCol(['DATE'])),
             bill:      bill,
             billNo:    bill,
             model:     getCol(['MODEL']),
@@ -1832,7 +1852,8 @@
           var a    = document.createElement('a');
           a.href   = url;
           var d    = new Date();
-          a.download = 'Export_INOUT_' + ieCurrentCustomer + '_' + d.getDate() + (d.getMonth()+1) + d.getFullYear() + '.csv';
+          var dateSlug = String(d.getDate()).padStart(2,'0') + String(d.getMonth()+1).padStart(2,'0') + d.getFullYear();
+          a.download = 'Export_INOUT_' + ieCurrentCustomer + '_' + dateSlug + '.csv';
           a.click();
           URL.revokeObjectURL(url);
           Toast.fire({icon:'success', title:'Export สำเร็จ! (' + res.rows.length + ' รายการ)'});
