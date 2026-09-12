@@ -1374,13 +1374,13 @@ function formatToDDMMYYYY(val) {
     }
   }
 
-  // Slash format — V.7.5.0: Robust DD/MM/YYYY detection
-  // Google Sheets US-locale may store our DD/MM/YYYY as MM/DD/YYYY text.
-  // Rules:
-  //   p0 > 12 => definitely DD/MM/YYYY (day cannot be a month)
-  //   p1 > 12 => definitely MM/DD/YYYY => swap to DD/MM
-  //   both <= 12 => ambiguous; treat as MM/DD/YYYY (US locale) => swap to DD/MM
-  //                 because Google Sheets en-US auto-formats dates as MM/DD.
+  // Slash format — V.7.5.4: Robust DD/MM/YYYY detection
+  // Input strings from CSV/frontend are ALWAYS Thai DD/MM/YYYY format.
+  // Only Date objects from Google Sheets US-locale need swap heuristic (handled above).
+  // Rules for string input:
+  //   p0 > 12 => definitely DD/MM/YYYY (day cannot be a month) -> keep as-is
+  //   p1 > 12 => definitely MM/DD/YYYY (month cannot be > 12) -> swap to DD/MM
+  //   both <= 12 => treat as DD/MM/YYYY (Thai format) -> keep as-is (NO swap)
   if (s.indexOf("/") > -1) {
     var parts = s.split(/\s+/);
     var slashParts = parts[0].split("/");
@@ -1391,9 +1391,8 @@ function formatToDDMMYYYY(val) {
       if (y > 2500) y -= 543;
       if (!isNaN(p0) && !isNaN(p1) && !isNaN(y) && y >= 1900 && y <= 2200) {
         var dd, mm;
-        if (p0 > 12)      { dd = p0; mm = p1; }  // Definitely DD/MM/YYYY
-        else if (p1 > 12) { dd = p1; mm = p0; }  // Definitely MM/DD/YYYY -> swap
-        else              { dd = p1; mm = p0; }  // Both <=12: assume MM/DD (US locale) -> swap
+        if (p1 > 12) { dd = p1; mm = p0; }  // Clearly MM/DD/YYYY (US) -> swap to DD/MM
+        else         { dd = p0; mm = p1; }  // DD/MM/YYYY (Thai) or unambiguous -> keep
         return ("0" + dd).slice(-2) + "/" + ("0" + mm).slice(-2) + "/" + y;
       }
     }
