@@ -1,5 +1,5 @@
 /*
- * Inventory Smart System - V.7.5.2
+ * Inventory Smart System - V.7.5.4
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
@@ -51,13 +51,13 @@ function doGet(e) {
 
   if (e.parameter.page === "dashboard") {
     return HtmlService.createTemplateFromFile('dashboard').evaluate()
-      .setTitle('Inventory Dashboard V.7.5.3')
+      .setTitle('Inventory Dashboard V.7.5.4')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-    .setTitle('Inventory Smart App V.7.5.3')
+    .setTitle('Inventory Smart App V.7.5.4')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
