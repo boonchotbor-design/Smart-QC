@@ -1231,24 +1231,32 @@ function recalculateAllDuidStatuses() {
 
 function uploadPhotoOnly(h, b, p, userEmail, userName) {
   try {
-    var root       = DriveApp.getFolderById(ROOT_FOLDER_ID);
-    var regionName = String(h.region || "Unknown_Region").trim() || "Unknown_Region";
-    var duidName   = String(h.duid   || "Unknown_DUID").trim()   || "Unknown_DUID";
-    var typeName   = String(h.type   || "Other").trim() || "Other";
+    var root = DriveApp.getFolderById(ROOT_FOLDER_ID);
 
-    var regF  = getOrCreateSubFolder(root,  regionName);
-    var duidF = getOrCreateSubFolder(regF,  duidName);
-    
-    // สร้าง 6 Folder มาตรฐาน ภายใต้ DUID เสมอ
+    // ── Normalize: trim + uppercase เพื่อป้องกัน folder ซ้ำจาก OCR ──
+    var regionName = String(h.region || "Unknown_Region").trim().toUpperCase() || "Unknown_Region";
+    var duidName   = String(h.duid   || "Unknown_DUID").trim()                 || "Unknown_DUID";
+    var rawType    = String(h.type   || "Other").trim().toUpperCase();
+
+    // ── Map type → standard subfolder name ──
+    var typeMap = { "IN":"IN", "OUT":"OUT", "DISMANTLE":"DISMANTLE", "RETURN":"RETURN",
+                    "STR/IN":"STR/IN", "STR/OUT":"STR/OUT", "STR_IN":"STR/IN", "STR_OUT":"STR/OUT" };
+    var typeName = typeMap[rawType] || rawType || "Other";
+
+    var regF  = getOrCreateSubFolder(root, regionName);
+    var duidF = getOrCreateSubFolder(regF, duidName);
+
+    // ── สร้าง 6 Folder มาตรฐาน ภายใต้ DUID เสมอ ──
     var stdTypes = ["IN", "OUT", "DISMANTLE", "RETURN", "STR/IN", "STR/OUT"];
     for (var i = 0; i < stdTypes.length; i++) {
       getOrCreateSubFolder(duidF, stdTypes[i]);
     }
-    
+
     var typeF = getOrCreateSubFolder(duidF, typeName);
 
+    var base64Data = b.indexOf(',') !== -1 ? b.split(',')[1] : b;
     var blob = Utilities.newBlob(
-      Utilities.base64Decode(b.split(',')[1] || b),
+      Utilities.base64Decode(base64Data),
       "image/jpeg",
       duidName + "_" + p + ".jpg"
     );
@@ -1270,13 +1278,25 @@ function uploadPhotoOnly(h, b, p, userEmail, userName) {
   }
 }
 
+/**
+ * getOrCreateSubFolder — ค้นหา folder case-insensitive เพื่อป้องกัน duplicate
+ * หาก parent มี folder ที่ชื่อ trim-case match อยู่แล้ว → return folder นั้น
+ * ถ้าไม่มี → สร้างใหม่
+ */
 function getOrCreateSubFolder(p, n) {
   if (!n || n === "-" || n === "null") n = "Unknown";
-  var it = p.getFoldersByName(n);
+  n = String(n).trim();
+  var nLower = n.toLowerCase();
+
+  // ── วนหา folder ที่ชื่อตรงกัน (case-insensitive) ──
+  var it = p.getFolders();
   while (it.hasNext()) {
     var f = it.next();
-    if (!f.isTrashed()) return f;
+    if (!f.isTrashed() && f.getName().trim().toLowerCase() === nLower) {
+      return f;
+    }
   }
+  // ไม่พบ → สร้างใหม่
   return p.createFolder(n);
 }
 
