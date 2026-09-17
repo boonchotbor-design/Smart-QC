@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.7.5.4)
+# 📦 Inventory Smart System (V.7.5.5)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI & Dashboard) and Telegram Bot with AI OCR capabilities.
 
@@ -35,6 +35,11 @@ Project Context: A Google Apps Script application for managing hardware inventor
 ### 🐞 Bug Fixing
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
+
+## 🐞 Bug Fixes & Stability (V.7.5.5)
+- **Teloneer Form Print Clean-up (Dummy 0 Removal)**: Removed forced 12-row padding loop (`for(let i=rows.length;i<12;i++)`) that populated empty rows 6-12 with literal `0` values. Added auto-filtering to remove invalid/dummy rows so only actual requisition items are displayed in Review and Print.
+- **Wider Date Underline Slots in Signature Block**: Expanded the signature date line (`วันที่ ____/____/______`) into clearly separated, wide underline slots (`55px` Day / `55px` Month / `75px` Year) with crisp borders, providing ample handwriting room for date/month/year on printed slips.
+- **Version Sync**: Synchronized all versions to V.7.5.5 across `dashboard.html`, `dashboard_demo.html`, `test.js`, and documentation.
 
 ## 🐞 Bug Fixes & Stability (V.7.5.4)
 - **Silent Bot on Non-DUID & Noise Suppression**: Added noise filtering in LINE and Telegram webhooks (`index.js` & `deploy/index.js`) to ignore messages containing `@` (mentions, emails), multiline texts, and URLs.

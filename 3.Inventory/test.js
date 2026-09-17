@@ -9011,14 +9011,47 @@ function execPrint(){
 }
 function buildTeloneerPage(rows,customer,type){
   const r0=rows[0]||{}, isOut=type==='OUT'||type==='DISMANTLE';
-  const items=rows.map((t,i)=>{
-    const bg=t.type==='OUT'||isOut?' class="tp-type-out"':'';
-    return `<tr${bg}><td style="text-align:center">${i+1}</td><td>${t.bill||''}</td><td>${t.itype||''}</td><td>${t.model||''}</td><td style="color:blue">${t.code||''}</td><td>${t.desc||''}</td><td style="text-align:center;font-weight:bold">${type}</td><td style="text-align:center;font-weight:bold">${t.qty||0}</td><td style="font-family:monospace">${t.sn||''}</td></tr>`;
+  const validRows = rows.filter(t => {
+    if(!t) return false;
+    const isZero = (t.bill==='0'||t.bill===0||!t.bill) &&
+                   (t.model==='0'||t.model===0||!t.model) &&
+                   (t.code==='0'||t.code===0||!t.code) &&
+                   (t.sn==='0'||t.sn===0||!t.sn) &&
+                   (!t.qty || t.qty==='0' || t.qty===0);
+    return !isZero && (t.model || t.code || t.sn || t.bill || (t.qty && Number(t.qty) > 0));
   });
-  for(let i=rows.length;i<12;i++){
-    items.push(`<tr><td style="text-align:center">${i+1}</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td style="text-align:center">0</td><td style="text-align:center">0</td><td>0</td></tr>`);
-  }
-  return `<div class="tp-page"><div class="tp-header"><div class="tp-logo"><span style="color:#a4cc00;font-size:36px;font-weight:900;">t</span><span style="color:#0099cc;font-size:36px;font-weight:900;">eloneer</span></div><div class="tp-title">ใบเบิกของ ${customer}</div></div><div class="tp-info"><div class="tpi-row"><span>ข้าพเจ้า/ผู้รับของ</span><span class="tpi-line" style="width:250px">${r0.ownerR||''}</span><span style="margin-left:15px">Tel</span><span class="tpi-line" style="width:150px"></span></div><div class="tpi-row"><span>ได้เบิกของจาก บริษัท เทโลเนียร์ จำกัด ตามรายละเอียดดังนี้</span><span style="margin-left:15px">Site Code :</span><span class="tpi-line" style="width:200px">${r0.duid||''}</span></div><div class="tpi-row"><span>Owner warehouse :</span><span class="tpi-line" style="width:300px">${r0.ownerW||''}</span></div><div class="tpi-row"><span>Location warehouse :</span><span class="tpi-line" style="width:300px">${r0.locW||''}</span></div><div class="tpi-row"><span>Location Receiver :</span><span class="tpi-line" style="width:300px">${r0.locR||''}</span></div></div><table class="tp-table"><thead><tr style="background:#00ff00;color:#000;"><th>No</th><th>Bill No</th><th>TYPE</th><th>Model</th><th>Item Code</th><th>Item Description</th><th>IN/OUT</th><th>Qty</th><th>SN</th></tr></thead><tbody>${items.join('')}</tbody></table></div>`;
+  const displayRows = validRows.length ? validRows : rows;
+  const items=displayRows.map((t,i)=>{
+    const bg=t.type==='OUT'||isOut?' class="tp-type-out"':'';
+    return `<tr${bg}><td style="text-align:center">${i+1}</td><td>${t.bill||''}</td><td>${t.itype||''}</td><td>${t.model||''}</td><td style="color:#0055cc !important; font-weight:bold;">${t.code||''}</td><td>${t.desc||''}</td><td style="text-align:center;font-weight:bold">${type}</td><td style="text-align:center;font-weight:bold">${t.qty||0}</td><td style="font-family:monospace">${t.sn||''}</td></tr>`;
+  });
+  const sigBlock = `
+    <div style="margin-top:20px; border:1px solid #000;">
+      <div style="padding:10px; border-bottom:1px solid #000; min-height:60px;">
+        <strong>หมายเหตุ</strong><br>${r0.desc||''}
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; text-align:center; font-size:12px;">
+        <div style="padding:20px 10px; border-right:1px solid #000;">
+          <div style="margin-top:40px; border-bottom:1px solid #000; width:80%; margin-left:auto; margin-right:auto;"></div>
+          <div style="margin-top:5px; font-weight:600;">ผู้ส่งมอบ / ผู้เบิก</div>
+          <div style="margin-top:5px; color:#555; font-size:11px;">(${r0.ownerW||'—'})</div>
+          <div style="margin-top:16px; font-size:13px;">วันที่ <span style="display:inline-block; border-bottom:1px solid #000; width:55px; height:18px; vertical-align:bottom; margin:0 3px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:55px; height:18px; vertical-align:bottom; margin:0 3px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:75px; height:18px; vertical-align:bottom; margin:0 3px;"></span></div>
+        </div>
+        <div style="padding:20px 10px; border-right:1px solid #000;">
+          <div style="margin-top:40px; border-bottom:1px solid #000; width:80%; margin-left:auto; margin-right:auto;"></div>
+          <div style="margin-top:5px; font-weight:600;">ผู้รับมอบ</div>
+          <div style="margin-top:5px; color:#555; font-size:11px;">(${r0.ownerR||'—'})</div>
+          <div style="margin-top:16px; font-size:13px;">วันที่ <span style="display:inline-block; border-bottom:1px solid #000; width:55px; height:18px; vertical-align:bottom; margin:0 3px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:55px; height:18px; vertical-align:bottom; margin:0 3px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:75px; height:18px; vertical-align:bottom; margin:0 3px;"></span></div>
+        </div>
+        <div style="padding:20px 10px;">
+          <div style="margin-top:40px; border-bottom:1px solid #000; width:80%; margin-left:auto; margin-right:auto;"></div>
+          <div style="margin-top:5px; font-weight:600;">ผู้อนุมัติ / หัวหน้างาน</div>
+          <div style="margin-top:5px; color:#555; font-size:11px;">&nbsp;</div>
+          <div style="margin-top:16px; font-size:13px;">วันที่ <span style="display:inline-block; border-bottom:1px solid #000; width:55px; height:18px; vertical-align:bottom; margin:0 3px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:55px; height:18px; vertical-align:bottom; margin:0 3px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:75px; height:18px; vertical-align:bottom; margin:0 3px;"></span></div>
+        </div>
+      </div>
+    </div>`;
+  return `<div class="tp-page"><div class="tp-header"><div class="tp-logo"><span style="color:#a4cc00;font-size:36px;font-weight:900;">t</span><span style="color:#0099cc;font-size:36px;font-weight:900;">eloneer</span></div><div class="tp-title">ใบเบิกของ ${customer}</div></div><div class="tp-info"><div class="tpi-row"><span>ข้าพเจ้า/ผู้รับของ</span><span class="tpi-line" style="width:250px">${r0.ownerR||''}</span><span style="margin-left:15px">Tel</span><span class="tpi-line" style="width:150px"></span></div><div class="tpi-row"><span>ได้เบิกของจาก บริษัท เทโลเนียร์ จำกัด ตามรายละเอียดดังนี้</span><span style="margin-left:15px">Site Code :</span><span class="tpi-line" style="width:200px">${r0.duid||''}</span></div><div class="tpi-row"><span>Owner warehouse :</span><span class="tpi-line" style="width:300px">${r0.ownerW||''}</span></div><div class="tpi-row"><span>Location warehouse :</span><span class="tpi-line" style="width:300px">${r0.locW||''}</span></div><div class="tpi-row"><span>Location Receiver :</span><span class="tpi-line" style="width:300px">${r0.locR||''}</span></div></div><table class="tp-table"><thead><tr style="background:#00ff00;color:#000;"><th>No</th><th>Bill No</th><th>TYPE</th><th>Model</th><th>Item Code</th><th>Item Description</th><th>IN/OUT</th><th>Qty</th><th>SN</th></tr></thead><tbody>${items.join('')}</tbody></table>${sigBlock}</div>`;
 }
 
 // ════ PRINT (with Item Code) ════
