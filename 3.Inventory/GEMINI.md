@@ -38,7 +38,8 @@ Project Context: A Google Apps Script application for managing hardware inventor
 
 ## 🐞 Bug Fixes & Stability (V.7.5.5)
 - **Teloneer Form Print Clean-up (Dummy 0 Removal)**: Removed forced 12-row padding loop (`for(let i=rows.length;i<12;i++)`) that populated empty rows 6-12 with literal `0` values. Added auto-filtering to remove invalid/dummy rows so only actual requisition items are displayed in Review and Print.
-- **Wider Date Underline Slots in Signature Block**: Expanded the signature date line (`วันที่ ____/____/______`) into clearly separated, wide underline slots (`55px` Day / `55px` Month / `75px` Year) with crisp borders, providing ample handwriting room for date/month/year on printed slips.
+- **A4 Bottom Pinning for Signature Block**: Enforced full A4 printable flex layout (`min-height: 255mm`) with `margin-top: auto` on `.tp-sig-wrap`, locking the remarks and 3-column signature block at the very bottom of the A4 sheet.
+- **Date Line Nowrap & Single-Line Fit**: Added `white-space: nowrap; overflow: hidden;` and tuned slot widths (`38px` Day / `38px` Month / `52px` Year) to guarantee the date line stays neatly on a single line without wrapping the year underline to row 2.
 - **Version Sync**: Synchronized all versions to V.7.5.5 across `dashboard.html`, `dashboard_demo.html`, `test.js`, and documentation.
 
 ## 🐞 Bug Fixes & Stability (V.7.5.4)

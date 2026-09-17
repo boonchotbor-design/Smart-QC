@@ -9026,32 +9026,60 @@ function buildTeloneerPage(rows,customer,type){
     return `<tr${bg}><td style="text-align:center">${i+1}</td><td>${t.bill||''}</td><td>${t.itype||''}</td><td>${t.model||''}</td><td style="color:#0055cc !important; font-weight:bold;">${t.code||''}</td><td>${t.desc||''}</td><td style="text-align:center;font-weight:bold">${type}</td><td style="text-align:center;font-weight:bold">${t.qty||0}</td><td style="font-family:monospace">${t.sn||''}</td></tr>`;
   });
   const sigBlock = `
-    <div style="margin-top:20px; border:1px solid #000;">
-      <div style="padding:10px; border-bottom:1px solid #000; min-height:60px;">
+    <div style="border:1px solid #000;">
+      <div style="padding:10px; border-bottom:1px solid #000; min-height:50px;">
         <strong>หมายเหตุ</strong><br>${r0.desc||''}
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr; text-align:center; font-size:12px;">
-        <div style="padding:20px 10px; border-right:1px solid #000;">
-          <div style="margin-top:40px; border-bottom:1px solid #000; width:80%; margin-left:auto; margin-right:auto;"></div>
-          <div style="margin-top:5px; font-weight:600;">ผู้ส่งมอบ / ผู้เบิก</div>
-          <div style="margin-top:5px; color:#555; font-size:11px;">(${r0.ownerW||'—'})</div>
-          <div style="margin-top:16px; font-size:13px;">วันที่ <span style="display:inline-block; border-bottom:1px solid #000; width:55px; height:18px; vertical-align:bottom; margin:0 3px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:55px; height:18px; vertical-align:bottom; margin:0 3px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:75px; height:18px; vertical-align:bottom; margin:0 3px;"></span></div>
+        <div style="padding:16px 8px; border-right:1px solid #000;">
+          <div style="margin-top:35px; border-bottom:1px solid #000; width:80%; margin-left:auto; margin-right:auto;"></div>
+          <div style="margin-top:6px; font-weight:600;">ผู้ส่งมอบ / ผู้เบิก</div>
+          <div style="margin-top:4px; color:#555; font-size:11px;">(${r0.ownerW||'—'})</div>
+          <div style="margin-top:14px; font-size:12px; white-space:nowrap; overflow:hidden;">วันที่ <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:15px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:15px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:52px; height:15px; vertical-align:bottom; margin:0 2px;"></span></div>
         </div>
-        <div style="padding:20px 10px; border-right:1px solid #000;">
-          <div style="margin-top:40px; border-bottom:1px solid #000; width:80%; margin-left:auto; margin-right:auto;"></div>
-          <div style="margin-top:5px; font-weight:600;">ผู้รับมอบ</div>
-          <div style="margin-top:5px; color:#555; font-size:11px;">(${r0.ownerR||'—'})</div>
-          <div style="margin-top:16px; font-size:13px;">วันที่ <span style="display:inline-block; border-bottom:1px solid #000; width:55px; height:18px; vertical-align:bottom; margin:0 3px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:55px; height:18px; vertical-align:bottom; margin:0 3px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:75px; height:18px; vertical-align:bottom; margin:0 3px;"></span></div>
+        <div style="padding:16px 8px; border-right:1px solid #000;">
+          <div style="margin-top:35px; border-bottom:1px solid #000; width:80%; margin-left:auto; margin-right:auto;"></div>
+          <div style="margin-top:6px; font-weight:600;">ผู้รับมอบ</div>
+          <div style="margin-top:4px; color:#555; font-size:11px;">(${r0.ownerR||'—'})</div>
+          <div style="margin-top:14px; font-size:12px; white-space:nowrap; overflow:hidden;">วันที่ <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:15px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:15px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:52px; height:15px; vertical-align:bottom; margin:0 2px;"></span></div>
         </div>
-        <div style="padding:20px 10px;">
-          <div style="margin-top:40px; border-bottom:1px solid #000; width:80%; margin-left:auto; margin-right:auto;"></div>
-          <div style="margin-top:5px; font-weight:600;">ผู้อนุมัติ / หัวหน้างาน</div>
-          <div style="margin-top:5px; color:#555; font-size:11px;">&nbsp;</div>
-          <div style="margin-top:16px; font-size:13px;">วันที่ <span style="display:inline-block; border-bottom:1px solid #000; width:55px; height:18px; vertical-align:bottom; margin:0 3px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:55px; height:18px; vertical-align:bottom; margin:0 3px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:75px; height:18px; vertical-align:bottom; margin:0 3px;"></span></div>
+        <div style="padding:16px 8px;">
+          <div style="margin-top:35px; border-bottom:1px solid #000; width:80%; margin-left:auto; margin-right:auto;"></div>
+          <div style="margin-top:6px; font-weight:600;">ผู้อนุมัติ / หัวหน้างาน</div>
+          <div style="margin-top:4px; color:#555; font-size:11px;">&nbsp;</div>
+          <div style="margin-top:14px; font-size:12px; white-space:nowrap; overflow:hidden;">วันที่ <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:15px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:15px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:52px; height:15px; vertical-align:bottom; margin:0 2px;"></span></div>
         </div>
       </div>
     </div>`;
-  return `<div class="tp-page"><div class="tp-header"><div class="tp-logo"><span style="color:#a4cc00;font-size:36px;font-weight:900;">t</span><span style="color:#0099cc;font-size:36px;font-weight:900;">eloneer</span></div><div class="tp-title">ใบเบิกของ ${customer}</div></div><div class="tp-info"><div class="tpi-row"><span>ข้าพเจ้า/ผู้รับของ</span><span class="tpi-line" style="width:250px">${r0.ownerR||''}</span><span style="margin-left:15px">Tel</span><span class="tpi-line" style="width:150px"></span></div><div class="tpi-row"><span>ได้เบิกของจาก บริษัท เทโลเนียร์ จำกัด ตามรายละเอียดดังนี้</span><span style="margin-left:15px">Site Code :</span><span class="tpi-line" style="width:200px">${r0.duid||''}</span></div><div class="tpi-row"><span>Owner warehouse :</span><span class="tpi-line" style="width:300px">${r0.ownerW||''}</span></div><div class="tpi-row"><span>Location warehouse :</span><span class="tpi-line" style="width:300px">${r0.locW||''}</span></div><div class="tpi-row"><span>Location Receiver :</span><span class="tpi-line" style="width:300px">${r0.locR||''}</span></div></div><table class="tp-table"><thead><tr style="background:#00ff00;color:#000;"><th>No</th><th>Bill No</th><th>TYPE</th><th>Model</th><th>Item Code</th><th>Item Description</th><th>IN/OUT</th><th>Qty</th><th>SN</th></tr></thead><tbody>${items.join('')}</tbody></table>${sigBlock}</div>`;
+  return `
+    <div class="tp-page" style="display:flex; flex-direction:column; min-height:255mm; box-sizing:border-box;">
+      <div class="tp-content" style="flex:0 0 auto;">
+        <div class="tp-header">
+          <div class="tp-logo">
+            <span style="color:#a4cc00;font-size:36px;font-weight:900;">t</span><span style="color:#0099cc;font-size:36px;font-weight:900;">eloneer</span>
+          </div>
+          <div class="tp-title">ใบเบิกของ ${customer}</div>
+        </div>
+        <div class="tp-info">
+          <div class="tpi-row"><span>ข้าพเจ้า/ผู้รับของ</span><span class="tpi-line" style="width:250px">${r0.ownerR||''}</span><span style="margin-left:15px">Tel</span><span class="tpi-line" style="width:150px"></span></div>
+          <div class="tpi-row"><span>ได้เบิกของจาก บริษัท เทโลเนียร์ จำกัด ตามรายละเอียดดังนี้</span><span style="margin-left:15px">Site Code :</span><span class="tpi-line" style="width:200px">${r0.duid||''}</span></div>
+          <div class="tpi-row"><span>Owner warehouse :</span><span class="tpi-line" style="width:300px">${r0.ownerW||''}</span></div>
+          <div class="tpi-row"><span>Location warehouse :</span><span class="tpi-line" style="width:300px">${r0.locW||''}</span></div>
+          <div class="tpi-row"><span>Location Receiver :</span><span class="tpi-line" style="width:300px">${r0.locR||''}</span></div>
+        </div>
+        <table class="tp-table">
+          <thead>
+            <tr style="background:#00ff00;color:#000;">
+              <th>No</th><th>Bill No</th><th>TYPE</th><th>Model</th><th>Item Code</th><th>Item Description</th><th>IN/OUT</th><th>Qty</th><th>SN</th>
+            </tr>
+          </thead>
+          <tbody>${items.join('')}</tbody>
+        </table>
+      </div>
+      <div class="tp-sig-wrap" style="margin-top:auto; padding-top:15px;">
+        ${sigBlock}
+      </div>
+    </div>`;
 }
 
 // ════ PRINT (with Item Code) ════
