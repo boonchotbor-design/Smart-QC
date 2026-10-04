@@ -1,6 +1,6 @@
-# 📦 Inventory Smart System (V.7.5.5)
+# 📦 Inventory Smart System (V.7.5.6)
 
-Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE) using Web App (Bootstrap UI & Dashboard) and Telegram Bot with AI OCR capabilities.
+Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE/NT) using Web App (Bootstrap UI & Dashboard) and Telegram Bot with AI OCR capabilities.
 
 ## 🛠 Tech Stack
 - **Backend:** Google Apps Script (`code.gs`)
@@ -35,6 +35,13 @@ Project Context: A Google Apps Script application for managing hardware inventor
 ### 🐞 Bug Fixing
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
+
+## 🐞 Bug Fixes & Stability (V.7.5.6)
+- **Full Export Support (All Customers & No User)**: Enhanced `exportSheetData` and `doExport` to support exporting all data (`ALL`) combining records across all operators (AIS, TRUE, NT) and preserving all rows without DUID or User (`No User`).
+- **Dynamic Multi-Sheet Scanner**: Updated `getDashboardData` to dynamically scan all sheets prefixed with `INOUT_HW_` (including `INOUT_HW_NT` and standalone `NT`/`NT No User`), auto-detecting customer operators and pulling non-empty rows even if DUID is missing.
+- **Export CSV Enhanced Columns**: Exported CSV now includes complete 20 columns: `NO`, `CUSTOMER`, `DUID`, `REGION`, `TYPE`, `ITYPE`, `DATE`, `BILL NO`, `MODEL`, `ITEM CODE`, `DESCRIPTION`, `QTY`, `SN`, `OWNER WAREHOUSE`, `OWNER RECEIVER`, `LOCATION WAREHOUSE`, `LOCATION RECEIVER`, `STATUS`, `INT NO`, and `USER` (explicitly labeling empty user rows as `No User`).
+- **Export All & NT Buttons Added**: Added direct "📦 Export ทั้งหมด (All)" and "📥 NT" buttons to `dashboard.html` and `app.html`, updated customer filters to include `NT`, and added auto-sheet creation (`getOrCreateInOutSheet`) for `INOUT_HW_NT`.
+- **Version Sync**: Synchronized all versions to V.7.5.6 across `code.gs`, `dashboard.html`, `app.html`, `dashboard_demo.html`, and documentation.
 
 ## 🐞 Bug Fixes & Stability (V.7.5.5)
 - **Teloneer Form Print Clean-up (Dummy 0 Removal)**: Removed forced 12-row padding loop (`for(let i=rows.length;i<12;i++)`) that populated empty rows 6-12 with literal `0` values. Added auto-filtering to remove invalid/dummy rows so only actual requisition items are displayed in Review and Print.

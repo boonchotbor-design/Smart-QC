@@ -1,5 +1,5 @@
 /*
- * Inventory Smart System - V.7.5.4
+ * Inventory Smart System - V.7.5.6
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
@@ -16,6 +16,8 @@
  *          Fix daily chart 0-count bug; Sort UI descending by date/time matching Google Sheet top-row recording.
  * V.7.5.2: Fixed CSV Import not updating Google Sheets; Added IMPORT_LOG sheet & getImportHistory API;
  *          Integrated Import History page (page-history) & recent import logs with success/failed tracking.
+ * V.7.5.6: Full Export Support — Includes ALL Customers (AIS, TRUE, NT) and records with No User.
+ *          Auto-detects all INOUT_HW_ sheets, preserves rows without DUID/User, adds Export All CSV with Customer and User columns.
  */
 
 var SPREADSHEET_ID      = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -41,6 +43,13 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (e.parameter.export === "csv" || e.parameter.export === "all" || e.parameter.action === "export") {
+    var customer = e.parameter.customer || "ALL";
+    var result = exportSheetData(customer);
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (e.parameter.duid) {
     var result = searchByDuidOnly(e.parameter.duid);
     if (e.parameter.format === "text")
@@ -51,13 +60,13 @@ function doGet(e) {
 
   if (e.parameter.page === "dashboard") {
     return HtmlService.createTemplateFromFile('dashboard').evaluate()
-      .setTitle('Inventory Dashboard V.7.5.4')
+      .setTitle('Inventory Dashboard V.7.5.6')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-    .setTitle('Inventory Smart App V.7.5.4')
+    .setTitle('Inventory Smart App V.7.5.6')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -201,8 +210,8 @@ function onEditAudit(e) {
   try {
     var sheet     = e.range.getSheet();
     var sheetName = sheet.getName();
-    var targets   = ["INOUT_HW_AIS", "INOUT_HW_TRUE"];
-    if (targets.indexOf(sheetName) === -1) return;
+    var targets   = ["INOUT_HW_AIS", "INOUT_HW_TRUE", "INOUT_HW_NT"];
+    if (targets.indexOf(sheetName) === -1 && sheetName.indexOf("INOUT_HW_") !== 0) return;
 
     var row = e.range.getRow();
     var col = e.range.getColumn();
@@ -370,6 +379,33 @@ function parsePickingList(text) {
 }
 
 // ─────────────────────────────────────────────
+// HELPER: GET OR CREATE TRANSACTION SHEET (AIS, TRUE, NT)
+// ─────────────────────────────────────────────
+
+function getOrCreateInOutSheet(ss, sheetName) {
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    try {
+      sheet = ss.insertSheet(sheetName);
+      var template = ss.getSheetByName("INOUT_HW_AIS") || ss.getSheetByName("INOUT_HW_TRUE");
+      if (template) {
+        var lastCol = template.getLastColumn();
+        if (lastCol > 0) {
+          var hRange = template.getRange(1, 1, 1, lastCol);
+          var hVals = hRange.getValues();
+          sheet.getRange(1, 1, 1, lastCol).setValues(hVals);
+          sheet.getRange(1, 1, 1, lastCol).setBackground("#1a73e8").setFontColor("#ffffff").setFontWeight("bold");
+        }
+      }
+      logToSheet("AUTO_CREATE_SHEET", "สร้าง Sheet ใหม่สำเร็จ: " + sheetName);
+    } catch (e) {
+      logToSheet("CREATE_SHEET_ERROR", e.toString());
+    }
+  }
+  return sheet;
+}
+
+// ─────────────────────────────────────────────
 // SAVE MAIN DATA (+ User Tracking)
 // ─────────────────────────────────────────────
 
@@ -380,11 +416,11 @@ function saveMainData(header, items, userEmail, userName) {
     if (!header || !items || items.length === 0)
       return { success: false, message: "❌ ข้อมูลไม่สมบูรณ์" };
 
-    var ss       = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var customer = (header.customer || "AIS").toString().trim().toUpperCase();
+    var ss        = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var customer  = (header.customer || "AIS").toString().trim().toUpperCase();
     var sheetName = "INOUT_HW_" + customer;
-    var sheet    = ss.getSheetByName(sheetName);
-    if (!sheet) return { success: false, message: "❌ ไม่พบหน้า Sheet: " + sheetName };
+    var sheet     = getOrCreateInOutSheet(ss, sheetName);
+    if (!sheet) return { success: false, message: "❌ ไม่สามารถเปิดหรือสร้าง Sheet: " + sheetName };
 
     var cleanDuid = String(header.duid   || "").trim();
     var cleanBill = String(header.billNo || "").trim();
@@ -654,7 +690,7 @@ function searchByBillNo(billNo, customer) {
 function searchDuidForUI(duid) {
   try {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var targetSheets = ["INOUT_HW_AIS", "INOUT_HW_TRUE"];
+    var targetSheets = ["INOUT_HW_AIS", "INOUT_HW_TRUE", "INOUT_HW_NT"];
     var results = {
       duid: "", region: "", ownerWarehouse: "", ownerReceiver: "",
       locationWarehouse: "", locationReceiver: "", items: []
@@ -723,7 +759,7 @@ function searchByDuidOnly(duid) {
   if (!duid) return { success: false, message: "❌ กรุณาระบุ DUID" };
   try {
     var ss           = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var targetSheets = ["INOUT_HW_AIS", "INOUT_HW_TRUE"];
+    var targetSheets = ["INOUT_HW_AIS", "INOUT_HW_TRUE", "INOUT_HW_NT"];
     var groups       = {}, found = false, totalItemsCount = 0;
     var targetDuid   = duid.toString().trim().toLowerCase();
     var currentStatus = "Pending";
@@ -1149,7 +1185,7 @@ function computeDuidStatus(data, idx, target) {
  */
 function recalculateAllDuidStatuses() {
   var ss      = SpreadsheetApp.openById(SPREADSHEET_ID);
-  var sheets  = ["INOUT_HW_AIS", "INOUT_HW_TRUE"];
+  var sheets  = ["INOUT_HW_AIS", "INOUT_HW_TRUE", "INOUT_HW_NT"];
   var summary = [];
 
   sheets.forEach(function(sheetName) {
@@ -1412,19 +1448,36 @@ function formatToDDMMYYYY(val) {
 }
 
 // ─────────────────────────────────────────────
-// DASHBOARD DATA API — V.7.4.4
-// เรียกจาก dashboard_demo.html ผ่าน google.script.run
-// คืนข้อมูลสรุป KPI, รายการล่าสุด, สรุปตาม Region
+// DASHBOARD DATA API — V.7.5.6
+// เรียกจาก dashboard.html ผ่าน google.script.run หรือ ?export=dashboard
+// คืนข้อมูลสรุป KPI, รายการล่าสุด, สรุปตาม Region ครอบคลุมทุกค่าย (AIS, TRUE, NT) และ No User
 // ─────────────────────────────────────────────
 
 function getDashboardData() {
   try {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheets = ["INOUT_HW_AIS", "INOUT_HW_TRUE"];
+    
+    // V.7.5.6: ดึงทุก Sheet ที่เกี่ยวข้อง (AIS, TRUE, NT ฯลฯ)
+    var allSheets = ss.getSheets();
+    var sheetList = [];
+    allSheets.forEach(function(s) {
+      var sName = s.getName();
+      var upper = sName.toUpperCase();
+      if (upper.indexOf("INOUT_HW_") === 0 || upper === "NT" || upper === "NT NO USER" || upper.indexOf("INOUT_HW_NT") > -1) {
+        if (sheetList.indexOf(sName) === -1) sheetList.push(sName);
+      }
+    });
+    ["INOUT_HW_AIS", "INOUT_HW_TRUE", "INOUT_HW_NT"].forEach(function(reqS) {
+      if (ss.getSheetByName(reqS) && sheetList.indexOf(reqS) === -1) {
+        sheetList.push(reqS);
+      }
+    });
+    if (sheetList.length === 0) sheetList = ["INOUT_HW_AIS", "INOUT_HW_TRUE"];
+
     var today  = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
     var allRows = [];
 
-    sheets.forEach(function(sheetName) {
+    sheetList.forEach(function(sheetName) {
       var sheet = ss.getSheetByName(sheetName);
       if (!sheet) return;
       var data = sheet.getDataRange().getValues();
@@ -1437,12 +1490,12 @@ function getDashboardData() {
         region: Math.max(h.indexOf("REGION"), 2),
         type:   Math.max(h.indexOf("IN/OUT"), 3),
         itype:  Math.max(h.indexOf("TYPE"), 4),
-        date:   Math.max(h.indexOf("DATE"), 5),
+        date:   Math.max(h.indexOf("DATE"), h.indexOf("PICK UP DATE"), 5),
         bill:   Math.max(h.indexOf("BILL NO."), h.indexOf("BILL NO"), 6),
         model:  Math.max(h.indexOf("MODEL"), 7),
         code:   Math.max(h.indexOf("ITEM CODE"), 8),
         desc:   Math.max(h.indexOf("ITEM DESCRIPTION"), 9),
-        qty:    Math.max(h.indexOf("SUM OF REQ.QTY"), 10),
+        qty:    Math.max(h.indexOf("SUM OF REQ.QTY"), h.indexOf("QTY"), 10),
         sn:     Math.max(h.indexOf("SERIAL"), 11),
         ownerW: Math.max(h.indexOf("OWNER WAREHOUSE"), 12),
         ownerR: Math.max(h.indexOf("OWNER RECEIVER"), 13),
@@ -1454,14 +1507,37 @@ function getDashboardData() {
         userNm: Math.max(h.indexOf("USER NAME"), 24)
       };
 
-      var cus = sheetName.indexOf("TRUE") > -1 ? "TRUE" : "AIS";
+      var sUpper = sheetName.toUpperCase();
+      var cus = "AIS";
+      if (sUpper.indexOf("TRUE") > -1) cus = "TRUE";
+      else if (sUpper.indexOf("NT") > -1) cus = "NT";
+      else if (sUpper.indexOf("AIS") > -1) cus = "AIS";
+      else cus = sheetName.replace(/^INOUT_HW_/i, "") || "AIS";
+
       for (var i = 1; i < data.length; i++) {
         var row = data[i];
-        if (!row[idx.duid]) continue;
+        // V.7.5.6: ตรวจสอบว่ามีข้อมูลจริง (ไม่ใช่แถวว่างเปล่า) แม้ไม่มี DUID หรือ User ก็ดึงทั้งหมด
+        var hasContent = (row[idx.duid] || row[idx.bill] || row[idx.model] || row[idx.code] || row[idx.sn]);
+        if (!hasContent) continue;
+
+        var rowDuid = String(row[idx.duid] || "").trim();
+        if (!rowDuid) {
+          rowDuid = String(row[idx.bill] || ("NO-DUID-" + (row[idx.runNo] || i))).trim();
+        }
+
+        var uEm = String(row[idx.userEm] || "").trim();
+        var uNm = String(row[idx.userNm] || "").trim();
+        if (!uNm && !uEm) {
+          uNm = "No User";
+          uEm = "-";
+        } else if (!uNm) {
+          uNm = uEm.split("@")[0] || "No User";
+        }
+
         allRows.push({
           _sheetOrder: allRows.length,
           no:       row[idx.runNo]  || (i),
-          duid:     String(row[idx.duid]   || ""),
+          duid:     rowDuid,
           region:   String(row[idx.region] || ""),
           type:     String(row[idx.type]   || ""),
           itype:    String(row[idx.itype]  || ""),
@@ -1478,8 +1554,8 @@ function getDashboardData() {
           locR:     String(row[idx.locR]   || ""),
           status:   String(row[idx.status] || "Pending"),
           intNo:    String(row[idx.intNo]  || ""),
-          userEm:   String(row[idx.userEm] || ""),
-          userNm:   String(row[idx.userNm] || ""),
+          userEm:   uEm,
+          userNm:   uNm,
           customer: cus
         });
       }
@@ -1804,7 +1880,7 @@ function saveImportData(rows, customer, userEmail, userName, fileName) {
 
     var ss        = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheetName = "INOUT_HW_" + (customer || "AIS").toString().trim().toUpperCase();
-    var sheet     = ss.getSheetByName(sheetName);
+    var sheet     = getOrCreateInOutSheet(ss, sheetName);
     if (!sheet) {
       var errMsg = "ไม่พบ Sheet: " + sheetName;
       logImportEntry({
@@ -1955,15 +2031,119 @@ function saveImportData(rows, customer, userEmail, userName, fileName) {
 }
 
 // ─────────────────────────────────────────────
-// EXPORT DATA — V.7.3.0
+// EXPORT DATA — V.7.5.6
 // คืน headers + rows ของ sheet สำหรับ download CSV บน client
+// รองรับ: "ALL" เพื่อดึงข้อมูลทุกค่าย (AIS, TRUE, NT) รวมถึงรายการที่ No User
 // ─────────────────────────────────────────────
 
 function exportSheetData(customer) {
   try {
-    var ss        = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheetName = "INOUT_HW_" + (customer || "AIS").toString().trim().toUpperCase();
-    var sheet     = ss.getSheetByName(sheetName);
+    var ss       = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var cusUpper = (customer || "ALL").toString().trim().toUpperCase();
+
+    // V.7.5.6: ถ้า customer เป็น "ALL" ให้รวมข้อมูลจากทุก Sheet (AIS, TRUE, NT ฯลฯ) รวมถึง No User
+    if (cusUpper === "ALL") {
+      var allSheets = ss.getSheets();
+      var targetSheets = [];
+      allSheets.forEach(function(s) {
+        var name = s.getName();
+        var u = name.toUpperCase();
+        if (u.indexOf("INOUT_HW_") === 0 || u === "NT" || u === "NT NO USER") {
+          targetSheets.push(name);
+        }
+      });
+      ["INOUT_HW_AIS", "INOUT_HW_TRUE", "INOUT_HW_NT"].forEach(function(reqS) {
+        if (ss.getSheetByName(reqS) && targetSheets.indexOf(reqS) === -1) {
+          targetSheets.push(reqS);
+        }
+      });
+      if (targetSheets.length === 0) targetSheets = ["INOUT_HW_AIS", "INOUT_HW_TRUE"];
+
+      var combinedRows = [];
+      var baseHeaders = [
+        "NO", "CUSTOMER", "DUID", "REGION", "IN/OUT", "TYPE", "DATE", "BILL NO.",
+        "MODEL", "ITEM CODE", "ITEM DESCRIPTION", "SUM OF REQ.QTY", "SERIAL",
+        "OWNER WAREHOUSE", "OWNER RECEIVER", "LOCATION WAREHOUSE", "LOCATION RECEIVER",
+        "STATUS", "INTERNAL NO", "USER EMAIL", "USER NAME"
+      ];
+
+      targetSheets.forEach(function(sName) {
+        var sheet = ss.getSheetByName(sName);
+        if (!sheet) return;
+        var data = sheet.getDataRange().getValues();
+        if (data.length < 2) return;
+
+        var sUpper = sName.toUpperCase();
+        var sCus = "AIS";
+        if (sUpper.indexOf("TRUE") > -1) sCus = "TRUE";
+        else if (sUpper.indexOf("NT") > -1) sCus = "NT";
+        else if (sUpper.indexOf("AIS") > -1) sCus = "AIS";
+        else sCus = sName.replace(/^INOUT_HW_/i, "") || "AIS";
+
+        var h = data[0].map(function(v) { return String(v || "").trim().toUpperCase(); });
+        var idx = {
+          runNo:  Math.max(h.indexOf("NO"), 0),
+          duid:   Math.max(h.indexOf("DUID"), 1),
+          region: Math.max(h.indexOf("REGION"), 2),
+          type:   Math.max(h.indexOf("IN/OUT"), 3),
+          itype:  Math.max(h.indexOf("TYPE"), 4),
+          date:   Math.max(h.indexOf("DATE"), h.indexOf("PICK UP DATE"), 5),
+          bill:   Math.max(h.indexOf("BILL NO."), h.indexOf("BILL NO"), 6),
+          model:  Math.max(h.indexOf("MODEL"), 7),
+          code:   Math.max(h.indexOf("ITEM CODE"), 8),
+          desc:   Math.max(h.indexOf("ITEM DESCRIPTION"), 9),
+          qty:    Math.max(h.indexOf("SUM OF REQ.QTY"), h.indexOf("QTY"), 10),
+          sn:     Math.max(h.indexOf("SERIAL"), 11),
+          ownerW: Math.max(h.indexOf("OWNER WAREHOUSE"), 12),
+          ownerR: Math.max(h.indexOf("OWNER RECEIVER"), 13),
+          locW:   Math.max(h.indexOf("LOCATION WAREHOUSE"), 14),
+          locR:   Math.max(h.indexOf("LOCATION RECEIVER"), 15),
+          status: Math.max(h.indexOf("STATUS"), 21),
+          intNo:  Math.max(h.indexOf("INTERNAL NO"), 22),
+          userEm: Math.max(h.indexOf("USER EMAIL"), 23),
+          userNm: Math.max(h.indexOf("USER NAME"), 24)
+        };
+
+        for (var i = 1; i < data.length; i++) {
+          var r = data[i];
+          var hasData = (r[idx.duid] || r[idx.bill] || r[idx.model] || r[idx.code] || r[idx.sn]);
+          if (!hasData) continue;
+
+          var uEm = String(r[idx.userEm] || "").trim();
+          var uNm = String(r[idx.userNm] || "").trim();
+          if (!uNm && !uEm) { uNm = "No User"; uEm = "-"; }
+          else if (!uNm) { uNm = uEm.split("@")[0] || "No User"; }
+
+          combinedRows.push([
+            String(r[idx.runNo] || (combinedRows.length + 1)),
+            sCus,
+            String(r[idx.duid] || r[idx.bill] || "NO-DUID"),
+            String(r[idx.region] || ""),
+            String(r[idx.type] || ""),
+            String(r[idx.itype] || ""),
+            formatToDDMMYYYY(r[idx.date]),
+            String(r[idx.bill] || ""),
+            String(r[idx.model] || ""),
+            String(r[idx.code] || ""),
+            String(r[idx.desc] || ""),
+            String(r[idx.qty] !== undefined ? r[idx.qty] : 1),
+            String(r[idx.sn] || ""),
+            String(r[idx.ownerW] || ""),
+            String(r[idx.ownerR] || ""),
+            String(r[idx.locW] || ""),
+            String(r[idx.locR] || ""),
+            String(r[idx.status] || "Pending"),
+            String(r[idx.intNo] || ""),
+            uEm,
+            uNm
+          ]);
+        }
+      });
+      return { success: true, headers: baseHeaders, rows: combinedRows };
+    }
+
+    var sheetName = "INOUT_HW_" + cusUpper;
+    var sheet     = ss.getSheetByName(sheetName) || ss.getSheetByName(cusUpper);
     if (!sheet) return { success: false, message: "❌ ไม่พบ Sheet: " + sheetName };
 
     var data = sheet.getDataRange().getValues();
@@ -1973,7 +2153,7 @@ function exportSheetData(customer) {
     var dateColIdx = -1;
     for (var c = 0; c < headers.length; c++) {
       var hName = String(headers[c] || "").trim().toUpperCase();
-      if (hName === "DATE" || hName === "DATE/TIME" || hName === "DATETIME") {
+      if (hName === "DATE" || hName === "DATE/TIME" || hName === "DATETIME" || hName === "PICK UP DATE") {
         dateColIdx = c;
         break;
       }
@@ -1981,11 +2161,14 @@ function exportSheetData(customer) {
 
     var rows = [];
     for (var i = 1; i < data.length; i++) {
-      rows.push(data[i].map(function(v, cIdx) {
+      var r = data[i];
+      var hasData = r.some(function(cell) { return String(cell || "").trim() !== ""; });
+      if (!hasData) continue;
+      rows.push(r.map(function(v, cIdx) {
         if (cIdx === dateColIdx || v instanceof Date) {
           return formatToDDMMYYYY(v);
         }
-        return String(v || "");
+        return String(v !== null && v !== undefined ? v : "");
       }));
     }
     return { success: true, headers: headers, rows: rows };
@@ -2009,7 +2192,7 @@ function saveImportDataUpdate(rows, customer, userEmail, userName, fileName) {
 
     var ss        = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheetName = "INOUT_HW_" + (customer || "AIS").toString().trim().toUpperCase();
-    var sheet     = ss.getSheetByName(sheetName);
+    var sheet     = getOrCreateInOutSheet(ss, sheetName);
     if (!sheet) return { success: false, message: "❌ ไม่พบ Sheet: " + sheetName };
 
     var dateStr  = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
