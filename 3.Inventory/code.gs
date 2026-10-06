@@ -1,5 +1,5 @@
 /*
- * Inventory Smart System - V.7.5.6
+ * Inventory Smart System - V.7.5.7
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
@@ -18,6 +18,9 @@
  *          Integrated Import History page (page-history) & recent import logs with success/failed tracking.
  * V.7.5.6: Full Export Support — Includes ALL Customers (AIS, TRUE, NT) and records with No User.
  *          Auto-detects all INOUT_HW_ sheets, preserves rows without DUID/User, adds Export All CSV with Customer and User columns.
+ * V.7.5.7: BOM Sync Fix & Draggable/Minimizable Modal —
+ *          Fixed BOM sync (BOM AIS & BOM TRUE) with dynamic column header mapping, robust type conversion & API endpoints;
+ *          Added move (draggable) & collapse/minimize (ย่อ) modal window for form modal in dashboard.
  */
 
 var SPREADSHEET_ID      = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -43,6 +46,13 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (e.parameter.action === "getBOM" || e.parameter.export === "bom") {
+    var customer = e.parameter.customer || "AIS";
+    var result = getBOMData(customer);
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (e.parameter.export === "csv" || e.parameter.export === "all" || e.parameter.action === "export") {
     var customer = e.parameter.customer || "ALL";
     var result = exportSheetData(customer);
@@ -60,13 +70,13 @@ function doGet(e) {
 
   if (e.parameter.page === "dashboard") {
     return HtmlService.createTemplateFromFile('dashboard').evaluate()
-      .setTitle('Inventory Dashboard V.7.5.6')
+      .setTitle('Inventory Dashboard V.7.5.7')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-    .setTitle('Inventory Smart App V.7.5.6')
+    .setTitle('Inventory Smart App V.7.5.7')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -116,6 +126,16 @@ function doPost(e) {
     if (data.action === "getImportHistory") {
       var history = getImportHistory();
       return jsonOut({ success: true, history: history });
+    }
+
+    if (data.action === "getBOM") {
+      var result = getBOMData(data.customer || "AIS");
+      return jsonOut({ success: true, data: result });
+    }
+
+    if (data.action === "saveBOM") {
+      var result = saveBOMData(data.customer || "AIS", data.data);
+      return jsonOut(result);
     }
 
     if (data.action === "upload") {
@@ -599,8 +619,10 @@ function getProjectData() {
 function saveBOMData(customer, data) {
   try {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var s = ss.getSheetByName(customer === "AIS" ? "BOM AIS" : "BOM TRUE");
-    if (!s) return { success: false, error: "Sheet not found" };
+    var cus = (customer || "AIS").toString().trim().toUpperCase();
+    var sheetName = (cus === "TRUE") ? "BOM TRUE" : "BOM AIS";
+    var s = ss.getSheetByName(sheetName);
+    if (!s) return { success: false, error: "Sheet not found: " + sheetName };
 
     var lastRow = s.getLastRow();
     if (lastRow > 1) {
@@ -609,12 +631,19 @@ function saveBOMData(customer, data) {
 
     if (data && data.length > 0) {
       var values = data.map(function(item) {
-        return [item.type || "", item.model || "", item.code || "", item.desc || ""];
+        return [
+          String(item.type  !== undefined && item.type  !== null ? item.type  : "").trim(),
+          String(item.model !== undefined && item.model !== null ? item.model : "").trim(),
+          String(item.code  !== undefined && item.code  !== null ? item.code  : "").trim(),
+          String(item.desc  !== undefined && item.desc  !== null ? item.desc  : "").trim()
+        ];
       });
       s.getRange(2, 1, values.length, 4).setValues(values);
     }
-    return { success: true };
+    SpreadsheetApp.flush();
+    return { success: true, count: data ? data.length : 0 };
   } catch (e) {
+    logToSheet("SAVE_BOM_ERROR", e.toString());
     return { success: false, error: e.message };
   }
 }
@@ -906,20 +935,42 @@ function formatDuidResponse(groups, totalItems, status) {
 
 function getBOMData(customer) {
   try {
-    var ss  = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var cus = (customer || "AIS").toString().trim().toUpperCase();
+    var sheetName = (cus === "TRUE") ? "BOM TRUE" : "BOM AIS";
+    var s = ss.getSheetByName(sheetName);
+    if (!s) return [];
+    var lastRow = s.getLastRow();
+    if (lastRow < 2) return [];
+    var lastCol = Math.max(s.getLastColumn(), 4);
+    var d = s.getRange(1, 1, lastRow, lastCol).getValues();
+    var h = d[0].map(function(v) { return String(v || "").trim().toUpperCase(); });
+    var typeCol  = h.indexOf("TYPE");
+    var modelCol = h.indexOf("MODEL");
+    var codeCol  = Math.max(h.indexOf("ITEM CODE"), h.indexOf("CODE"));
+    var descCol  = Math.max(h.indexOf("ITEM DESCRIPTION"), h.indexOf("DESCRIPTION"), h.indexOf("DESC"));
+    
+    if (typeCol === -1)  typeCol = 0;
+    if (modelCol === -1) modelCol = 1;
+    if (codeCol === -1)  codeCol = 2;
+    if (descCol === -1)  descCol = 3;
+
     var res = [];
-    var s   = ss.getSheetByName(customer === "AIS" ? "BOM AIS" : "BOM TRUE");
-    if (s) {
-      var lastRow = s.getLastRow();
-      if (lastRow < 2) return [];
-      var d = s.getRange(2, 1, lastRow - 1, 4).getValues();
-      for (var i = 0; i < d.length; i++) {
-        if (d[i][1]) res.push({ type: String(d[i][0]), model: String(d[i][1]),
-                                code: String(d[i][2]), desc: String(d[i][3]) });
+    for (var i = 1; i < d.length; i++) {
+      var row = d[i];
+      var model = String(row[modelCol] !== undefined && row[modelCol] !== null ? row[modelCol] : "").trim();
+      var code  = String(row[codeCol]  !== undefined && row[codeCol]  !== null ? row[codeCol]  : "").trim();
+      var desc  = String(row[descCol]  !== undefined && row[descCol]  !== null ? row[descCol]  : "").trim();
+      var type  = String(row[typeCol]  !== undefined && row[typeCol]  !== null ? row[typeCol]  : "").trim();
+      if (model || code || desc) {
+        res.push({ type: type, model: model, code: code, desc: desc });
       }
     }
     return res;
-  } catch (e) { return []; }
+  } catch (e) {
+    logToSheet("GET_BOM_ERROR", e.toString());
+    return [];
+  }
 }
 
 function getOwnerData() {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📦 Smart Inventory Dashboard V.7.5.4</title>
+<title>📦 Smart Inventory Dashboard V.7.5.7</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
@@ -103,13 +103,30 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
 .sp{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700}.s-open{background:rgba(0,194,138,.15);color:var(--primary)}.s-closed{background:rgba(255,77,106,.15);color:var(--red)}.s-proc{background:rgba(255,217,77,.15);color:var(--yellow)}
 .prnbtn{background:none;border:none;cursor:pointer;font-size:14px;padding:2px 5px;border-radius:6px;transition:background .15s;color:var(--muted)}.prnbtn:hover{background:rgba(255,255,255,.1);color:var(--text)}
 /* ─── FORM MODAL (matches app.html style) ─── */
-.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);z-index:9000;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0}
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);z-index:9000;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0;transition:background .2s,backdrop-filter .2s}
 .ov.show{display:flex}
 @keyframes pop{from{transform:scale(.92) translateY(-10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
-.mbox{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:0;width:96%;max-width:700px;animation:pop .22s cubic-bezier(.34,1.56,.64,1);margin:auto}
-/* Form header */
-.fhdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
-.fhdr-title{font-size:16px;font-weight:800;flex:1}.fhdr-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:4px;border-radius:8px;line-height:1}.fhdr-close:hover{background:rgba(255,255,255,.08);color:var(--text)}
+.mbox{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:0;width:96%;max-width:700px;animation:pop .22s cubic-bezier(.34,1.56,.64,1);margin:auto;box-shadow:0 20px 50px rgba(0,0,0,0.5);transition:box-shadow .2s}
+/* Form header (Draggable & Collapsible) */
+.fhdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;cursor:grab;user-select:none;touch-action:none}
+.fhdr:active{cursor:grabbing}
+.fhdr-title{font-size:15px;font-weight:800;flex:1}
+.fhdr-actions{display:flex;align-items:center;gap:6px}
+.fhdr-btn{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:14px;width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;line-height:1;transition:all .18s;outline:none}
+.fhdr-btn:hover{background:rgba(255,255,255,.12);color:var(--text)}
+.fhdr-btn.fhdr-close:hover{background:rgba(255,77,106,.2);border-color:var(--red);color:var(--red)}
+.fhdr-btn.fhdr-min:hover{background:rgba(0,210,255,.2);border-color:var(--blue);color:var(--blue)}
+.fhdr-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px;border-radius:8px;line-height:1}
+.fhdr-close:hover{background:rgba(255,77,106,.2);color:var(--red)}
+
+/* Minimized Form Window (ย่อหน้าต่าง) */
+.ov.is-minimized{background:transparent !important;backdrop-filter:none !important;pointer-events:none !important;align-items:flex-end;justify-content:flex-end;padding:0}
+.mbox.is-minimized{position:fixed !important;bottom:20px !important;right:20px !important;left:auto !important;top:auto !important;width:350px !important;max-width:92vw !important;margin:0 !important;pointer-events:auto !important;box-shadow:0 12px 40px rgba(0,0,0,0.65),0 0 0 2px var(--primary) !important;z-index:99999 !important;border-radius:14px !important;animation:pop .2s ease;overflow:hidden}
+.mbox.is-minimized .type-pills,
+.mbox.is-minimized .fbody{display:none !important}
+.mbox.is-minimized .fhdr{border-bottom:none;padding:12px 14px;background:linear-gradient(135deg,#1e2638,#111827)}
+.mbox.is-minimized .m-drag-hint{display:none}
+.mbox.is-minimized #mMinBtn{background:var(--primary);color:#fff;border-color:var(--primary)}
 /* Type pills */
 .type-pills{display:flex;gap:6px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
 .tp{padding:5px 13px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Sarabun',sans-serif;transition:all .18s}
@@ -809,11 +826,17 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
 
 <!-- ════ FORM MODAL (app.html style) ════ -->
 <div class="ov" id="modal" onclick="if(event.target===this)confirmCloseM()">
-  <div class="mbox">
-    <div class="fhdr">
-      <span id="mIcon" style="font-size:24px">📥</span>
-      <div class="fhdr-title" id="mTitle">บันทึกรายการ IN</div>
-      <button class="fhdr-close" onclick="closeM()">✕</button>
+  <div class="mbox" id="modalBox">
+    <div class="fhdr" id="modalHeader" title="ลากเพื่อย้ายตำแหน่ง / ดับเบิลคลิกเพื่อย่อหรือขยาย">
+      <span id="mIcon" style="font-size:24px; cursor:grab;">📥</span>
+      <div class="fhdr-title" id="mTitle" style="cursor:grab; user-select:none; display:flex; align-items:center; gap:8px;">
+        <span id="mTitleText">บันทึกรายการ IN</span>
+        <span class="m-drag-hint" style="font-size:11px; font-weight:normal; color:var(--muted); opacity:0.8;">(⠿ ลากย้ายได้)</span>
+      </div>
+      <div class="fhdr-actions">
+        <button type="button" class="fhdr-btn fhdr-min" id="mMinBtn" onclick="toggleMinimizeM(event)" title="ย่อหน้าต่าง (Minimize)">🗕</button>
+        <button type="button" class="fhdr-btn fhdr-close" onclick="closeM()" title="ปิดหน้าต่าง">✕</button>
+      </div>
     </div>
     <!-- Type selector -->
     <div class="type-pills">
@@ -827,7 +850,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
     <div class="fbody">
       <!-- Row 1: ลูกค้า + งาน -->
       <div class="frow">
-        <div class="fg"><label class="fl">ลูกค้า</label><select class="fi" id="m-cus" onchange="onCustomerChange()"><option>AIS</option><option>TRUE</option></select></div>
+        <div class="fg"><label class="fl">ลูกค้า</label><select class="fi" id="m-cus" onchange="onCustomerChange()"><option>AIS</option><option>TRUE</option><option>NT</option></select></div>
         <div class="fg"><label class="fl">Region</label><select class="fi" id="m-reg"><option>ER</option><option>SR</option><option>NR</option><option>BKK</option><option>CR</option><option>NER</option></select></div>
       </div>
       <!-- Bill No. -->
@@ -5525,7 +5548,11 @@ let BOM_TRUE = [
   {type:'clamp',model:'RRUclamp 10 sq.mm',code:'LTH27151235-N',desc:'Antenna Accessory,D-type RRUclamp 10 sq.mm with CPRIcable, design 2020, 4 layers.'},
   {type:'AAU',model:'AAU5636',code:'LTH02313HCL-N',desc:'AAU5636,WD7MQTRA3802,2300A(TX2300~2400/RX2300~2400)64T64R 320W,23.5i,eCPRI'}
 ];
-function getActiveBOM() { return document.getElementById('m-cus')?.value==='TRUE' ? BOM_TRUE : BOM_AIS; }
+function getActiveBOM() {
+  var cus = document.getElementById('m-cus')?.value || 'AIS';
+  if(cus === 'TRUE') return BOM_TRUE;
+  return BOM_AIS; // AIS and NT use AIS BOM
+}
 
 let curBomCustomer = 'AIS';
 let bomPage = 0;
@@ -5555,6 +5582,8 @@ function openBomPage(cus, el) {
   if(searchEl) searchEl.value = '';
   pg('bom', el);
   bomFilterAndRender();
+  // V.7.5.7: Auto-fetch latest BOM from Google Sheet on open
+  fetchBOMFromSheet(true);
 }
 
 function bomSearchChange() {
@@ -5694,9 +5723,12 @@ function deleteBomItem(itemId) {
 function syncBOMToSheet() {
   const bom = curBomCustomer === 'TRUE' ? BOM_TRUE : BOM_AIS;
   const btn = document.getElementById('btnSyncBom');
-  const ogHtml = btn.innerHTML;
-  btn.innerHTML = '🔄 กำลัง Sync...';
-  btn.disabled = true;
+  let ogHtml = '';
+  if (btn) {
+    ogHtml = btn.innerHTML;
+    btn.innerHTML = '🔄 กำลัง Sync...';
+    btn.disabled = true;
+  }
 
   const cleanData = bom.map(x => ({
     type: x.type || '',
@@ -5705,55 +5737,104 @@ function syncBOMToSheet() {
     desc: x.desc || ''
   }));
 
-  google.script.run
-    .withSuccessHandler(res => {
+  function handleSuccess(res) {
+    if (btn) {
       btn.innerHTML = ogHtml;
       btn.disabled = false;
-      if (res && res.success) {
-        toast('✅ Sync ข้อมูล BOM ไปยัง Google Sheet สำเร็จ', 'g');
-      } else {
-        alert('เกิดข้อผิดพลาดในการ Sync: ' + (res.error || 'Unknown'));
-      }
-    })
-    .withFailureHandler(err => {
+    }
+    if (res && res.success) {
+      toast('✅ Sync ข้อมูล BOM ไปยัง Google Sheet สำเร็จ (' + (res.count || cleanData.length) + ' รายการ)', 'g');
+    } else {
+      alert('เกิดข้อผิดพลาดในการ Sync: ' + (res && res.error ? res.error : 'Unknown'));
+    }
+  }
+
+  function handleFail(err) {
+    if (btn) {
       btn.innerHTML = ogHtml;
       btn.disabled = false;
-      alert('Network Error: ' + err.message);
-    })
-    .saveBOMData(curBomCustomer, cleanData);
+      alert('Network Error: ' + (err.message || err));
+    }
+  }
+
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    google.script.run
+      .withSuccessHandler(handleSuccess)
+      .withFailureHandler(handleFail)
+      .saveBOMData(curBomCustomer, cleanData);
+  } else {
+    const gasUrl = (document.getElementById('apiUrlInput')?.value || '').trim();
+    if (gasUrl) {
+      fetch(gasUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: JSON.stringify({ action: 'saveBOM', customer: curBomCustomer, data: cleanData })
+      })
+        .then(r => r.json())
+        .then(handleSuccess)
+        .catch(handleFail);
+    } else {
+      handleFail(new Error('ไม่พบการเชื่อมต่อ Google Apps Script'));
+    }
+  }
 }
 
-function fetchBOMFromSheet() {
+function fetchBOMFromSheet(silent) {
   const btn = document.getElementById('btnFetchBom');
-  if(!btn) return;
-  const ogHtml = btn.innerHTML;
-  btn.innerHTML = '📥 กำลังโหลด...';
-  btn.disabled = true;
+  let ogHtml = '';
+  if (btn && !silent) {
+    ogHtml = btn.innerHTML;
+    btn.innerHTML = '📥 กำลังโหลด...';
+    btn.disabled = true;
+  }
 
-  google.script.run
-    .withSuccessHandler(res => {
+  function handleSuccess(res) {
+    if (btn && !silent) {
       btn.innerHTML = ogHtml;
       btn.disabled = false;
-      if (res && res.length) {
-        if(curBomCustomer === 'TRUE') {
-          BOM_TRUE = res;
-          ensureBomItems(BOM_TRUE);
-        } else {
-          BOM_AIS = res;
-          ensureBomItems(BOM_AIS);
-        }
-        bomFilterAndRender();
-        toast('✅ โหลดข้อมูลล่าสุดจาก Google Sheet สำเร็จ', 'g');
+    }
+    if (res && res.length) {
+      if(curBomCustomer === 'TRUE') {
+        BOM_TRUE = res;
+        ensureBomItems(BOM_TRUE);
       } else {
-        alert('เกิดข้อผิดพลาดในการดึงข้อมูล หรือข้อมูลว่างเปล่า');
+        BOM_AIS = res;
+        ensureBomItems(BOM_AIS);
       }
-    })
-    .withFailureHandler(err => {
+      bomFilterAndRender();
+      if (!silent) toast('✅ โหลดข้อมูลล่าสุดจาก Google Sheet สำเร็จ (' + res.length + ' รายการ)', 'g');
+    } else {
+      if (!silent) alert('เกิดข้อผิดพลาดในการดึงข้อมูล หรือข้อมูลว่างเปล่า');
+    }
+  }
+
+  function handleFail(err) {
+    if (btn && !silent) {
       btn.innerHTML = ogHtml;
       btn.disabled = false;
-      alert('Network Error: ' + err.message);
-    })
-    .getBOMData(curBomCustomer);
+      alert('Network Error: ' + (err.message || err));
+    }
+  }
+
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    google.script.run
+      .withSuccessHandler(handleSuccess)
+      .withFailureHandler(handleFail)
+      .getBOMData(curBomCustomer);
+  } else {
+    const gasUrl = (document.getElementById('apiUrlInput')?.value || '').trim();
+    if (gasUrl) {
+      fetch(gasUrl + (gasUrl.includes('?') ? '&' : '?') + 'action=getBOM&customer=' + encodeURIComponent(curBomCustomer))
+        .then(r => r.json())
+        .then(data => {
+          var arr = Array.isArray(data) ? data : (data && data.data ? data.data : []);
+          handleSuccess(arr);
+        })
+        .catch(handleFail);
+    } else {
+      handleFail(new Error('ไม่พบการเชื่อมต่อ Google Apps Script'));
+    }
+  }
 }
 
 function addBomRow() {
@@ -6098,14 +6179,48 @@ function openM(type){
   addItemRow();
   document.getElementById('modal').classList.add('show');
 }
-function switchType(type,btn){curAction=type;document.getElementById('mIcon').textContent=M_ICONS[type]||'📦';document.getElementById('mTitle').textContent=`บันทึกรายการ ${type}`;document.getElementById('mSaveIcon').textContent=M_ICONS[type]||'🚀';document.getElementById('mSaveText').textContent=`บันทึก ${type}`;document.querySelectorAll('.tp').forEach(b=>b.className='tp');btn.classList.add(TYPE_CLS[type]||'active-in');}
-function closeM(){document.getElementById('modal').classList.remove('show');}
+function switchType(type,btn){
+  curAction=type;
+  document.getElementById('mIcon').textContent=M_ICONS[type]||'📦';
+  // Support both new (mTitleText span) and legacy (mTitle text)
+  var tt=document.getElementById('mTitleText');
+  if(tt) tt.textContent='บันทึกรายการ '+type; else document.getElementById('mTitle').textContent='บันทึกรายการ '+type;
+  document.getElementById('mSaveIcon').textContent=M_ICONS[type]||'🚀';
+  document.getElementById('mSaveText').textContent='บันทึก '+type;
+  document.querySelectorAll('.tp').forEach(b=>b.className='tp');
+  btn.classList.add(TYPE_CLS[type]||'active-in');
+}
+function closeM(){
+  const modal=document.getElementById('modal');
+  const box=document.getElementById('modalBox');
+  modal.classList.remove('show','is-minimized');
+  if(box){box.classList.remove('is-minimized');box.style.cssText='';}
+  const minBtn=document.getElementById('mMinBtn');
+  if(minBtn) minBtn.textContent='🗕';
+}
 function confirmCloseM(){
   const duid = document.getElementById('m-duid')?.value || '';
   if (duid || itemRowCount > 0) {
     if (!confirm('คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการปิดหน้าต่างนี้ใช่หรือไม่?')) return;
   }
   closeM();
+}
+function toggleMinimizeM(e){
+  if(e) e.stopPropagation();
+  const modal=document.getElementById('modal');
+  const box=document.getElementById('modalBox');
+  const minBtn=document.getElementById('mMinBtn');
+  const isMin=box && box.classList.contains('is-minimized');
+  if(isMin){
+    modal.classList.remove('is-minimized');
+    box.classList.remove('is-minimized');
+    box.style.cssText='';
+    if(minBtn) minBtn.textContent='🗕';
+  } else {
+    modal.classList.add('is-minimized');
+    if(box){box.classList.add('is-minimized');box.style.cssText='';}
+    if(minBtn) minBtn.textContent='🗖';
+  }
 }
 
 // ════ ITEM ROWS ════
@@ -7662,14 +7777,32 @@ function syncFromGAS(){
 
   }).getDashboardData();
   
-  google.script.run.withSuccessHandler(function(data){
-    if(data && data.length) { BOM_AIS = data; ensureBomItems(BOM_AIS); }
-  }).getBOMData("AIS");
+  // V.7.5.7: Auto-sync BOM from Google Sheet on every dashboard sync
+  google.script.run
+    .withSuccessHandler(function(data){
+      if(data && data.length) {
+        BOM_AIS = data;
+        ensureBomItems(BOM_AIS);
+        // Refresh BOM table if currently viewing AIS BOM page
+        if(curBomCustomer === 'AIS') bomFilterAndRender();
+      }
+    })
+    .withFailureHandler(function(e){ console.warn('getBOMData AIS error:', e.message); })
+    .getBOMData("AIS");
 
-  google.script.run.withSuccessHandler(function(data){
-    if(data && data.length) { BOM_TRUE = data; ensureBomItems(BOM_TRUE); }
-  }).getBOMData("TRUE");
+  google.script.run
+    .withSuccessHandler(function(data){
+      if(data && data.length) {
+        BOM_TRUE = data;
+        ensureBomItems(BOM_TRUE);
+        // Refresh BOM table if currently viewing TRUE BOM page
+        if(curBomCustomer === 'TRUE') bomFilterAndRender();
+      }
+    })
+    .withFailureHandler(function(e){ console.warn('getBOMData TRUE error:', e.message); })
+    .getBOMData("TRUE");
 }
+
 
 // ════ STATUS CALCULATION V.7.4.1 ════
 // กฎ: จับคู่ 3 คู่อิสระ ต่อ DUID
@@ -8213,6 +8346,119 @@ function selectDashItem(code, model, desc, type) {
 }
 </script>
 
+<!-- ════ DRAGGABLE MODAL ════ -->
+<script>
+(function(){
+  var dragState = null;
+
+  function initModalDrag() {
+    var header = document.getElementById('modalHeader');
+    var box    = document.getElementById('modalBox');
+    if (!header || !box) return;
+
+    // Double-click on header to toggle minimize
+    header.addEventListener('dblclick', function(e) {
+      if (e.target.closest('button')) return; // ignore button dblclicks
+      toggleMinimizeM();
+    });
+
+    // --- Mouse drag ---
+    header.addEventListener('mousedown', function(e) {
+      if (e.target.closest('button')) return;
+      var box = document.getElementById('modalBox');
+      if (!box || box.classList.contains('is-minimized')) return;
+      var rect = box.getBoundingClientRect();
+      dragState = {
+        startX: e.clientX, startY: e.clientY,
+        origLeft: rect.left, origTop: rect.top,
+        w: rect.width
+      };
+      box.style.position = 'fixed';
+      box.style.left = rect.left + 'px';
+      box.style.top  = rect.top  + 'px';
+      box.style.margin = '0';
+      box.style.maxWidth = rect.width + 'px';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!dragState) return;
+      var box = document.getElementById('modalBox');
+      if (!box) return;
+      var dx = e.clientX - dragState.startX;
+      var dy = e.clientY - dragState.startY;
+      var newLeft = dragState.origLeft + dx;
+      var newTop  = dragState.origTop  + dy;
+      // Clamp within viewport
+      newLeft = Math.max(0, Math.min(newLeft, window.innerWidth  - dragState.w));
+      newTop  = Math.max(0, Math.min(newTop,  window.innerHeight - 60));
+      box.style.left = newLeft + 'px';
+      box.style.top  = newTop  + 'px';
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (dragState) {
+        dragState = null;
+        document.body.style.userSelect = '';
+      }
+    });
+
+    // --- Touch drag ---
+    header.addEventListener('touchstart', function(e) {
+      if (e.target.closest('button')) return;
+      var box = document.getElementById('modalBox');
+      if (!box || box.classList.contains('is-minimized')) return;
+      var t = e.touches[0];
+      var rect = box.getBoundingClientRect();
+      dragState = {
+        startX: t.clientX, startY: t.clientY,
+        origLeft: rect.left, origTop: rect.top,
+        w: rect.width
+      };
+      box.style.position = 'fixed';
+      box.style.left = rect.left + 'px';
+      box.style.top  = rect.top  + 'px';
+      box.style.margin = '0';
+      box.style.maxWidth = rect.width + 'px';
+    }, {passive: true});
+
+    document.addEventListener('touchmove', function(e) {
+      if (!dragState) return;
+      var box = document.getElementById('modalBox');
+      if (!box) return;
+      var t = e.touches[0];
+      var dx = t.clientX - dragState.startX;
+      var dy = t.clientY - dragState.startY;
+      var newLeft = dragState.origLeft + dx;
+      var newTop  = dragState.origTop  + dy;
+      newLeft = Math.max(0, Math.min(newLeft, window.innerWidth  - dragState.w));
+      newTop  = Math.max(0, Math.min(newTop,  window.innerHeight - 60));
+      box.style.left = newLeft + 'px';
+      box.style.top  = newTop  + 'px';
+    }, {passive: true});
+
+    document.addEventListener('touchend', function() {
+      dragState = null;
+    });
+  }
+
+  // Also re-init whenever modal opens (openM may recreate elements)
+  var _origOpenM = window.openM;
+  window.openM = function(type) {
+    _origOpenM && _origOpenM(type);
+    setTimeout(initModalDrag, 50);
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initModalDrag);
+  } else {
+    initModalDrag();
+  }
+})();
+</script>
+
 </body>
 
 </html>
+

@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.7.5.6)
+# 📦 Inventory Smart System (V.7.5.7)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE/NT) using Web App (Bootstrap UI & Dashboard) and Telegram Bot with AI OCR capabilities.
 
@@ -35,6 +35,12 @@ Project Context: A Google Apps Script application for managing hardware inventor
 ### 🐞 Bug Fixing
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
+
+## 🐞 Bug Fixes & Stability (V.7.5.7)
+- **BOM Sync Fix (BOM AIS & BOM TRUE)**: Fixed issue where BOM data updated in Google Sheet did not sync into the UX UI. Rewrote `getBOMData` and `saveBOMData` in `code.gs` to dynamically map headers (`Type`, `Model`, `Item Code`/`Code`, `Item Description`/`Description`/`Desc`), handle uppercase/lowercase customer names (`AIS`/`TRUE`), prevent empty model filtering errors, and added doGet/doPost action endpoints (`action: "getBOM"`, `action: "saveBOM"`).
+- **Auto-Sync & Standalone BOM Support**: In `dashboard.html`, added auto-sync on page navigation (`openBomPage`), table re-rendering upon data load, and standalone fetch fallback via Web App URL so BOM works seamlessly both inside Google Apps Script and standalone.
+- **Draggable & Minimizable Modal (Move & ย่อ)**: Added full drag-and-drop capability (mouse and touch) to the item record modal header (`#modalHeader`) allowing users to move the modal window freely anywhere across the viewport. Added a dedicated minimize button (`🗕` / `🗖`) and header double-click shortcut to collapse/minimize the modal into a compact bottom-right floating pill, letting users see and interact with the underlying dashboard while keeping form progress intact.
+- **Version Sync**: Synchronized all versions to V.7.5.7 across `code.gs`, `dashboard.html`, and documentation.
 
 ## 🐞 Bug Fixes & Stability (V.7.5.6)
 - **Full Export Support (All Customers & No User)**: Enhanced `exportSheetData` and `doExport` to support exporting all data (`ALL`) combining records across all operators (AIS, TRUE, NT) and preserving all rows without DUID or User (`No User`).
