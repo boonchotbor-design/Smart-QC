@@ -764,10 +764,11 @@ tbody td{padding:10px 12px;font-size:11.5px;vertical-align:middle;white-space:no
         <div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">
           <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:var(--primary)">🌐 Sync จาก GAS Web App URL</div>
           <div style="display:flex;gap:8px">
-            <input class="fi" id="apiUrlInput" placeholder="https://script.google.com/macros/.../exec" value="https://script.google.com/a/macros/technow.co.th/s/AKfycbwoTnwaExeObR_54tVajXxz7j2rAsQlyIWN3rbaGfTXxf9-HZ8oAMs4_gKOhrFx7b6b/exec" style="flex:1">
+            <input class="fi" id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec" value="https://script.google.com/macros/s/AKfycbwoTnwaExeObR_54tVajXxz7j2rAsQlyIWN3rbaGfTXxf9-HZ8oAMs4_gKOhrFx7b6b/exec" style="flex:1">
             <button class="tbtn g" onclick="syncFromURL()" style="white-space:nowrap">🔄 Sync Now</button>
           </div>
           <div id="syncStatus" style="font-size:10px;color:var(--muted);margin-top:6px">ยังไม่ได้ Sync — กดเพื่อดึงข้อมูลจริงจากระบบ</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:4px;padding:4px 8px;background:rgba(255,255,255,0.04);border-radius:6px">⚠️ Sync ด้วย URL ใช้ได้เฉพาะเมื่อเปิดจาก <b>GAS Web App URL</b> เท่านั้น (ติด CORS เมื่อเปิดจาก localhost) — บน GAS กด 🔄 Sync บน Topbar แทน</div>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:14px;justify-content:center;flex-wrap:wrap">
           <button class="tbtn" onclick="downloadTemplate('AIS')" style="font-size:11px;padding:6px 12px;background:rgba(255,255,255,0.1)">📥 Download Template (AIS)</button>
@@ -7246,7 +7247,42 @@ function updateModalPhotoStatus(){
 }
 
 // ════ SYNC & IMPORT ════
-async function syncNow(){await syncFromURL();}
+async function syncNow() {
+  // ถ้าอยู่บน GAS ให้ใช้ google.script.run โดยตรง (เร็วและไม่ติด CORS)
+  if (checkIsGAS()) {
+    showProg(true, 'กำลัง Sync จาก GAS...', 30);
+    document.getElementById('syncStatus').textContent = 'กำลัง Sync...';
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (!data || !data.success) {
+          showToast('❌ Sync ล้มเหลว: ' + (data && data.message || 'No data'), 'err');
+          showProg(false);
+          document.getElementById('syncStatus').textContent = '❌ Sync ล้มเหลว';
+          return;
+        }
+        TX = (data.recent || []).map(function(r, i) { r._sheetOrder = i; return r; });
+        recalculateAllStatusJS();
+        refreshDash(TX);
+        isLiveData = true;
+        showImportBar(`🔗 GAS Live: ${TX.length} รายการ | อัปเดต: ${new Date().toLocaleTimeString('th-TH')}`);
+        showProg(false);
+        showToast(`✅ Sync สำเร็จ! ${TX.length} รายการ`, 'ok');
+        document.getElementById('syncBadge').textContent = '● Live';
+        document.getElementById('syncBadge').className = 'sync-badge sync-live';
+        document.getElementById('syncStatus').textContent = `✅ Sync สำเร็จ ${TX.length} รายการ — ${new Date().toLocaleTimeString('th-TH')}`;
+      })
+      .withFailureHandler(function(err) {
+        showToast('❌ GAS Error: ' + err.message, 'err');
+        showProg(false);
+        document.getElementById('syncStatus').textContent = '❌ GAS Error: ' + err.message;
+      })
+      .getDashboardData();
+  } else {
+    // Standalone / localhost mode: ใช้ URL จาก apiUrlInput
+    await syncFromURL();
+  }
+}
+
 async function syncFromURL(){
   const url=(document.getElementById('apiUrlInput')?.value||'').trim();
   if(!url){showToast('⚠️ กรุณาระบุ URL','warn');return}
@@ -7254,7 +7290,9 @@ async function syncFromURL(){
   document.getElementById('syncStatus').textContent='กำลัง Sync...';
   try{
     const apiUrl=url+(url.includes('?')?'&':'?')+'export=dashboard';
-    const res=await fetch(apiUrl);const dt=await res.json();
+    const res=await fetch(apiUrl, { redirect: 'follow' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const dt=await res.json();
     if(!dt.success){showToast('❌ '+dt.message,'err');showProg(false);document.getElementById('syncStatus').textContent='❌ Sync ล้มเหลว: '+dt.message;return}
     TX=(dt.recent||[]).map(function(r,i){ r._sheetOrder=i; return r; });isLiveData=true;
     recalculateAllStatusJS();
@@ -7264,8 +7302,8 @@ async function syncFromURL(){
     document.getElementById('syncBadge').textContent='● Live';document.getElementById('syncBadge').className='sync-badge sync-live';
     document.getElementById('syncStatus').textContent=`✅ Sync สำเร็จ ${TX.length} รายการ — ${new Date().toLocaleTimeString('th-TH')}`;
   }catch(e){
-    showToast('❌ เชื่อมต่อไม่ได้','err');showProg(false);
-    document.getElementById('syncStatus').innerHTML='<span style="color:var(--red);font-weight:bold">❌ เชื่อมต่อไม่ได้ (ติด CORS Policy)</span> <br><span style="color:#fff">หากเปิดไฟล์จากเครื่องตัวเอง (file://) จะไม่สามารถดึงข้อมูลข้ามโดเมนได้<br><b>วิธีแก้:</b> ให้นำโค้ดหน้านี้ทั้งหมด ไปวางในไฟล์ <code>app.html</code> บน Google Apps Script แล้ว Deploy ใหม่ครับ</span>';
+    showToast('❌ เชื่อมต่อไม่ได้ — ' + e.message,'err');showProg(false);
+    document.getElementById('syncStatus').innerHTML='<span style="color:var(--red);font-weight:bold">❌ เชื่อมต่อไม่ได้ (ติด CORS Policy)</span> <br><span style="color:var(--muted)">หากเปิดจาก localhost จะถูก CORS block<br>แก้ไข: เปิดใช้งานจาก Google Apps Script URL โดยตรง หรือ Deploy บน GAS แล้วเปิดผ่าน URL ที่ถูกต้อง</span>';
   }
 }
 function escapeHtml(str) {
