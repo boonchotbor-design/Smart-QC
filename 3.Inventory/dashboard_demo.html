@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -639,9 +639,13 @@ tbody td{padding:10px 12px;font-size:11.5px;vertical-align:middle;white-space:no
         <div class="t-hdr">
           <div class="c-title">📋 รายการทั้งหมด (<span id="txCount">0</span>)</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;width:100%;margin-top:10px;">
-            <div class="sbox" style="flex:1;min-width:250px;max-width:350px;">
-              🔍<input type="text" placeholder="ค้นหา DUID / Bill / Model / Code..." id="txQ" oninput="applyF()" style="width:100%;background:transparent;border:none;color:var(--text);outline:none;font-size:12px">
+            <div class="sbox" style="flex:1;min-width:240px;max-width:350px;">
+              🔍<input type="text" placeholder="ค้นหา DUID / Bill / Model / Code..." id="txQ" oninput="applyF()" onkeydown="if(event.key==='Enter')applyF()" style="width:100%;background:transparent;border:none;color:var(--text);outline:none;font-size:12px">
             </div>
+            <!-- ปุ่มค้นหา -->
+            <button type="button" class="tbtn no-print" onclick="applyF()" style="padding:7px 14px;font-size:12px;font-weight:700;background:var(--primary);color:#fff;border:none;border-radius:9px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap" title="กดเพื่อค้นหา">
+              🔍 <span>ค้นหา</span>
+            </button>
             
             <select id="txCus" onchange="applyF()" class="fi-sel">
               <option value="ALL">ทุกลูกค้า (All)</option>

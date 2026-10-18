@@ -654,9 +654,13 @@ tbody td{padding:10px 12px;font-size:11.5px;vertical-align:middle;white-space:no
           <!-- Multi-filter bar -->
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;width:100%;padding:10px 12px;background:var(--card2);border:1px solid var(--border);border-radius:10px">
             <!-- Search input -->
-            <div class="sbox" style="flex:1;min-width:260px;max-width:380px;">
-              🔍<input type="text" placeholder="ค้นหา DUID, Bill, Model, Code, SN, Warehouse..." id="txQ" oninput="applyF()" style="width:100%;background:transparent;border:none;color:var(--text);outline:none;font-size:12px;font-family:inherit">
+            <div class="sbox" style="flex:1;min-width:240px;max-width:380px;">
+              🔍<input type="text" placeholder="ค้นหา DUID, Bill, Model, Code, SN, Warehouse..." id="txQ" oninput="applyF()" onkeydown="if(event.key==='Enter')applyF()" style="width:100%;background:transparent;border:none;color:var(--text);outline:none;font-size:12px;font-family:inherit">
             </div>
+            <!-- ปุ่มค้นหา -->
+            <button type="button" class="tbtn no-print" onclick="applyF()" style="padding:7px 14px;font-size:12px;font-weight:700;background:var(--primary);color:#fff;border:none;border-radius:9px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap" title="กดเพื่อค้นหา">
+              🔍 <span>ค้นหา</span>
+            </button>
             
             <!-- Customer -->
             <select id="txCus" onchange="applyF()" class="fi-sel" title="กรองตามลูกค้า">
