@@ -3,105 +3,178 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📦 Smart Inventory Dashboard V.7.5.7</title>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<title>📦 Smart Inventory Dashboard V.7.5.8</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--sw:260px;--primary:#00c28a;--pd:#009e6f;--dark:#0e1017;--card:#181b26;--card2:#1e2232;--border:rgba(255,255,255,0.07);--text:#e8ecf4;--muted:#8892a4;--red:#ff4d6a;--blue:#4d9fff;--yellow:#ffd94d;--purple:#b26dff;--orange:#ff9f4d}
-body.light-mode{--dark:#f0f2f5;--card:#ffffff;--card2:#f0f4f8;--border:rgba(0,0,0,0.1);--text:#181b26;--muted:#555e6c}
-body.light-mode .tbtn{color:#181b26;background:rgba(0,0,0,0.06);border-color:rgba(0,0,0,0.12)}
-body.light-mode .tbtn:hover{background:rgba(0,0,0,0.1)}
+:root{
+  --sw:260px;
+  --font-main:'Inter','Sarabun',-apple-system,BlinkMacSystemFont,sans-serif;
+  --font-mono:'JetBrains Mono','Courier New',monospace;
+  --primary:#00c28a;--pd:#009e6f;--dark:#0b0f17;--card:#151a26;--card2:#1c2333;
+  --border:rgba(255,255,255,0.08);--border-focus:rgba(0,194,138,0.5);
+  --text:#f1f5f9;--muted:#94a3b8;
+  --red:#f43f5e;--blue:#3b82f6;--yellow:#f59e0b;--purple:#8b5cf6;--orange:#f97316;
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.25);
+  --shadow-md:0 4px 16px -2px rgba(0,0,0,0.35);
+  --shadow-lg:0 12px 32px -4px rgba(0,0,0,0.45);
+}
+body.light-mode{
+  --dark:#f8fafc;--card:#ffffff;--card2:#f1f5f9;--border:rgba(0,0,0,0.09);--border-focus:rgba(0,194,138,0.6);
+  --text:#0f172a;--muted:#64748b;
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md:0 4px 16px -2px rgba(0,0,0,0.08);
+  --shadow-lg:0 12px 32px -4px rgba(0,0,0,0.12);
+}
+body.light-mode .tbtn{color:#0f172a;background:rgba(0,0,0,0.05);border-color:rgba(0,0,0,0.1)}
+body.light-mode .tbtn:hover{background:rgba(0,0,0,0.09)}
 body.light-mode .tbtn.g{color:#fff}
 body.light-mode .tbtn.b{color:#fff}
 body.light-mode .tbtn.r{color:#fff}
-body.light-mode .ni{color:#444}
-body.light-mode .ni:hover{background:rgba(0,0,0,0.04);color:#181b26}
-body.light-mode .ni.active{color:var(--primary)}
-body.light-mode .fl{color:#444}
-body.light-mode .c-title{color:#181b26}
-body.light-mode .k-lbl{color:#555e6c}
-body.light-mode .ai-m{color:#555e6c}
-body.light-mode .ai-t{color:#555e6c}
+body.light-mode .ni{color:#64748b}
+body.light-mode .ni:hover{background:rgba(0,0,0,0.04);color:#0f172a}
+body.light-mode .ni.active{background:rgba(0,194,138,0.1);color:var(--primary)}
+body.light-mode .fl{color:#475569}
+body.light-mode .c-title{color:#0f172a}
+body.light-mode .k-lbl{color:#64748b}
+body.light-mode .ai-m{color:#64748b}
+body.light-mode .ai-t{color:#64748b}
+body.light-mode thead th{background:#f8fafc;color:#64748b}
 /* Dark Gray Mode */
-body.gray-mode{--dark:#202124;--card:#292a2d;--card2:#35363a;--border:rgba(255,255,255,0.1);--text:#e8eaed;--muted:#9aa0a6}
+body.gray-mode{--dark:#1e2022;--card:#26282b;--card2:#323438;--border:rgba(255,255,255,0.1);--text:#e8eaed;--muted:#9aa0a6}
 /* Colorful Mode */
-body.color-mode{--dark:#1a0b2e;--card:#2b124c;--card2:#3c1874;--border:rgba(255,255,255,0.15);--text:#f4eeff;--muted:#b5a0e5}
-body{font-family:'Sarabun',sans-serif;background:var(--dark);color:var(--text);display:flex;min-height:100vh;overflow-x:hidden;transition:background 0.3s, color 0.3s;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-weight:400;letter-spacing:0.01em}
-.tbtn, .mc, .tc, .cc, .ac, .kc, .ni, #sb, .topbar { transition: background 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s; }
+body.color-mode{--dark:#160927;--card:#24113e;--card2:#351a5a;--border:rgba(255,255,255,0.15);--text:#f4eeff;--muted:#b5a0e5}
+
+body{font-family:var(--font-main);background:var(--dark);color:var(--text);display:flex;min-height:100vh;overflow-x:hidden;transition:background 0.3s cubic-bezier(0.4,0,0.2,1),color 0.3s cubic-bezier(0.4,0,0.2,1);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-weight:400;letter-spacing:-0.01em}
+.tbtn, .mc, .tc, .cc, .ac, .kc, .ni, #sb, .topbar { transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease; }
+
 /* Sidebar */
-#sb{width:var(--sw);background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:1000;transition:transform .3s}
-.sb-logo{padding:20px 18px 14px;border-bottom:1px solid var(--border)}.sb-logo h2{font-size:16px;font-weight:800;color:var(--primary)}.sb-logo p{font-size:10px;color:var(--muted);margin-top:1px}
-.sb-user{padding:10px 18px;background:rgba(0,194,138,.06);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
-.u-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--blue));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}
-.u-info strong{display:block;font-size:12px;font-weight:700}.u-info span{font-size:10px;color:var(--primary)}
-.sb-nav{flex:1;overflow-y:auto;padding:6px 0;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
-.nav-sec{font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--muted);padding:12px 18px 4px;text-transform:uppercase}
-.ni{display:flex;align-items:center;gap:11px;padding:9px 18px;cursor:pointer;font-size:13px;color:var(--muted);border-left:3px solid transparent;transition:all .18s;text-decoration:none;user-select:none}
-.ni:hover{background:rgba(255,255,255,.04);color:var(--text)}.ni.active{background:rgba(0,194,138,.11);color:var(--primary);border-left-color:var(--primary);font-weight:700}
-.ni-ic{font-size:15px;width:20px;text-align:center;flex-shrink:0}.n-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;min-width:18px;text-align:center}
-.ni.t-dis:hover,.ni.t-dis.active{color:var(--purple);border-left-color:var(--purple);background:rgba(178,109,255,.1)}
-.ni.t-stri:hover,.ni.t-stri.active{color:var(--blue);border-left-color:var(--blue);background:rgba(77,159,255,.1)}
-.ni.t-stro:hover,.ni.t-stro.active{color:var(--orange);border-left-color:var(--orange);background:rgba(255,159,77,.1)}
-.ni.t-ret:hover,.ni.t-ret.active{color:var(--yellow);border-left-color:var(--yellow);background:rgba(255,217,77,.1)}
-.sb-foot{padding:10px 18px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);text-align:center}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}.ldot{width:7px;height:7px;background:var(--primary);border-radius:50%;animation:pulse 2s infinite;display:inline-block;margin-right:4px}
-/* Main */
+#sb{width:var(--sw);background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:1000;transition:transform .3s cubic-bezier(0.4,0,0.2,1)}
+.sb-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sb-logo-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#008f65);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 12px rgba(0,194,138,0.3);flex-shrink:0}
+.sb-logo h2{font-size:16px;font-weight:800;color:var(--text);letter-spacing:-0.3px}
+.sb-logo p{font-size:10px;color:var(--muted);margin-top:2px}
+.sb-user{padding:12px 18px;background:rgba(0,194,138,.05);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.u-av{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--blue));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+.u-info strong{display:block;font-size:12px;font-weight:700;color:var(--text);letter-spacing:-0.2px}
+.u-info span{font-size:10px;color:var(--primary);font-weight:600}
+.sb-nav{flex:1;overflow-y:auto;padding:8px 0;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.nav-sec{font-size:9.5px;font-weight:800;letter-spacing:1.2px;color:var(--muted);padding:14px 18px 6px;text-transform:uppercase;opacity:.85}
+.ni{display:flex;align-items:center;gap:11px;padding:9px 16px;margin:2px 10px;border-radius:9px;cursor:pointer;font-size:12.5px;font-weight:500;color:var(--muted);transition:all .18s ease;text-decoration:none;user-select:none;border-left:none}
+.ni:hover{background:rgba(255,255,255,.05);color:var(--text);transform:translateX(2px)}
+.ni.active{background:linear-gradient(90deg,rgba(0,194,138,.16),rgba(0,194,138,.05));color:var(--primary);font-weight:700;box-shadow:inset 3px 0 0 var(--primary)}
+.ni-ic{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.n-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:20px;min-width:20px;text-align:center}
+.ni.t-dis:hover,.ni.t-dis.active{color:var(--purple);background:rgba(139,92,246,.12);box-shadow:inset 3px 0 0 var(--purple)}
+.ni.t-stri:hover,.ni.t-stri.active{color:var(--blue);background:rgba(59,130,246,.12);box-shadow:inset 3px 0 0 var(--blue)}
+.ni.t-stro:hover,.ni.t-stro.active{color:var(--orange);background:rgba(249,115,22,.12);box-shadow:inset 3px 0 0 var(--orange)}
+.ni.t-ret:hover,.ni.t-ret.active{color:var(--yellow);background:rgba(245,158,11,.12);box-shadow:inset 3px 0 0 var(--yellow)}
+.sb-foot{padding:12px 18px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);text-align:center;font-weight:600}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}.ldot{width:7px;height:7px;background:var(--primary);border-radius:50%;animation:pulse 2s infinite;display:inline-block;margin-right:5px;box-shadow:0 0 8px var(--primary)}
+
+/* Main Layout */
 #main{margin-left:var(--sw);flex:1;display:flex;flex-direction:column;min-height:100vh;max-width:calc(100vw - var(--sw));overflow-x:hidden}
-.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:0 22px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:500}
-.tb-left{display:flex;align-items:center;gap:11px}#hbg{display:none;background:none;border:none;color:var(--text);font-size:21px;cursor:pointer;padding:6px;border-radius:8px}
-.tb-right{display:flex;align-items:center;gap:7px}
-.tbtn{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:7px 12px;font-size:12px;font-family:'Sarabun',sans-serif;cursor:pointer;transition:background .2s;white-space:nowrap}
-.tbtn:hover{background:rgba(255,255,255,.1)}.tbtn.g{background:linear-gradient(135deg,var(--primary),var(--pd));border-color:transparent;color:#fff;font-weight:700}.tbtn.b{background:linear-gradient(135deg,#1a6fda,#0043a8);border-color:transparent;color:#fff;font-weight:700}.tbtn.r{background:linear-gradient(135deg,#e0002b,#9b0020);border-color:transparent;color:#fff;font-weight:700}
-.pg-title{font-size:14px;font-weight:700}.pg-sub{font-size:10px;color:var(--muted);margin-top:1px}
-#importBar{background:rgba(0,194,138,.1);border:1px solid rgba(0,194,138,.3);border-radius:10px;padding:8px 14px;margin-bottom:14px;font-size:11px;align-items:center;gap:10px;display:none}#importBar.show{display:flex}.ibar-dot{width:8px;height:8px;background:var(--primary);border-radius:50%;flex-shrink:0}
-.content{padding:20px;flex:1;min-width:0}.page{display:none}.page.active{display:block}
-/* KPI */
-.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
-.kc{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
-.kc:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.3)}.kc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--cc,var(--primary))}
-.k-ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px}
-.k-lbl{font-size:10px;color:var(--muted);font-weight:700;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}.k-val{font-size:28px;font-weight:800;line-height:1}.k-sub{font-size:10px;color:var(--muted);margin-top:6px}
-.kg{--cc:#00c28a}.kr{--cc:#ff4d6a}.kb{--cc:#4d9fff}.kp{--cc:#b26dff}
-/* Charts */
-.dash-row{display:grid;grid-template-columns:1fr 340px;gap:12px;margin-bottom:18px}
-.cc,.ac,.tc{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
-.c-title{font-size:13px;font-weight:700}.c-sub{font-size:10px;color:var(--muted);margin-top:1px}
-.c-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
-.leg{display:flex;gap:10px;flex-wrap:wrap}.li{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)}.ld{width:8px;height:8px;border-radius:50%}
-.ac{display:flex;flex-direction:column}.a-list{flex:1;display:flex;flex-direction:column;gap:6px;overflow-y:auto;max-height:250px}
-.ai{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card2);border-radius:9px;border:1px solid var(--border)}.ai:hover{background:rgba(255,255,255,.04)}
-.ab{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap}
-.b-in{background:rgba(0,194,138,.2);color:var(--primary)}.b-out{background:rgba(255,77,106,.2);color:var(--red)}.b-dis{background:rgba(178,109,255,.2);color:var(--purple)}.b-str{background:rgba(77,159,255,.2);color:var(--blue)}.b-stro{background:rgba(255,159,77,.2);color:var(--orange)}.b-ret{background:rgba(255,217,77,.2);color:var(--yellow)}
-.ai-info{flex:1;min-width:0}.ai-d{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ai-m{font-size:9px;color:var(--muted);margin-top:1px}.ai-t{font-size:9px;color:var(--muted);flex-shrink:0}
-/* Region */
-.mg{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:18px}
-.mc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:transform .2s;cursor:pointer}.mc:hover{transform:translateY(-2px)}
-.m-lbl{font-size:10px;color:var(--muted);margin-bottom:3px}.m-val{font-size:22px;font-weight:800}.m-sub{font-size:9px;color:var(--muted);margin-top:1px}.r-bar{height:3px;border-radius:3px;margin-top:6px}
-/* Table */
-.tc{margin-bottom:20px}
-.t-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
-.sbox{display:flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:6px 10px}
-.sbox input{background:none;border:none;outline:none;color:var(--text);font-size:12px;font-family:'Sarabun',sans-serif;width:150px}.sbox input::placeholder{color:var(--muted)}
-.ftabs{display:flex;gap:4px;flex-wrap:wrap}
-.ft{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Sarabun',sans-serif;transition:all .18s}.ft:hover{background:rgba(255,255,255,.06);color:var(--text)}.ft.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.topbar{background:rgba(21,26,38,0.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0 24px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:500}
+.tb-left{display:flex;align-items:center;gap:12px}
+#hbg{display:none;background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;padding:6px;border-radius:8px}
+.tb-right{display:flex;align-items:center;gap:8px}
+.tbtn{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 13px;font-size:12px;font-weight:600;font-family:var(--font-main);cursor:pointer;transition:all .18s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.tbtn:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.15);transform:translateY(-1px)}
+.tbtn:active{transform:translateY(0)}
+.tbtn.g{background:linear-gradient(135deg,var(--primary),var(--pd));border-color:transparent;color:#fff;font-weight:700;box-shadow:0 4px 12px rgba(0,194,138,0.25)}
+.tbtn.g:hover{box-shadow:0 6px 16px rgba(0,194,138,0.35);filter:brightness(1.05)}
+.tbtn.b{background:linear-gradient(135deg,#2563eb,#1d4ed8);border-color:transparent;color:#fff;font-weight:700;box-shadow:0 4px 12px rgba(37,99,235,0.25)}
+.tbtn.r{background:linear-gradient(135deg,#e11d48,#be123c);border-color:transparent;color:#fff;font-weight:700}
+.pg-title{font-size:15px;font-weight:800;color:var(--text);letter-spacing:-0.2px}
+.pg-sub{font-size:10.5px;color:var(--muted);margin-top:1px}
+#importBar{background:rgba(0,194,138,.1);border:1px solid rgba(0,194,138,.3);border-radius:10px;padding:9px 14px;margin-bottom:16px;font-size:11.5px;font-weight:600;align-items:center;gap:10px;display:none;box-shadow:var(--shadow-sm)}
+#importBar.show{display:flex}.ibar-dot{width:8px;height:8px;background:var(--primary);border-radius:50%;flex-shrink:0;box-shadow:0 0 8px var(--primary)}
+.content{padding:22px;flex:1;min-width:0}.page{display:none}.page.active{display:block}
+
+/* 8 Executive KPI Cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+@media (max-width:1200px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:600px){.kpi-grid{grid-template-columns:1fr}}
+.kc{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;position:relative;overflow:hidden;box-shadow:var(--shadow-sm);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.kc:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:rgba(255,255,255,.14)}
+.kc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--cc,var(--primary))}
+.k-ic{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:12px}
+.k-lbl{font-size:10.5px;color:var(--muted);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.7px}
+.k-val{font-size:28px;font-weight:800;font-family:'Inter',sans-serif;line-height:1;letter-spacing:-0.5px}
+.k-sub{font-size:10.5px;color:var(--muted);margin-top:8px;font-weight:600}
+.kg{--cc:#00c28a}.kr{--cc:#f43f5e}.kb{--cc:#3b82f6}.kp{--cc:#8b5cf6}.ky{--cc:#f59e0b}.ks{--cc:#64748b}
+.t-pill{transition:all .15s ease}
+.t-pill:hover{color:var(--text) !important}
+
+/* Charts & Dashboard Rows */
+.dash-row{display:grid;grid-template-columns:1fr 340px;gap:14px;margin-bottom:20px}
+.cc,.ac,.tc{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:var(--shadow-sm)}
+.c-title{font-size:13.5px;font-weight:800;letter-spacing:-0.2px}
+.c-sub{font-size:10.5px;color:var(--muted);margin-top:2px}
+.c-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.leg{display:flex;gap:12px;flex-wrap:wrap}
+.li{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:var(--muted)}
+.ld{width:8px;height:8px;border-radius:50%}
+.ac{display:flex;flex-direction:column}
+.a-list{flex:1;display:flex;flex-direction:column;gap:7px;overflow-y:auto;max-height:240px}
+.ai{display:flex;align-items:center;gap:9px;padding:9px 11px;background:var(--card2);border-radius:10px;border:1px solid var(--border);transition:background .15s ease}
+.ai:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1)}
+.ab{font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:20px;flex-shrink:0;white-space:nowrap;letter-spacing:.3px}
+.b-in{background:rgba(0,194,138,.16);color:var(--primary)}
+.b-out{background:rgba(244,63,94,.16);color:var(--red)}
+.b-dis{background:rgba(139,92,246,.16);color:var(--purple)}
+.b-str{background:rgba(59,130,246,.16);color:var(--blue)}
+.b-stro{background:rgba(249,115,22,.16);color:var(--orange)}
+.b-ret{background:rgba(245,158,11,.16);color:var(--yellow)}
+.ai-info{flex:1;min-width:0}
+.ai-d{font-size:11px;font-weight:700;font-family:var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai-m{font-size:9.5px;color:var(--muted);margin-top:2px}
+.ai-t{font-size:9.5px;color:var(--muted);flex-shrink:0;font-weight:600}
+
+/* Regional Distribution */
+.mg{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px}
+.mc{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 10px;text-align:center;transition:transform .2s ease,box-shadow .2s ease;cursor:pointer;box-shadow:var(--shadow-sm)}
+.mc:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.m-lbl{font-size:10.5px;color:var(--muted);font-weight:700;margin-bottom:4px;letter-spacing:.5px}
+.m-val{font-size:22px;font-weight:800;font-family:'Inter',sans-serif}
+.m-sub{font-size:9.5px;color:var(--muted);margin-top:2px}
+.r-bar{height:3px;border-radius:3px;margin-top:8px}
+
+/* Data Tables */
+.tc{margin-bottom:22px}
+.t-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.sbox{display:flex;align-items:center;gap:7px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;transition:border-color .2s ease,box-shadow .2s ease}
+.sbox:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px rgba(0,194,138,0.15)}
+.sbox input{background:none;border:none;outline:none;color:var(--text);font-size:12px;font-family:var(--font-main);width:160px}
+.sbox input::placeholder{color:var(--muted)}
+.ftabs{display:flex;gap:5px;flex-wrap:wrap}
+.ft{padding:5px 12px;border-radius:20px;font-size:10.5px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-main);transition:all .18s}
+.ft:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.ft.active{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 2px 8px rgba(0,194,138,0.3)}
 table{width:100%;border-collapse:collapse}
-thead th{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--card);z-index:10;box-shadow: 0 1px 0 var(--border);}
-/* Filter select & inline edit — supports dark+light */
-.fi-sel{padding:7px 10px;font-size:12px;border-radius:6px;background:var(--card2);color:var(--text);border:1px solid var(--border);outline:none;cursor:pointer;font-family:'Sarabun',sans-serif;transition:border-color .2s}
+thead th{font-size:9.5px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.8px;padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--card);z-index:10;box-shadow:0 1px 0 var(--border)}
+.fi-sel{padding:7px 11px;font-size:12px;font-weight:600;border-radius:8px;background:var(--card2);color:var(--text);border:1px solid var(--border);outline:none;cursor:pointer;font-family:var(--font-main);transition:border-color .2s}
 .fi-sel option{background:var(--card2);color:var(--text)}
-.fi-sel:focus{border-color:var(--primary)}
-.edit-in{background:var(--card2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:3px 6px;font-size:11px;font-family:'Sarabun',sans-serif;outline:none}
+.fi-sel:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(0,194,138,0.15)}
+.edit-in{background:var(--card2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 8px;font-size:11px;font-family:var(--font-main);outline:none}
 .edit-in:focus{border-color:var(--primary)}
 .edit-in option{background:var(--card2);color:var(--text)}
-/* Font sharpness */
-h1,h2,h3,h4,h5,h6,.c-title,.ni,.ti,.ai-d,.td-d{font-weight:700;letter-spacing:-0.01em}
+h1,h2,h3,h4,h5,h6,.c-title,.ni,.ti,.ai-d,.td-d{font-weight:700;letter-spacing:-0.015em}
 tbody td{color:var(--text)}
-tbody tr{border-bottom:1px solid var(--border);transition:background .15s}tbody tr:hover{background:rgba(255,255,255,.025)}tbody tr:last-child{border-bottom:none}
-tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
-.td-d{font-weight:700;color:var(--primary);font-family:monospace;font-size:11px}
-.sp{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700}.s-open{background:rgba(0,194,138,.15);color:var(--primary)}.s-closed{background:rgba(255,77,106,.15);color:var(--red)}.s-proc{background:rgba(255,217,77,.15);color:var(--yellow)}
-.prnbtn{background:none;border:none;cursor:pointer;font-size:14px;padding:2px 5px;border-radius:6px;transition:background .15s;color:var(--muted)}.prnbtn:hover{background:rgba(255,255,255,.1);color:var(--text)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s ease}
+tbody tr:hover{background:rgba(255,255,255,.03)}
+tbody tr:last-child{border-bottom:none}
+tbody td{padding:10px 12px;font-size:11.5px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.td-d{font-weight:700;color:var(--primary);font-family:var(--font-mono);font-size:11px}
+.sp{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:9.5px;font-weight:800;letter-spacing:.2px}
+.s-open{background:rgba(0,194,138,.15);color:var(--primary)}
+.s-closed{background:rgba(244,63,94,.15);color:var(--red)}
+.s-proc{background:rgba(245,158,11,.15);color:var(--yellow)}
+.prnbtn{background:none;border:none;cursor:pointer;font-size:14px;padding:3px 6px;border-radius:6px;transition:all .15s;color:var(--muted)}
+.prnbtn:hover{background:rgba(255,255,255,.1);color:var(--text);transform:scale(1.08)}
 /* ─── FORM MODAL (matches app.html style) ─── */
 .ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);z-index:9000;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0;transition:background .2s,backdrop-filter .2s}
 .ov.show{display:flex}
@@ -400,7 +473,16 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
 
 <div id="sbov" onclick="cSb()"></div>
 <nav id="sb">
-  <div class="sb-logo"><h2>📦 SmartStock</h2><p>Inventory V.7.5.4</p></div>
+  <div class="sb-logo">
+    <div class="sb-logo-icon">📦</div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <h2>SmartStock</h2>
+        <span style="font-size:9.5px;font-weight:800;background:rgba(0,194,138,0.15);color:var(--primary);padding:2px 6px;border-radius:6px;border:1px solid rgba(0,194,138,0.3)">V.7.5.8</span>
+      </div>
+      <p>Telecom Inventory Platform</p>
+    </div>
+  </div>
   <div class="sb-user" style="cursor:pointer" title="ข้อมูลผู้ใช้">
     <div class="u-av" id="sbUserAv">??</div>
     <div class="u-info" style="flex:1" onclick="promptChangeUser()">
@@ -430,7 +512,7 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
     <a class="ni" onclick="pg('print',this)"><span class="ni-ic">🖨️</span>Print ใบเบิก (Teloneer)</a>
     <a class="ni" onclick="pg('history',this); loadHistoryPage();"><span class="ni-ic">📜</span>ประวัติ Import</a>
   </nav>
-  <div class="sb-foot"><span class="ldot"></span>Smart Inventory V.7.5.4</div>
+  <div class="sb-foot"><span class="ldot"></span>Smart Inventory V.7.5.8</div>
 </nav>
 
 <div id="main">
@@ -449,50 +531,143 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
     <!-- Dashboard -->
     <div class="page active" id="page-dashboard">
       <div class="kpi-grid">
-        <div class="kc kg"><div class="k-ic" style="background:rgba(0,194,138,.15)">📥</div><div class="k-lbl">IN + STR/IN</div><div class="k-val" id="kIn">0</div><div class="k-sub" style="color:var(--primary)">▲ ยอดรับเข้าวันนี้</div></div>
-        <div class="kc kr"><div class="k-ic" style="background:rgba(255,77,106,.15)">📤</div><div class="k-lbl">OUT + DISMANTLE</div><div class="k-val" id="kOut">0</div><div class="k-sub" style="color:var(--red)">▼ ยอดนำออกวันนี้</div></div>
-        <div class="kc kb"><div class="k-ic" style="background:rgba(77,159,255,.15)">🏷️</div><div class="k-lbl">DUID Active</div><div class="k-val" id="kDuid">0</div><div class="k-sub" style="color:var(--blue)">รายการในระบบ</div></div>
-        <div class="kc kp" style="cursor:pointer" onclick="filterByStatus('Open')" title="คลิกเพื่อกรองรายการ OPEN (หรือคลิก CLOSED เพื่อดูกลุ่มปิด)">
-          <div class="k-ic" style="background:rgba(178,109,255,.15)">⏳</div>
-          <div class="k-lbl">รอดำเนินการ (OPEN)</div>
+        <!-- 1. Total Records -->
+        <div class="kc kg" style="cursor:pointer" onclick="filterByStatus('ALL')" title="คลิกเพื่อดูรายการทั้งหมด">
+          <div class="k-ic" style="background:rgba(0,194,138,.15)">📦</div>
+          <div class="k-lbl">Total Records (จำนวนรายการ)</div>
+          <div class="k-val" id="kTotal">0</div>
+          <div class="k-sub" id="kGrowth" style="color:var(--primary);font-size:10px">รายการทั้งหมดในระบบ</div>
+        </div>
+        <!-- 2. Active DUIDs -->
+        <div class="kc kb" style="cursor:pointer" onclick="pg('duid',document.querySelectorAll('.ni')[2])" title="คลิกเพื่อไปหน้าค้นหา DUID">
+          <div class="k-ic" style="background:rgba(77,159,255,.15)">🏷️</div>
+          <div class="k-lbl">Active DUIDs (ไซต์งานที่ไม่ซ้ำ)</div>
+          <div class="k-val" id="kDuid">0</div>
+          <div class="k-sub" style="color:var(--blue)">ไซต์งานที่เคลื่อนไหว (Unique DUIDs)</div>
+        </div>
+        <!-- 3. IN -->
+        <div class="kc kg" style="cursor:pointer" onclick="setFAndGo('IN')" title="คลิกเพื่อดูรายการ IN">
+          <div class="k-ic" style="background:rgba(0,194,138,.15)">📥</div>
+          <div class="k-lbl">Receive (IN) (รับเข้า)</div>
+          <div class="k-val" id="kIn">0</div>
+          <div class="k-sub" id="kInSub" style="color:var(--primary)">ยอดรับเข้าอุปกรณ์ (Records)</div>
+        </div>
+        <!-- 4. OUT -->
+        <div class="kc kr" style="cursor:pointer" onclick="setFAndGo('OUT')" title="คลิกเพื่อดูรายการ OUT">
+          <div class="k-ic" style="background:rgba(255,77,106,.15)">📤</div>
+          <div class="k-lbl">Issue (OUT) (เบิกจ่าย)</div>
+          <div class="k-val" id="kOut">0</div>
+          <div class="k-sub" id="kOutSub" style="color:var(--red)">ยอดเบิกใช้งาน (Records)</div>
+        </div>
+        <!-- 5. Dismantle -->
+        <div class="kc kp" style="cursor:pointer" onclick="setFAndGo('DISMANTLE')" title="คลิกเพื่อดูรายการ DISMANTLE">
+          <div class="k-ic" style="background:rgba(178,109,255,.15)">🔧</div>
+          <div class="k-lbl">Dismantle (รื้อถอน)</div>
+          <div class="k-val" id="kDis" style="color:var(--purple)">0</div>
+          <div class="k-sub" id="kDisSub" style="color:var(--purple)">อุปกรณ์รื้อถอน (Records)</div>
+        </div>
+        <!-- 6. Store Transfers -->
+        <div class="kc ks" style="cursor:pointer" onclick="filterByTransfer()" title="คลิกเพื่อดูรายการย้ายคลัง">
+          <div class="k-ic" style="background:rgba(100,116,139,.15)">🔄</div>
+          <div class="k-lbl">Store Transfers (ย้ายคลัง)</div>
+          <div class="k-val" id="kStr" style="color:var(--muted)">0</div>
+          <div class="k-sub" id="kStrSub" style="color:var(--muted)">STR/IN &amp; STR/OUT (Records)</div>
+        </div>
+        <!-- 7. Returns -->
+        <div class="kc kr" style="cursor:pointer" onclick="setFAndGo('RETURN')" title="คลิกเพื่อดูรายการ RETURN">
+          <div class="k-ic" style="background:rgba(255,77,106,.15)">🔙</div>
+          <div class="k-lbl">Returns (ส่งคืน)</div>
+          <div class="k-val" id="kRet" style="color:var(--red)">0</div>
+          <div class="k-sub" id="kRetSub" style="color:var(--red)">คืนคลัง / เคลม (Records)</div>
+        </div>
+        <!-- 8. Pending Review -->
+        <div class="kc ky" style="cursor:pointer" onclick="filterByStatus('Open')" title="คลิกเพื่อกรองรายการ OPEN (หรือคลิก CLOSED เพื่อดูกลุ่มปิด)">
+          <div class="k-ic" style="background:rgba(245,158,11,.15)">⏳</div>
+          <div class="k-lbl">Pending Review (รอดำเนินการ)</div>
           <div style="display:flex;align-items:baseline;gap:8px">
-            <div class="k-val" id="kPend" style="color:var(--purple)">0</div>
+            <div class="k-val" id="kPend" style="color:var(--yellow)">0</div>
             <span style="font-size:12px;color:var(--muted);font-weight:600">รายการ</span>
           </div>
           <div class="k-sub" style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
-            <span style="color:var(--primary);font-weight:700">🟢 OPEN: <span id="kOpen">0</span></span>
+            <span style="color:var(--primary);font-weight:700" title="คลิกเพื่อดูงาน OPEN">🟢 OPEN: <span id="kOpen">0</span></span>
             <span style="color:var(--muted)">|</span>
             <span style="color:var(--red);font-weight:700;cursor:pointer" onclick="event.stopPropagation();filterByStatus('Closed')" title="คลิกเพื่อดู CLOSED">🔴 CLOSED: <span id="kClosed">0</span></span>
           </div>
         </div>
       </div>
+
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:16px" id="typeMini"></div>
+
       <div class="dash-row">
-        <div class="cc"><div class="c-hdr"><div><div class="c-title">📈 สถิติรายวัน (7 วันล่าสุด)</div><div class="c-sub">แยกตามประเภท</div></div><div class="leg"><div class="li"><div class="ld" style="background:var(--primary)"></div>IN</div><div class="li"><div class="ld" style="background:var(--blue)"></div>STR/IN</div><div class="li"><div class="ld" style="background:var(--red)"></div>OUT</div><div class="li"><div class="ld" style="background:var(--purple)"></div>DIS</div><div class="li"><div class="ld" style="background:var(--orange)"></div>STR/OUT</div><div class="li"><div class="ld" style="background:var(--yellow)"></div>RET</div></div></div><canvas id="lineChart" style="max-height:230px"></canvas></div>
-        <div class="ac"><div class="c-title" style="margin-bottom:10px">⚡ กิจกรรมล่าสุด</div><div class="a-list" id="actList"></div></div>
+        <div class="cc">
+          <div class="c-hdr">
+            <div>
+              <div class="c-title">📈 สถิติการเคลื่อนไหวอุปกรณ์ (Inventory Movement)</div>
+              <div class="c-sub">แยกตามประเภทธุรกรรมและช่วงเวลาจริง</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <div class="time-filter-pills" style="display:flex;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:2px">
+                <button class="t-pill active" onclick="setChartTimeRange(7, this)" style="border:none;background:var(--card);padding:3px 9px;font-size:11px;font-weight:700;color:var(--text);border-radius:6px;cursor:pointer">7 วัน</button>
+                <button class="t-pill" onclick="setChartTimeRange(30, this)" style="border:none;background:transparent;padding:3px 9px;font-size:11px;font-weight:700;color:var(--muted);border-radius:6px;cursor:pointer">30 วัน</button>
+                <button class="t-pill" onclick="setChartTimeRange(90, this)" style="border:none;background:transparent;padding:3px 9px;font-size:11px;font-weight:700;color:var(--muted);border-radius:6px;cursor:pointer">90 วัน</button>
+              </div>
+              <div class="leg">
+                <div class="li"><div class="ld" style="background:var(--primary)"></div>IN</div>
+                <div class="li"><div class="ld" style="background:var(--blue)"></div>STR/IN</div>
+                <div class="li"><div class="ld" style="background:var(--red)"></div>OUT</div>
+                <div class="li"><div class="ld" style="background:var(--purple)"></div>DIS</div>
+                <div class="li"><div class="ld" style="background:var(--orange)"></div>STR/OUT</div>
+                <div class="li"><div class="ld" style="background:var(--yellow)"></div>RET</div>
+              </div>
+            </div>
+          </div>
+          <div style="position:relative;height:230px">
+            <canvas id="lineChart" style="max-height:230px"></canvas>
+            <div id="chartEmptyState" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:var(--muted);font-size:12px;background:rgba(0,0,0,0.2);border-radius:8px">ℹ️ ไม่มีข้อมูลการเคลื่อนไหวในช่วงเวลานี้</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="ac"><div class="c-title" style="margin-bottom:10px">⚡ กิจกรรมล่าสุด</div><div class="a-list" id="actList"></div></div>
+          <div class="ac"><div class="c-title" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><span>⚠️ Action Required</span><span style="font-size:10px;color:var(--red);font-weight:700">ตรวจติดตามงาน</span></div><div id="actionRequiredPanel"></div></div>
+        </div>
       </div>
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px">🗺️ สรุปตาม Region</div>
+
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px">🗺️ สรุปตาม Region (Regional Volume Distribution)</div>
       <div class="mg" id="rgMini"></div>
     </div>
 
     <!-- Transactions -->
     <div class="page" id="page-transactions">
       <div class="tc">
-        <div class="t-hdr">
-          <div class="c-title">📋 รายการทั้งหมด (<span id="txCount">0</span>)</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;width:100%;margin-top:10px;">
-            <div class="sbox" style="flex:1;min-width:250px;max-width:350px;">
-              🔍<input type="text" placeholder="ค้นหา DUID / Bill / Model / Code..." id="txQ" oninput="applyF()" style="width:100%;background:transparent;border:none;color:var(--text);outline:none;font-size:12px">
+        <div class="t-hdr" style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;width:100%;flex-wrap:wrap;gap:8px">
+            <div class="c-title">📋 รายการทั้งหมด (<span id="txCount">0</span> รายการ)</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="tbtn" onclick="addTx()" style="font-size:11px;padding:6px 12px;background:var(--primary);border-color:var(--primary);color:#fff;font-weight:700">➕ Add New</button>
+              <button class="tbtn g no-print" onclick="openImportExport('AIS')" style="font-size:11px;padding:6px 12px;">📥 AIS</button>
+              <button class="tbtn b no-print" onclick="openImportExport('TRUE')" style="font-size:11px;padding:6px 12px">📥 TRUE</button>
+              <button class="tbtn no-print" onclick="openImportExport('NT')" style="font-size:11px;padding:6px 12px;background:#6f42c1;border-color:#6f42c1;color:#fff">📥 NT</button>
+              <button class="tbtn no-print" onclick="openImportExport('ALL')" style="font-size:11px;padding:6px 12px;background:linear-gradient(135deg,#e65100,#f57c00);border:none;color:#fff;font-weight:700">📦 Export ทั้งหมด (All)</button>
+            </div>
+          </div>
+
+          <!-- Multi-filter bar -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;width:100%;padding:10px 12px;background:var(--card2);border:1px solid var(--border);border-radius:10px">
+            <!-- Search input -->
+            <div class="sbox" style="flex:1;min-width:260px;max-width:380px;">
+              🔍<input type="text" placeholder="ค้นหา DUID, Bill, Model, Code, SN, Warehouse..." id="txQ" oninput="applyF()" style="width:100%;background:transparent;border:none;color:var(--text);outline:none;font-size:12px;font-family:inherit">
             </div>
             
-            <select id="txCus" onchange="applyF()" class="fi-sel">
-              <option value="ALL">ทุกลูกค้า (All)</option>
+            <!-- Customer -->
+            <select id="txCus" onchange="applyF()" class="fi-sel" title="กรองตามลูกค้า">
+              <option value="ALL">ทุกลูกค้า (All Customers)</option>
               <option value="AIS">AIS</option>
               <option value="TRUE">TRUE</option>
               <option value="NT">NT</option>
             </select>
             
-            <select id="txReg" onchange="applyF()" class="fi-sel">
+            <!-- Region -->
+            <select id="txReg" onchange="applyF()" class="fi-sel" title="กรองตามภูมิภาค">
               <option value="ALL">ทุก Region (All)</option>
               <option value="BKK">BKK</option>
               <option value="ER">ER</option>
@@ -502,21 +677,68 @@ tbody td{padding:9px 10px;font-size:11px;vertical-align:middle;white-space:nowra
               <option value="NER">NER</option>
             </select>
             
-            <select id="txType" onchange="applyF()" class="fi-sel">
-              <option value="ALL">ทุกประเภท (All)</option>
-              <option value="IN">IN</option>
-              <option value="OUT">OUT</option>
-              <option value="DISMANTLE">DISMANTLE</option>
-              <option value="STR/IN">STR/IN</option>
-              <option value="STR/OUT">STR/OUT</option>
-              <option value="RETURN">RETURN</option>
+            <!-- Transaction Type -->
+            <select id="txType" onchange="applyF()" class="fi-sel" title="กรองประเภทรายการ">
+              <option value="ALL">ทุกประเภท (All Types)</option>
+              <option value="IN">IN (รับเข้า)</option>
+              <option value="OUT">OUT (เบิกจ่าย)</option>
+              <option value="DISMANTLE">DISMANTLE (รื้อถอน)</option>
+              <option value="STR/IN">STR/IN (ย้ายเข้า)</option>
+              <option value="STR/OUT">STR/OUT (ย้ายออก)</option>
+              <option value="RETURN">RETURN (ส่งคืน)</option>
             </select>
-            
-            <button class="tbtn" onclick="addTx()" style="font-size:10px;padding:6px 12px;margin-left:auto;background:var(--primary);border-color:var(--primary);">➕ Add New</button>
-            <button class="tbtn g no-print" onclick="openImportExport('AIS')" style="font-size:10px;padding:6px 12px;">📥 AIS</button>
-            <button class="tbtn b no-print" onclick="openImportExport('TRUE')" style="font-size:10px;padding:6px 12px">📥 TRUE</button>
-            <button class="tbtn no-print" onclick="openImportExport('NT')" style="font-size:10px;padding:6px 12px;background:#6f42c1;border-color:#6f42c1;color:#fff">📥 NT</button>
-            <button class="tbtn no-print" onclick="openImportExport('ALL')" style="font-size:10px;padding:6px 12px;background:linear-gradient(135deg,#e65100,#f57c00);border:none;color:#fff;font-weight:700">📦 Export ทั้งหมด (All)</button>
+
+            <!-- Status -->
+            <select id="txStatus" onchange="applyF()" class="fi-sel" title="กรองตามสถานะงาน">
+              <option value="ALL">ทุกสถานะ (All Statuses)</option>
+              <option value="Open">🟢 Open</option>
+              <option value="Closed">🔴 Closed</option>
+              <option value="On Process">🟡 On Process</option>
+              <option value="Pending">⏳ Pending</option>
+            </select>
+
+            <!-- Item Type -->
+            <select id="txIType" onchange="applyF()" class="fi-sel" title="กรองตามหมวดอุปกรณ์">
+              <option value="ALL">ทุกหมวด (All Item Types)</option>
+              <option value="RRU">RRU</option>
+              <option value="DBS">DBS</option>
+              <option value="BBU">BBU</option>
+              <option value="BOAD">BOAD</option>
+              <option value="Switch">Switch</option>
+              <option value="DC Power">DC Power</option>
+              <option value="Rectifier">Rectifier</option>
+              <option value="Cabinet">Cabinet</option>
+              <option value="Antenna">Antenna</option>
+              <option value="Cable">Cable</option>
+              <option value="Other">Other</option>
+            </select>
+
+            <!-- Action Required Filter -->
+            <select id="txActionReq" onchange="applyF()" class="fi-sel" style="border-color:rgba(255,77,106,0.3);color:var(--text)" title="กรองเฉพาะรายการที่ต้องตรวจสอบ">
+              <option value="ALL">⚠️ Action Required: ทั้งหมด</option>
+              <option value="missing_sn">🔴 Missing SN (Active HW ขาด SN)</option>
+              <option value="open_items">⏳ งานรอ Reconcile (Open/Pending)</option>
+            </select>
+
+            <!-- Date Range -->
+            <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)">
+              <span>📅</span>
+              <input type="date" id="txDateFrom" onchange="applyF()" class="fi" style="padding:4px 6px;font-size:11px;width:125px" title="วันที่เริ่มต้น">
+              <span>-</span>
+              <input type="date" id="txDateTo" onchange="applyF()" class="fi" style="padding:4px 6px;font-size:11px;width:125px" title="วันที่สิ้นสุด">
+            </div>
+
+            <!-- Page Size -->
+            <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+              <span style="font-size:11px;color:var(--muted)">แสดง:</span>
+              <select id="txPageSize" onchange="changePageSize(this.value)" class="fi-sel" style="padding:4px 8px;font-size:11px">
+                <option value="25">25 / หน้า</option>
+                <option value="50" selected>50 / หน้า</option>
+                <option value="100">100 / หน้า</option>
+                <option value="200">200 / หน้า</option>
+              </select>
+              <button class="tbtn" onclick="resetAllFilters()" style="padding:4px 8px;font-size:11px;background:rgba(255,255,255,0.06);border:1px solid var(--border)" title="ล้างตัวกรองทั้งหมด">↺ Reset</button>
+            </div>
           </div>
         </div>
         <div style="overflow-x:auto;overflow-y:auto;max-height:65vh;border-bottom:1px solid var(--border);max-width:calc(100vw - var(--sw) - 40px);-webkit-overflow-scrolling:touch"><table style="min-width:1400px;border-collapse:collapse"><thead><tr><th></th><th>No</th><th>DUID</th><th>Region</th><th>TYPE</th><th>IType</th><th>Date</th><th>Bill No.</th><th>Model</th><th>Item Code</th><th>Item Description</th><th>Qty</th><th>SN</th><th>Owner Warehouse</th><th>Owner Receiver</th><th>Location Warehouse</th><th>Location Receiver</th><th>Status</th><th>INT No</th><th>User</th></tr></thead><tbody id="txBody"></tbody></table></div>
@@ -5853,6 +6075,21 @@ function addBomRow() {
 const today=()=>{const d=new Date();return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`};
 const dAgo=n=>{const d=new Date(Date.now()-n*86400000);return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`};
 const MOCK=[
+  {no:1,customer:"AIS",duid:"TECBA_2026 Capacity Expansion NW Modernization_EXP_BKK",region:"BKK",type:"DISMANTLE",itype:"RRU",date:today(),bill:"2026 Capacity Expansion NW Modernization_EXP_BKK",model:"RRU3962",code:"02311EPK",desc:"RRU3962, 1800MHz~2100MHz 2T4R",qty:1,sn:"2102311EPK10HA000111",ownerW:"TLN_XAIPHONE K.",ownerR:"TLN_nammon manakiat",status:"Closed",locW:"WH TLN BKK",locR:"Site TECBA"},
+  {no:2,customer:"AIS",duid:"NGSUM_2026 Capacity Expansion Ph1_EXP_ER",region:"ER",type:"IN",itype:"BOAD",date:today(),bill:"Phase 26Cap Exp Ph1",model:"UBBPb2a",code:"03050SYY",desc:"Universal FE or GE Lightning Protection Unit",qty:1,sn:"2103050SYY10S5100079",ownerW:"TLN ER",ownerR:"TLN_Wachira SAC",status:"Closed",locW:"WH TLN ER",locR:"Site NGSUM"},
+  {no:3,customer:"AIS",duid:"NGSUM_2026 Capacity Expansion Ph1_EXP_ER",region:"ER",type:"IN",itype:"DBS",date:today(),bill:"Phase 26Cap Exp Ph1",model:"DBS3900",code:"02232HFK",desc:"DBS3900 Single RRU Material Kit For Thailand AIS",qty:1,sn:"NA",ownerW:"TLN ER",ownerR:"TLN_Wachira SAC",status:"Open",locW:"WH TLN ER",locR:"Site NGSUM"},
+  {no:4,customer:"AIS",duid:"NGSUM_2026 Capacity Expansion Ph1_EXP_ER",region:"ER",type:"IN",itype:"RRU",date:dAgo(1),bill:"Phase 26Cap Exp Ph1",model:"RRU5526",code:"02315GWS",desc:"RRU5526 Multi-Carrier Dual Band High Power Unit",qty:1,sn:"2102315GWS10RB105331",ownerW:"TLN ER",ownerR:"TLN_Wachira SAC",status:"Closed",locW:"WH TLN ER",locR:"Site NGSUM"},
+  {no:5,customer:"AIS",duid:"BNMFM_2026 Capacity Expansion Ph1_EXP_ER",region:"ER",type:"IN",itype:"RRU",date:dAgo(1),bill:"Phase 26Cap Exp Ph1",model:"RRU5516 L9",code:"02314GJC",desc:"RRU5516 L9 900Mhz Multi-mode RF transceiver",qty:1,sn:"2102314GJCDU55000079",ownerW:"TLN ER",ownerR:"TLN_Anat Sria",status:"Closed",locW:"WH TLN ER",locR:"Site BNMFM"},
+  {no:6,customer:"AIS",duid:"WAGWM_2026 Capacity Expansion Ph1_EXP_ER",region:"ER",type:"OUT",itype:"ANTENNA",date:dAgo(2),bill:"Phase 26Cap Exp Ph1",model:"HXPM8X22WW1718065T2C",code:"HXPM8X22WW1718065T2C",desc:"HXPM8X22WW1718065T2C Base Station Antenna",qty:1,sn:"110059255000071",ownerW:"TLN ER",ownerR:"Team Apichat",status:"Open",locW:"WH TLN ER",locR:"Site WAGWM"},
+  {no:7,customer:"AIS",duid:"TBSVM_2026 Capacity Expansion Ph1_EXP_ER",region:"ER",type:"OUT",itype:"RRU",date:dAgo(2),bill:"Phase 26Cap Exp Ph1",model:"RRU5516 L9",code:"02314GJC",desc:"RRU5516 L9 RF transceiver unit",qty:1,sn:"2102314GJCDU55000088",ownerW:"TLN ER",ownerR:"Team Apichat",status:"Closed",locW:"WH TLN ER",locR:"Site TBSVM"},
+  {no:8,customer:"AIS",duid:"TBSVM_2026 Capacity Expansion Ph1_EXP_ER",region:"ER",type:"OUT",itype:"BOAD",date:dAgo(3),bill:"Phase 26Cap Exp Ph1",model:"UBBPb2a",code:"03050SYY",desc:"Universal Baseband Processing Unit",qty:1,sn:"2103050SYY10S5100123",ownerW:"TLN ER",ownerR:"Team Apichat",status:"Closed",locW:"WH TLN ER",locR:"Site TBSVM"},
+  {no:9,customer:"TRUE",duid:"TRUE_BKK_SITE_88942_MOD",region:"BKK",type:"STR/IN",itype:"DC Power",date:dAgo(3),bill:"TRUE_ROLLOUT_WH_2026_09",model:"DCDU16D-02",code:"2122720",desc:"DC Power Distribution Unit DCDU16D-02",qty:1,sn:"2102122720P0S5002905",ownerW:"WH TLN BKK",ownerR:"TLN_XAIPHONE K.",status:"Closed",locW:"WH TLN BKK",locR:"WH TLN Subcon"},
+  {no:10,customer:"TRUE",duid:"TRUE_BKK_SITE_88942_MOD",region:"BKK",type:"STR/OUT",itype:"Material",date:dAgo(4),bill:"TRUE_ROLLOUT_WH_2026_09",model:"Jumper (4.3-10) 3m",code:"04130700-001",desc:"Jumper Cable 4.3-10 Male to Din Superflexible",qty:8,sn:"NA",ownerW:"WH TLN BKK",ownerR:"Subcon Central",status:"Closed",locW:"WH TLN BKK",locR:"Site 88942"},
+  {no:11,customer:"AIS",duid:"SR_SONGKHLA_EXP_MOD_01",region:"SR",type:"RETURN",itype:"RRU",date:dAgo(4),bill:"SR_RETURN_DEFECT_004",model:"RRU3962",code:"02311EPK",desc:"RRU3962 Faulty Return to Central Vendor",qty:1,sn:"2102311EPK10HA000999",ownerW:"TLN SR WH",ownerR:"Vendor Warehouse",status:"Closed",locW:"TLN SR WH",locR:"Vendor Central WH"},
+  {no:12,customer:"AIS",duid:"NR_CHIANGMAI_NORTH_091",region:"NR",type:"IN",itype:"RRU",date:dAgo(5),bill:"NR_PHASE_09_EXP",model:"RRU5526",code:"02315GWS",desc:"RRU5526 Multi-Carrier Dual Band High Power Unit",qty:2,sn:"2102315GWS10RB108844",ownerW:"TLN NR WH",ownerR:"TLN North Logistics",status:"Closed",locW:"TLN NR WH",locR:"Site 091"},
+  {no:13,customer:"NT",duid:"NT_BKK_CORE_UPGRADE_01",region:"BKK",type:"IN",itype:"Material",date:dAgo(5),bill:"NT_CORE_2026_BILL",model:"Fiber SFP+ 10G",code:"34060713",desc:"Optical Transceiver SFP+ 10Gbps LC Single Mode 10km",qty:12,sn:"NA",ownerW:"TLN NT WH",ownerR:"NT Engineering",status:"Open",locW:"TLN NT WH",locR:"Site Core BKK"},
+  {no:14,customer:"AIS",duid:"TECBA_2026 Capacity Expansion NW Modernization_EXP_BKK",region:"BKK",type:"DISMANTLE",itype:"DC Power",date:dAgo(6),bill:"2026 Capacity Expansion NW Modernization_EXP_BKK",model:"OPM15M",code:"02311RCD",desc:"OPM15M Ver.B AC Power Module",qty:1,sn:"2102311RCDBTK4006550",ownerW:"TLN_XAIPHONE K.",ownerR:"TLN Central Store",status:"Closed",locW:"Site TECBA",locR:"TLN Central Store"},
+  {no:15,customer:"AIS",duid:"NGSUM_2026 Capacity Expansion Ph1_EXP_ER",region:"ER",type:"IN",itype:"Material",date:dAgo(6),bill:"Phase 26Cap Exp Ph1",model:"Power Cable 35sqmm",code:"25031223",desc:"Double Shield Power Cable 35sqmm Blue/Black",qty:45,sn:"NA",ownerW:"TLN ER",ownerR:"TLN_Wachira SAC",status:"Closed",locW:"WH TLN ER",locR:"Site NGSUM"}
 ];
 // ════ STATE ════
 let TX=[...MOCK],curF='ALL',rChInst=null,lChInst=null,pending=0,curAction='IN',itemRowCount=0,isLiveData=false;
@@ -5875,24 +6112,332 @@ function cSb(){document.getElementById('sb').classList.remove('open');document.g
 
 // ════ KPI ════
 function countUp(el,n,dur=700){if(!el)return;let s=0,step=Math.max(1,Math.ceil(n/(dur/16)));const t=setInterval(()=>{s=Math.min(s+step,n);el.textContent=s;if(s>=n)clearInterval(t)},16)}
-function calcKPI(data){const d=new Date(),ts=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`,tR=data.filter(r=>fmtDate(r.date)===ts);const openRows=data.filter(r=>/^(open|pending|on process)$/i.test((r.status||'').trim())),closedRows=data.filter(r=>/^closed$/i.test((r.status||'').trim()));return{inToday:tR.filter(r=>/^(IN|STR\/IN)$/i.test(r.type||'')).length,outToday:tR.filter(r=>/^(OUT|DISMANTLE)$/i.test(r.type||'')).length,openCount:openRows.length,closedCount:closedRows.length,activeDuid:new Set(data.map(r=>r.duid)).size};}
-function loadKPIs(data){const k=calcKPI(data);pending=k.openCount;const elPend=document.getElementById('kPend'),elOpen=document.getElementById('kOpen'),elClosed=document.getElementById('kClosed');if(elPend)elPend.textContent=k.openCount;if(elOpen)elOpen.textContent=k.openCount;if(elClosed)elClosed.textContent=k.closedCount;const nbEl=document.getElementById('nbPending');if(nbEl)nbEl.textContent=(data&&data.length)?data.length:'-';setTimeout(()=>countUp(document.getElementById('kIn'),k.inToday),120);setTimeout(()=>countUp(document.getElementById('kOut'),k.outToday),240);setTimeout(()=>countUp(document.getElementById('kDuid'),k.activeDuid),360);setTimeout(()=>countUp(document.getElementById('kPend'),k.openCount),480);setTimeout(()=>countUp(document.getElementById('kOpen'),k.openCount),480);setTimeout(()=>countUp(document.getElementById('kClosed'),k.closedCount),560);}
+function calcKPI(data){
+  const totalRecords = data.length;
+  const uniqueDuids = new Set(data.map(r => (r.duid||'').trim()).filter(Boolean)).size;
+
+  const inRows = data.filter(r => /^IN$/i.test((r.type||'').trim()));
+  const inQty = inRows.reduce((acc, r) => acc + (parseInt(r.qty)||1), 0);
+
+  const outRows = data.filter(r => /^OUT$/i.test((r.type||'').trim()));
+  const outQty = outRows.reduce((acc, r) => acc + (parseInt(r.qty)||1), 0);
+
+  const disRows = data.filter(r => /^DISMANTLE$/i.test((r.type||'').trim()));
+  const disQty = disRows.reduce((acc, r) => acc + (parseInt(r.qty)||1), 0);
+
+  const strInRows = data.filter(r => /^STR\/IN$/i.test((r.type||'').trim()));
+  const strOutRows = data.filter(r => /^STR\/OUT$/i.test((r.type||'').trim()));
+  const strTotal = strInRows.length + strOutRows.length;
+
+  const retRows = data.filter(r => /^RETURN$/i.test((r.type||'').trim()));
+  const retQty = retRows.reduce((acc, r) => acc + (parseInt(r.qty)||1), 0);
+
+  const openRows = data.filter(r => /^(open|pending|on process)$/i.test((r.status||'').trim()));
+  const closedRows = data.filter(r => /^closed$/i.test((r.status||'').trim()));
+
+  // Rate of change comparison: last 30 days vs previous 30 days (day 31 to 60)
+  const now = Date.now();
+  const ms30d = 30 * 86400 * 1000;
+  let recent30d = 0;
+  let prior30d = 0;
+  let hasValidDates = false;
+
+  data.forEach(r => {
+    const ts = parseDateStrict(r.date);
+    if (ts > 0) {
+      hasValidDates = true;
+      const diff = now - ts;
+      if (diff >= 0 && diff <= ms30d) recent30d++;
+      else if (diff > ms30d && diff <= ms30d * 2) prior30d++;
+    }
+  });
+
+  let growthText = 'ไม่มีข้อมูลเปรียบเทียบ';
+  if (prior30d > 0) {
+    const diff = recent30d - prior30d;
+    const sign = diff >= 0 ? '+' : '';
+    const pct = Math.round((diff / prior30d) * 100);
+    growthText = `${sign}${diff} รายการ (${sign}${pct}% vs 30 วันก่อน)`;
+  } else if (recent30d > 0 && hasValidDates) {
+    growthText = `+${recent30d} รายการใน 30 วัน (ไม่มีข้อมูลช่วงก่อนหน้า)`;
+  }
+
+  return {
+    totalRecords,
+    growthText,
+    uniqueDuids,
+    inTotal: inRows.length,
+    inQty,
+    outTotal: outRows.length,
+    outQty,
+    disTotal: disRows.length,
+    disQty,
+    strTotal,
+    strInCount: strInRows.length,
+    strOutCount: strOutRows.length,
+    retTotal: retRows.length,
+    retQty,
+    openCount: openRows.length,
+    closedCount: closedRows.length
+  };
+}
+
+function loadKPIs(data){
+  const k=calcKPI(data);
+  pending=k.openCount;
+
+  const elGrowth = document.getElementById('kGrowth');
+  if (elGrowth) elGrowth.textContent = k.growthText;
+
+  const elInSub = document.getElementById('kInSub');
+  if (elInSub) elInSub.textContent = `${k.inTotal} รายการ · ${k.inQty} ชิ้น (Records)`;
+
+  const elOutSub = document.getElementById('kOutSub');
+  if (elOutSub) elOutSub.textContent = `${k.outTotal} รายการ · ${k.outQty} ชิ้น (Records)`;
+
+  const elDisSub = document.getElementById('kDisSub');
+  if (elDisSub) elDisSub.textContent = `${k.disTotal} รายการ · ${k.disQty} ชิ้น (Records)`;
+
+  const elStrSub = document.getElementById('kStrSub');
+  if (elStrSub) elStrSub.textContent = `STR/IN: ${k.strInCount} | STR/OUT: ${k.strOutCount} (Records)`;
+
+  const elRetSub = document.getElementById('kRetSub');
+  if (elRetSub) elRetSub.textContent = `${k.retTotal} รายการ · ${k.retQty} ชิ้น (Records)`;
+
+  const elPend=document.getElementById('kPend'),elOpen=document.getElementById('kOpen'),elClosed=document.getElementById('kClosed');
+  if(elPend)elPend.textContent=k.openCount;
+  if(elOpen)elOpen.textContent=k.openCount;
+  if(elClosed)elClosed.textContent=k.closedCount;
+  const nbEl=document.getElementById('nbPending');
+  if(nbEl)nbEl.textContent=(data&&data.length)?data.length:'-';
+  const elTotal=document.getElementById('kTotal');
+  if(elTotal)countUp(elTotal,k.totalRecords);
+  const elDis=document.getElementById('kDis');
+  if(elDis)countUp(elDis,k.disTotal);
+  const elStr=document.getElementById('kStr');
+  if(elStr)countUp(elStr,k.strTotal);
+  const elRet=document.getElementById('kRet');
+  if(elRet)countUp(elRet,k.retTotal);
+  setTimeout(()=>countUp(document.getElementById('kIn'),k.inTotal),120);
+  setTimeout(()=>countUp(document.getElementById('kOut'),k.outTotal),240);
+  setTimeout(()=>countUp(document.getElementById('kDuid'),k.uniqueDuids),360);
+  setTimeout(()=>countUp(document.getElementById('kPend'),k.openCount),480);
+  setTimeout(()=>countUp(document.getElementById('kOpen'),k.openCount),480);
+  setTimeout(()=>countUp(document.getElementById('kClosed'),k.closedCount),560);
+  renderExecutiveAlerts(data);
+}
+
+function isUnclearSN(sn) {
+  if (!sn) return true;
+  const s = String(sn).trim().toLowerCase();
+  return s === '' || s === '-' || s === 'na' || s === 'n/a' || s === 'none' || s === 'null' || s === '?' || s === '0' || s === 'ไม่ระบุ';
+}
+
+function renderExecutiveAlerts(data) {
+  const panel = document.getElementById('actionRequiredPanel');
+  if (!panel) return;
+
+  const missingSn = data.filter(r => {
+    const isClosed = /^(closed)$/i.test((r.status||'').trim());
+    const isTargetItem = /^(rru|dbs|boad|bbu|dc power)$/i.test((r.itype||'').trim()) ||
+                         /rru|dbs|bbu/i.test((r.model||'').trim());
+    return !isClosed && isTargetItem && isUnclearSN(r.sn);
+  });
+
+  const openItems = data.filter(r => /^(open|pending|on process)$/i.test((r.status||'').trim()));
+
+  panel.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <!-- Missing SN Card -->
+      <div style="display:flex;flex-direction:column;gap:6px;padding:9px 11px;background:var(--card2);border:1px solid ${missingSn.length ? 'rgba(255,77,106,0.3)' : 'var(--border)'};border-radius:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:14px">⚠️</span>
+            <span style="font-size:11px;font-weight:700;color:var(--text)">อุปกรณ์ Active ขาด Serial Number</span>
+          </div>
+          <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:${missingSn.length ? 'rgba(255,77,106,.2);color:var(--red)' : 'rgba(0,194,138,.2);color:var(--primary)'}">
+            ${missingSn.length} รายการ
+          </span>
+        </div>
+        <div style="font-size:10px;color:var(--muted)">
+          ${missingSn.length > 0 ? 'พบอุปกรณ์ RRU/DBS/BOAD ที่สถานะยังไม่ปิดและไม่มี SN' : '✅ ไม่พบอุปกรณ์ Active ที่ขาด SN'}
+        </div>
+        ${missingSn.length > 0 ? `
+          <div style="display:flex;flex-direction:column;gap:2px;padding-top:4px;border-top:1px dashed var(--border)">
+            ${missingSn.slice(0, 2).map(r => `
+              <div style="font-size:9px;color:var(--muted);display:flex;justify-content:space-between;gap:4px">
+                <span style="color:var(--text);font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.duid} · ${r.model||r.itype}</span>
+                <span style="color:var(--red)">SN: ${r.sn || 'ว่าง'} (${r.status})</span>
+              </div>
+            `).join('')}
+          </div>
+          <button onclick="filterActionRequired('missing_sn')" style="margin-top:2px;background:none;border:none;color:var(--red);font-size:10px;font-weight:700;cursor:pointer;padding:0;text-align:left">
+            🔍 ตรวจสอบและแก้ไข Missing SN ➔
+          </button>
+        ` : ''}
+      </div>
+
+      <!-- Open Items Card -->
+      <div style="display:flex;flex-direction:column;gap:6px;padding:9px 11px;background:var(--card2);border:1px solid ${openItems.length ? 'rgba(245,158,11,0.3)' : 'var(--border)'};border-radius:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:14px">⏳</span>
+            <span style="font-size:11px;font-weight:700;color:var(--text)">งานรอดำเนินการ / รอ Reconcile</span>
+          </div>
+          <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:${openItems.length ? 'rgba(245,158,11,.2);color:var(--yellow)' : 'rgba(0,194,138,.2);color:var(--primary)'}">
+            ${openItems.length} รายการ
+          </span>
+        </div>
+        <div style="font-size:10px;color:var(--muted)">
+          ${openItems.length > 0 ? 'รายการสถานะ Open, Pending หรือ On Process ที่ยังไม่ปิดงาน' : '✅ Reconcile ครบถ้วน ไม่มีงานค้าง'}
+        </div>
+        ${openItems.length > 0 ? `
+          <button onclick="filterActionRequired('open_items')" style="margin-top:2px;background:none;border:none;color:var(--yellow);font-size:10px;font-weight:700;cursor:pointer;padding:0;text-align:left">
+            📋 ตรวจสอบรายการ OPEN / รอ Reconcile ➔
+          </button>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function filterActionRequired(type) {
+  const arEl = document.getElementById('txActionReq');
+  if (arEl) arEl.value = type;
+  pg('transactions', document.querySelectorAll('.ni')[1]);
+  applyF();
+}
+
+function filterByTransfer() {
+  const tEl = document.getElementById('txType');
+  if (tEl) tEl.value = 'ALL';
+  const arEl = document.getElementById('txActionReq');
+  if (arEl) arEl.value = 'ALL';
+  const qEl = document.getElementById('txQ');
+  if (qEl) qEl.value = 'STR';
+  pg('transactions', document.querySelectorAll('.ni')[1]);
+  applyF();
+}
+
+function filterMissingSN() {
+  filterActionRequired('missing_sn');
+}
+
+let chartTimeRange = 7;
+function setChartTimeRange(days, btn) {
+  chartTimeRange = days;
+  if (btn) {
+    document.querySelectorAll('.t-pill').forEach(b => {
+      b.style.color = 'var(--muted)';
+      b.style.background = 'transparent';
+      b.classList.remove('active');
+    });
+    btn.style.color = 'var(--text)';
+    btn.style.background = 'var(--card)';
+    btn.classList.add('active');
+  }
+  drawLineChart(TX, chartTimeRange);
+}
+
 function renderTypeMini(data){document.getElementById('typeMini').innerHTML=TYPE_DEFS.map(td=>{const cnt=data.filter(r=>(r.type||'').toUpperCase()===td.type.toUpperCase()).length;return`<div style="background:var(--card);border:1px solid var(--border);border-radius:11px;padding:11px 8px;text-align:center;cursor:pointer;transition:transform .2s" onclick="setFAndGo('${td.type}')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''"><div style="font-size:20px;margin-bottom:4px">${td.icon}</div><div style="font-size:18px;font-weight:800;color:${td.color}">${cnt}</div><div style="font-size:9px;color:var(--muted);margin-top:2px">${td.type}</div></div>`;}).join('');}
-function setFAndGo(type){curF=type;pg('transactions',document.querySelectorAll('.ni')[1]);document.querySelectorAll('.ft').forEach(b=>b.classList.remove('active'));applyF();}
+function setFAndGo(type){
+  curF=type;
+  const tEl = document.getElementById('txType');
+  if(tEl) tEl.value = type;
+  pg('transactions',document.querySelectorAll('.ni')[1]);
+  document.querySelectorAll('.ft').forEach(b=>b.classList.remove('active'));
+  applyF();
+}
 let curStatusF='ALL';
-function filterByStatus(status){curStatusF=status||'ALL';const qEl=document.getElementById('txQ');if(qEl)qEl.value='';pg('transactions',document.querySelectorAll('.ni')[1]);applyF();}
+function filterByStatus(status){
+  curStatusF=status||'ALL';
+  const stEl = document.getElementById('txStatus');
+  if(stEl) stEl.value = curStatusF;
+  const qEl=document.getElementById('txQ');
+  if(qEl)qEl.value='';
+  pg('transactions',document.querySelectorAll('.ni')[1]);
+  applyF();
+}
 
 // ════ CHARTS ════
-function drawLineChart(data){if(lChInst)lChInst.destroy();const labels=[],d0=[],d1=[],d2=[],d3=[],d4=[],d5=[];for(let i=6;i>=0;i--){const dt=new Date(Date.now()-i*86400000),lbl=`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;labels.push(lbl);// V.7.4.4: match both DD/MM prefix and full DD/MM/YYYY string after normalization
-const day=data.filter(r=>{const fd=fmtDate(r.date||'');return fd.startsWith(lbl+'/') || fd===lbl;});d0.push(day.filter(r=>/^IN$/i.test(r.type||'')).length);d1.push(day.filter(r=>/^STR\/IN$/i.test(r.type||'')).length);d2.push(day.filter(r=>/^OUT$/i.test(r.type||'')).length);d3.push(day.filter(r=>/^DISMANTLE$/i.test(r.type||'')).length);d4.push(day.filter(r=>/^STR\/OUT$/i.test(r.type||'')).length);d5.push(day.filter(r=>/^RETURN$/i.test(r.type||'')).length);}const mk=(label,data,color)=>({label,data,borderColor:color,backgroundColor:color+'22',tension:.4,fill:true,pointRadius:4,pointBackgroundColor:color,borderWidth:2});lChInst=new Chart(document.getElementById('lineChart').getContext('2d'),{type:'line',data:{labels,datasets:[mk('IN',d0,'#00c28a'),mk('STR/IN',d1,'#4d9fff'),mk('OUT',d2,'#ff4d6a'),mk('DISMANTLE',d3,'#b26dff'),mk('STR/OUT',d4,'#ff9f4d'),mk('RETURN',d5,'#ffd94d')]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'Sarabun',size:10}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'Sarabun'},stepSize:1},beginAtZero:true}}}});}
+function drawLineChart(data, periodDays = 7){
+  if(lChInst)lChInst.destroy();
+  const days = periodDays || chartTimeRange || 7;
+  const labels=[],d0=[],d1=[],d2=[],d3=[],d4=[],d5=[];
+  const step = days > 30 ? Math.ceil(days / 15) : (days > 14 ? 2 : 1);
+  for(let i=days-1;i>=0;i-=step){
+    const dt=new Date(Date.now()-i*86400000),lbl=`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
+    labels.push(lbl);
+    const day=data.filter(r=>{const fd=fmtDate(r.date||'');return fd.startsWith(lbl+'/') || fd===lbl;});
+    d0.push(day.filter(r=>/^IN$/i.test(r.type||'')).length);
+    d1.push(day.filter(r=>/^STR\/IN$/i.test(r.type||'')).length);
+    d2.push(day.filter(r=>/^OUT$/i.test(r.type||'')).length);
+    d3.push(day.filter(r=>/^DISMANTLE$/i.test(r.type||'')).length);
+    d4.push(day.filter(r=>/^STR\/OUT$/i.test(r.type||'')).length);
+    d5.push(day.filter(r=>/^RETURN$/i.test(r.type||'')).length);
+  }
+
+  const isLight = document.body.classList.contains('light-mode');
+  const gridColor = isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.04)';
+  const tickColor = isLight ? '#475569' : '#8892a4';
+
+  const hasData = (d0.concat(d1, d2, d3, d4, d5)).some(v => v > 0);
+  const emptyEl = document.getElementById('chartEmptyState');
+  if(emptyEl) emptyEl.style.display = hasData ? 'none' : 'flex';
+
+  const mk=(label,data,color)=>({label,data,borderColor:color,backgroundColor:color+'22',tension:.4,fill:true,pointRadius:days>30?2:4,pointBackgroundColor:color,borderWidth:2});
+  lChInst=new Chart(document.getElementById('lineChart').getContext('2d'),{
+    type:'line',
+    data:{labels,datasets:[mk('IN',d0,'#00c28a'),mk('STR/IN',d1,'#4d9fff'),mk('OUT',d2,'#ff4d6a'),mk('DISMANTLE',d3,'#b26dff'),mk('STR/OUT',d4,'#ff9f4d'),mk('RETURN',d5,'#ffd94d')]},
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor: isLight ? 'rgba(255,255,255,0.96)' : 'rgba(15,23,42,0.95)',
+          titleColor: isLight ? '#0f172a' : '#f8fafc',
+          bodyColor: isLight ? '#334155' : '#cbd5e1',
+          borderColor: isLight ? '#cbd5e1' : 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          padding: 10,
+          boxPadding: 4,
+          usePointStyle: true,
+          callbacks:{
+            label: function(ctx) { return ` ${ctx.dataset.label}: ${ctx.parsed.y} รายการ`; }
+          }
+        }
+      },
+      scales:{
+        x:{grid:{color:gridColor},ticks:{color:tickColor,font:{family:'Sarabun',size:10}}},
+        y:{grid:{color:gridColor},ticks:{color:tickColor,font:{family:'Sarabun'},stepSize:1},beginAtZero:true}
+      }
+    }
+  });
+}
 function drawRgChart(){if(rChInst)rChInst.destroy();const map={};TX.forEach(r=>{const rg=r.region||'?';map[rg]=(map[rg]||0)+1});const labels=Object.keys(map),vals=Object.values(map),colors=labels.map(l=>(RGCOL[l]||'#888')+'cc');rChInst=new Chart(document.getElementById('rgChart').getContext('2d'),{type:'bar',data:{labels,datasets:[{label:'รายการ',data:vals,backgroundColor:colors,borderColor:labels.map(l=>RGCOL[l]||'#888'),borderWidth:2,borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'Sarabun',size:12,weight:'bold'}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'Sarabun'}},beginAtZero:true}}}});}
 function renderActivity(data){document.getElementById('actList').innerHTML=data.slice(0,8).map((t,i)=>`<div class="ai"><span class="ab ${BADGE[t.type]||'b-in'}">${t.type}</span><div class="ai-info"><div class="ai-d">${t.duid}</div><div class="ai-m">${t.model||'-'} · ${t.code||''} · ${t.customer} · ${t.region}</div></div><div class="ai-t">${TAGO[i]||''}</div></div>`).join('');}
 function renderRgMini(data){const map={};data.forEach(r=>{const rg=r.region||'?';map[rg]=(map[rg]||0)+1});document.getElementById('rgMini').innerHTML=Object.entries(map).map(([r,n])=>`<div class="mc" onclick="setFAndGo('${r}')"><div class="m-lbl">${r}</div><div class="m-val" style="color:${RGCOL[r]||'#888'}">${n}</div><div class="m-sub">รายการ</div><div class="r-bar" style="background:${RGCOL[r]||'#888'}"></div></div>`).join('');}
 
 // ════ TABLE ════
 let txPage = 0;
-const TX_PAGE_SIZE = 50;
+let TX_PAGE_SIZE = 50;
 let txFiltered = [];
+
+function changePageSize(sz) {
+  TX_PAGE_SIZE = parseInt(sz, 10) || 50;
+  txPage = 0;
+  renderTable();
+}
+
+function resetAllFilters() {
+  const ids = ['txQ', 'txDateFrom', 'txDateTo'];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const sels = ['txCus', 'txReg', 'txType', 'txStatus', 'txIType', 'txActionReq'];
+  sels.forEach(id => { const el = document.getElementById(id); if (el) el.value = 'ALL'; });
+  curStatusF = 'ALL';
+  applyF();
+}
 
 function chgTxPage(d) {
   const total = txFiltered.length;
@@ -6063,10 +6608,15 @@ function addTx() {
 function setF(f,btn){ /* Deprecated by dropdowns */ }
 
 function applyF() {
-  const q = (document.getElementById('txQ')?.value || '').toLowerCase();
+  const q = (document.getElementById('txQ')?.value || '').toLowerCase().trim();
   const c = document.getElementById('txCus')?.value || 'ALL';
   const r = document.getElementById('txReg')?.value || 'ALL';
   const ty = document.getElementById('txType')?.value || 'ALL';
+  const st = document.getElementById('txStatus')?.value || curStatusF || 'ALL';
+  const it = document.getElementById('txIType')?.value || 'ALL';
+  const ar = document.getElementById('txActionReq')?.value || 'ALL';
+  const df = document.getElementById('txDateFrom')?.value || '';
+  const dt = document.getElementById('txDateTo')?.value || '';
   
   // V.7.4.4: Clean parseDateStrict — GAS now always returns DD/MM/YYYY
   function parseDateStrict(dStr) {
@@ -6102,11 +6652,11 @@ function applyF() {
       }
     }
     // Fallback: ISO or other parseable string (e.g. GMT strings left over)
-    const dt = new Date(s);
-    if (!isNaN(dt.getTime())) {
-      let y = dt.getFullYear();
+    const dObj = new Date(s);
+    if (!isNaN(dObj.getTime())) {
+      let y = dObj.getFullYear();
       if (y > 2500) y -= 543;
-      if (y >= 1900 && y <= 2200) return dt.getTime();
+      if (y >= 1900 && y <= 2200) return dObj.getTime();
     }
     return 0;
   }
@@ -6123,8 +6673,31 @@ function applyF() {
   if (c !== 'ALL') txFiltered = txFiltered.filter(t => t.customer === c);
   if (r !== 'ALL') txFiltered = txFiltered.filter(t => t.region === r);
   if (ty !== 'ALL') txFiltered = txFiltered.filter(t => (t.type||'').toUpperCase() === ty);
-  if (typeof curStatusF !== 'undefined' && curStatusF !== 'ALL') {
-    txFiltered = txFiltered.filter(t => (t.status||'').toLowerCase() === curStatusF.toLowerCase());
+  if (st !== 'ALL') {
+    txFiltered = txFiltered.filter(t => (t.status||'').toLowerCase() === st.toLowerCase());
+  }
+  if (it !== 'ALL') {
+    txFiltered = txFiltered.filter(t => (t.itype||'').toLowerCase() === it.toLowerCase());
+  }
+  if (ar === 'missing_sn') {
+    txFiltered = txFiltered.filter(t => {
+      const isClosed = /^(closed)$/i.test((t.status||'').trim());
+      const isTargetItem = /^(rru|dbs|boad|bbu|dc power)$/i.test((t.itype||'').trim()) ||
+                           /rru|dbs|bbu/i.test((t.model||'').trim());
+      return !isClosed && isTargetItem && isUnclearSN(t.sn);
+    });
+  } else if (ar === 'open_items') {
+    txFiltered = txFiltered.filter(t => /^(open|pending|on process)$/i.test((t.status||'').trim()));
+  }
+
+  if (df || dt) {
+    const fromTime = df ? new Date(df + 'T00:00:00').getTime() : 0;
+    const toTime = dt ? new Date(dt + 'T23:59:59').getTime() : Infinity;
+    txFiltered = txFiltered.filter(t => {
+      const txTime = parseDateStrict(t.date);
+      if (!txTime) return true;
+      return txTime >= fromTime && txTime <= toTime;
+    });
   }
   
   if (q) {
@@ -6133,7 +6706,14 @@ function applyF() {
       (t.bill||'').toLowerCase().includes(q) || 
       (t.model||'').toLowerCase().includes(q) || 
       (t.code||'').toLowerCase().includes(q) ||
-      (t.desc||'').toLowerCase().includes(q)
+      (t.desc||'').toLowerCase().includes(q) ||
+      (t.sn||'').toLowerCase().includes(q) ||
+      (t.ownerW||'').toLowerCase().includes(q) ||
+      (t.ownerR||'').toLowerCase().includes(q) ||
+      (t.locW||'').toLowerCase().includes(q) ||
+      (t.locR||'').toLowerCase().includes(q) ||
+      (t.intNo||'').toLowerCase().includes(q) ||
+      (t.userNm||'').toLowerCase().includes(q)
     );
   }
 
@@ -6159,7 +6739,8 @@ var modalPhotoArray = [];
 function openM(type){
   curAction=type;
   document.getElementById('mIcon').textContent=M_ICONS[type]||'📦';
-  document.getElementById('mTitle').textContent=`บันทึกรายการ ${type}`;
+  const tt=document.getElementById('mTitleText');
+  if(tt) tt.textContent=`บันทึกรายการ ${type}`; else document.getElementById('mTitle').textContent=`บันทึกรายการ ${type}`;
   document.getElementById('mSaveIcon').textContent=M_ICONS[type]||'🚀';
   document.getElementById('mSaveText').textContent=`บันทึก ${type}`;
   document.querySelectorAll('.tp').forEach(b=>b.className='tp');
@@ -7284,8 +7865,10 @@ let printRowsCache=[];
 function loadPrintData(){
   const q=(document.getElementById('printQ').value||'').trim().toLowerCase();
   if(!q){showToast('กรุณากรอก DUID หรือ Bill','warn');return}
-  const res=TX.filter(t=>(t.duid||'').toLowerCase()===q||(t.bill||'').toLowerCase()===q);
-  if(!res.length){showToast('ไม่พบข้อมูล','err');return}
+  // V.7.5.8: Support exact + partial match for DUID and Bill No.
+  let res=TX.filter(t=>(t.duid||'').toLowerCase()===q||(t.bill||'').toLowerCase()===q);
+  if(!res.length) res=TX.filter(t=>(t.duid||'').toLowerCase().includes(q)||(t.bill||'').toLowerCase().includes(q));
+  if(!res.length){showToast('ไม่พบข้อมูล — ลองพิมพ์ DUID หรือ Bill No. ให้ตรงกับข้อมูลที่บันทึก','err');return}
   printRowsCache=res;
   document.getElementById('printConfig').style.display='block';
   document.getElementById('pcCustomer').value=res[0].customer||'AIS';
@@ -7477,8 +8060,14 @@ function safeSetItem(k,v){try{localStorage.setItem(k,v);}catch(e){}}
 function safeRemoveItem(k){try{localStorage.removeItem(k);}catch(e){}}
 
 var _usersCache = null;
-var _isGAS = false;
-function checkIsGAS(){ return typeof google !== 'undefined' && typeof google.script !== 'undefined'; }
+function checkIsGAS(){
+  try {
+    return typeof google !== 'undefined' && typeof google.script !== 'undefined' && typeof google.script.run !== 'undefined' && !!google.script.run;
+  } catch(e) {
+    return false;
+  }
+}
+var _isGAS = checkIsGAS();
 
 function getLocalUsers(){
   if(_usersCache) return _usersCache;
@@ -7487,13 +8076,13 @@ function getLocalUsers(){
 function saveLocalUsers(u){
   _usersCache = u;
   safeSetItem('inv_users',JSON.stringify(u));
-  if(_isGAS){
+  if(checkIsGAS()){
     try{ google.script.run.saveUsersDB(JSON.stringify(u)); }catch(e){}
   }
 }
 
 function loadUsersFromServer(cb){
-  if(!_isGAS){ cb(getLocalUsers()); return; }
+  if(!checkIsGAS()){ cb(getLocalUsers()); return; }
   try{
     google.script.run
       .withSuccessHandler(function(raw){
@@ -7570,7 +8159,7 @@ function togglePw(inputId,btn){const inp=document.getElementById(inputId);if(inp
 function onRegEmailChange(){const sel=document.getElementById('regEmailSelect').value;document.getElementById('regCustomEmailWrap').style.display=(sel==='__new__')?'block':'none';}
 function checkPwStrength(pw){const bar=document.getElementById('pwStrengthBar'),txt=document.getElementById('pwStrengthText');let score=0;if(pw.length>=6)score++;if(pw.length>=10)score++;if(/[A-Z]/.test(pw))score++;if(/[0-9]/.test(pw))score++;if(/[^A-Za-z0-9]/.test(pw))score++;const levels=[{pct:'0%',color:'#e0e0e0',label:'— ความปลอดภัย Password —',txtColor:'#aaa'},{pct:'25%',color:'#e74c3c',label:'🔴 อ่อนแอมาก',txtColor:'#e74c3c'},{pct:'45%',color:'#e67e22',label:'🟠 อ่อน',txtColor:'#e67e22'},{pct:'65%',color:'#f1c40f',label:'🟡 ปานกลาง',txtColor:'#b8860b'},{pct:'85%',color:'#2ecc71',label:'🟢 แข็งแกร่ง',txtColor:'#1a7f40'},{pct:'100%',color:'#0d6efd',label:'💪 แข็งแกร่งมาก',txtColor:'#0043a8'}];const lv=levels[Math.min(score,5)];if(bar){bar.style.width=pw.length===0?'0%':lv.pct;bar.style.background=lv.color;}if(txt){txt.innerText=lv.label;txt.style.color=lv.txtColor;}}
 
-// ── DO LOGIN V.7.4.0 (Server-side verify)
+// ── DO LOGIN V.7.5.8 (Server-side verify with local/standalone fallback)
 async function doLogin(){
   clearAlert('loginAlert');
   const email=(document.getElementById('loginEmail').value||'').trim().toLowerCase();
@@ -7578,31 +8167,68 @@ async function doLogin(){
   if(!email){showAlert('loginAlert','⚠️ กรุณากรอก Email ก่อน');return;}
   if(!pw){showAlert('loginAlert','⚠️ กรุณากรอก Password');return;}
   const btn=document.getElementById('btnDoLogin');btn.disabled=true;btn.innerText='⏳ กำลังตรวจสอบ...';
-  const hashed=await sha256(pw);
-  google.script.run
-    .withSuccessHandler(function(res){
-      btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';
-      if(!res.success){
-        showAlert('loginAlert',res.message||'❌ เกิดข้อผิดพลาด');
-        document.getElementById('loginPassword').value='';
-        if(res.message&&res.message.indexOf('ลงทะเบียน')>-1)setTimeout(()=>switchLoginTab('register'),1800);
-        return;
-      }
-      currentUserEmail=email;currentUserName=res.name||email;
-      safeSetItem('inv_user_email',currentUserEmail);
-      safeSetItem('inv_user_name',currentUserName);
-      document.getElementById('loginModal').classList.remove('show');
-      updateSbUser();
-      showToast('✅ ยินดีต้อนรับ '+currentUserName,'ok');
-    })
-    .withFailureHandler(function(err){
-      btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';
-      showAlert('loginAlert','❌ ไม่สามารถเชื่อมต่อ Server: '+(err.message||err));
-    })
-    .loginUserOnServer(email,hashed);
+  
+  try {
+    const hashed=await sha256(pw);
+
+    // If running in local file or standalone mode without GAS environment:
+    if(!checkIsGAS()){
+      setTimeout(function(){
+        btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';
+        const users=getLocalUsers();
+        if(users && users[email] && users[email].hash && users[email].hash !== hashed){
+          showAlert('loginAlert','❌ รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
+          document.getElementById('loginPassword').value='';
+          return;
+        }
+        let displayName = (users && users[email] && users[email].name) ? users[email].name : '';
+        if(!displayName){
+          const userPart = email.split('@')[0];
+          displayName = userPart.charAt(0).toUpperCase() + userPart.slice(1);
+          if(!users[email]) users[email] = { name: displayName, hash: hashed };
+          saveLocalUsers(users);
+        }
+        currentUserEmail=email;
+        currentUserName=displayName;
+        safeSetItem('inv_user_email',currentUserEmail);
+        safeSetItem('inv_user_name',currentUserName);
+        document.getElementById('loginModal').classList.remove('show');
+        updateSbUser();
+        showToast('✅ เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ '+currentUserName,'ok');
+      }, 300);
+      return;
+    }
+
+    // Google Apps Script Production Environment
+    google.script.run
+      .withSuccessHandler(function(res){
+        btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';
+        if(!res || !res.success){
+          showAlert('loginAlert',(res && res.message)||'❌ เกิดข้อผิดพลาด');
+          document.getElementById('loginPassword').value='';
+          if(res && res.message && res.message.indexOf('ลงทะเบียน')>-1)setTimeout(()=>switchLoginTab('register'),1800);
+          return;
+        }
+        currentUserEmail=email;currentUserName=res.name||email;
+        safeSetItem('inv_user_email',currentUserEmail);
+        safeSetItem('inv_user_name',currentUserName);
+        document.getElementById('loginModal').classList.remove('show');
+        updateSbUser();
+        showToast('✅ ยินดีต้อนรับ '+currentUserName,'ok');
+      })
+      .withFailureHandler(function(err){
+        btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';
+        showAlert('loginAlert','❌ ไม่สามารถเชื่อมต่อ Server: '+(err && err.message ? err.message : err));
+      })
+      .loginUserOnServer(email,hashed);
+  } catch(err) {
+    btn.disabled=false;btn.innerText='🔑 เข้าสู่ระบบ';
+    console.error('Login error:', err);
+    showAlert('loginAlert','❌ เกิดข้อผิดพลาด: '+(err.message||err));
+  }
 }
 
-// ── DO REGISTER V.7.4.0 (Server-side save)
+// ── DO REGISTER V.7.5.8 (Server-side save with local/standalone fallback)
 async function doRegister(){
   clearAlert('registerAlert');
   const firstName=(document.getElementById('regFirstName').value||'').trim();
@@ -7617,60 +8243,102 @@ async function doRegister(){
   if(pw.length<6){showAlert('registerAlert','⚠️ Password ต้องมีอย่างน้อย 6 ตัวอักษร');return;}
   if(pw!==pwConf){showAlert('registerAlert','❌ Password ไม่ตรงกัน กรุณาลองใหม่');return;}
   const btn=document.getElementById('btnDoRegister');btn.disabled=true;btn.innerText='⏳ กำลังบันทึก...';
-  const hashed=await sha256(pw);
-  const fullName=firstName+' '+lastName;
-  google.script.run
-    .withSuccessHandler(function(res){
-      btn.disabled=false;btn.innerText='📝 ลงทะเบียน & เข้าสู่ระบบ';
-      if(!res.success){
-        showAlert('registerAlert',res.message||'❌ เกิดข้อผิดพลาด');
-        if(res.message&&res.message.indexOf('ลงทะเบียนไปแล้ว')>-1)setTimeout(()=>switchLoginTab('login'),1800);
-        return;
-      }
-      currentUserEmail=email;currentUserName=fullName;
-      safeSetItem('inv_user_email',currentUserEmail);
-      safeSetItem('inv_user_name',currentUserName);
-      document.getElementById('loginModal').classList.remove('show');
-      updateSbUser();
-      showToast('✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ '+fullName,'ok');
-    })
-    .withFailureHandler(function(err){
-      btn.disabled=false;btn.innerText='📝 ลงทะเบียน & เข้าสู่ระบบ';
-      showAlert('registerAlert','❌ ไม่สามารถเชื่อมต่อ Server: '+(err.message||err));
-    })
-    .registerUserOnServer(email,fullName,hashed);
+  
+  try {
+    const hashed=await sha256(pw);
+    const fullName=firstName+' '+lastName;
+
+    if(!checkIsGAS()){
+      setTimeout(function(){
+        btn.disabled=false;btn.innerText='📝 ลงทะเบียน & เข้าสู่ระบบ';
+        const users=getLocalUsers();
+        users[email] = { name: fullName, hash: hashed };
+        saveLocalUsers(users);
+        currentUserEmail=email;
+        currentUserName=fullName;
+        safeSetItem('inv_user_email',currentUserEmail);
+        safeSetItem('inv_user_name',currentUserName);
+        document.getElementById('loginModal').classList.remove('show');
+        updateSbUser();
+        showToast('✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ '+fullName,'ok');
+      }, 300);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(res){
+        btn.disabled=false;btn.innerText='📝 ลงทะเบียน & เข้าสู่ระบบ';
+        if(!res || !res.success){
+          showAlert('registerAlert',(res && res.message)||'❌ เกิดข้อผิดพลาด');
+          if(res && res.message && res.message.indexOf('ลงทะเบียนไปแล้ว')>-1)setTimeout(()=>switchLoginTab('login'),1800);
+          return;
+        }
+        currentUserEmail=email;currentUserName=fullName;
+        safeSetItem('inv_user_email',currentUserEmail);
+        safeSetItem('inv_user_name',currentUserName);
+        document.getElementById('loginModal').classList.remove('show');
+        updateSbUser();
+        showToast('✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ '+fullName,'ok');
+      })
+      .withFailureHandler(function(err){
+        btn.disabled=false;btn.innerText='📝 ลงทะเบียน & เข้าสู่ระบบ';
+        showAlert('registerAlert','❌ ไม่สามารถเชื่อมต่อ Server: '+(err && err.message ? err.message : err));
+      })
+      .registerUserOnServer(email,fullName,hashed);
+  } catch(err) {
+    btn.disabled=false;btn.innerText='📝 ลงทะเบียน & เข้าสู่ระบบ';
+    showAlert('registerAlert','❌ เกิดข้อผิดพลาด: '+(err.message||err));
+  }
 }
 
-// ── REQUEST OTP V.7.4.0
+// ── REQUEST OTP V.7.5.8
 function requestOtp(){
   clearAlert('resetAlert');
   const email=(document.getElementById('resetEmail').value||'').trim().toLowerCase();
   if(!email){showAlert('resetAlert','⚠️ กรุณากรอก Email ที่ลงทะเบียนก่อน');return;}
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showAlert('resetAlert','⚠️ รูปแบบ Email ไม่ถูกต้อง');return;}
   const btn=document.getElementById('btnRequestOtp');btn.disabled=true;btn.innerText='⏳ ส่ง...';
-  google.script.run
-    .withSuccessHandler(function(res){
+  
+  if(!checkIsGAS()){
+    setTimeout(function(){
       btn.disabled=false;btn.innerText='ขอ OTP';
-      if(!res.success){showAlert('resetAlert',res.message||'❌ เกิดข้อผิดพลาด');return;}
       document.getElementById('otpInputGroup').style.display='block';
       document.getElementById('btnDoReset').disabled=false;
+      document.getElementById('resetOtp').value='123456';
       document.getElementById('resetOtp').focus();
-      showAlert('resetAlert',res.message,'ok');
-      // countdown 5 นาที
-      var countdown=300;btn.disabled=true;
-      var timer=setInterval(function(){
-        countdown--;btn.innerText='ส่งใหม่ ('+countdown+'s)';
-        if(countdown<=0){clearInterval(timer);btn.disabled=false;btn.innerText='ขอ OTP';}
-      },1000);
-    })
-    .withFailureHandler(function(err){
-      btn.disabled=false;btn.innerText='ขอ OTP';
-      showAlert('resetAlert','❌ ไม่สามารถเชื่อมต่อ Server: '+(err.message||err));
-    })
-    .requestResetOtp(email);
+      showAlert('resetAlert','✅ โหมดจำลอง: OTP คือ 123456 (กรอกให้อัตโนมัติแล้ว)','ok');
+    }, 400);
+    return;
+  }
+
+  try {
+    google.script.run
+      .withSuccessHandler(function(res){
+        btn.disabled=false;btn.innerText='ขอ OTP';
+        if(!res || !res.success){showAlert('resetAlert',(res && res.message)||'❌ เกิดข้อผิดพลาด');return;}
+        document.getElementById('otpInputGroup').style.display='block';
+        document.getElementById('btnDoReset').disabled=false;
+        document.getElementById('resetOtp').focus();
+        showAlert('resetAlert',res.message,'ok');
+        // countdown 5 นาที
+        var countdown=300;btn.disabled=true;
+        var timer=setInterval(function(){
+          countdown--;btn.innerText='ส่งใหม่ ('+countdown+'s)';
+          if(countdown<=0){clearInterval(timer);btn.disabled=false;btn.innerText='ขอ OTP';}
+        },1000);
+      })
+      .withFailureHandler(function(err){
+        btn.disabled=false;btn.innerText='ขอ OTP';
+        showAlert('resetAlert','❌ ไม่สามารถเชื่อมต่อ Server: '+(err && err.message ? err.message : err));
+      })
+      .requestResetOtp(email);
+  } catch(err) {
+    btn.disabled=false;btn.innerText='ขอ OTP';
+    showAlert('resetAlert','❌ เกิดข้อผิดพลาด: '+(err.message||err));
+  }
 }
 
-// ── DO RESET PASSWORD V.7.4.0 (OTP verify)
+// ── DO RESET PASSWORD V.7.5.8 (OTP verify)
 async function doReset(){
   clearAlert('resetAlert');
   const email=(document.getElementById('resetEmail').value||'').trim().toLowerCase();
@@ -7680,26 +8348,52 @@ async function doReset(){
   if(!otp||otp.length!==6){showAlert('resetAlert','⚠️ กรุณากรอกรหัส OTP 6 หลัก');return;}
   if(pw.length<6){showAlert('resetAlert','⚠️ Password ต้องมีอย่างน้อย 6 ตัวอักษร');return;}
   const btn=document.getElementById('btnDoReset');btn.disabled=true;btn.innerText='⏳ กำลังยืนยัน...';
-  const hashed=await sha256(pw);
-  google.script.run
-    .withSuccessHandler(function(res){
-      btn.disabled=false;btn.innerText='🔄 ยืนยันและรีเซ็ตรหัสผ่าน';
-      if(!res.success){showAlert('resetAlert',res.message||'❌ เกิดข้อผิดพลาด');return;}
-      showAlert('resetAlert','✅ รีเซ็ตรหัสผ่านสำเร็จ! กำลังเข้าสู่ระบบ...','ok');
-      setTimeout(()=>{
-        document.getElementById('loginEmail').value=email;
-        document.getElementById('loginPassword').value='';
-        document.getElementById('otpInputGroup').style.display='none';
-        document.getElementById('resetOtp').value='';
-        document.getElementById('btnDoReset').disabled=true;
-        switchLoginTab('login');
-      },1800);
-    })
-    .withFailureHandler(function(err){
-      btn.disabled=false;btn.innerText='🔄 ยืนยันและรีเซ็ตรหัสผ่าน';
-      showAlert('resetAlert','❌ ไม่สามารถเชื่อมต่อ Server: '+(err.message||err));
-    })
-    .verifyOtpAndResetPassword(email,otp,hashed);
+  
+  try {
+    const hashed=await sha256(pw);
+
+    if(!checkIsGAS()){
+      setTimeout(function(){
+        btn.disabled=false;btn.innerText='🔄 ยืนยันและรีเซ็ตรหัสผ่าน';
+        const users=getLocalUsers();
+        if(users[email]){ users[email].hash=hashed; } else { users[email]={ name: email.split('@')[0], hash: hashed }; }
+        saveLocalUsers(users);
+        showAlert('resetAlert','✅ รีเซ็ตรหัสผ่านสำเร็จ! กำลังเข้าสู่ระบบ...','ok');
+        setTimeout(()=>{
+          document.getElementById('loginEmail').value=email;
+          document.getElementById('loginPassword').value='';
+          document.getElementById('otpInputGroup').style.display='none';
+          document.getElementById('resetOtp').value='';
+          document.getElementById('btnDoReset').disabled=true;
+          switchLoginTab('login');
+        },1200);
+      }, 400);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(res){
+        btn.disabled=false;btn.innerText='🔄 ยืนยันและรีเซ็ตรหัสผ่าน';
+        if(!res || !res.success){showAlert('resetAlert',(res && res.message)||'❌ เกิดข้อผิดพลาด');return;}
+        showAlert('resetAlert','✅ รีเซ็ตรหัสผ่านสำเร็จ! กำลังเข้าสู่ระบบ...','ok');
+        setTimeout(()=>{
+          document.getElementById('loginEmail').value=email;
+          document.getElementById('loginPassword').value='';
+          document.getElementById('otpInputGroup').style.display='none';
+          document.getElementById('resetOtp').value='';
+          document.getElementById('btnDoReset').disabled=true;
+          switchLoginTab('login');
+        },1800);
+      })
+      .withFailureHandler(function(err){
+        btn.disabled=false;btn.innerText='🔄 ยืนยันและรีเซ็ตรหัสผ่าน';
+        showAlert('resetAlert','❌ ไม่สามารถเชื่อมต่อ Server: '+(err && err.message ? err.message : err));
+      })
+      .verifyOtpAndResetPassword(email,otp,hashed);
+  } catch(err) {
+    btn.disabled=false;btn.innerText='🔄 ยืนยันและรีเซ็ตรหัสผ่าน';
+    showAlert('resetAlert','❌ เกิดข้อผิดพลาด: '+(err.message||err));
+  }
 }
 
 function promptChangeUser(){
@@ -7718,6 +8412,11 @@ function initDashboard() {
   if(pgSubEl) pgSubEl.textContent='วันที่ '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
   if(document.getElementById('duidQ')) document.getElementById('duidQ').addEventListener('keydown',e=>{if(e.key==='Enter')srchDuid();});
   document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap')&&!e.target.closest('.fbtn-srch')&&!e.target.closest('.fi')){hideDrop('duid');hideDrop('bill');}});
+  
+  const lp = document.getElementById('loginPassword');
+  if(lp) lp.addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+  const le = document.getElementById('loginEmail');
+  if(le) le.addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
   
   // ─── Load user session first ───
   loadCurrentUser();
@@ -8230,6 +8929,9 @@ function setTheme(theme) {
     btn.textContent = THEME_ICONS[theme] || '☀️';
     btn.title = THEME_LABELS[theme] || 'สลับโหมด';
   }
+  if (typeof drawLineChart === 'function' && typeof TX !== 'undefined' && TX && TX.length) {
+    try { drawLineChart(TX, chartTimeRange); } catch(e){}
+  }
 }
 
 // Load theme on startup
@@ -8265,28 +8967,31 @@ function logoutUser() {
   </div>
 </div>
 <!-- ══ Dashboard Item Code Search Modal ══ -->
-<div id="dashItemSearchModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);align-items:flex-end;justify-content:center">
-  <div style="background:#1e2235;border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,0.5)">
+<div id="dashItemSearchModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeDashItemSearch()">
+  <div style="background:#181b2a;border:1px solid #2a2e45;border-radius:20px;width:100%;max-width:540px;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.7);overflow:hidden">
     <!-- Header -->
-    <div style="padding:16px 18px 12px;border-bottom:1px solid #2a2d3e;display:flex;align-items:center;gap:10px">
-      <span style="font-size:20px">🔍</span>
+    <div style="padding:16px 20px 14px;border-bottom:1px solid #25283b;display:flex;align-items:center;gap:12px;background:#181b2a">
+      <span style="font-size:20px;line-height:1">🔍</span>
       <div style="flex:1">
-        <div style="font-weight:700;color:#e2e8f0;font-size:15px">ค้นหา Item Code / Model</div>
-        <div style="font-size:11px;color:#64748b">พิมพ์ Model / Code / Description เพื่อค้นหา</div>
+        <div style="font-weight:700;color:#f1f5f9;font-size:15px;letter-spacing:.2px">ค้นหา Item Code / Model</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px">พิมพ์ Model / Code / Description เพื่อค้นหา</div>
       </div>
-      <button onclick="closeDashItemSearch()" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;line-height:1">✕</button>
+      <button onclick="closeDashItemSearch()" type="button" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;line-height:1;padding:4px;border-radius:6px" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#94a3b8'">✕</button>
     </div>
     <!-- Search Input -->
-    <div style="padding:12px 16px;border-bottom:1px solid #2a2d3e">
-      <input id="dashItemSearchInput" type="text" placeholder="🔎  พิมพ์เพื่อค้นหา..."
-        oninput="renderDashItemSearch(this.value)"
-        style="width:100%;padding:10px 14px;background:#0f1120;border:1.5px solid #6366f1;border-radius:12px;color:#e2e8f0;font-size:14px;font-family:'Sarabun',sans-serif;outline:none;box-sizing:border-box">
+    <div style="padding:12px 18px;border-bottom:1px solid #25283b;background:#131625">
+      <div style="position:relative;display:flex;align-items:center">
+        <span style="position:absolute;left:14px;font-size:14px;pointer-events:none;color:#94a3b8">🔎</span>
+        <input id="dashItemSearchInput" type="text" placeholder="พิมพ์เพื่อค้นหา..."
+          oninput="renderDashItemSearch(this.value)"
+          style="width:100%;padding:10px 14px 10px 38px;background:#0d0f1b;border:1.5px solid #6366f1;border-radius:12px;color:#f8fafc;font-size:14px;font-family:'Sarabun',sans-serif;outline:none;box-sizing:border-box;box-shadow:0 0 0 2px rgba(99,102,241,0.2)">
+      </div>
     </div>
     <!-- Results List -->
-    <div id="dashItemSearchList" style="overflow-y:auto;flex:1;padding:4px 0"></div>
+    <div id="dashItemSearchList" style="overflow-y:auto;flex:1;max-height:55vh;padding:4px 0"></div>
     <!-- Cancel -->
-    <div style="padding:12px 16px;border-top:1px solid #2a2d3e">
-      <button onclick="closeDashItemSearch()" style="width:100%;padding:11px;background:#2a2d3e;color:#94a3b8;border:none;border-radius:12px;font-size:14px;font-family:'Sarabun',sans-serif;cursor:pointer">ยกเลิก</button>
+    <div style="padding:12px 18px;border-top:1px solid #25283b;background:#181b2a">
+      <button onclick="closeDashItemSearch()" type="button" style="width:100%;padding:11px;background:#252a40;color:#cbd5e1;border:1px solid #333956;border-radius:12px;font-size:14px;font-weight:600;font-family:'Sarabun',sans-serif;cursor:pointer;transition:all .15s" onmouseover="this.style.background='#2d3450'" onmouseout="this.style.background='#252a40'">ยกเลิก</button>
     </div>
   </div>
 </div>

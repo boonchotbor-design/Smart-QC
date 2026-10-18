@@ -1,5 +1,5 @@
 /*
- * Inventory Smart System - V.7.5.7
+ * Inventory Smart System - V.7.5.8
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
@@ -21,6 +21,10 @@
  * V.7.5.7: BOM Sync Fix & Draggable/Minimizable Modal —
  *          Fixed BOM sync (BOM AIS & BOM TRUE) with dynamic column header mapping, robust type conversion & API endpoints;
  *          Added move (draggable) & collapse/minimize (ย่อ) modal window for form modal in dashboard.
+ * V.7.5.8: Executive UI & Dashboard Features Integration —
+ *          Integrated 8 Executive KPI Cards (Total Records, Active DUIDs, IN, OUT, DISMANTLE, Store Transfers, Returns, Pending Items);
+ *          Added time-range filtering (7 Days, 30 Days, 90 Days) to Inventory Movement chart;
+ *          Added Action Required alert system for missing Serial Numbers & open balance tracking while preserving 100% existing backend and workflow logic.
  */
 
 var SPREADSHEET_ID      = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -70,13 +74,13 @@ function doGet(e) {
 
   if (e.parameter.page === "dashboard") {
     return HtmlService.createTemplateFromFile('dashboard').evaluate()
-      .setTitle('Inventory Dashboard V.7.5.7')
+      .setTitle('Inventory Dashboard V.7.5.8')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-    .setTitle('Inventory Smart App V.7.5.7')
+    .setTitle('Inventory Smart App V.7.5.8')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

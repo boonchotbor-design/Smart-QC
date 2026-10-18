@@ -1,4 +1,4 @@
-# 📦 Inventory Smart System (V.7.5.7)
+# 📦 Inventory Smart System (V.7.5.8)
 
 Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE/NT) using Web App (Bootstrap UI & Dashboard) and Telegram Bot with AI OCR capabilities.
 
@@ -36,11 +36,13 @@ Project Context: A Google Apps Script application for managing hardware inventor
 - "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
 - "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
 
-## 🐞 Bug Fixes & Stability (V.7.5.7)
-- **BOM Sync Fix (BOM AIS & BOM TRUE)**: Fixed issue where BOM data updated in Google Sheet did not sync into the UX UI. Rewrote `getBOMData` and `saveBOMData` in `code.gs` to dynamically map headers (`Type`, `Model`, `Item Code`/`Code`, `Item Description`/`Description`/`Desc`), handle uppercase/lowercase customer names (`AIS`/`TRUE`), prevent empty model filtering errors, and added doGet/doPost action endpoints (`action: "getBOM"`, `action: "saveBOM"`).
-- **Auto-Sync & Standalone BOM Support**: In `dashboard.html`, added auto-sync on page navigation (`openBomPage`), table re-rendering upon data load, and standalone fetch fallback via Web App URL so BOM works seamlessly both inside Google Apps Script and standalone.
-- **Draggable & Minimizable Modal (Move & ย่อ)**: Added full drag-and-drop capability (mouse and touch) to the item record modal header (`#modalHeader`) allowing users to move the modal window freely anywhere across the viewport. Added a dedicated minimize button (`🗕` / `🗖`) and header double-click shortcut to collapse/minimize the modal into a compact bottom-right floating pill, letting users see and interact with the underlying dashboard while keeping form progress intact.
-- **Version Sync**: Synchronized all versions to V.7.5.7 across `code.gs`, `dashboard.html`, and documentation.
+## 🐞 Bug Fixes & Stability (V.7.5.8)
+- **Dual GAS & Local Preview Authentication**: Resolved issue where opening `dashboard.html` or `app.html` locally (`file:///` or standalone preview server) threw an uncaught error when calling `google.script.run`, causing the login button to freeze indefinitely on `"⌛ กำลังตรวจสอบ..."`. Added robust runtime environment detection (`checkIsGAS()`) with local credential/storage fallback for offline preview and try/catch wrapped server verification on Google Apps Script production.
+- **Executive UI & Dashboard Features Integration**: Integrated 8 Executive KPI Cards (`#kTotal`, `#kDuid`, `#kIn`, `#kOut`, `#kDis`, `#kStr`, `#kRet`, `#kPend` with `#kOpen` and `#kClosed`) into `dashboard.html`, maintaining 100% backward compatibility with existing element IDs and Google Apps Script backend functions.
+- **Timeline Range Filtering**: Added dynamic time-range filter pills (7 วัน, 30 วัน, 90 วัน) to the Inventory Movement line chart (`drawLineChart`) allowing managers to observe daily hardware trends across custom time horizons.
+- **Action Required Panel**: Added alert system for missing Serial Numbers (`Missing Serial Numbers` on active equipment RRU/DBS/BOAD) and pending items with one-click direct table filtering (`filterMissingSN()`, `filterByStatus('Open')`).
+- **Codebase Pattern Preservation**: Preserved all original backend functions (`google.script.run`, `syncFromURL`, `saveMainData`, `saveImportData`, `getBOMData`, `saveBOMData`, `loginGuard`, `doLogin`, `printTeloneerForm`), keeping core logic and workflows completely intact while upgrading UI features.
+- **Version Sync**: Synchronized all versions to V.7.5.8 across `code.gs`, `dashboard.html`, and documentation.
 
 ## 🐞 Bug Fixes & Stability (V.7.5.6)
 - **Full Export Support (All Customers & No User)**: Enhanced `exportSheetData` and `doExport` to support exporting all data (`ALL`) combining records across all operators (AIS, TRUE, NT) and preserving all rows without DUID or User (`No User`).
