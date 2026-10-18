@@ -520,7 +520,7 @@ tbody td{padding:10px 12px;font-size:11.5px;vertical-align:middle;white-space:no
     <div class="tb-left"><button id="hbg" onclick="tSb()">☰</button><div><div class="pg-title" id="pgTitle">📊 Dashboard</div><div class="pg-sub" id="pgSub">กำลังโหลด...</div></div></div>
     <div class="tb-right">
       <button class="tbtn no-print" id="lightModeBtn" onclick="toggleLightMode()" title="สลับโหมด Light/Dark" style="border-radius:50%;padding:7px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px">☀️</button>
-      <button class="tbtn no-print" onclick="syncNow()">🔄 <span>Sync</span></button>
+      <button id="topSyncBtn" class="tbtn no-print" onclick="syncNow()">🔄 <span>Sync</span></button>
       <button class="tbtn b no-print" onclick="pg('import',document.querySelectorAll('.ni')[3])">📂 <span>Import</span></button>
       <button class="tbtn g no-print" onclick="openM('IN')">➕ <span>บันทึก</span></button>
     </div>
@@ -7248,38 +7248,68 @@ function updateModalPhotoStatus(){
 
 // ════ SYNC & IMPORT ════
 async function syncNow() {
+  const syncBtn = document.getElementById('topSyncBtn');
+  if (syncBtn) {
+    syncBtn.disabled = true;
+    syncBtn.innerHTML = '⏳ <span>กำลัง Sync...</span>';
+  }
+  showImportBar('⏳ กำลัง Sync ข้อมูลจาก Google Sheets กรุณารอสักครู่...');
+  showToast('⏳ กำลังดึงข้อมูลล่าสุดจาก Google Sheets...', 'info');
+
+  const resetSyncBtn = () => {
+    if (syncBtn) {
+      syncBtn.disabled = false;
+      syncBtn.innerHTML = '🔄 <span>Sync</span>';
+    }
+  };
+
   // ถ้าอยู่บน GAS ให้ใช้ google.script.run โดยตรง (เร็วและไม่ติด CORS)
   if (checkIsGAS()) {
     showProg(true, 'กำลัง Sync จาก GAS...', 30);
-    document.getElementById('syncStatus').textContent = 'กำลัง Sync...';
+    const syncStatusEl = document.getElementById('syncStatus');
+    if (syncStatusEl) syncStatusEl.textContent = 'กำลัง Sync...';
+
     google.script.run
       .withSuccessHandler(function(data) {
+        resetSyncBtn();
         if (!data || !data.success) {
           showToast('❌ Sync ล้มเหลว: ' + (data && data.message || 'No data'), 'err');
           showProg(false);
-          document.getElementById('syncStatus').textContent = '❌ Sync ล้มเหลว';
+          if (syncStatusEl) syncStatusEl.textContent = '❌ Sync ล้มเหลว';
+          showImportBar('❌ Sync ล้มเหลว: ' + (data && data.message || 'No data'));
           return;
         }
-        TX = (data.recent || []).map(function(r, i) { r._sheetOrder = i; return r; });
-        recalculateAllStatusJS();
-        refreshDash(TX);
-        isLiveData = true;
-        showImportBar(`🔗 GAS Live: ${TX.length} รายการ | อัปเดต: ${new Date().toLocaleTimeString('th-TH')}`);
-        showProg(false);
-        showToast(`✅ Sync สำเร็จ! ${TX.length} รายการ`, 'ok');
-        document.getElementById('syncBadge').textContent = '● Live';
-        document.getElementById('syncBadge').className = 'sync-badge sync-live';
-        document.getElementById('syncStatus').textContent = `✅ Sync สำเร็จ ${TX.length} รายการ — ${new Date().toLocaleTimeString('th-TH')}`;
+        try {
+          TX = (data.recent || []).map(function(r, i) { r._sheetOrder = i; return r; });
+          recalculateAllStatusJS();
+          refreshDash(TX);
+          isLiveData = true;
+          showImportBar(`🔗 GAS Live: ${TX.length} รายการ | อัปเดต: ${new Date().toLocaleTimeString('th-TH')}`);
+          showProg(false);
+          showToast(`✅ Sync สำเร็จ! ${TX.length} รายการ`, 'ok');
+          const badge = document.getElementById('syncBadge');
+          if (badge) { badge.textContent = '● Live'; badge.className = 'sync-badge sync-live'; }
+          if (syncStatusEl) syncStatusEl.textContent = `✅ Sync สำเร็จ ${TX.length} รายการ — ${new Date().toLocaleTimeString('th-TH')}`;
+        } catch(renderErr) {
+          console.error('Render error after sync:', renderErr);
+          showToast('⚠️ Sync ข้อมูลมาแล้วแต่แสดงผลติดขัด: ' + renderErr.message, 'warn');
+          showImportBar(`⚠️ ได้ข้อมูล ${TX.length} รายการ แต่พบ error: ` + renderErr.message);
+        }
       })
       .withFailureHandler(function(err) {
+        resetSyncBtn();
         showToast('❌ GAS Error: ' + err.message, 'err');
         showProg(false);
-        document.getElementById('syncStatus').textContent = '❌ GAS Error: ' + err.message;
+        if (syncStatusEl) syncStatusEl.textContent = '❌ GAS Error: ' + err.message;
+        showImportBar('❌ ดึงข้อมูลจาก GAS ไม่สำเร็จ: ' + err.message);
       })
       .getDashboardData();
   } else {
-    // Standalone / localhost mode: ใช้ URL จาก apiUrlInput
-    await syncFromURL();
+    try {
+      await syncFromURL();
+    } finally {
+      resetSyncBtn();
+    }
   }
 }
 
@@ -8485,34 +8515,37 @@ window.addEventListener('load', function(){
 
 function syncFromGAS(){
   if(!_isGAS) return;
-  google.script.run.withSuccessHandler(function(data){
-    if(!data.success)return;
-    TX=(data.recent||[]).map(function(r,i){ r._sheetOrder=i; return r; });
-    recalculateAllStatusJS();
-    refreshDash(TX);
+  google.script.run
+    .withSuccessHandler(function(data){
+      if(!data || !data.success){
+        showImportBar('❌ โหลดข้อมูลจาก GAS ไม่สำเร็จ: ' + (data && data.message || 'No data'));
+        return;
+      }
+      try {
+        TX=(data.recent||[]).map(function(r,i){ r._sheetOrder=i; return r; });
+        recalculateAllStatusJS();
+        refreshDash(TX);
 
-    // ✅ FIX: อัปเดตวันที่ใน header ทุกครั้งที่ Sync
-    var pgSubEl = document.getElementById('pgSub');
-    if(pgSubEl){
-      var d=new Date();
-      pgSubEl.textContent='วันที่ '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
-    }
-    showImportBar(`🔗 GAS Live: ${TX.length} รายการ | อัปเดต: ${new Date().toLocaleTimeString('th-TH')}`);
-
-    // ✅ V.7.4.3: Push status ที่ recalculate แล้วกลับไป save ใน Sheet
-    // สร้าง map: { duid: { customer, rows:[{rowIndex, status}] } }
-    const statusUpdates = {};
-    TX.forEach((r, i) => {
-      if(!r.duid) return;
-      const key = r.duid.toUpperCase() + '|' + (r.customer||'AIS').toUpperCase();
-      if(!statusUpdates[key]) statusUpdates[key] = { duid: r.duid, customer: (r.customer||'AIS').toUpperCase() };
-    });
-    // เรียก GAS ให้ recalculate ใน Sheet ด้วย logic ล่าสุด
-    google.script.run.withSuccessHandler(function(res){
-      if(res && res.msg) showImportBar(`🔗 GAS Live: ${TX.length} รายการ | อัปเดต: ${new Date().toLocaleTimeString('th-TH')} ✅ Status sync`);
-    }).recalculateAllDuidStatuses();
-
-  }).getDashboardData();
+        // ✅ FIX: อัปเดตวันที่ใน header ทุกครั้งที่ Sync
+        var pgSubEl = document.getElementById('pgSub');
+        if(pgSubEl){
+          var d=new Date();
+          pgSubEl.textContent='วันที่ '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
+        }
+        showImportBar(`🔗 GAS Live: ${TX.length} รายการ | อัปเดต: ${new Date().toLocaleTimeString('th-TH')}`);
+        var badge = document.getElementById('syncBadge');
+        if (badge) { badge.textContent = '● Live'; badge.className = 'sync-badge sync-live'; }
+      } catch(renderErr) {
+        console.error('Error in syncFromGAS rendering:', renderErr);
+        showImportBar(`⚠️ โหลดข้อมูลได้ ${TX.length} รายการ แต่แสดงผลติดขัด: ` + renderErr.message);
+      }
+    })
+    .withFailureHandler(function(err){
+      console.error('syncFromGAS failure:', err);
+      showImportBar('❌ ไม่สามารถเชื่อมต่อกับ GAS: ' + err.message);
+      showToast('❌ โหลดข้อมูลเริ่มต้นไม่สำเร็จ: ' + err.message, 'err');
+    })
+    .getDashboardData();
   
   // V.7.5.7: Auto-sync BOM from Google Sheet on every dashboard sync
   google.script.run
