@@ -6111,6 +6111,49 @@ function pg(id,el){
 function tSb(){document.getElementById('sb').classList.toggle('open');document.getElementById('sbov').classList.toggle('show')}
 function cSb(){document.getElementById('sb').classList.remove('open');document.getElementById('sbov').classList.remove('show')}
 
+// ════ DATE UTILS ════
+function parseDateStrict(dStr) {
+  if (!dStr) return 0;
+  let s = String(dStr).trim();
+  if (!s) return 0;
+  // Excel serial number
+  if (!isNaN(s) && Number(s) > 30000 && Number(s) < 70000) {
+    return Math.round((Number(s) - 25569) * 86400 * 1000);
+  }
+  // DD/MM/YYYY or MM/DD/YYYY (canonical format after normalization)
+  if (s.includes('/')) {
+    const parts = s.split(/\s+/);
+    const p = parts[0].split('/');
+    if (p.length === 3) {
+      let p0 = parseInt(p[0], 10);
+      let p1 = parseInt(p[1], 10);
+      let yyyy = parseInt(p[2], 10);
+      if (yyyy > 2500) yyyy -= 543;
+      if (!isNaN(p0) && !isNaN(p1) && !isNaN(yyyy) && yyyy >= 1900 && yyyy <= 2200) {
+        let dd, mm;
+        if (p0 > 12)      { dd = p0; mm = p1; }  // Definitely DD/MM/YYYY
+        else if (p1 > 12) { dd = p1; mm = p0; }  // Definitely MM/DD/YYYY -> swap
+        else              { dd = p0; mm = p1; }  // Both <= 12: trust DD/MM/YYYY
+        // Add HH:MM if present for same-day ordering
+        let hh = 0, min = 0;
+        if (parts[1]) {
+          const tp = parts[1].split(':');
+          hh = parseInt(tp[0]||0,10); min = parseInt(tp[1]||0,10);
+        }
+        return new Date(yyyy, mm - 1, dd, hh, min).getTime();
+      }
+    }
+  }
+  // Fallback: ISO or other parseable string (e.g. GMT strings left over)
+  const dObj = new Date(s);
+  if (!isNaN(dObj.getTime())) {
+    let y = dObj.getFullYear();
+    if (y > 2500) y -= 543;
+    if (y >= 1900 && y <= 2200) return dObj.getTime();
+  }
+  return 0;
+}
+
 // ════ KPI ════
 function countUp(el,n,dur=700){if(!el)return;let s=0,step=Math.max(1,Math.ceil(n/(dur/16)));const t=setInterval(()=>{s=Math.min(s+step,n);el.textContent=s;if(s>=n)clearInterval(t)},16)}
 function calcKPI(data){
@@ -6618,49 +6661,6 @@ function applyF() {
   const ar = document.getElementById('txActionReq')?.value || 'ALL';
   const df = document.getElementById('txDateFrom')?.value || '';
   const dt = document.getElementById('txDateTo')?.value || '';
-  
-  // V.7.4.4: Clean parseDateStrict — GAS now always returns DD/MM/YYYY
-  function parseDateStrict(dStr) {
-    if (!dStr) return 0;
-    let s = String(dStr).trim();
-    if (!s) return 0;
-    // Excel serial number
-    if (!isNaN(s) && Number(s) > 30000 && Number(s) < 70000) {
-      return Math.round((Number(s) - 25569) * 86400 * 1000);
-    }
-    // DD/MM/YYYY or MM/DD/YYYY (canonical format after normalization)
-    if (s.includes('/')) {
-      const parts = s.split(/\s+/);
-      const p = parts[0].split('/');
-      if (p.length === 3) {
-        let p0 = parseInt(p[0], 10);
-        let p1 = parseInt(p[1], 10);
-        let yyyy = parseInt(p[2], 10);
-        if (yyyy > 2500) yyyy -= 543;
-        if (!isNaN(p0) && !isNaN(p1) && !isNaN(yyyy) && yyyy >= 1900 && yyyy <= 2200) {
-          let dd, mm;
-          if (p0 > 12)      { dd = p0; mm = p1; }  // Definitely DD/MM/YYYY
-          else if (p1 > 12) { dd = p1; mm = p0; }  // Definitely MM/DD/YYYY -> swap
-          else              { dd = p0; mm = p1; }  // Both <= 12: trust DD/MM/YYYY
-          // Add HH:MM if present for same-day ordering
-          let hh = 0, min = 0;
-          if (parts[1]) {
-            const tp = parts[1].split(':');
-            hh = parseInt(tp[0]||0,10); min = parseInt(tp[1]||0,10);
-          }
-          return new Date(yyyy, mm - 1, dd, hh, min).getTime();
-        }
-      }
-    }
-    // Fallback: ISO or other parseable string (e.g. GMT strings left over)
-    const dObj = new Date(s);
-    if (!isNaN(dObj.getTime())) {
-      let y = dObj.getFullYear();
-      if (y > 2500) y -= 543;
-      if (y >= 1900 && y <= 2200) return dObj.getTime();
-    }
-    return 0;
-  }
 
   // V.7.4.5: Sort by _sheetOrder ascending (= Google Sheet row order)
   // _sheetOrder=0 → row 2 of sheet = most recently inserted record (saveMainData inserts at row 2)
