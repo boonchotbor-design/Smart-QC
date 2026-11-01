@@ -1665,13 +1665,17 @@
       });
       // Update submit button
       const icon = TX_ICONS[type] || '📦';
-      document.getElementById('modal-submit-icon').textContent = icon;
-      document.getElementById('modal-submit-label').textContent = 'บันทึก ' + type;
+      const submitIcon = document.getElementById('modal-submit-icon');
+      if (submitIcon) submitIcon.textContent = icon;
+      const submitLabel = document.getElementById('modal-submit-label');
+      if (submitLabel) submitLabel.textContent = 'บันทึก ' + type;
       const submitBtn = document.getElementById('btn-modal-next');
-      if (submitBtn) submitBtn.style = TX_BTN_COLORS[type] + '; flex:2;';
+      if (submitBtn) submitBtn.style = (TX_BTN_COLORS[type] || '') + '; flex:2;';
       // Update modal title
-      document.getElementById('modal-title').textContent = 'บันทึกรายการ ' + type;
-      document.getElementById('modal-action-icon').textContent = icon;
+      const modalTitle = document.getElementById('modal-title');
+      if (modalTitle) modalTitle.textContent = 'บันทึกรายการ ' + type;
+      const actionIcon = document.getElementById('modal-action-icon');
+      if (actionIcon) actionIcon.textContent = icon;
     }
 
     // ── MASTER BOM CATALOG for Item Search & Dropdowns (Screenshot 1, 3, 4) ──
@@ -1819,6 +1823,19 @@
     }
 
     function removeModalItem(idx) {
+      const container = document.getElementById('modal-items-container');
+      const items = container ? container.querySelectorAll('[id^="modal-item-"]') : [];
+      if (items.length <= 1) {
+        const el = document.getElementById('modal-item-' + idx);
+        if (el) {
+          el.querySelectorAll('input').forEach(inp => {
+            if (inp.type === 'number') inp.value = '1';
+            else inp.value = '';
+          });
+        }
+        showToast('ล้างข้อมูลสินค้าเรียบร้อย', 'info');
+        return;
+      }
       const el = document.getElementById('modal-item-' + idx);
       if (el) el.remove();
       modalItemCount = Math.max(1, modalItemCount - 1);
@@ -1827,23 +1844,73 @@
     }
 
     function openMultiStepModal(defaultType = 'IN') {
-      currentTxType = defaultType;
-      modalItemCount = 1;
-      document.getElementById('inp-duid').value = '';
-      document.getElementById('inp-bill').value = '';
-      document.getElementById('inp-sn').value = '';
-      document.getElementById('err-duid').classList.add('hidden');
-      document.getElementById('inp-customer').value = 'AIS';
-      document.getElementById('inp-region').value = 'ER';
-      setTxType(defaultType);
-      document.getElementById('modal-item-count').textContent = '1 รายการ';
-      resetModalPosition();
-      if (isModalMinimized) toggleModalMinimize();
-      document.getElementById('modal-multistep').classList.remove('hidden');
+      try {
+        currentTxType = defaultType;
+        modalItemCount = 1;
+        const setVal = (id, val) => {
+          const el = document.getElementById(id);
+          if (el) el.value = val;
+        };
+        setVal('inp-duid', '');
+        setVal('inp-bill', '');
+        setVal('item-sn-1', '');
+        setVal('inp-sn', '');
+        setVal('item-model-1', '');
+        setVal('inp-model', '');
+        setVal('item-type-1', '');
+        setVal('item-code-1', '');
+        setVal('inp-code', '');
+        setVal('item-desc-1', '');
+        setVal('item-qty-1', '1');
+        setVal('inp-owner-wh', '');
+        setVal('inp-owner-rcv', '');
+        setVal('inp-loc-wh', '');
+        setVal('inp-loc-rcv', '');
+        setVal('inp-customer', 'AIS');
+        setVal('inp-region', 'ER');
+
+        // Reset extra item rows if added, keep only modal-item-1
+        const container = document.getElementById('modal-items-container');
+        if (container) {
+          const extraItems = container.querySelectorAll('[id^="modal-item-"]:not(#modal-item-1)');
+          extraItems.forEach(el => el.remove());
+        }
+
+        const errEl = document.getElementById('err-duid');
+        if (errEl) errEl.classList.add('hidden');
+
+        setTxType(defaultType);
+        const countEl = document.getElementById('modal-item-count');
+        if (countEl) countEl.textContent = '1 รายการ';
+
+        resetModalPosition();
+        if (isModalMinimized) toggleModalMinimize();
+
+        const modalEl = document.getElementById('modal-multistep');
+        if (modalEl) modalEl.classList.remove('hidden');
+      } catch (err) {
+        console.error('openMultiStepModal error:', err);
+        const modalEl = document.getElementById('modal-multistep');
+        if (modalEl) modalEl.classList.remove('hidden');
+      }
     }
 
     function closeMultiStepModal() {
-      document.getElementById('modal-multistep').classList.add('hidden');
+      try {
+        const duid = (document.getElementById('inp-duid')?.value || '').trim();
+        const bill = (document.getElementById('inp-bill')?.value || '').trim();
+        const sn = (document.getElementById('item-sn-1')?.value || document.getElementById('inp-sn')?.value || '').trim();
+        const model = (document.getElementById('item-model-1')?.value || document.getElementById('inp-model')?.value || '').trim();
+        if (duid || bill || sn || model) {
+          if (!confirm('คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการปิดหน้าต่างนี้ใช่หรือไม่?')) {
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn(e);
+      }
+      const modalEl = document.getElementById('modal-multistep');
+      if (modalEl) modalEl.classList.add('hidden');
     }
 
     // ── Draggable Modal Logic (move ขึ้น move ลง และ ย้ายได้) ──
@@ -2018,7 +2085,7 @@
       }, 1200);
     }
 
-    function syncBOMDetails(model) {
+    function syncBOMDetails(model, idx = 1) {
       const codes = {
         'RRU3962': '02311EPK',
         'RRU5526': '02315QWS',
@@ -2028,7 +2095,9 @@
         'Jumper 4.3-10': '04130700-001',
         'VCT-G 2x6mm2': '25032397'
       };
-      document.getElementById('inp-code').value = codes[model] || '00000000';
+      const codeVal = codes[model] || '00000000';
+      const target = document.getElementById('item-code-' + idx) || document.getElementById('inp-code');
+      if (target) target.value = codeVal;
     }
 
     function submitNewTransaction() {
