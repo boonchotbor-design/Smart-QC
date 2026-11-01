@@ -1378,6 +1378,36 @@
           </div>
         </div>
 
+        <!-- วันที่ + INT No -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">📅 วันที่บันทึก</label>
+            <input type="date" id="inp-tx-date" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a; color-scheme:dark;">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">INT NO</label>
+            <input type="text" id="inp-int-no" placeholder="เลข Internal" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all font-mono" style="background:#0f172a;">
+          </div>
+        </div>
+
+        <!-- ผู้บันทึก (User) + สถานะ -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">👤 ผู้บันทึก (USER)</label>
+            <input type="text" id="inp-user-name" placeholder="ชื่อผู้บันทึก" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a;">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">STATUS</label>
+            <select id="inp-tx-status" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a;">
+              <option value="On Process">On Process</option>
+              <option value="Open">Open</option>
+              <option value="Closed">Closed</option>
+              <option value="Pending">Pending</option>
+              <option value="Returned">Returned</option>
+            </select>
+          </div>
+        </div>
+
         <!-- Photo Upload (Working Camera & Gallery Upload) -->
         <div id="bill-photo-section" class="rounded-xl border border-slate-700/60 p-3.5 transition-all" style="background:rgba(15,23,42,0.6);">
           <div class="text-[11px] font-semibold text-slate-400 mb-2 flex items-center justify-between">
@@ -1443,6 +1473,20 @@
                   style="background:#0f172a;"
                 >
               </div>
+              <div>
+                <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM TYPE (IType)</label>
+                <select id="item-itype-1" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" style="background:#0f172a;">
+                  <option value="Equipment">Equipment</option>
+                  <option value="Spare Part">Spare Part</option>
+                  <option value="Material">Material</option>
+                  <option value="Tool">Tool</option>
+                  <option value="Consumable">Consumable</option>
+                  <option value="Cable">Cable</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">MODEL</label>
                 <input 
@@ -7523,6 +7567,20 @@ let BOM_TRUE = [
             <input type="text" id="item-type-${idx}" list="catalog-type-list" placeholder="พิมพ์หรือเลือก" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" style="background:#0f172a;">
           </div>
           <div>
+            <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM TYPE (IType)</label>
+            <select id="item-itype-${idx}" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" style="background:#0f172a;">
+              <option value="Equipment">Equipment</option>
+              <option value="Spare Part">Spare Part</option>
+              <option value="Material">Material</option>
+              <option value="Tool">Tool</option>
+              <option value="Consumable">Consumable</option>
+              <option value="Cable">Cable</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
             <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">MODEL</label>
             <input type="text" id="item-model-${idx}" list="catalog-model-list" placeholder="พิมพ์หรือเลือก" oninput="onModelInputChange(this, ${idx})" onchange="onModelInputChange(this, ${idx})" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" style="background:#0f172a;">
           </div>
@@ -7599,6 +7657,20 @@ let BOM_TRUE = [
         setVal('inp-loc-rcv', '');
         setVal('inp-customer', 'AIS');
         setVal('inp-region', 'ER');
+        setVal('inp-int-no', '');
+        setVal('inp-user-name', '');
+        setVal('inp-tx-status', 'On Process');
+        // Set today's date as default
+        try {
+          const today = new Date();
+          const yyyy = today.getFullYear();
+          const mm = String(today.getMonth()+1).padStart(2,'0');
+          const dd = String(today.getDate()).padStart(2,'0');
+          setVal('inp-tx-date', `${yyyy}-${mm}-${dd}`);
+        } catch(e) {}
+        // Reset IType on item-1
+        const itypeEl = document.getElementById('item-itype-1');
+        if (itypeEl) itypeEl.value = 'Equipment';
         modalPhotoArray = [];
         renderPhotoThumbnails();
         updateBillPhotoStatus();
@@ -7862,13 +7934,27 @@ let BOM_TRUE = [
         type: currentTxType,
         region: document.getElementById('inp-region').value,
         customer: document.getElementById('inp-customer').value,
+        itype: (document.getElementById('item-itype-1')?.value || 'Equipment').trim(),
         model: (document.getElementById('item-model-1')?.value || document.getElementById('inp-model')?.value || 'RRU3962').trim(),
         code: (document.getElementById('item-code-1')?.value || document.getElementById('inp-code')?.value || '02311EPK').trim(),
         desc: (document.getElementById('item-desc-1')?.value || document.getElementById('inp-desc')?.value || 'Certified Hardware Component').trim(),
         qty: parseInt(document.getElementById('item-qty-1')?.value || document.getElementById('inp-qty')?.value || 1) || 1,
         sn: (document.getElementById('item-sn-1')?.value || document.getElementById('inp-sn')?.value || '').trim() || 'N/A',
-        status: 'On Process',
-        date: new Date().toLocaleDateString('en-GB')
+        ownerWarehouse: (document.getElementById('inp-owner-wh')?.value || '').trim(),
+        ownerReceiver: (document.getElementById('inp-owner-rcv')?.value || '').trim(),
+        locationWarehouse: (document.getElementById('inp-loc-wh')?.value || '').trim(),
+        locationReceiver: (document.getElementById('inp-loc-rcv')?.value || '').trim(),
+        intNo: (document.getElementById('inp-int-no')?.value || '').trim() || `INT-${Date.now()}`,
+        user: (document.getElementById('inp-user-name')?.value || '').trim() || 'admin',
+        status: (document.getElementById('inp-tx-status')?.value || 'On Process'),
+        date: (() => {
+          const d = document.getElementById('inp-tx-date')?.value;
+          if (d) {
+            const parts = d.split('-');
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+          }
+          return new Date().toLocaleDateString('en-GB');
+        })()
       };
       TRANSACTIONS.unshift(newRecord);
       closeMultiStepModal();
@@ -7895,10 +7981,18 @@ let BOM_TRUE = [
       document.getElementById('inp-region').value = item.region;
       if (document.getElementById('item-model-1')) document.getElementById('item-model-1').value = item.model;
       if (document.getElementById('item-type-1')) document.getElementById('item-type-1').value = item.type;
+      if (document.getElementById('item-itype-1')) document.getElementById('item-itype-1').value = item.itype || 'Equipment';
       if (document.getElementById('item-code-1')) document.getElementById('item-code-1').value = item.code;
       if (document.getElementById('item-desc-1')) document.getElementById('item-desc-1').value = item.desc;
       if (document.getElementById('item-qty-1')) document.getElementById('item-qty-1').value = item.qty;
       if (document.getElementById('item-sn-1')) document.getElementById('item-sn-1').value = item.sn;
+      if (document.getElementById('inp-owner-wh')) document.getElementById('inp-owner-wh').value = item.ownerWarehouse || '';
+      if (document.getElementById('inp-owner-rcv')) document.getElementById('inp-owner-rcv').value = item.ownerReceiver || '';
+      if (document.getElementById('inp-loc-wh')) document.getElementById('inp-loc-wh').value = item.locationWarehouse || '';
+      if (document.getElementById('inp-loc-rcv')) document.getElementById('inp-loc-rcv').value = item.locationReceiver || '';
+      if (document.getElementById('inp-int-no')) document.getElementById('inp-int-no').value = item.intNo || '';
+      if (document.getElementById('inp-user-name')) document.getElementById('inp-user-name').value = item.user || '';
+      if (document.getElementById('inp-tx-status')) document.getElementById('inp-tx-status').value = item.status || 'On Process';
       showToast(`✏️ แก้ไขรายการ #${no} — ${item.duid}`, 'info');
     }
 
