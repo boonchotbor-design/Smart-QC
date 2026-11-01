@@ -465,23 +465,29 @@
           <div class="glass-card rounded-2xl overflow-hidden border border-slate-800/80 shadow-2xl">
             <div class="max-h-[62vh] overflow-x-auto overflow-y-auto relative">
               <table class="w-full text-left border-collapse text-xs">
-                <!-- Sticky Table Header -->
-                <thead class="sticky top-0 bg-[#0d1527] z-20 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                <!-- Sticky Table Header (All 19 Columns) -->
+                <thead class="sticky top-0 bg-[#0d1527] z-20 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[11px] whitespace-nowrap">
                   <tr>
                     <th class="p-3 w-12 text-center">Action</th>
                     <th class="p-3 w-14 text-center cursor-pointer hover:text-slate-200" onclick="sortTable('no')">No ↕</th>
                     <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('duid')">DUID ↕</th>
-                    <th class="p-3">Bill No.</th>
-                    <th class="p-3">Type</th>
-                    <th class="p-3">Region</th>
-                    <th class="p-3">Customer</th>
-                    <th class="p-3">Model</th>
-                    <th class="p-3">Item Code</th>
-                    <th class="p-3">Description</th>
-                    <th class="p-3 text-center">Qty</th>
-                    <th class="p-3">Serial No.</th>
-                    <th class="p-3">Status</th>
-                    <th class="p-3">Date</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('region')">Region ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('type')">TYPE ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('itype')">IType ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('date')">Date ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('bill')">Bill No. ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('model')">Model ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('code')">Item Code ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('desc')">Item Description ↕</th>
+                    <th class="p-3 text-center cursor-pointer hover:text-slate-200" onclick="sortTable('qty')">Qty ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('sn')">SN ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('ownerWarehouse')">Owner Warehouse ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('ownerReceiver')">Owner Receiver ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('locationWarehouse')">Location Warehouse ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('locationReceiver')">Location Receiver ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('status')">Status ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('intNo')">INT No ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('user')">User ↕</th>
                   </tr>
                 </thead>
                 <tbody id="table-body" class="divide-y divide-slate-800/60 text-slate-300">
@@ -1607,18 +1613,18 @@
         .replace(/'/g, '&#39;');
     }
 
-    // Mock Transaction Dataset (Simulating 3,782 records)
+    // Mock Transaction Dataset (Simulating 3,782 records with all 19 columns)
     const SAMPLE_RAW_DATA = [
-      { no: 1, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', type: 'DISMANTLE', region: 'BKK', customer: 'AIS', model: 'RRU3962', code: '02311EPK', desc: 'RRU3962, 1800MHz~2100MHz 2T4R', qty: 1, sn: '2102311EPK10H4000311', status: 'On Process', date: '30/07/2026' },
-      { no: 2, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', type: 'DISMANTLE', region: 'BKK', customer: 'AIS', model: 'OPM15M', code: '02311RCD', desc: 'OPM15M Ver.B AC Power Module', qty: 1, sn: '2102311RCD0T64000550', status: 'On Process', date: '30/07/2026' },
-      { no: 3, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', type: 'DISMANTLE', region: 'BKK', customer: 'AIS', model: 'SM SFP(9.8G) 1.4k', code: '34060713', desc: 'Optical Transceiver,SFP+,1310nm,9.8G', qty: 1, sn: 'N/A', status: 'On Process', date: '30/07/2026' },
-      { no: 4, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', type: 'OUT', region: 'BKK', customer: 'AIS', model: 'RRU5526', code: '02315QWS', desc: 'RRU5526 for Multi-mode 1800MHz~2100MHz', qty: 1, sn: '2102315QWS10S3102160', status: 'On Process', date: '30/07/2026' },
-      { no: 5, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', type: 'OUT', region: 'BKK', customer: 'AIS', model: 'DPU40-N06A3', code: '02312NGM', desc: 'DPU400-N06A3 2000W Distributed Power DC', qty: 1, sn: 'JV26540218588', status: 'On Process', date: '30/07/2026' },
-      { no: 6, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', type: 'OUT', region: 'BKK', customer: 'AIS', model: 'Jumper (4.3-4.3) 3m', code: '04130700-001', desc: 'RF Jumper,3m,4.3-10SM,COAX50-8.7/3.55', qty: 4, sn: 'N/A', status: 'On Process', date: '30/07/2026' },
-      { no: 7, duid: 'TRUE_5G_CORE_UPGRADE_EAST_RAYONG_SITE_01', bill: '2026-TUC-EXP-ER-091', type: 'IN', region: 'ER', customer: 'TRUE', model: 'BBU3900', code: '02310MND', desc: 'BBU3900 Baseband Unit Box', qty: 2, sn: '2102310MND10K2000142', status: 'Open', date: '31/07/2026' },
-      { no: 8, duid: 'TRUE_5G_CORE_UPGRADE_EAST_RAYONG_SITE_01', bill: '2026-TUC-EXP-ER-091', type: 'STR/IN', region: 'ER', customer: 'TRUE', model: 'UBBPg3', code: '03058842', desc: 'Universal Baseband Processing Unit G3', qty: 2, sn: '03058842TUC109281', status: 'Open', date: '31/07/2026' },
-      { no: 9, duid: 'NR_CHIANGMAI_MODERNIZATION_PHASE2_NODE3', bill: '2026-CM-MOD-NR-008', type: 'STR/OUT', region: 'NR', customer: 'AIS', model: 'RRU3962', code: '02311EPK', desc: 'RRU3962, 1800MHz~2100MHz 2T4R', qty: 2, sn: '2102311EPK10H4000889', status: 'Closed', date: '01/08/2026' },
-      { no: 10, duid: 'NER_KORAT_SUBSTATION_OPTICAL_RECOVERY', bill: '2026-KOR-REC-NER-44', type: 'RETURN', region: 'NER', customer: 'TRUE', model: 'SM SFP(9.8G) 1.4k', code: '34060713', desc: 'Optical Transceiver,SFP+,1310nm,9.8G', qty: 6, sn: 'N/A', status: 'Open', date: '02/08/2026' }
+      { no: 1, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', region: 'BKK', type: 'DISMANTLE', itype: 'RRU', date: '30/07/2026', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', model: 'RRU3962', code: '02311EPK', desc: 'RRU3962, 1800MHz~2100MHz 2T4R', qty: 1, sn: '2102311EPK10H4000311', ownerWarehouse: 'WH-BKK Central', ownerReceiver: 'Boonchot B.', locationWarehouse: 'WH-BKK Metro', locationReceiver: 'Site BKK-1042', status: 'On Process', intNo: 'INT-2026-0881', user: 'boonchot.b', customer: 'AIS' },
+      { no: 2, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', region: 'BKK', type: 'DISMANTLE', itype: 'Power', date: '30/07/2026', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', model: 'OPM15M', code: '02311RCD', desc: 'OPM15M Ver.B AC Power Module', qty: 1, sn: '2102311RCD0T64000550', ownerWarehouse: 'WH-BKK Central', ownerReceiver: 'Somchai P.', locationWarehouse: 'WH-BKK Metro', locationReceiver: 'Site BKK-1042', status: 'On Process', intNo: 'INT-2026-0882', user: 'somchai.p', customer: 'AIS' },
+      { no: 3, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', region: 'BKK', type: 'DISMANTLE', itype: 'SFP', date: '30/07/2026', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', model: 'SM SFP(9.8G) 1.4k', code: '34060713', desc: 'Optical Transceiver,SFP+,1310nm,9.8G', qty: 1, sn: 'N/A', ownerWarehouse: 'WH-BKK Central', ownerReceiver: 'Teerasak K.', locationWarehouse: 'WH-BKK Metro', locationReceiver: 'Site BKK-1042', status: 'On Process', intNo: 'INT-2026-0883', user: 'teerasak.k', customer: 'AIS' },
+      { no: 4, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', region: 'BKK', type: 'OUT', itype: 'RRU', date: '30/07/2026', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', model: 'RRU5526', code: '02315QWS', desc: 'RRU5526 for Multi-mode 1800MHz~2100MHz', qty: 1, sn: '2102315QWS10S3102160', ownerWarehouse: 'WH-BKK Central', ownerReceiver: 'Wittaya N.', locationWarehouse: 'WH-BKK Metro', locationReceiver: 'Site BKK-1042', status: 'On Process', intNo: 'INT-2026-0884', user: 'wittaya.n', customer: 'AIS' },
+      { no: 5, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', region: 'BKK', type: 'OUT', itype: 'Power', date: '30/07/2026', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', model: 'DPU40-N06A3', code: '02312NGM', desc: 'DPU400-N06A3 2000W Distributed Power DC', qty: 1, sn: 'JV26540218588', ownerWarehouse: 'WH-BKK Central', ownerReceiver: 'Boonchot B.', locationWarehouse: 'WH-BKK Metro', locationReceiver: 'Site BKK-1042', status: 'On Process', intNo: 'INT-2026-0885', user: 'boonchot.b', customer: 'AIS' },
+      { no: 6, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', region: 'BKK', type: 'OUT', itype: 'Cable', date: '30/07/2026', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', model: 'Jumper (4.3-4.3) 3m', code: '04130700-001', desc: 'RF Jumper,3m,4.3-10SM,COAX50-8.7/3.55', qty: 4, sn: 'N/A', ownerWarehouse: 'WH-BKK Central', ownerReceiver: 'Somchai P.', locationWarehouse: 'WH-BKK Metro', locationReceiver: 'Site BKK-1042', status: 'On Process', intNo: 'INT-2026-0886', user: 'somchai.p', customer: 'AIS' },
+      { no: 7, duid: 'TRUE_5G_CORE_UPGRADE_EAST_RAYONG_SITE_01', region: 'ER', type: 'IN', itype: 'BBU', date: '31/07/2026', bill: '2026-TUC-EXP-ER-091', model: 'BBU3900', code: '02310MND', desc: 'BBU3900 Baseband Unit Box', qty: 2, sn: '2102310MND10K2000142', ownerWarehouse: 'WH-EAST Hub', ownerReceiver: 'Anupong S.', locationWarehouse: 'WH-Rayong 01', locationReceiver: 'Site Rayong-Cell-01', status: 'Open', intNo: 'INT-2026-0891', user: 'anupong.s', customer: 'TRUE' },
+      { no: 8, duid: 'TRUE_5G_CORE_UPGRADE_EAST_RAYONG_SITE_01', region: 'ER', type: 'STR/IN', itype: 'BOAD', date: '31/07/2026', bill: '2026-TUC-EXP-ER-091', model: 'UBBPg3', code: '03058842', desc: 'Universal Baseband Processing Unit G3', qty: 2, sn: '03058842TUC109281', ownerWarehouse: 'WH-EAST Hub', ownerReceiver: 'Surachai T.', locationWarehouse: 'WH-Rayong 01', locationReceiver: 'Site Rayong-Cell-01', status: 'Open', intNo: 'INT-2026-0892', user: 'surachai.t', customer: 'TRUE' },
+      { no: 9, duid: 'NR_CHIANGMAI_MODERNIZATION_PHASE2_NODE3', region: 'NR', type: 'STR/OUT', itype: 'RRU', date: '01/08/2026', bill: '2026-CM-MOD-NR-008', model: 'RRU3962', code: '02311EPK', desc: 'RRU3962, 1800MHz~2100MHz 2T4R', qty: 2, sn: '2102311EPK10H4000889', ownerWarehouse: 'WH-NORTH Hub', ownerReceiver: 'Boonchot B.', locationWarehouse: 'WH-ChiangMai', locationReceiver: 'Site North-MW-03', status: 'Closed', intNo: 'INT-2026-0901', user: 'boonchot.b', customer: 'AIS' },
+      { no: 10, duid: 'NER_KORAT_SUBSTATION_OPTICAL_RECOVERY', region: 'NER', type: 'RETURN', itype: 'SFP', date: '02/08/2026', bill: '2026-KOR-REC-NER-44', model: 'SM SFP(9.8G) 1.4k', code: '34060713', desc: 'Optical Transceiver,SFP+,1310nm,9.8G', qty: 6, sn: 'N/A', ownerWarehouse: 'WH-NE Hub', ownerReceiver: 'Teerasak K.', locationWarehouse: 'WH-Korat', locationReceiver: 'Tower Korat-Sub-44', status: 'Open', intNo: 'INT-2026-0912', user: 'teerasak.k', customer: 'TRUE' }
     ];
 
     let TRANSACTIONS = [];
@@ -1626,6 +1632,11 @@
     const TYPES = ['IN', 'OUT', 'DISMANTLE', 'STR/IN', 'STR/OUT', 'RETURN'];
     const CUSTS = ['AIS', 'TRUE'];
     const STATUSES = ['Open', 'On Process', 'Closed', 'Pending'];
+    const WH_LIST = ['WH-BKK Central', 'WH-EAST Hub', 'WH-WEST Hub', 'WH-NORTH Hub', 'WH-SOUTH Hub', 'WH-NE Hub'];
+    const RC_LIST = ['Boonchot B.', 'Somchai P.', 'Teerasak K.', 'Wittaya N.', 'Anupong S.', 'Surachai T.'];
+    const LOC_WH = ['WH-BKK Metro', 'WH-Rayong 01', 'WH-Chonburi', 'WH-ChiangMai', 'WH-Surat', 'WH-Korat'];
+    const USERS = ['boonchot.b', 'somchai.p', 'teerasak.k', 'wittaya.n', 'admin@teloneer.com'];
+    const ITYPES = ['RRU', 'BBU', 'BOAD', 'SFP', 'Power', 'Cable', 'Antenna', 'Accessory'];
 
     for (let i = 1; i <= 3782; i++) {
       if (i <= SAMPLE_RAW_DATA.length) {
@@ -1636,20 +1647,28 @@
         const rCust = CUSTS[i % CUSTS.length];
         const rType = TYPES[i % TYPES.length];
         const rStat = STATUSES[i % STATUSES.length];
+        const rItype = ITYPES[i % ITYPES.length];
         TRANSACTIONS.push({
           no: i,
           duid: `${rCust}_SITE_${rReg}_${1000 + (i % 250)}_CELL_TOWER`,
-          bill: `2026-EXP-${rReg}-${rCust}-${100 + (i % 900)}`,
-          type: rType,
           region: rReg,
-          customer: rCust,
+          type: rType,
+          itype: proto.itype || rItype,
+          date: `2${(i % 8) + 1}/08/2026`,
+          bill: `2026-EXP-${rReg}-${rCust}-${100 + (i % 900)}`,
           model: proto.model,
           code: proto.code,
           desc: proto.desc,
           qty: (i % 4) + 1,
           sn: i % 3 === 0 ? `SN${rCust}${2026000 + i}` : 'N/A',
+          ownerWarehouse: WH_LIST[i % WH_LIST.length],
+          ownerReceiver: RC_LIST[i % RC_LIST.length],
+          locationWarehouse: LOC_WH[i % LOC_WH.length],
+          locationReceiver: `Site ${rReg}-${1000 + (i % 250)}`,
           status: rStat,
-          date: `2${(i % 8) + 1}/08/2026`
+          intNo: `INT-2026-${1000 + (i % 9000)}`,
+          user: USERS[i % USERS.length],
+          customer: rCust
         });
       }
     }
@@ -1764,12 +1783,19 @@
 
       filteredTransactions = TRANSACTIONS.filter(item => {
         const matchQ = !q || (
-          item.duid.toLowerCase().includes(q) ||
-          item.bill.toLowerCase().includes(q) ||
-          item.model.toLowerCase().includes(q) ||
-          item.code.toLowerCase().includes(q) ||
-          item.sn.toLowerCase().includes(q) ||
-          item.desc.toLowerCase().includes(q)
+          (item.duid && item.duid.toLowerCase().includes(q)) ||
+          (item.bill && item.bill.toLowerCase().includes(q)) ||
+          (item.model && item.model.toLowerCase().includes(q)) ||
+          (item.code && item.code.toLowerCase().includes(q)) ||
+          (item.sn && item.sn.toLowerCase().includes(q)) ||
+          (item.desc && item.desc.toLowerCase().includes(q)) ||
+          (item.itype && item.itype.toLowerCase().includes(q)) ||
+          (item.ownerWarehouse && item.ownerWarehouse.toLowerCase().includes(q)) ||
+          (item.ownerReceiver && item.ownerReceiver.toLowerCase().includes(q)) ||
+          (item.locationWarehouse && item.locationWarehouse.toLowerCase().includes(q)) ||
+          (item.locationReceiver && item.locationReceiver.toLowerCase().includes(q)) ||
+          (item.intNo && item.intNo.toLowerCase().includes(q)) ||
+          (item.user && item.user.toLowerCase().includes(q))
         );
         const matchCust = cust === 'ALL' || item.customer === cust;
         const matchReg = reg === 'ALL' || item.region === reg;
@@ -1815,7 +1841,7 @@
       document.getElementById('btn-last').disabled = currentPage >= totalPages;
 
       if (pageData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="14" class="p-8 text-center text-slate-500">❌ No matching records found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="20" class="p-8 text-center text-slate-500">❌ No matching records found.</td></tr>`;
         return;
       }
 
@@ -1829,7 +1855,6 @@
           'RETURN': 'badge-ret'
         }[row.type] || 'badge-in';
 
-        const custColor = row.customer === 'AIS' ? 'text-emerald-400' : 'text-blue-400';
         const statColor = row.status === 'Open' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' 
           : row.status === 'Closed' ? 'text-slate-400 bg-slate-800 border-slate-700' 
           : 'text-amber-400 bg-amber-500/10 border-amber-500/20';
@@ -1840,19 +1865,25 @@
               <button onclick="editRow(${row.no})" title="Quick Edit" class="p-1 hover:text-indigo-400 text-slate-500 transition-colors">✏️</button>
               <button onclick="deleteRow(${row.no})" title="Delete Record" class="p-1 hover:text-rose-400 text-slate-500 transition-colors">🗑️</button>
             </td>
-            <td class="p-3 text-center text-slate-500 font-mono">${row.no}</td>
-            <td class="p-3 font-semibold text-slate-200 max-w-[180px] truncate" title="${row.duid}">${row.duid}</td>
-            <td class="p-3 text-slate-400 max-w-[140px] truncate font-mono text-[11px]" title="${row.bill}">${row.bill || '—'}</td>
-            <td class="p-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${row.type}</span></td>
-            <td class="p-3 font-medium text-slate-300">${row.region}</td>
-            <td class="p-3 font-bold ${custColor}">${row.customer}</td>
-            <td class="p-3 font-medium text-slate-200 max-w-[120px] truncate" title="${row.model}">${row.model}</td>
-            <td class="p-3 font-mono text-indigo-300 text-[11px]">${row.code}</td>
-            <td class="p-3 text-slate-400 max-w-[160px] truncate" title="${row.desc}">${row.desc}</td>
-            <td class="p-3 text-center font-bold text-slate-100">${row.qty}</td>
-            <td class="p-3 font-mono text-[11px] text-slate-400 max-w-[130px] truncate" title="${row.sn}">${row.sn}</td>
-            <td class="p-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statColor}">${row.status}</span></td>
-            <td class="p-3 text-slate-400 whitespace-nowrap text-[11px]">${row.date}</td>
+            <td class="p-3 text-center text-slate-500 font-mono whitespace-nowrap">${row.no}</td>
+            <td class="p-3 font-semibold text-slate-200 max-w-[200px] truncate whitespace-nowrap" title="${escapeHtml(row.duid)}">${escapeHtml(row.duid)}</td>
+            <td class="p-3 font-medium text-slate-300 whitespace-nowrap">${escapeHtml(row.region || '—')}</td>
+            <td class="p-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${escapeHtml(row.type)}</span></td>
+            <td class="p-3 font-medium text-indigo-300 whitespace-nowrap">${escapeHtml(row.itype || 'Equipment')}</td>
+            <td class="p-3 text-slate-400 whitespace-nowrap text-[11px] font-mono">${escapeHtml(row.date || '—')}</td>
+            <td class="p-3 text-slate-400 max-w-[150px] truncate font-mono text-[11px] whitespace-nowrap" title="${escapeHtml(row.bill)}">${escapeHtml(row.bill || '—')}</td>
+            <td class="p-3 font-medium text-slate-200 max-w-[140px] truncate whitespace-nowrap" title="${escapeHtml(row.model)}">${escapeHtml(row.model || '—')}</td>
+            <td class="p-3 font-mono text-indigo-300 text-[11px] whitespace-nowrap">${escapeHtml(row.code || '—')}</td>
+            <td class="p-3 text-slate-400 max-w-[180px] truncate whitespace-nowrap" title="${escapeHtml(row.desc)}">${escapeHtml(row.desc || '—')}</td>
+            <td class="p-3 text-center font-bold text-slate-100 whitespace-nowrap">${row.qty || 1}</td>
+            <td class="p-3 font-mono text-[11px] text-slate-400 max-w-[140px] truncate whitespace-nowrap" title="${escapeHtml(row.sn)}">${escapeHtml(row.sn || '—')}</td>
+            <td class="p-3 text-slate-300 max-w-[140px] truncate whitespace-nowrap text-[11px]" title="${escapeHtml(row.ownerWarehouse)}">${escapeHtml(row.ownerWarehouse || '—')}</td>
+            <td class="p-3 text-slate-300 max-w-[140px] truncate whitespace-nowrap text-[11px]" title="${escapeHtml(row.ownerReceiver)}">${escapeHtml(row.ownerReceiver || '—')}</td>
+            <td class="p-3 text-slate-300 max-w-[140px] truncate whitespace-nowrap text-[11px]" title="${escapeHtml(row.locationWarehouse)}">${escapeHtml(row.locationWarehouse || '—')}</td>
+            <td class="p-3 text-slate-300 max-w-[140px] truncate whitespace-nowrap text-[11px]" title="${escapeHtml(row.locationReceiver)}">${escapeHtml(row.locationReceiver || '—')}</td>
+            <td class="p-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statColor}">${escapeHtml(row.status)}</span></td>
+            <td class="p-3 font-mono text-slate-400 text-[11px] whitespace-nowrap">${escapeHtml(row.intNo || '—')}</td>
+            <td class="p-3 text-slate-300 whitespace-nowrap text-[11px] font-mono">${escapeHtml(row.user || '—')}</td>
           </tr>
         `;
       }).join('');
@@ -7873,19 +7904,46 @@ let BOM_TRUE = [
 
     function exportCSV() {
       let csv = '\uFEFF';
-      csv += 'No,DUID,Bill No,Type,Region,Customer,Model,Item Code,Description,Qty,Serial No,Status,Date\n';
-      filteredTransactions.slice(0, 1000).forEach(r => {
-        csv += `"${r.no}","${r.duid}","${r.bill}","${r.type}","${r.region}","${r.customer}","${r.model}","${r.code}","${r.desc}",${r.qty},"${r.sn}","${r.status}","${r.date}"\n`;
+      // Complete 19 columns in exact requested order:
+      // No, DUID, Region, TYPE, IType, Date, Bill No., Model, Item Code, Item Description, Qty, SN, Owner Warehouse, Owner Receiver, Location Warehouse, Location Receiver, Status, INT No, User
+      csv += 'No,DUID,Region,TYPE,IType,Date,Bill No.,Model,Item Code,Item Description,Qty,SN,Owner Warehouse,Owner Receiver,Location Warehouse,Location Receiver,Status,INT No,User\n';
+
+      const clean = (val) => `"${String(val !== undefined && val !== null ? val : '').replace(/"/g, '""')}"`;
+      const listToExport = filteredTransactions.length > 0 ? filteredTransactions : TRANSACTIONS;
+
+      listToExport.forEach(r => {
+        csv += [
+          r.no,
+          clean(r.duid),
+          clean(r.region),
+          clean(r.type),
+          clean(r.itype || 'Equipment'),
+          clean(r.date),
+          clean(r.bill),
+          clean(r.model),
+          clean(r.code),
+          clean(r.desc),
+          r.qty || 1,
+          clean(r.sn),
+          clean(r.ownerWarehouse),
+          clean(r.ownerReceiver),
+          clean(r.locationWarehouse),
+          clean(r.locationReceiver),
+          clean(r.status),
+          clean(r.intNo),
+          clean(r.user)
+        ].join(',') + '\n';
       });
+
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `smartstock_export_${new Date().toISOString().slice(0,10)}.csv`);
+      link.setAttribute('download', `smartstock_export_all_columns_${new Date().toISOString().slice(0,10)}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      showToast('Exported filtered data to CSV successfully!', 'success');
+      showToast(`Exported all ${listToExport.length.toLocaleString()} rows (all columns) to CSV successfully!`, 'success');
     }
 
     function performDeepSearch() {
