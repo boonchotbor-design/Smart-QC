@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SmartStock Pro — Telecom Asset & Inventory Cloud</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -1291,7 +1292,7 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">ลูกค้า</label>
-            <select id="inp-customer" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all" style="background:#0f172a;">
+            <select id="inp-customer" onchange="onTxCustomerChange(this.value)" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all" style="background:#0f172a;">
               <option value="AIS">AIS</option>
               <option value="TRUE">TRUE</option>
               <option value="NT">NT</option>
@@ -1364,20 +1365,34 @@
           </div>
         </div>
 
-        <!-- Photo Upload -->
-        <div class="rounded-xl border border-slate-700/60 p-3" style="background:rgba(15,23,42,0.6);">
-          <div class="text-[11px] font-semibold text-slate-400 mb-2 flex items-center gap-1.5">
-            <span>📋</span> รูปบิล <span class="text-rose-400">* (บังคับก่อน SUBMIT)</span>
+        <!-- Photo Upload (Working Camera & Gallery Upload) -->
+        <div id="bill-photo-section" class="rounded-xl border border-slate-700/60 p-3.5 transition-all" style="background:rgba(15,23,42,0.6);">
+          <div class="text-[11px] font-semibold text-slate-400 mb-2 flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+              <span>📋</span> <span class="text-slate-300">รูปบิล</span> <span class="text-rose-400 font-bold">* (บังคับก่อน SUBMIT)</span>
+            </div>
+            <span id="photo-count-badge" class="text-[10px] text-slate-500 font-mono">0 รูป</span>
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <button class="py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
-              📸 ถ่ายรูปบิล
+          <div class="grid grid-cols-2 gap-2.5">
+            <button type="button" onclick="triggerBillCamera()" class="py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-500/20 hover:brightness-110 active:scale-95" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+              <span>📸</span> ถ่ายรูปบิล
             </button>
-            <button class="py-2.5 rounded-xl text-sm font-bold text-slate-200 border border-slate-700/80 flex items-center justify-center gap-2 hover:border-indigo-500/40 transition-all" style="background:rgba(30,41,59,0.8);">
-              🖼️ จากเครื่อง
+            <button type="button" onclick="triggerBillGallery()" class="py-2.5 rounded-xl text-xs font-bold text-slate-200 border border-slate-700/80 flex items-center justify-center gap-2 hover:border-indigo-500/40 hover:bg-slate-800 active:scale-95 transition-all" style="background:rgba(30,41,59,0.8);">
+              <span>🖼️</span> จากเครื่อง
             </button>
           </div>
-          <p class="text-[11px] text-amber-400 mt-2 text-center">⚠️ ยังไม่มีรูปบิล — กรุณาถ่ายรูปก่อนบันทึก</p>
+          
+          <!-- Hidden File Inputs -->
+          <input type="file" id="bill-cam-input" accept="image/*" capture="environment" style="display:none;" onchange="handleBillPhotoUpload(this)" multiple>
+          <input type="file" id="bill-file-input" accept="image/*" style="display:none;" onchange="handleBillPhotoUpload(this)" multiple>
+
+          <!-- Photo Thumbnails Gallery Wrap -->
+          <div id="modal-photo-thumbnails" class="flex flex-wrap gap-2.5 mt-2.5 empty:hidden"></div>
+
+          <!-- Status Warning / Success Badge -->
+          <p id="modal-photo-status" class="text-[11px] text-amber-400 mt-2.5 text-center flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <span>⚠️</span> <span>ยังไม่มีรูปบิล — กรุณาถ่ายรูปก่อนบันทึก</span>
+          </p>
         </div>
 
         <!-- Items Section -->
@@ -1409,6 +1424,8 @@
                   id="item-type-1"
                   list="catalog-type-list" 
                   placeholder="พิมพ์หรือเลือก" 
+                  oninput="onTypeInputChange(this, 1)" 
+                  onchange="onTypeInputChange(this, 1)" 
                   class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" 
                   style="background:#0f172a;"
                 >
@@ -1432,7 +1449,7 @@
               <div>
                 <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM CODE</label>
                 <div class="flex gap-1.5">
-                  <input type="text" id="item-code-1" placeholder="รหัสสินค้า" class="flex-1 rounded-lg px-3 py-2 text-xs text-purple-400 font-mono border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all font-bold" style="background:#0f172a;">
+                  <input type="text" id="item-code-1" placeholder="รหัสสินค้า" oninput="onCodeInputChange(this, 1)" onchange="onCodeInputChange(this, 1)" class="flex-1 rounded-lg px-3 py-2 text-xs text-purple-400 font-mono border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all font-bold" style="background:#0f172a;">
                   <button type="button" onclick="openItemSearchModal(1)" title="ค้นหารหัสและรุ่นสินค้า" class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-sm hover:bg-indigo-600/30 transition-all">🔍</button>
                 </div>
               </div>
@@ -1447,7 +1464,7 @@
                 <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">SN</label>
                 <div class="flex gap-1.5">
                   <input type="text" id="item-sn-1" placeholder="Serial Number" class="flex-1 rounded-lg px-3 py-2 text-xs text-slate-200 font-mono border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a;">
-                  <button type="button" class="flex items-center gap-1 px-2 rounded-lg text-[11px] font-bold bg-slate-700/80 border border-slate-600/60 text-slate-300 hover:bg-slate-700 transition-all whitespace-nowrap">
+                  <button type="button" onclick="scanSN(1)" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/50 hover:text-white transition-all whitespace-nowrap active:scale-95">
                     <span>📷</span> Scan
                   </button>
                 </div>
@@ -1890,6 +1907,389 @@
     }
 
     
+    
+    // ══════════════════════════════════════════════════════════════════
+    // 1 & 4. DYNAMIC BOM CATALOG & DATALISTS (AIS & TRUE)
+    // ══════════════════════════════════════════════════════════════════
+    function getActiveBOM() {
+      const cus = document.getElementById('inp-customer')?.value || 'AIS';
+      if (cus === 'TRUE') {
+        return (typeof BOM_TRUE !== 'undefined' && BOM_TRUE.length) ? BOM_TRUE : [];
+      }
+      return (typeof BOM_AIS !== 'undefined' && BOM_AIS.length) ? BOM_AIS : [];
+    }
+
+    function onTxCustomerChange(cus) {
+      updateTxDatalists();
+      // Update catalog search header
+      const searchBadge = document.getElementById('item-search-cus-badge');
+      if (searchBadge) searchBadge.textContent = cus;
+      showToast('🔄 สลับฐานข้อมูล BOM เป็น ' + cus + ' (' + getActiveBOM().length + ' รายการ)', 'info');
+    }
+
+    function updateTxDatalists() {
+      const bom = getActiveBOM();
+      if (!bom || !bom.length) return;
+
+      // Column A: Unique Types
+      const uniqueTypes = [...new Set(bom.map(x => (x.type || '').trim()).filter(Boolean))].sort();
+      const typeDl = document.getElementById('catalog-type-list');
+      if (typeDl) {
+        typeDl.innerHTML = uniqueTypes.map(t => '<option value="' + escapeHtml(t) + '"></option>').join('');
+      }
+
+      // Column B: Models with Description
+      const modelDl = document.getElementById('catalog-model-list');
+      if (modelDl) {
+        modelDl.innerHTML = bom.map(m => 
+          '<option value="' + escapeHtml(m.model || '') + '">' + escapeHtml((m.type ? '[' + m.type + '] ' : '') + (m.desc || m.code || '')) + '</option>'
+        ).join('');
+      }
+    }
+
+    function onTypeInputChange(input, rowIdx) {
+      const val = (input.value || '').trim().toLowerCase();
+      if (!val) {
+        updateTxDatalists();
+        return;
+      }
+      const bom = getActiveBOM();
+      const filtered = bom.filter(x => (x.type || '').toLowerCase().includes(val));
+      const modelDl = document.getElementById('catalog-model-list');
+      if (modelDl && filtered.length) {
+        modelDl.innerHTML = filtered.map(m => 
+          '<option value="' + escapeHtml(m.model || '') + '">' + escapeHtml(m.desc || m.code || '') + '</option>'
+        ).join('');
+      }
+    }
+
+    function onModelInputChange(input, rowIdx) {
+      const val = (input.value || '').trim().toLowerCase();
+      if (!val) return;
+      const bom = getActiveBOM();
+      const found = bom.find(it => 
+        (it.model && it.model.toLowerCase() === val) || 
+        (it.code && it.code.toLowerCase() === val)
+      );
+      if (found) {
+        const typeEl = document.getElementById('item-type-' + rowIdx);
+        const codeEl = document.getElementById('item-code-' + rowIdx);
+        const descEl = document.getElementById('item-desc-' + rowIdx);
+        if (typeEl && found.type) typeEl.value = found.type; // Col A
+        if (codeEl && found.code) codeEl.value = found.code; // Col C
+        if (descEl && found.desc) descEl.value = found.desc; // Col D
+        showToast('✅ เลือก ' + found.model + ' (' + found.code + ') อัตโนมัติ', 'info');
+      }
+    }
+
+    function onCodeInputChange(input, rowIdx) {
+      const val = (input.value || '').trim().toLowerCase();
+      if (!val) return;
+      const bom = getActiveBOM();
+      const found = bom.find(it => it.code && it.code.toLowerCase() === val);
+      if (found) {
+        const typeEl = document.getElementById('item-type-' + rowIdx);
+        const modelEl = document.getElementById('item-model-' + rowIdx);
+        const descEl = document.getElementById('item-desc-' + rowIdx);
+        if (typeEl && found.type) typeEl.value = found.type;   // Col A
+        if (modelEl && found.model) modelEl.value = found.model; // Col B
+        if (descEl && found.desc) descEl.value = found.desc;   // Col D
+        showToast('✅ พบรหัสสินค้า: ' + found.model, 'info');
+      }
+    }
+
+    // Override filterCatalogItems to search the active customer's BOM
+    function filterCatalogItems(kw = '') {
+      const q = kw.trim().toLowerCase();
+      const listEl = document.getElementById('catalog-items-list');
+      if (!listEl) return;
+      const bom = getActiveBOM();
+      const matches = q ? bom.filter(it => 
+        (it.code && it.code.toLowerCase().includes(q)) || 
+        (it.model && it.model.toLowerCase().includes(q)) || 
+        (it.desc && it.desc.toLowerCase().includes(q)) || 
+        (it.type && it.type.toLowerCase().includes(q))
+      ) : bom.slice(0, 100);
+
+      if (matches.length === 0) {
+        listEl.innerHTML = '<div class="p-6 text-center text-slate-500">❌ ไม่พบรายการที่ตรงกับ "' + escapeHtml(kw) + '"</div>';
+        return;
+      }
+      listEl.innerHTML = matches.map(it => `
+        <div onclick="selectCatalogItem('${escapeHtml(it.code)}')" class="p-3 rounded-xl hover:bg-indigo-600/15 cursor-pointer transition-colors border border-transparent hover:border-indigo-500/30 group">
+          <div class="flex items-center justify-between">
+            <span class="font-bold font-mono text-purple-400 text-sm group-hover:text-purple-300">${escapeHtml(it.code)}</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">${escapeHtml(it.type || 'อุปกรณ์')}</span>
+          </div>
+          <div class="font-semibold text-slate-100 text-xs mt-1">${escapeHtml(it.model)}</div>
+          <div class="text-[11px] text-slate-400 truncate mt-0.5">${escapeHtml(it.desc || '—')}</div>
+        </div>
+      `).join('');
+    }
+
+    function selectCatalogItem(code) {
+      const bom = getActiveBOM();
+      const item = bom.find(it => it.code === code);
+      if (!item) return;
+      const rowIdx = activeTargetItemRow;
+      const typeEl = document.getElementById('item-type-' + rowIdx);
+      const modelEl = document.getElementById('item-model-' + rowIdx);
+      const codeEl = document.getElementById('item-code-' + rowIdx);
+      const descEl = document.getElementById('item-desc-' + rowIdx);
+
+      if (typeEl) typeEl.value = item.type || '';   // Column A: Type
+      if (modelEl) modelEl.value = item.model || ''; // Column B: Model
+      if (codeEl) codeEl.value = item.code || '';   // Column C: Item Code
+      if (descEl) descEl.value = item.desc || '';   // Column D: Item Description
+
+      closeItemSearchModal();
+      showToast('✅ เลือก ' + item.model + ' (' + item.code + ') เรียบร้อยแล้ว', 'success');
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // 2. กล้อง SCAN SN (BARCODE / QR CODE SCANNER)
+    // ══════════════════════════════════════════════════════════════════
+    let activeScanRowIdx = 1;
+    let html5QrScannerInstance = null;
+    let isLiveCameraRunning = false;
+
+    function scanSN(rowIdx = 1) {
+      activeScanRowIdx = rowIdx;
+      const badge = document.getElementById('scan-target-badge');
+      if (badge) badge.textContent = 'SN #' + rowIdx;
+      const modal = document.getElementById('modal-barcode-scanner');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeBarcodeScanner() {
+      stopCameraScanner();
+      const modal = document.getElementById('modal-barcode-scanner');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function toggleLiveCameraScanner() {
+      if (isLiveCameraRunning) {
+        stopCameraScanner();
+      } else {
+        startCameraScanner();
+      }
+    }
+
+    function startCameraScanner() {
+      const placeholder = document.getElementById('scanner-placeholder');
+      const lbl = document.getElementById('lbl-toggle-cam');
+      const btn = document.getElementById('btn-toggle-cam');
+
+      if (typeof Html5Qrcode === 'undefined') {
+        showToast('⚠️ ไม่สามารถโหลดโมดูล Html5Qrcode ได้ กรุณาใช้ปุ่มถ่ายรูป', 'error');
+        return;
+      }
+
+      if (placeholder) placeholder.classList.add('hidden');
+      if (lbl) lbl.textContent = 'ปิดกล้องสด';
+      if (btn) btn.className = 'py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-95';
+
+      try {
+        html5QrScannerInstance = new Html5Qrcode('qr-reader');
+        html5QrScannerInstance.start(
+          { facingMode: 'environment' },
+          { fps: 15, qrbox: { width: 260, height: 160 } },
+          (decodedText) => {
+            applyScannedSN(decodedText);
+          },
+          (error) => {
+            // ignore scan frame misses
+          }
+        ).then(() => {
+          isLiveCameraRunning = true;
+          showToast('📷 กล้องพร้อมสแกน เล็งไปที่ Barcode/QR Code', 'info');
+        }).catch((err) => {
+          console.warn('Camera start error:', err);
+          showToast('⚠️ ไม่สามารถเข้าถึงกล้องได้: ' + (err.message || 'Permission denied'), 'error');
+          stopCameraScanner();
+        });
+      } catch (e) {
+        console.error(e);
+        stopCameraScanner();
+      }
+    }
+
+    function stopCameraScanner() {
+      const placeholder = document.getElementById('scanner-placeholder');
+      const lbl = document.getElementById('lbl-toggle-cam');
+      const btn = document.getElementById('btn-toggle-cam');
+
+      if (html5QrScannerInstance && isLiveCameraRunning) {
+        html5QrScannerInstance.stop().then(() => {
+          html5QrScannerInstance.clear();
+          isLiveCameraRunning = false;
+        }).catch((e) => {
+          console.warn(e);
+          isLiveCameraRunning = false;
+        });
+      } else {
+        isLiveCameraRunning = false;
+      }
+
+      if (placeholder) placeholder.classList.remove('hidden');
+      if (lbl) lbl.textContent = 'เปิดกล้องสด';
+      if (btn) btn.className = 'py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 flex items-center justify-center gap-1.5 transition-all shadow-md shadow-indigo-600/30 active:scale-95';
+    }
+
+    async function handleScanFileBarcode(input) {
+      const file = input.files && input.files[0];
+      if (!file) return;
+
+      showToast('🔍 กำลังวิเคราะห์รูปภาพเพื่อค้นหา Barcode...', 'info');
+
+      // 1. Try BarcodeDetector API if available
+      if ('BarcodeDetector' in window) {
+        try {
+          const bd = new BarcodeDetector({ formats: ['code_128', 'code_39', 'qr_code', 'ean_13', 'ean_8', 'data_matrix'] });
+          const img = await createImageBitmap(file);
+          const results = await bd.detect(img);
+          if (results && results.length > 0) {
+            applyScannedSN(results[0].rawValue);
+            input.value = '';
+            return;
+          }
+        } catch (e) {
+          console.warn('BarcodeDetector fallback:', e);
+        }
+      }
+
+      // 2. Try Html5Qrcode scanFile
+      if (typeof Html5Qrcode !== 'undefined') {
+        try {
+          const scanner = new Html5Qrcode('qr-reader');
+          const result = await scanner.scanFile(file, true);
+          applyScannedSN(result);
+          input.value = '';
+          return;
+        } catch (e) {
+          console.warn('Html5Qrcode scanFile error:', e);
+        }
+      }
+
+      showToast('⚠️ ไม่พบบาร์โค้ดในภาพ กรุณาถ่ายภาพให้ชัดเจนหรือพิมพ์ SN ด้วยตนเอง', 'warn');
+      input.value = '';
+    }
+
+    function applyScannedSN(snText) {
+      const cleanSN = (snText || '').trim();
+      if (!cleanSN) return;
+      const targetInput = document.getElementById('item-sn-' + activeScanRowIdx) || document.getElementById('item-sn-1');
+      if (targetInput) {
+        targetInput.value = cleanSN;
+        targetInput.focus();
+      }
+      closeBarcodeScanner();
+      showToast('✅ สแกน SN สำเร็จ: ' + cleanSN, 'success');
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // 3. รูปบิล* (บังคับก่อน SUBMIT) - CAMERA & GALLERY UPLOAD
+    // ══════════════════════════════════════════════════════════════════
+    let modalPhotoArray = [];
+
+    function triggerBillCamera() {
+      const cam = document.getElementById('bill-cam-input');
+      if (cam) cam.click();
+    }
+
+    function triggerBillGallery() {
+      const gal = document.getElementById('bill-file-input');
+      if (gal) gal.click();
+    }
+
+    async function handleBillPhotoUpload(input) {
+      if (!input.files || !input.files.length) return;
+      const files = Array.from(input.files);
+      showToast('⏳ กำลังประมวลผลรูปภาพ...', 'info');
+
+      for (let f of files) {
+        try {
+          const compressed = await compressModalImage(f);
+          modalPhotoArray.push(compressed);
+        } catch (e) {
+          console.error('Image compression error:', e);
+        }
+      }
+
+      renderPhotoThumbnails();
+      updateBillPhotoStatus();
+      input.value = '';
+      showToast('📸 อัปโหลดรูปบิลสำเร็จ (' + modalPhotoArray.length + ' รูป)', 'success');
+    }
+
+    function compressModalImage(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (e) => {
+          const img = new Image();
+          img.src = e.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX = 1280;
+            let w = img.width, h = img.height;
+            if (w > h) {
+              if (w > MAX) { h *= MAX / w; w = MAX; }
+            } else {
+              if (h > MAX) { w *= MAX / h; h = MAX; }
+            }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.8));
+          };
+        };
+      });
+    }
+
+    function renderPhotoThumbnails() {
+      const wrap = document.getElementById('modal-photo-thumbnails');
+      if (!wrap) return;
+      wrap.innerHTML = '';
+      modalPhotoArray.forEach((dataUrl, idx) => {
+        const div = document.createElement('div');
+        div.className = 'relative w-16 h-16 rounded-xl overflow-hidden border border-slate-700 shadow-md group';
+        div.innerHTML = `
+          <img src="${dataUrl}" alt="บิล ${idx+1}" class="w-full h-full object-cover">
+          <button type="button" onclick="removeModalPhoto(${idx})" title="ลบรูป" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600/90 text-white flex items-center justify-center text-[10px] font-bold shadow hover:bg-rose-500 transition-all">✕</button>
+        `;
+        wrap.appendChild(div);
+      });
+    }
+
+    function removeModalPhoto(idx) {
+      modalPhotoArray.splice(idx, 1);
+      renderPhotoThumbnails();
+      updateBillPhotoStatus();
+      showToast('ลบรูปภาพแล้ว', 'info');
+    }
+
+    function updateBillPhotoStatus() {
+      const el = document.getElementById('modal-photo-status');
+      const badge = document.getElementById('photo-count-badge');
+      if (badge) badge.textContent = modalPhotoArray.length + ' รูป';
+
+      if (!el) return;
+      if (modalPhotoArray.length > 0) {
+        el.className = 'text-[11px] text-emerald-400 mt-2.5 text-center flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30';
+        el.innerHTML = '<span>✅</span> <span>มีรูปบิล ' + modalPhotoArray.length + ' รูป — พร้อม SUBMIT บันทึก</span>';
+        const section = document.getElementById('bill-photo-section');
+        if (section) section.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+      } else {
+        el.className = 'text-[11px] text-amber-400 mt-2.5 text-center flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-amber-500/10 border border-amber-500/20';
+        el.innerHTML = '<span>⚠️</span> <span>ยังไม่มีรูปบิล — กรุณาถ่ายรูปก่อนบันทึก</span>';
+        const section = document.getElementById('bill-photo-section');
+        if (section) section.style.borderColor = 'rgba(51, 65, 85, 0.6)';
+      }
+    }
+
+
     // ── MASTER DATA BOM ENGINE (AIS & TRUE) ──
     let BOM_AIS = [
   {type:'AAU',model:'AAU5613',code:'02312CHP',desc:'AAU5613 TX3400-3600MHz/RX3400-3600MHz 64T64R 200W'},
@@ -7148,6 +7548,10 @@ let BOM_TRUE = [
         setVal('inp-loc-rcv', '');
         setVal('inp-customer', 'AIS');
         setVal('inp-region', 'ER');
+        modalPhotoArray = [];
+        renderPhotoThumbnails();
+        updateBillPhotoStatus();
+        updateTxDatalists();
 
         // Reset extra item rows if added, keep only modal-item-1
         const container = document.getElementById('modal-items-container');
@@ -7381,6 +7785,17 @@ let BOM_TRUE = [
     }
 
     function submitNewTransaction() {
+      // Enforce Photo requirement (ข้อ 3: รูปบิล บังคับก่อน SUBMIT)
+      if (!modalPhotoArray || modalPhotoArray.length === 0) {
+        showToast('⚠️ กรุณาถ่ายรูปบิลหรือแนบไฟล์รูปภาพก่อนบันทึก (บังคับก่อน SUBMIT)', 'error');
+        const section = document.getElementById('bill-photo-section');
+        if (section) {
+          section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          section.style.borderColor = '#f43f5e';
+          setTimeout(() => { section.style.borderColor = 'rgba(244, 63, 94, 0.4)'; }, 1500);
+        }
+        return;
+      }
       const duidVal = (document.getElementById('inp-duid').value || '').trim();
       if (!duidVal) {
         document.getElementById('err-duid').classList.remove('hidden');
@@ -7596,6 +8011,78 @@ let BOM_TRUE = [
         <button onclick="closeAddBomModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 border border-slate-700 hover:bg-slate-800 transition-all">ยกเลิก</button>
         <button onclick="saveNewBomItem()" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-md shadow-emerald-600/30">บันทึกรายการ</button>
       </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================== -->
+  <!-- BARCODE / QR SCANNER MODAL (กล้อง scan SN)    -->
+  <!-- ============================================== -->
+  <div id="modal-barcode-scanner" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 hidden">
+    <div class="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-slate-700/80 flex flex-col" style="background:#0f172a; max-height:90vh;">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-800 bg-slate-900/80">
+        <div class="flex items-center gap-2.5">
+          <span class="text-base">📷</span>
+          <div>
+            <h3 class="text-sm font-bold text-slate-100 flex items-center gap-1.5">
+              <span>สแกนบาร์โค้ด / QR Code</span>
+              <span id="scan-target-badge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">SN #1</span>
+            </h3>
+            <p class="text-[11px] text-slate-400">สแกนจากกล้องสด, ถ่ายรูป หรืออัปโหลดไฟล์</p>
+          </div>
+        </div>
+        <button onclick="closeBarcodeScanner()" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs font-bold">✕</button>
+      </div>
+
+      <!-- Scanner Body -->
+      <div class="p-4 space-y-3.5 overflow-y-auto flex-1">
+        
+        <!-- Live Camera Viewfinder Box -->
+        <div class="relative rounded-xl overflow-hidden border border-slate-700 bg-black flex flex-col items-center justify-center min-h-[220px]">
+          <div id="qr-reader" class="w-full"></div>
+          <div id="scanner-placeholder" class="text-center p-6 space-y-2">
+            <div class="text-3xl animate-pulse">📷</div>
+            <p class="text-xs text-slate-300 font-semibold">คลิกปุ่มด้านล่างเพื่อเปิดกล้องสแกน</p>
+            <p class="text-[10px] text-slate-500">รองรับ 1D Barcode (Code-128, Code-39) และ QR Code</p>
+          </div>
+        </div>
+
+        <!-- Controls Row -->
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" id="btn-toggle-cam" onclick="toggleLiveCameraScanner()" class="py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 flex items-center justify-center gap-1.5 transition-all shadow-md shadow-indigo-600/30 active:scale-95">
+            <span>🎥</span> <span id="lbl-toggle-cam">เปิดกล้องสด</span>
+          </button>
+          
+          <button type="button" onclick="document.getElementById('sn-file-cam-input').click()" class="py-2.5 rounded-xl text-xs font-bold text-slate-200 border border-slate-700 bg-slate-800/80 hover:bg-slate-700 flex items-center justify-center gap-1.5 transition-all active:scale-95">
+            <span>📸</span> ถ่ายรูป / อัปโหลด
+          </button>
+        </div>
+        <input type="file" id="sn-file-cam-input" accept="image/*" capture="environment" style="display:none;" onchange="handleScanFileBarcode(this)">
+
+        <!-- Quick Demo Barcodes (for Desktop testing) -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-3 space-y-2">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+            <span>⚡ ทดสอบตัวอย่าง SN (Quick Demo)</span>
+            <span class="text-[9px] text-indigo-400">คลิกเพื่อกรอกทันที</span>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <button type="button" onclick="applyScannedSN('2102315AWF10K4000123')" class="px-2 py-1 rounded bg-slate-800 hover:bg-indigo-600/20 text-slate-300 hover:text-indigo-300 border border-slate-700 text-[10px] font-mono">2102315AWF10K4000123</button>
+            <button type="button" onclick="applyScannedSN('2103050SYY10K4000456')" class="px-2 py-1 rounded bg-slate-800 hover:bg-indigo-600/20 text-slate-300 hover:text-indigo-300 border border-slate-700 text-[10px] font-mono">2103050SYY10K4000456</button>
+            <button type="button" onclick="applyScannedSN('2102312CHPK4000789')" class="px-2 py-1 rounded bg-slate-800 hover:bg-indigo-600/20 text-slate-300 hover:text-indigo-300 border border-slate-700 text-[10px] font-mono">2102312CHPK4000789</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="px-5 py-3 border-t border-slate-800 bg-slate-900/80 flex justify-end">
+        <button type="button" onclick="closeBarcodeScanner()" class="w-full py-2 rounded-xl text-xs font-semibold text-slate-400 border border-slate-700 hover:bg-slate-800 transition-all">
+          ปิดหน้าต่าง
+        </button>
+      </div>
+
     </div>
   </div>
 
