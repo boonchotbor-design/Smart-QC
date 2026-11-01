@@ -1,0 +1,181 @@
+# 📦 Inventory Smart System (V.7.5.8)
+
+Project Context: A Google Apps Script application for managing hardware inventory (AIS/TRUE/NT) using Web App (Bootstrap UI & Dashboard) and Telegram Bot with AI OCR capabilities.
+
+## 🛠 Tech Stack
+- **Backend:** Google Apps Script (`code.gs`)
+- **Frontend:** HTML5, Bootstrap 5, Chart.js, Vanilla CSS, JavaScript (`app.html`, `dashboard.html`)
+- **Integration:** Telegram Bot API, LINE Bot SDK, Google Drive OCR
+- **Storage:** Google Sheets
+
+## 🚀 Telegram Bot Setup (V.6.7.5)
+- **Webhook:** ต้องตั้งค่าให้ชี้มาที่ Vercel เท่านั้น: `https://[YOUR_VERCEL_URL]/telegram-webhook`
+- **GAS Permissions:** ใน Google Apps Script ต้อง Deploy เป็น Web App โดยตั้งค่า **"Who has access" เป็น "Anyone"** (สำคัญมาก)
+- **Services:** ต้องเปิดใช้งาน **Drive API** ในส่วนของ Services ของ GAS Project
+- **Environment Variables:** ใน Vercel ต้องมี `TELEGRAM_BOT_TOKEN`, `TELEGRAM_DESTINATION_ID` และ `GAS_WEB_APP_URL`
+
+## 🚀 Workflow
+1. **Research:** Analyze `code.gs` (logic) and `dashboard.html` / `app.html` (UI) before changes.
+2. **Strategy:** Propose changes ensuring compatibility between Web App and Telegram Bot.
+3. **Execution:** Surgical edits using `replace` or `write_file`.
+4. **Validation:** Verify function logic and UI responsiveness.
+5. **Deployment:** Redeploy to Vercel after changing `index.js` and ensure GAS is deployed as "Anyone".
+
+## 📝 Recommended Prompts
+
+### 🔍 Research & Analysis
+- "ช่วยวิเคราะห์ฟังก์ชัน `parsePickingList` ใน `code.gs` ว่าปัจจุบันอ่านข้อมูลอะไรได้บ้าง และมีจุดไหนที่ยังตกหล่น"
+- "ตรวจสอบ `SPREADSHEET_ID` และโครงสร้าง Column ที่ระบบคาดหวังใน Google Sheets"
+
+### 🛠 Feature Enhancements
+- "เพิ่มหมวดหมู่สินค้า (Item Type) ใหม่ใน `app.html` และปรับให้ `code.gs` บันทึกลง Sheet ได้ถูกต้อง"
+- "ปรับปรุงระบบ OCR ให้รองรับรูปแบบใบงานใหม่ โดยเพิ่ม Regex ในฟังก์ชัน `parsePickingList`"
+- "เพิ่มฟังก์ชันตรวจสอบจำนวนคงเหลือ (Stock Check) ก่อนทำการบันทึกรายการ OUT"
+
+### 🐞 Bug Fixing
+- "ทำไม Telegram Bot ถึงไม่อ่านรูปภาพ? ช่วยตรวจสอบ `handleTelegramOCR` และการตั้งค่า Webhook"
+- "แก้ไขปัญหา UI ของเครื่องมือสแกน QR Code ที่แสดงผลผิดเพี้ยนบนหน้าจอมือถือบางรุ่น"
+
+## 🐞 Bug Fixes & Stability (V.7.5.8)
+- **Dual GAS & Local Preview Authentication**: Resolved issue where opening `dashboard.html` or `app.html` locally (`file:///` or standalone preview server) threw an uncaught error when calling `google.script.run`, causing the login button to freeze indefinitely on `"⌛ กำลังตรวจสอบ..."`. Added robust runtime environment detection (`checkIsGAS()`) with local credential/storage fallback for offline preview and try/catch wrapped server verification on Google Apps Script production.
+- **Executive UI & Dashboard Features Integration**: Integrated 8 Executive KPI Cards (`#kTotal`, `#kDuid`, `#kIn`, `#kOut`, `#kDis`, `#kStr`, `#kRet`, `#kPend` with `#kOpen` and `#kClosed`) into `dashboard.html`, maintaining 100% backward compatibility with existing element IDs and Google Apps Script backend functions.
+- **Timeline Range Filtering**: Added dynamic time-range filter pills (7 วัน, 30 วัน, 90 วัน) to the Inventory Movement line chart (`drawLineChart`) allowing managers to observe daily hardware trends across custom time horizons.
+- **Action Required Panel**: Added alert system for missing Serial Numbers (`Missing Serial Numbers` on active equipment RRU/DBS/BOAD) and pending items with one-click direct table filtering (`filterMissingSN()`, `filterByStatus('Open')`).
+- **Codebase Pattern Preservation**: Preserved all original backend functions (`google.script.run`, `syncFromURL`, `saveMainData`, `saveImportData`, `getBOMData`, `saveBOMData`, `loginGuard`, `doLogin`, `printTeloneerForm`), keeping core logic and workflows completely intact while upgrading UI features.
+- **Version Sync**: Synchronized all versions to V.7.5.8 across `code.gs`, `dashboard.html`, and documentation.
+
+## 🐞 Bug Fixes & Stability (V.7.5.6)
+- **Full Export Support (All Customers & No User)**: Enhanced `exportSheetData` and `doExport` to support exporting all data (`ALL`) combining records across all operators (AIS, TRUE, NT) and preserving all rows without DUID or User (`No User`).
+- **Dynamic Multi-Sheet Scanner**: Updated `getDashboardData` to dynamically scan all sheets prefixed with `INOUT_HW_` (including `INOUT_HW_NT` and standalone `NT`/`NT No User`), auto-detecting customer operators and pulling non-empty rows even if DUID is missing.
+- **Export CSV Enhanced Columns**: Exported CSV now includes complete 20 columns: `NO`, `CUSTOMER`, `DUID`, `REGION`, `TYPE`, `ITYPE`, `DATE`, `BILL NO`, `MODEL`, `ITEM CODE`, `DESCRIPTION`, `QTY`, `SN`, `OWNER WAREHOUSE`, `OWNER RECEIVER`, `LOCATION WAREHOUSE`, `LOCATION RECEIVER`, `STATUS`, `INT NO`, and `USER` (explicitly labeling empty user rows as `No User`).
+- **Export All & NT Buttons Added**: Added direct "📦 Export ทั้งหมด (All)" and "📥 NT" buttons to `dashboard.html` and `app.html`, updated customer filters to include `NT`, and added auto-sheet creation (`getOrCreateInOutSheet`) for `INOUT_HW_NT`.
+- **Version Sync**: Synchronized all versions to V.7.5.6 across `code.gs`, `dashboard.html`, `app.html`, `dashboard_demo.html`, and documentation.
+
+## 🐞 Bug Fixes & Stability (V.7.5.5)
+- **Teloneer Form Print Clean-up (Dummy 0 Removal)**: Removed forced 12-row padding loop (`for(let i=rows.length;i<12;i++)`) that populated empty rows 6-12 with literal `0` values. Added auto-filtering to remove invalid/dummy rows so only actual requisition items are displayed in Review and Print.
+- **A4 Bottom Pinning for Signature Block**: Enforced full A4 printable flex layout (`min-height: 255mm`) with `margin-top: auto` on `.tp-sig-wrap`, locking the remarks and 3-column signature block at the very bottom of the A4 sheet.
+- **Date Line Nowrap & Single-Line Fit**: Added `white-space: nowrap; overflow: hidden;` and tuned slot widths (`38px` Day / `38px` Month / `52px` Year) to guarantee the date line stays neatly on a single line without wrapping the year underline to row 2.
+- **Version Sync**: Synchronized all versions to V.7.5.5 across `dashboard.html`, `dashboard_demo.html`, `test.js`, and documentation.
+
+## 🐞 Bug Fixes & Stability (V.7.5.4)
+- **Silent Bot on Non-DUID & Noise Suppression**: Added noise filtering in LINE and Telegram webhooks (`index.js` & `deploy/index.js`) to ignore messages containing `@` (mentions, emails), multiline texts, and URLs.
+- **Direct DUID Search with Zero-Spam Response**: Sending direct DUID strings (e.g. `CNAPM_2026 Capacity Expansion Modernize_EXP_ER`) queries GAS and replies with complete inventory reports when found, while suppressing `❌ Not found` / `❌ ไม่พบข้อมูล` responses during general chats so the bot never disturbs group conversations.
+- **Version Sync**: Synchronized all versions to V.7.5.4 across `index.js`, `deploy/index.js`, and documentation.
+
+## 🐞 Bug Fixes & Stability (V.7.5.3)
+- **CSV Import LINE & Telegram Notification System**: Fixed critical bug where CSV imports did not send notifications to LINE and Telegram. Built `sendImportNotifications` in `code.gs` which groups imported rows by DUID/Bill and extracts complete details (DUID, Bill No, Region, Customer, Type, Owner Warehouse/Receiver, Location Warehouse/Receiver, and breakdown of Model, Serial Number, Quantity).
+- **Upsert (Update) Notification Support**: Integrated notification triggering into `saveImportDataUpdate` and added backend `doPost` action support for `saveImportUpdate` / `importUpdate`.
+- **Modal Import Warehouse & Receiver Extraction**: Updated `previewImport` in both `dashboard.html` and `app.html` to parse and inherit Warehouse/Receiver columns (`ownerWarehouse`, `ownerReceiver`, `locationWarehouse`, `locationReceiver`) and pass `fileName`.
+- **Version Sync**: Synchronized all versions to V.7.5.3 across `code.gs`, `index.js`, `dashboard.html`, `app.html`, and documentation.
+
+## 🐞 Bug Fixes & Stability (V.7.5.2)
+- **CSV Import Update Fix**: Fixed issue where CSV import in `dashboard.html` only saved in-memory and never sent data to Google Sheets backend (`code.gs`). Hooked up `saveImportData` with dynamic column header mapping, DUID/Bill multi-item inheritance, and full 25-column recording (including Owner Warehouse/Receiver & Location Warehouse/Receiver).
+- **Import History & Audit Log System**: Created `IMPORT_LOG` sheet and `getImportHistory` API in `code.gs`. Added full `page-history` view in `dashboard.html` with KPI summary cards, filter/search controls, status badges (✅ สำเร็จ / ❌ ไม่สำเร็จ), and recent import logs directly in the Import panel.
+- **Standalone/CORS Web App Fallback**: Supported both direct `google.script.run` execution and external `fetch` POST (`action: "import"`, `action: "getImportHistory"`) so the system functions whether embedded in GAS or run standalone.
+- **Version Sync**: Synchronized all versions to V.7.5.2 across `code.gs`, `dashboard.html`, and documentation.
+- **Status Calculation Fix**: Normalized `Item Code` (removed `LTH` prefix and `-N`/`-D` suffixes) in `computeDuidStatus` inside `code.gs`. This ensures that IN and OUT records balance correctly even if the Item Code was recorded slightly differently (e.g., `LTH25033335-N` vs `25033335`).
+- **Version Sync**: Synchronized all versions to V.6.8.2.
+
+## 🐞 Bug Fixes & Stability (V.6.8.1)
+- **Telegram Group Notification**: Updated default Telegram Destination ID to `-5188878406` (Inventory-Recode Group) to ensure notifications are routed correctly to the group instead of the user's personal ID.
+- **Version Sync**: Synchronized all versions to V.6.8.1 across `code.gs`, `index.js`, and `app.html`.
+
+## 🐞 Bug Fixes & Stability (V.6.8.0)
+- **LINE Group ID Diagnostic & Webhook Command**: Added `/id` and `get id` commands in LINE webhook (`handleEvent`) allowing users to query their Group ID or User ID directly from LINE chat.
+- **Diagnostic API Upgrade**: Exposed `lineDestIdUsed` (currently active LINE Destination ID) on the root URL path diagnostic endpoint (`/`) to identify mismatched or incorrect LINE destination configurations.
+- **Version Sync**: Synchronized version to V.6.8.0 across `code.gs`, `app.html`, and `index.js`.
+
+## 🐞 Bug Fixes & Stability (V.6.7.9)
+- **iPhone 15 Deep Scan V2**: Upgraded Deep Scan logic with aggressive sharpness and brightness filters specifically tuned for high-end mobile cameras (iPhone 15, Samsung S26).
+- **Multi-Phase Decoding**: Implemented 4 distinct pre-processing phases (High Contrast B&W, Sharp B&W, Ultra-res Color, Fast-Low res) to extract data from blurry or high-noise photos.
+- **Enhanced Image Processing**: Used higher quality JPEG output (95%) and simulated sharpening filters to aid the QR/Barcode engine.
+- **Version Sync**: Synchronized version to V.6.7.9 across `code.gs`, `app.html`, and `index.js`.
+
+## 🐞 Bug Fixes & Stability (V.6.7.8)
+- **Enhanced Diagnostics**: Added token usage logging and detailed diagnostic route in `index.js`.
+- **Version Sync**: Synchronized all success messages and version strings to V.6.7.3.
+- **Robustness**: Improved error logging for Telegram push failures.
+
+## 🐞 Bug Fixes & Stability (V.6.7.2)
+- **Destination ID Fix**: Corrected the Telegram Destination ID to the user's personal ID `7378939928`.
+- **Version Sync**: Synchronized version to V.6.7.2 across all components.
+
+## 🐞 Bug Fixes & Stability (V.6.7.1)
+- **Destination ID Update**: Updated the Telegram Destination ID to `8621299992` as requested by the user.
+- **Version Sync**: Synchronized version to V.6.7.1 across all components.
+
+## 🐞 Bug Fixes & Stability (V.6.7.0)
+- **Emergency Token Update**: Updated the Telegram Bot token to the latest one (`...AZYwWk`) after the previous one was revoked.
+- **Version Sync**: Synchronized version to V.6.7.0 across all components (`code.gs`, `index.js`, `app.html`).
+- **Robustness**: Ensured `index.js` uses the new token as a fallback for immediate fix.
+
+## 🐞 Bug Fixes & Stability (V.6.6.9)
+- **Telegram Token Update**: Updated the Telegram Bot token to the new one provided by the user (`862129...`).
+- **Token Fallback**: Implemented a fallback mechanism for `TELEGRAM_BOT_TOKEN` in `index.js` to ensure the bot works immediately after deployment.
+- **Version Sync**: Synchronized version to V.6.6.9 across all components (`code.gs`, `index.js`, `app.html`).
+
+## 🐞 Bug Fixes & Stability (V.6.6.8)
+- **Multi-LINE Bot Support**: The system now supports multiple LINE accounts (TLN-Inventory, TLN-Inventory#2, TLN-Inventory#3). Notifications are sent through all configured bots to ensure delivery.
+- **Dynamic Configuration**: Improved `index.js` to handle an array of LINE credentials, allowing for easier scaling of the notification system.
+- **Version Sync**: Synchronized version to V.6.6.8 across all components.
+
+## 🐞 Bug Fixes & Stability (V.6.6.7)
+- **Region Fallback Engine**: Implemented a robust fallback in `saveMainData`. If Region is missing, the system automatically lookups the Master Data sheet using DUID before saving.
+- **UI-Backend Sync**: Modified the Web App to use the processed header returned from GAS, ensuring that folder creation and notifications always use the most accurate Region detected.
+- **Enhanced Diagnostics**: Added rich environment variable checks and detailed logging to `index.js` for better troubleshooting of LINE/Telegram notifications.
+- **Version Sync**: Synchronized version to V.6.6.7 across all components.
+
+## 🐞 Bug Fixes & Stability (V.6.6.6)
+- **Enhanced Region Recording**: Fixed issue where Column C (Region) was not being recorded.
+- **DUID Suffix Detection**: OCR now automatically extracts Region from DUID suffixes (e.g., `_ER`, `_BKK`).
+- **Master Data Fallback**: If OCR fails to detect Region, the system now automatically looks up the Region from the 'data' master sheet using the DUID.
+- **Detailed Debug Logging**: Added rich logging for the `save` action, including the full header payload for easier troubleshooting.
+- **Version Sync**: Synchronized version to V.6.6.6 across all core components.
+
+## 🐞 Bug Fixes & Stability (V.6.6.5)
+- **Telegram OCR Auto-Save**: Telegram Bot now automatically saves images to Google Drive following the `Region > DUID` structure.
+- **Robust Region Detection**: Improved OCR regex to accurately detect Region (ER, BKK, etc.) from various bill formats.
+- **Folder Hierarchy Guard**: Implemented `Unknown_Region` fallback to prevent folders from being created in the root directory.
+- **Large Image Support**: Increased Vercel payload limit to 50MB and optimized timeout (60s) for high-resolution OCR processing.
+- **Enhanced Search Template**: Refined Telegram response style with continuous item indexing and `📄` bill emoji.
+- **Crash Prevention**: Fixed LINE middleware crash when environment variables are missing.
+- **Version Sync**: Synchronized version to V.6.6.5 across `code.gs`, `index.js`, `app.html`, and `test-system.js`.
+
+## 🐞 Bug Fixes & Stability (V.6.6.3)
+- **AI OCR Integration:** Restored `parsePickingList` and implemented `processOCR` in `code.gs` using Google Drive API.
+- **Telegram Image Handling:** Enabled Telegram Bot to handle Picking List images, perform OCR, and automatically record data to the spreadsheet.
+- **Enhanced Notification:** Refined the Telegram notification template to include Bill No in the header and improved overall formatting with professional dividers.
+- **Version Sync:** Updated version to V.6.6.3 across all components.
+
+## 🐞 Bug Fixes & Stability (V.6.6.2)
+- **Top-Row Recording:** Modified `saveMainData` to insert new records at row 2 (immediately below the header) instead of appending to the bottom. This improves usability for sheets with 2000+ rows.
+- **Telegram & LINE Restoration:** Restored the missing `/notify` and `/telegram-webhook` endpoints in `index.js`.
+- **Notification Template:** Updated the notification format to match the requested template with detailed item information.
+- **Version Sync:** Updated version to V.6.6.1 across `code.gs`, `app.html`, and `index.js`.
+
+## 🐞 Bug Fixes & Stability (V.6.5.4)
+- **Column Mapping Lock:** Locked DUID to Column A (Index 0) across all sheets as requested.
+- **Header-Based Detection:** Implemented robust header detection for all sheet interactions (DUID, Region, Owners, Models, etc.) to handle variations in sheet structure.
+- **Transaction Alignment:** Updated `saveMainData` to use the new Column A alignment (DUID at index 0) and removed the redundant 'No' column.
+- **Search Optimization:** Improved `searchByDuidOnly` to correctly read metadata from the 'data' master sheet and items from transaction sheets.
+
+## 🐞 Bug Fixes & Stability (V.6.1.5)
+- **Spreadsheet Mapping Fix:** Corrected column mapping in `saveMainData` to match the actual spreadsheet structure.
+- **Notification Restoration:** Restored Line notification format to the rich text style with emojis as requested by the user.
+- **Field Restoration:** Re-added 'Owner Warehouse' and 'Owner Receiver' fields to the UI with searchable datalists.
+- **Camera Permission Fix:** Improved error handling for `NotAllowedError`. Added specific instructions and `alert` to guide users on how to reset camera permissions in their browser.
+- **Scanner Optimization:** Simplified `html5-qrcode` initialization and removed redundant permission requests to prevent conflicts on mobile browsers.
+- **Version Sync:** Synchronized version numbers across `app.html` and `code.gs`.
+
+## 🐞 Bug Fixes & Stability (V.6.0.6)
+- **Field Simplification:** Removed Internal Project, Internal Phase, Internal WON, Site Code, and Project Code for a leaner workflow.
+- **Flexible Photo Upload:** Removed `capture="environment"` to allow users to choose between taking a photo or importing from the gallery.
+- **Dynamic Owners:** Converted 'Owner Warehouse' and 'Owner Receiver' to searchable datalists that allow adding new entries.
+- **Improved OCR:** Refined OCR to focus on essential fields like Bill Number.
+- **UI Cleanup:** Optimized `app.html` for better mobile experience and less clutter.
+
+## ⚠️ Important Rules
+- **Deployment:** When updating code, always **Deploy as Web App** and select **"New Version"** to ensure changes take effect.
+- **Telegram Token:** Do NOT expose `TELEGRAM_BOT_TOKEN` in logs or public commits.
+- **Data Integrity:** The Google Sheet structure is maintained; removed fields will now save as empty strings to ensure backward compatibility with existing reporting tools.
+- **Mobile First:** All UI changes in `app.html` must be tested for mobile responsiveness.

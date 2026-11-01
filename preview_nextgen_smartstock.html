@@ -1,0 +1,2218 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartStock Pro — Telecom Asset & Inventory Cloud</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Sarabun:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+      --font-sans: 'Plus Jakarta Sans', 'Sarabun', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    
+    body {
+      font-family: var(--font-sans);
+      background-color: #080c14;
+      color: #f1f5f9;
+      overflow-x: hidden;
+      letter-spacing: -0.015em;
+    }
+    
+    .font-mono {
+      font-family: var(--font-mono);
+    }
+
+    /* Glassmorphism & Custom borders */
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(51, 65, 85, 0.4);
+    }
+    
+    .glass-card:hover {
+      border-color: rgba(99, 102, 241, 0.35);
+    }
+    
+    .glass-panel {
+      background: rgba(11, 17, 32, 0.88);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(51, 65, 85, 0.4);
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #080c14;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    /* Micro-glows */
+    .glow-emerald {
+      box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.15);
+    }
+    .glow-indigo {
+      box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.2);
+    }
+
+    /* Badges */
+    .badge-in { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-out { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-dis { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+    .badge-str-in { background: rgba(59, 130, 246, 0.15) !important; color: #60a5fa !important; border: 1px solid rgba(59, 130, 246, 0.3) !important; }
+    .badge-str-out { background: rgba(245, 158, 11, 0.15) !important; color: #fbbf24 !important; border: 1px solid rgba(245, 158, 11, 0.3) !important; }
+    .badge-ret { background: rgba(236, 72, 153, 0.15) !important; color: #f472b6 !important; border: 1px solid rgba(236, 72, 153, 0.3) !important; }
+
+    .transition-all-fast {
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- App Wrapper -->
+  <div class="flex h-screen overflow-hidden">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 glass-panel flex flex-col justify-between shrink-0 hidden md:flex">
+      <div class="overflow-y-auto">
+        <!-- Logo -->
+        <div class="p-5 border-b border-slate-800/80 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-emerald-400 p-[1.5px] flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center font-extrabold text-indigo-400 text-lg">
+              SQ
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-100 tracking-tight text-base">SmartStock</span>
+              <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">v8.0 PRO</span>
+            </div>
+            <p class="text-xs text-slate-400">Telecom Inventory & Asset</p>
+          </div>
+        </div>
+
+        <!-- User Profile Pill -->
+        <div class="px-4 py-3 border-b border-slate-800/60 bg-slate-900/40 mx-3 my-3 rounded-xl border flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="relative">
+              <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold text-xs flex items-center justify-center">
+                TL
+              </div>
+              <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-950"></span>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-slate-200 leading-tight">TLN Engineer Admin</p>
+              <p class="text-[11px] text-emerald-400 font-mono">AIS & TRUE Ops</p>
+            </div>
+          </div>
+          <span class="text-xs text-slate-500 hover:text-slate-300 cursor-pointer">⚙️</span>
+        </div>
+
+        <!-- Navigation Links (All Original Menus) -->
+        <nav class="px-3 space-y-1 pb-4">
+          
+          <!-- Section 1: Overview -->
+          <div class="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">Overview</div>
+          
+          <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition-all-fast">
+            <span class="text-sm">📊</span>
+            <span>Analytics Dashboard</span>
+          </button>
+          
+          <button onclick="switchTab('transactions')" id="nav-transactions" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-200 bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 transition-all-fast">
+            <div class="flex items-center gap-3">
+              <span class="text-sm">📦</span>
+              <span>All Transactions</span>
+            </div>
+            <span id="badge-total-tx" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">3,782</span>
+          </button>
+
+          <button onclick="switchTab('bom')" id="nav-bom" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition-all-fast">
+            <span class="text-sm">📋</span>
+            <span>BOM Master Catalog</span>
+          </button>
+
+          <button onclick="switchTab('search')" id="nav-search" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition-all-fast">
+            <span class="text-sm">🔍</span>
+            <span>ค้นหา DUID / Bill</span>
+          </button>
+
+          <button onclick="switchTab('import')" id="nav-import" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition-all-fast">
+            <span class="text-sm">🔄</span>
+            <span>Import / Sync ข้อมูล</span>
+          </button>
+
+          <button onclick="switchTab('import-history')" id="nav-import-history" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition-all-fast">
+            <span class="text-sm">📁</span>
+            <span>ประวัติ Import</span>
+          </button>
+
+          <!-- Section 2: บันทึกข้อมูล (Movement Operations) -->
+          <div class="pt-3 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">บันทึกข้อมูล (Movement)</div>
+          
+          <button onclick="openMultiStepModal('IN')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20 transition-all-fast">
+            <span>📥</span>
+            <span>รับเข้า (IN)</span>
+          </button>
+          
+          <button onclick="openMultiStepModal('OUT')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-500/10 border border-rose-500/20 transition-all-fast">
+            <span>📤</span>
+            <span>ส่งออก (OUT)</span>
+          </button>
+
+          <button onclick="openMultiStepModal('DISMANTLE')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-purple-400 hover:bg-purple-500/10 border border-purple-500/20 transition-all-fast">
+            <span>🔧</span>
+            <span>รื้อถอน (DISMANTLE)</span>
+          </button>
+
+          <button onclick="openMultiStepModal('STR/IN')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-blue-400 hover:bg-blue-500/10 border border-blue-500/20 transition-all-fast">
+            <span>📦</span>
+            <span>รับเข้าคลัง (STR/IN)</span>
+          </button>
+
+          <button onclick="openMultiStepModal('STR/OUT')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-amber-400 hover:bg-amber-500/10 border border-amber-500/20 transition-all-fast">
+            <span>🚚</span>
+            <span>ส่งออกคลัง (STR/OUT)</span>
+          </button>
+
+          <button onclick="openMultiStepModal('RETURN')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-pink-400 hover:bg-pink-500/10 border border-pink-500/20 transition-all-fast">
+            <span>↩️</span>
+            <span>คืนของ (RETURN)</span>
+          </button>
+
+          <!-- Section 3: รายงาน & พิมพ์ใบเบิก -->
+          <div class="pt-3 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">รายงาน & เอกสาร</div>
+          
+          <button onclick="switchTab('region-report')" id="nav-region-report" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition-all-fast">
+            <span class="text-sm">🗺️</span>
+            <span>สรุปตาม Region</span>
+          </button>
+
+          <button onclick="switchTab('teloneer')" id="nav-teloneer" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-indigo-400 hover:bg-indigo-500/10 border border-indigo-500/20 transition-all-fast">
+            <span class="text-sm">🖨️</span>
+            <span>Print ใบเบิก (Teloneer)</span>
+          </button>
+
+        </nav>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="p-4 border-t border-slate-800/60 bg-slate-900/30 shrink-0">
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+          <span>GAS Cloud Sync</span>
+          <span class="inline-flex items-center gap-1.5 text-emerald-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Connected
+          </span>
+        </div>
+        <button onclick="showToast('Cloud Data Synchronized with Google Sheets & Apps Script!', 'success')" class="w-full py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md text-xs font-medium border border-slate-700 flex items-center justify-center gap-1.5 transition-all-fast">
+          <span>🔄</span> Sync Data Now
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-y-auto bg-[#080c14]">
+      
+      <!-- Top Header Bar -->
+      <header class="h-16 border-b border-slate-800/80 px-6 flex items-center justify-between shrink-0 bg-slate-950/40 backdrop-blur-md sticky top-0 z-30">
+        <div class="flex items-center gap-3">
+          <button class="md:hidden text-slate-400 hover:text-white p-2">☰</button>
+          <div>
+            <h1 id="page-heading" class="text-base font-semibold text-slate-100 flex items-center gap-2">
+              <span>All Transactions Master</span>
+              <span class="text-xs font-normal text-slate-400">| Realtime Data Management</span>
+            </h1>
+          </div>
+        </div>
+
+        <!-- Global Action Controls (Top Right) -->
+        <div class="flex items-center gap-3">
+          <!-- Customer Segment Selector -->
+          <div class="flex items-center bg-slate-900/90 p-1 rounded-lg border border-slate-800">
+            <button onclick="setCustomerFilter('ALL')" id="btn-cust-all" class="px-3 py-1 rounded text-xs font-semibold bg-indigo-600 text-white shadow-sm transition-all-fast">All Networks</button>
+            <button onclick="setCustomerFilter('AIS')" id="btn-cust-ais" class="px-3 py-1 rounded text-xs font-semibold text-slate-400 hover:text-emerald-400 transition-all-fast">AIS (Green)</button>
+            <button onclick="setCustomerFilter('TRUE')" id="btn-cust-true" class="px-3 py-1 rounded text-xs font-semibold text-slate-400 hover:text-blue-400 transition-all-fast">TRUE (Blue)</button>
+          </div>
+
+          <!-- Create Action Trigger -->
+          <button onclick="openMultiStepModal('IN')" class="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-md shadow-indigo-500/20 border border-indigo-400/30 transition-all-fast">
+            <span>✨</span> New Transaction
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Body Container -->
+      <div class="p-6 space-y-6 flex-1">
+
+        <!-- ============================================== -->
+        <!-- TAB 1: ALL TRANSACTIONS (DEFAULT VIEW)         -->
+        <!-- ============================================== -->
+        <div id="view-transactions" class="space-y-4">
+          
+          <!-- Filter & Control Toolbar -->
+          <div class="glass-card rounded-2xl p-4 flex flex-wrap gap-3 items-center justify-between border border-slate-800">
+            
+            <!-- Search Input -->
+            <div class="relative flex-1 min-w-[260px]">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-sm">🔍</span>
+              <input 
+                type="text" 
+                id="search-input"
+                oninput="handleSearch()"
+                placeholder="Search DUID, Bill No, Model, Code, S/N..."
+                class="w-full pl-9 pr-4 py-2 bg-slate-900/90 text-sm text-slate-100 placeholder-slate-500 rounded-xl border border-slate-700/80 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+
+            <!-- Dropdown Filters -->
+            <div class="flex flex-wrap items-center gap-2">
+              
+              <!-- Customer Filter -->
+              <select id="filter-customer" onchange="applyFilters()" class="bg-slate-900/90 text-xs text-slate-200 border border-slate-700/80 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
+                <option value="ALL">Network: All (AIS + TRUE)</option>
+                <option value="AIS">AIS Only</option>
+                <option value="TRUE">TRUE Only</option>
+              </select>
+
+              <!-- Region Filter -->
+              <select id="filter-region" onchange="applyFilters()" class="bg-slate-900/90 text-xs text-slate-200 border border-slate-700/80 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
+                <option value="ALL">Region: All Areas</option>
+                <option value="BKK">BKK (Bangkok)</option>
+                <option value="ER">ER (Eastern)</option>
+                <option value="WR">WR (Western)</option>
+                <option value="NR">NR (Northern)</option>
+                <option value="SR">SR (Southern)</option>
+                <option value="NER">NER (North Eastern)</option>
+              </select>
+
+              <!-- Type Filter -->
+              <select id="filter-type" onchange="applyFilters()" class="bg-slate-900/90 text-xs text-slate-200 border border-slate-700/80 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
+                <option value="ALL">Type: All Operations</option>
+                <option value="IN">IN (Receive)</option>
+                <option value="OUT">OUT (Dispatch)</option>
+                <option value="DISMANTLE">DISMANTLE</option>
+                <option value="STR/IN">STR/IN</option>
+                <option value="STR/OUT">STR/OUT</option>
+                <option value="RETURN">RETURN</option>
+              </select>
+
+              <!-- Reset Button -->
+              <button onclick="resetFilters()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium border border-slate-700 transition-all-fast">
+                Reset
+              </button>
+
+              <!-- Export CSV Button -->
+              <button onclick="exportCSV()" class="px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-xl text-xs font-semibold border border-indigo-500/30 flex items-center gap-1.5 transition-all-fast">
+                <span>📥</span> Export CSV
+              </button>
+            </div>
+          </div>
+
+          <!-- Active Table Section with Sticky Header -->
+          <div class="glass-card rounded-2xl overflow-hidden border border-slate-800/80 shadow-2xl">
+            <div class="max-h-[62vh] overflow-x-auto overflow-y-auto relative">
+              <table class="w-full text-left border-collapse text-xs">
+                <!-- Sticky Table Header -->
+                <thead class="sticky top-0 bg-[#0d1527] z-20 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                  <tr>
+                    <th class="p-3 w-12 text-center">Action</th>
+                    <th class="p-3 w-14 text-center cursor-pointer hover:text-slate-200" onclick="sortTable('no')">No ↕</th>
+                    <th class="p-3 cursor-pointer hover:text-slate-200" onclick="sortTable('duid')">DUID ↕</th>
+                    <th class="p-3">Bill No.</th>
+                    <th class="p-3">Type</th>
+                    <th class="p-3">Region</th>
+                    <th class="p-3">Customer</th>
+                    <th class="p-3">Model</th>
+                    <th class="p-3">Item Code</th>
+                    <th class="p-3">Description</th>
+                    <th class="p-3 text-center">Qty</th>
+                    <th class="p-3">Serial No.</th>
+                    <th class="p-3">Status</th>
+                    <th class="p-3">Date</th>
+                  </tr>
+                </thead>
+                <tbody id="table-body" class="divide-y divide-slate-800/60 text-slate-300">
+                  <!-- Rendered dynamically via JavaScript -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Table Footer & Pagination (50 items per page) -->
+            <div class="p-4 bg-slate-900/60 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
+              <div class="flex items-center gap-2 text-slate-400">
+                <span id="page-stat-label">Showing 1-50 of 3,782 items</span>
+                <span class="text-slate-600">|</span>
+                <span>Page Size:</span>
+                <select id="select-pagesize" onchange="changePageSize(this.value)" class="bg-slate-800 border border-slate-700 text-slate-200 rounded px-2 py-1 text-xs">
+                  <option value="15">15</option>
+                  <option value="25">25</option>
+                  <option value="50" selected>50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+
+              <!-- Page navigation buttons -->
+              <div class="flex items-center gap-1.5">
+                <button onclick="navigatePage('first')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded text-slate-300 border border-slate-700 font-mono" id="btn-first">&laquo;</button>
+                <button onclick="navigatePage('prev')" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded text-slate-300 border border-slate-700" id="btn-prev">Prev</button>
+                <span id="current-page-badge" class="px-3 py-1 bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 rounded font-semibold">Page 1 of 76</span>
+                <button onclick="navigatePage('next')" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded text-slate-300 border border-slate-700" id="btn-next">Next</button>
+                <button onclick="navigatePage('last')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded text-slate-300 border border-slate-700 font-mono" id="btn-last">&raquo;</button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 2: ANALYTICS DASHBOARD VIEW (REBUILT)      -->
+        <!-- ============================================== -->
+        <div id="view-dashboard" class="space-y-6 hidden">
+
+          <!-- GAS Live Banner -->
+          <div class="flex items-center justify-between px-4 py-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/8 text-xs">
+            <span class="flex items-center gap-2 text-emerald-400 font-semibold">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              🔗 GAS Live: <span class="font-mono">10,321 รายการ</span> | อัปเดต: <span class="font-mono">08:39:57</span>
+            </span>
+            <button class="text-slate-500 hover:text-slate-300 text-base leading-none">✕</button>
+          </div>
+
+          <!-- 8 Executive KPI Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3.5">
+            
+            <!-- KPI 1: Total Records -->
+            <div onclick="switchTab('transactions')" class="glass-card rounded-2xl p-4 glow-emerald transition-all-fast cursor-pointer hover:border-emerald-500/40">
+              <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+                <span class="font-medium">Total Records (จำนวนรายการ)</span>
+                <span class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-sm">📦</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <div class="text-2xl font-extrabold text-slate-100 font-mono tracking-tight" id="kpi-total-count">10,321</div>
+                <div class="flex items-center text-[11px] font-semibold text-emerald-400">
+                  <span>+18.4%</span>
+                </div>
+              </div>
+              <div class="text-[10px] text-slate-400 mt-1">รายการทั้งหมดในระบบ (Live)</div>
+            </div>
+
+            <!-- KPI 2: Active DUIDs -->
+            <div onclick="switchTab('search')" class="glass-card rounded-2xl p-4 glow-indigo transition-all-fast cursor-pointer hover:border-indigo-500/40">
+              <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+                <span class="font-medium">Active DUIDs (ไซต์งานที่ไม่ซ้ำ)</span>
+                <span class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-sm">🏷️</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <div class="text-2xl font-extrabold text-slate-100 font-mono tracking-tight" id="kpi-duid-count">3,782</div>
+                <div class="flex items-center text-[11px] font-semibold text-indigo-400">
+                  <span>Unique Sites</span>
+                </div>
+              </div>
+              <div class="text-[10px] text-slate-400 mt-1">ไซต์งานที่เคลื่อนไหวในระบบ</div>
+            </div>
+
+            <!-- KPI 3: IN -->
+            <div onclick="openMultiStepModal('IN')" class="glass-card rounded-2xl p-4 transition-all-fast cursor-pointer hover:border-emerald-500/40">
+              <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+                <span class="font-medium">Receive (IN) (รับเข้า)</span>
+                <span class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-sm">📥</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <div class="text-2xl font-extrabold text-emerald-400 font-mono tracking-tight" id="kpi-in-count">5,120</div>
+                <div class="flex items-center text-[11px] font-semibold text-emerald-400">
+                  <span>+12.6%</span>
+                </div>
+              </div>
+              <div class="text-[10px] text-slate-400 mt-1">ยอดรับเข้าอุปกรณ์ (Records)</div>
+            </div>
+
+            <!-- KPI 4: OUT -->
+            <div onclick="openMultiStepModal('OUT')" class="glass-card rounded-2xl p-4 transition-all-fast cursor-pointer hover:border-rose-500/40">
+              <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+                <span class="font-medium">Issue (OUT) (เบิกจ่าย)</span>
+                <span class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold text-sm">📤</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <div class="text-2xl font-extrabold text-rose-400 font-mono tracking-tight" id="kpi-out-count">3,840</div>
+                <div class="flex items-center text-[11px] font-semibold text-rose-400">
+                  <span>-4.2%</span>
+                </div>
+              </div>
+              <div class="text-[10px] text-slate-400 mt-1">ยอดเบิกใช้งานหน้างาน (Records)</div>
+            </div>
+
+            <!-- KPI 5: DISMANTLE -->
+            <div onclick="openMultiStepModal('DISMANTLE')" class="glass-card rounded-2xl p-4 transition-all-fast cursor-pointer hover:border-purple-500/40">
+              <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+                <span class="font-medium">Dismantle (รื้อถอน)</span>
+                <span class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center font-bold text-sm">🔧</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <div class="text-2xl font-extrabold text-purple-400 font-mono tracking-tight">642</div>
+                <div class="flex items-center text-[11px] font-semibold text-purple-400">
+                  <span>Recovery</span>
+                </div>
+              </div>
+              <div class="text-[10px] text-slate-400 mt-1">อุปกรณ์รื้อถอนจากไซต์งาน</div>
+            </div>
+
+            <!-- KPI 6: STR Transfer -->
+            <div onclick="openMultiStepModal('STR/IN')" class="glass-card rounded-2xl p-4 transition-all-fast cursor-pointer hover:border-blue-500/40">
+              <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+                <span class="font-medium">Store Transfers (ย้ายคลัง)</span>
+                <span class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold text-sm">🔄</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <div class="text-2xl font-extrabold text-blue-400 font-mono tracking-tight">410</div>
+                <div class="flex items-center text-[11px] font-semibold text-blue-400">
+                  <span>STR/IN &amp; OUT</span>
+                </div>
+              </div>
+              <div class="text-[10px] text-slate-400 mt-1">โยกย้ายระหว่างคลังและภาค</div>
+            </div>
+
+            <!-- KPI 7: RETURN -->
+            <div onclick="openMultiStepModal('RETURN')" class="glass-card rounded-2xl p-4 transition-all-fast cursor-pointer hover:border-pink-500/40">
+              <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+                <span class="font-medium">Returns (ส่งคืน)</span>
+                <span class="w-8 h-8 rounded-lg bg-pink-500/10 text-pink-400 flex items-center justify-center font-bold text-sm">🔙</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <div class="text-2xl font-extrabold text-pink-400 font-mono tracking-tight">289</div>
+                <div class="flex items-center text-[11px] font-semibold text-pink-400">
+                  <span>Vendor Claim</span>
+                </div>
+              </div>
+              <div class="text-[10px] text-slate-400 mt-1">คืนคลังกลาง / เคลมผู้ผลิต</div>
+            </div>
+
+            <!-- KPI 8: PENDING REVIEW -->
+            <div class="glass-card rounded-2xl p-4 transition-all-fast border border-amber-500/30">
+              <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+                <span class="font-medium">Pending Review (รอดำเนินการ)</span>
+                <span class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-sm">⏳</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <div class="text-2xl font-extrabold text-amber-400 font-mono tracking-tight" id="kpi-pending-count">162</div>
+                <span class="text-xs text-slate-400">รายการ</span>
+              </div>
+              <div class="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-slate-800">
+                <span class="text-emerald-400 font-bold">🟢 OPEN: 148</span>
+                <span class="text-slate-600">|</span>
+                <span class="text-rose-400 font-bold">🔴 CLOSED: 14</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Charts Row with Time Pills -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="glass-card rounded-2xl p-5 lg:col-span-2">
+              <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <div>
+                  <h3 class="font-semibold text-slate-100 text-sm">Daily Telecom Asset Velocity</h3>
+                  <p class="text-xs text-slate-400">Comparing Inbound Receive vs Outbound Site Dispatch</p>
+                </div>
+                <!-- Time Range Filter Pills -->
+                <div class="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-1 text-xs">
+                  <button class="px-3 py-1 rounded bg-indigo-600 text-white font-semibold">7 วัน</button>
+                  <button class="px-3 py-1 rounded text-slate-400 hover:text-white transition-colors">30 วัน</button>
+                  <button class="px-3 py-1 rounded text-slate-400 hover:text-white transition-colors">90 วัน</button>
+                </div>
+              </div>
+              <div class="relative h-64 w-full pt-4">
+                <svg viewBox="0 0 600 200" class="w-full h-full">
+                  <line x1="0" y1="40" x2="600" y2="40" stroke="#1e293b" stroke-dasharray="3 3" />
+                  <line x1="0" y1="90" x2="600" y2="90" stroke="#1e293b" stroke-dasharray="3 3" />
+                  <line x1="0" y1="140" x2="600" y2="140" stroke="#1e293b" stroke-dasharray="3 3" />
+                  <line x1="0" y1="190" x2="600" y2="190" stroke="#334155" />
+                  <polyline points="50,120 130,90 210,135 290,65 370,80 450,45 530,55" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" />
+                  <polyline points="50,150 130,140 210,110 290,130 370,95 450,85 530,105" fill="none" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="5 3" />
+                </svg>
+              </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-5">
+              <h3 class="font-semibold text-slate-100 text-sm mb-1">Regional Inventory Distribution</h3>
+              <p class="text-xs text-slate-400 mb-4">Volume breakdown across operational hubs</p>
+              <div class="space-y-3">
+                <div>
+                  <div class="flex justify-between text-xs mb-1"><span>Eastern Region (ER)</span><span class="text-emerald-400 font-mono">7,251 units (70%)</span></div>
+                  <div class="w-full bg-slate-800 rounded-full h-2"><div class="bg-emerald-500 h-2 rounded-full" style="width: 70%"></div></div>
+                </div>
+                <div>
+                  <div class="flex justify-between text-xs mb-1"><span>Bangkok Metro (BKK)</span><span class="text-amber-400 font-mono">1,245 units (12%)</span></div>
+                  <div class="w-full bg-slate-800 rounded-full h-2"><div class="bg-amber-500 h-2 rounded-full" style="width: 12%"></div></div>
+                </div>
+                <div>
+                  <div class="flex justify-between text-xs mb-1"><span>North Eastern (NER)</span><span class="text-orange-400 font-mono">980 units (10%)</span></div>
+                  <div class="w-full bg-slate-800 rounded-full h-2"><div class="bg-orange-500 h-2 rounded-full" style="width: 10%"></div></div>
+                </div>
+                <div>
+                  <div class="flex justify-between text-xs mb-1"><span>Northern (NR)</span><span class="text-blue-400 font-mono">512 units (5%)</span></div>
+                  <div class="w-full bg-slate-800 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: 5%"></div></div>
+                </div>
+                <div>
+                  <div class="flex justify-between text-xs mb-1"><span>Southern Region (SR)</span><span class="text-purple-400 font-mono">320 units (3%)</span></div>
+                  <div class="w-full bg-slate-800 rounded-full h-2"><div class="bg-purple-500 h-2 rounded-full" style="width: 3%"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 3: BOM MASTER CATALOG                     -->
+        <!-- ============================================== -->
+        <div id="view-bom" class="space-y-4 hidden">
+          <div class="glass-card rounded-2xl p-5 border border-slate-800">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="font-semibold text-slate-100 text-sm">BOM (Bill of Materials) Master Catalog</h3>
+                <p class="text-xs text-slate-400">Certified telecom equipment for AIS & TRUE network rollouts</p>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="filterBOM('ALL')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600/30 text-indigo-300 border border-indigo-500/40">All BOM</button>
+                <button onclick="filterBOM('AIS')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">AIS Components</button>
+                <button onclick="filterBOM('TRUE')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/40">TRUE Components</button>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" id="bom-catalog-grid"></div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 4: PRINT ใบเบิก (TELONEER FORM)            -->
+        <!-- ============================================== -->
+        <div id="view-teloneer" class="space-y-4 hidden">
+          <div class="glass-card rounded-2xl p-5 border border-slate-800">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="font-semibold text-slate-100 text-sm">🖨️ Teloneer Official Requisition Form (A4 Review)</h3>
+                <p class="text-xs text-slate-400">แบบฟอร์มใบเบิก/ส่งมอบอุปกรณ์โทรคมนาคมมาตรฐาน A4</p>
+              </div>
+              <button onclick="window.print()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-2">
+                <span>🖨️</span> พิมพ์เอกสาร (Print A4)
+              </button>
+            </div>
+
+            <!-- A4 Document Box -->
+            <div class="bg-white text-slate-900 p-8 rounded-xl max-w-4xl mx-auto shadow-2xl text-xs space-y-4 font-sans">
+              <div class="border-b-2 border-slate-900 pb-3 flex justify-between items-center">
+                <div>
+                  <h2 class="text-lg font-black text-slate-900 tracking-tight">TELONEER CO., LTD.</h2>
+                  <p class="text-xs text-slate-600">ใบเบิกและส่งมอบอุปกรณ์โครงข่ายโทรคมนาคม (MATERIAL REQUISITION SLIP)</p>
+                </div>
+                <div class="text-right">
+                  <span class="inline-block px-3 py-1 bg-slate-900 text-white font-mono font-bold text-xs rounded">FORM: TLN-MAT-2026</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4 py-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                <div><strong>DUID:</strong> TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK</div>
+                <div><strong>Bill No:</strong> 2026 Capacity Expansion NW Modernization_EXP_BKK</div>
+                <div><strong>Network:</strong> AIS (Advanced Info Service)</div>
+                <div><strong>Region:</strong> BKK Metro (Bangkok Area)</div>
+              </div>
+
+              <table class="w-full text-left border-collapse border border-slate-300 text-xs mt-4">
+                <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-300">
+                  <tr>
+                    <th class="p-2 border border-slate-300 text-center w-12">No</th>
+                    <th class="p-2 border border-slate-300">Model & Description</th>
+                    <th class="p-2 border border-slate-300">Item Code</th>
+                    <th class="p-2 border border-slate-300 text-center w-16">Qty</th>
+                    <th class="p-2 border border-slate-300">Serial Number</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                  <tr><td class="p-2 border border-slate-300 text-center">1</td><td class="p-2 border border-slate-300">RRU3962, 1800MHz~2100MHz 2T4R</td><td class="p-2 border border-slate-300 font-mono">02311EPK</td><td class="p-2 border border-slate-300 text-center font-bold">1</td><td class="p-2 border border-slate-300 font-mono">2102311EPK10H4000311</td></tr>
+                  <tr><td class="p-2 border border-slate-300 text-center">2</td><td class="p-2 border border-slate-300">OPM15M Ver.B AC Power Module</td><td class="p-2 border border-slate-300 font-mono">02311RCD</td><td class="p-2 border border-slate-300 text-center font-bold">1</td><td class="p-2 border border-slate-300 font-mono">2102311RCD0T64000550</td></tr>
+                  <tr><td class="p-2 border border-slate-300 text-center">3</td><td class="p-2 border border-slate-300">RRU5526 Multi-mode 1800+2100MHz</td><td class="p-2 border border-slate-300 font-mono">02315QWS</td><td class="p-2 border border-slate-300 text-center font-bold">1</td><td class="p-2 border border-slate-300 font-mono">2102315QWS10S3102160</td></tr>
+                </tbody>
+              </table>
+
+              <div class="grid grid-cols-3 gap-6 pt-10 text-center text-xs">
+                <div class="border-t border-slate-400 pt-2">
+                  <p class="font-bold">ผู้เบิก (Requisitioner)</p>
+                  <p class="text-slate-500 mt-6">วันที่: ......./......./2026</p>
+                </div>
+                <div class="border-t border-slate-400 pt-2">
+                  <p class="font-bold">ผู้จ่ายของ (Warehouse Owner)</p>
+                  <p class="text-slate-500 mt-6">วันที่: ......./......./2026</p>
+                </div>
+                <div class="border-t border-slate-400 pt-2">
+                  <p class="font-bold">ผู้รับของ (Receiver Engineer)</p>
+                  <p class="text-slate-500 mt-6">วันที่: ......./......./2026</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 5: ค้นหา DUID / BILL (REBUILT)             -->
+        <!-- ============================================== -->
+        <div id="view-search" class="space-y-4 hidden">
+          <!-- GAS Live Banner -->
+          <div class="flex items-center justify-between px-4 py-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/8 text-xs">
+            <span class="flex items-center gap-2 text-emerald-400 font-semibold">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              🔗 GAS Live: <span class="font-mono">10,321 รายการ</span> | อัปเดต: <span class="font-mono">08:39:57</span>
+            </span>
+            <button class="text-slate-500 hover:text-slate-300 text-base leading-none">✕</button>
+          </div>
+
+          <div class="glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
+            <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">🔍 ค้นหา DUID / Bill No.</h3>
+            
+            <div class="flex gap-2">
+              <input 
+                type="text" 
+                id="deep-search-q" 
+                placeholder="พิมพ์ DUID หรือ Bill No. แล้วกด Enter..." 
+                onkeydown="if(event.key==='Enter') performDeepSearch()"
+                class="flex-1 rounded-xl px-4 py-2.5 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition-all font-mono" 
+                style="background:#0f172a;"
+              />
+              <button 
+                onclick="performDeepSearch()" 
+                class="px-5 py-2.5 rounded-xl text-xs font-bold text-white whitespace-nowrap flex items-center gap-1.5 shadow-lg transition-all"
+                style="background:linear-gradient(135deg,#10b981,#059669);"
+              >
+                🔍 ค้นหา
+              </button>
+            </div>
+
+            <!-- Instant Results Box -->
+            <div id="deep-search-result" class="space-y-2 pt-2">
+              <p class="text-xs text-slate-500 text-center py-4">พิมพ์รหัสไซต์งาน DUID เช่น <code class="text-indigo-400 font-mono">TECBA_SITE_ER_1001</code> หรือ Bill No. แล้วกด Enter เพื่อค้นหา</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 6: IMPORT / SYNC ข้อมูล (REBUILT) -->
+        <div id="view-import" class="space-y-4 hidden">
+
+          <!-- GAS Live Banner -->
+          <div class="flex items-center justify-between px-4 py-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/8 text-xs">
+            <span class="flex items-center gap-2 text-emerald-400 font-semibold">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              🔗 GAS Live: <span class="font-mono">10,321 รายการ</span> | อัปเดต: <span id="live-clock" class="font-mono">08:39:57</span>
+            </span>
+            <button class="text-slate-500 hover:text-slate-300 text-base leading-none">✕</button>
+          </div>
+
+          <!-- Sync & Import Header -->
+          <div class="glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
+            <div>
+              <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">📋 Sync &amp; Import ข้อมูล</h3>
+              <p class="text-xs text-slate-400 mt-0.5">ดึงข้อมูลจาก GAS Web App หรือนำเข้าจาก CSV</p>
+            </div>
+
+            <!-- GAS URL Sync -->
+            <div class="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4 space-y-3">
+              <div class="flex items-center gap-2 text-xs font-semibold text-emerald-400">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sync จาก GAS Web App URL
+              </div>
+              <div class="flex gap-2">
+                <input type="text" value="https://script.google.com/macros/s/AKfycbwoTnwaExeObR_54tVajXxz7j2rAsQlyIWN3rbaGfTXxf9-HZ8oAMs4_gKOhrFx7b6b/exec"
+                  class="flex-1 rounded-xl px-3 py-2 text-xs font-mono border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all text-slate-300"
+                  style="background:#0f172a;" readonly>
+                <button onclick="showToast('🔄 กำลัง Sync ข้อมูลจาก GAS...', 'info'); setTimeout(()=>showToast('✅ Sync สำเร็จ! อัปเดต 10,321 รายการ', \'success\'), 2000);"
+                  class="px-4 py-2 rounded-xl text-xs font-bold text-white whitespace-nowrap flex items-center gap-1.5 transition-all"
+                  style="background:linear-gradient(135deg,#10b981,#059669);">
+                  🔄 Sync Now
+                </button>
+              </div>
+              <div class="text-[11px] text-slate-500">
+                ถ้าไม่มี Sync — กดเพื่อเชื่อมต่อกับฐานข้อมูลจริงของระบบ
+                <br><span class="text-amber-400/80">⚠ Sync จาก URL ที่เชื่อมต่อผ่าน GAS Web App URL เพื่อหลีกเลี่ยงปัญหา CORS เมื่อเปิดจาก localhost — ดู GAS ใน Toolbar ด้านล่าง</span>
+              </div>
+            </div>
+
+            <!-- Download Templates -->
+            <div class="flex gap-2 flex-wrap">
+              <button onclick="showToast('⬇️ กำลังดาวน์โหลด Template AIS...', 'info')"
+                class="px-3 py-2 rounded-xl text-xs font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 transition-all">
+                📋 Download Template (AIS)
+              </button>
+              <button onclick="showToast('⬇️ กำลังดาวน์โหลด Template TRUE...', 'info')"
+                class="px-3 py-2 rounded-xl text-xs font-semibold border border-blue-500/30 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 transition-all">
+                📋 Download Template (TRUE)
+              </button>
+              <button onclick="showToast('⬇️ กำลังดาวน์โหลด Template NT...', 'info')"
+                class="px-3 py-2 rounded-xl text-xs font-semibold border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 transition-all">
+                📋 Download Template (NT)
+              </button>
+            </div>
+
+            <!-- Import Cards Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <!-- Import AIS -->
+              <div onclick="document.getElementById('csv-ais').click()"
+                class="glass-card rounded-xl border border-emerald-500/20 p-4 text-center cursor-pointer hover:border-emerald-500/50 transition-all group">
+                <div class="text-2xl mb-2">🟩</div>
+                <div class="text-xs font-bold text-slate-200 group-hover:text-emerald-400 transition-colors">Import CSV — AIS</div>
+                <div class="text-[10px] text-slate-500 mt-1">Sheet:INOUT_HW_AIS</div>
+                <input type="file" id="csv-ais" accept=".csv" class="hidden" onchange="handleImportCSV(this,'AIS')">
+              </div>
+              <!-- Import TRUE -->
+              <div onclick="document.getElementById('csv-true').click()"
+                class="glass-card rounded-xl border border-blue-500/20 p-4 text-center cursor-pointer hover:border-blue-500/50 transition-all group">
+                <div class="text-2xl mb-2">🟦</div>
+                <div class="text-xs font-bold text-slate-200 group-hover:text-blue-400 transition-colors">Import CSV — TRUE</div>
+                <div class="text-[10px] text-slate-500 mt-1">Sheet:INOUT_HW_TRUE</div>
+                <input type="file" id="csv-true" accept=".csv" class="hidden" onchange="handleImportCSV(this,'TRUE')">
+              </div>
+              <!-- Import NT -->
+              <div onclick="document.getElementById('csv-nt').click()"
+                class="glass-card rounded-xl border border-purple-500/20 p-4 text-center cursor-pointer hover:border-purple-500/50 transition-all group">
+                <div class="text-2xl mb-2">🟣</div>
+                <div class="text-xs font-bold text-slate-200 group-hover:text-purple-400 transition-colors">Import CSV — NT</div>
+                <div class="text-[10px] text-slate-500 mt-1">Sheet:INOUT_HW_NT</div>
+                <input type="file" id="csv-nt" accept=".csv" class="hidden" onchange="handleImportCSV(this,'NT')">
+              </div>
+              <!-- Mock Data -->
+              <div onclick="showToast('🗑 ล้างข้อมูล Mock Data...', 'error')"
+                class="glass-card rounded-xl border border-rose-500/20 p-4 text-center cursor-pointer hover:border-rose-500/50 transition-all group">
+                <div class="text-2xl mb-2">🗑</div>
+                <div class="text-xs font-bold text-rose-400">ล้างข้อมูล</div>
+                <div class="text-[10px] text-slate-500 mt-1">ล้างไฟล์ Mock Data</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ประวัติ Import ล่าสุด (Mini) -->
+          <div class="glass-card rounded-2xl p-5 border border-slate-800">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-bold text-slate-100 text-sm">📋 ประวัติการ Import ล่าสุด</h3>
+              <button onclick="switchTab('import-history')" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1">
+                ดูประวัติทั้งหมด →
+              </button>
+            </div>
+            <div id="import-mini-log" class="space-y-2">
+              <p class="text-xs text-slate-500 text-center py-4">ยังไม่มีประวัติการ Import ล่าสุด</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 7: สรุปตาม REGION (REBUILT with Chart)    -->
+        <!-- ============================================== -->
+        <div id="view-region-report" class="space-y-4 hidden">
+
+          <!-- GAS Live Banner -->
+          <div class="flex items-center justify-between px-4 py-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/8 text-xs">
+            <span class="flex items-center gap-2 text-emerald-400 font-semibold">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              🔗 GAS Live: 10,321 รายการ | อัปเดต: 08:39:57
+            </span>
+            <button class="text-slate-500 hover:text-slate-300 text-base leading-none">✕</button>
+          </div>
+
+          <!-- Region Bar Chart -->
+          <div class="glass-card rounded-2xl p-5 border border-slate-800">
+            <h3 class="font-bold text-slate-100 text-sm mb-4 flex items-center gap-2">🗺️ สรุปตาม Region</h3>
+            <div class="relative" style="height:280px;">
+              <canvas id="regionBarChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Region KPI Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div class="glass-card p-4 rounded-xl border border-emerald-500/30 text-center">
+              <div class="text-lg font-extrabold text-emerald-400 font-mono">7,251</div>
+              <div class="text-xs font-bold text-slate-200 mt-1">ER</div>
+              <div class="text-[10px] text-slate-500 mt-1">Eastern</div>
+              <div class="mt-2 text-[10px]"><span class="text-emerald-400">↑ IN</span> / <span class="text-rose-400">↓ OUT</span></div>
+            </div>
+            <div class="glass-card p-4 rounded-xl border border-slate-700/60 text-center">
+              <div class="text-lg font-extrabold text-slate-300 font-mono">320</div>
+              <div class="text-xs font-bold text-slate-200 mt-1">SR</div>
+              <div class="text-[10px] text-slate-500 mt-1">Southern</div>
+              <div class="mt-2 text-[10px]"><span class="text-emerald-400">↑ IN</span> / <span class="text-rose-400">↓ OUT</span></div>
+            </div>
+            <div class="glass-card p-4 rounded-xl border border-amber-500/30 text-center">
+              <div class="text-lg font-extrabold text-amber-400 font-mono">1,245</div>
+              <div class="text-xs font-bold text-slate-200 mt-1">BKK</div>
+              <div class="text-[10px] text-slate-500 mt-1">Bangkok</div>
+              <div class="mt-2 text-[10px]"><span class="text-emerald-400">↑ IN</span> / <span class="text-rose-400">↓ OUT</span></div>
+            </div>
+            <div class="glass-card p-4 rounded-xl border border-orange-500/30 text-center">
+              <div class="text-lg font-extrabold text-orange-400 font-mono">980</div>
+              <div class="text-xs font-bold text-slate-200 mt-1">NER</div>
+              <div class="text-[10px] text-slate-500 mt-1">North Eastern</div>
+              <div class="mt-2 text-[10px]"><span class="text-emerald-400">↑ IN</span> / <span class="text-rose-400">↓ OUT</span></div>
+            </div>
+            <div class="glass-card p-4 rounded-xl border border-blue-500/30 text-center">
+              <div class="text-lg font-extrabold text-blue-400 font-mono">512</div>
+              <div class="text-xs font-bold text-slate-200 mt-1">NR</div>
+              <div class="text-[10px] text-slate-500 mt-1">Northern</div>
+              <div class="mt-2 text-[10px]"><span class="text-emerald-400">↑ IN</span> / <span class="text-rose-400">↓ OUT</span></div>
+            </div>
+            <div class="glass-card p-4 rounded-xl border border-purple-500/30 text-center">
+              <div class="text-lg font-extrabold text-purple-400 font-mono">214</div>
+              <div class="text-xs font-bold text-slate-200 mt-1">WR</div>
+              <div class="text-[10px] text-slate-500 mt-1">Western</div>
+              <div class="mt-2 text-[10px]"><span class="text-emerald-400">↑ IN</span> / <span class="text-rose-400">↓ OUT</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 8: ประวัติ Import (IMPORT HISTORY)        -->
+        <!-- ============================================== -->
+        <div id="view-import-history" class="space-y-4 hidden">
+
+          <!-- GAS Live Banner -->
+          <div class="flex items-center justify-between px-4 py-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/8 text-xs">
+            <span class="flex items-center gap-2 text-emerald-400 font-semibold">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              🔗 GAS Live: 10,321 รายการ | อัปเดต: 08:39:57
+            </span>
+            <button class="text-slate-500 hover:text-slate-300">✕</button>
+          </div>
+
+          <div class="glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="font-bold text-slate-100 text-sm">📋 ประวัติการ Import ข้อมูล (Import History)</h3>
+                <p class="text-xs text-slate-400 mt-0.5">บันทึกประวัติการนำเข้าไฟล์ CSV พร้อมสถานะการนำเข้าและตรวจสอบย้อนหลังได้</p>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="showToast('🔄 รีเฟรชประวัติ...', 'info')" class="px-3 py-2 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-1.5">
+                  🔄 รีเฟรชประวัติ
+                </button>
+                <button onclick="switchTab('import')" class="px-3 py-2 rounded-xl text-xs font-bold text-white flex items-center gap-1.5" style="background:linear-gradient(135deg,#6366f1,#4f46e5);">
+                  📥 ไปหน้า Import CSV
+                </button>
+              </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div class="rounded-xl border p-4 border-amber-500/30 bg-amber-500/5">
+                <div class="flex items-center gap-2 mb-2"><span class="text-xl">📁</span></div>
+                <div class="text-xs text-slate-400">ประวัติทั้งหมด</div>
+                <div class="text-2xl font-extrabold text-amber-400 font-mono mt-1">17</div>
+                <div class="text-[10px] text-slate-500">ครั้ง</div>
+              </div>
+              <div class="rounded-xl border p-4 border-emerald-500/30 bg-emerald-500/5">
+                <div class="flex items-center gap-2 mb-2"><span class="text-xl">✅</span></div>
+                <div class="text-xs text-slate-400">สำเร็จ (SUCCESS)</div>
+                <div class="text-2xl font-extrabold text-emerald-400 font-mono mt-1">16</div>
+                <div class="text-[10px] text-slate-500">ครั้ง</div>
+              </div>
+              <div class="rounded-xl border p-4 border-rose-500/30 bg-rose-500/5">
+                <div class="flex items-center gap-2 mb-2"><span class="text-xl">❌</span></div>
+                <div class="text-xs text-slate-400">ไม่สำเร็จ (FAILED)</div>
+                <div class="text-2xl font-extrabold text-rose-400 font-mono mt-1">1</div>
+                <div class="text-[10px] text-slate-500">ครั้ง</div>
+              </div>
+              <div class="rounded-xl border p-4 border-purple-500/30 bg-purple-500/5">
+                <div class="flex items-center gap-2 mb-2"><span class="text-xl">🧩</span></div>
+                <div class="text-xs text-slate-400">รายการรวมสะสม</div>
+                <div class="text-2xl font-extrabold text-purple-400 font-mono mt-1">1,738</div>
+                <div class="text-[10px] text-slate-500">รายการ</div>
+              </div>
+            </div>
+
+            <!-- Filter Row -->
+            <div class="flex flex-wrap gap-2">
+              <div class="flex-1 min-w-[200px] relative">
+                <span class="absolute inset-y-0 left-3 flex items-center text-slate-400 text-xs">🔍</span>
+                <input type="text" placeholder="ค้นหาชื่อไฟล์, DUID, ผู้ใช้, รายละเอียด..."
+                  class="w-full pl-8 pr-3 py-2 rounded-xl text-xs border border-slate-700/80 focus:outline-none focus:border-indigo-500 text-slate-200 transition-all"
+                  style="background:#0f172a;">
+              </div>
+              <select class="rounded-xl px-3 py-2 text-xs border border-slate-700/80 focus:outline-none text-slate-200" style="background:#0f172a;">
+                <option>ลูกค้าทั้งหมด</option>
+                <option>AIS</option>
+                <option>TRUE</option>
+                <option>NT</option>
+              </select>
+              <select class="rounded-xl px-3 py-2 text-xs border border-slate-700/80 focus:outline-none text-slate-200" style="background:#0f172a;">
+                <option>สถานะทั้งหมด</option>
+                <option>สำเร็จ</option>
+                <option>ไม่สำเร็จ</option>
+              </select>
+            </div>
+
+            <!-- Import History Table -->
+            <div class="overflow-x-auto rounded-xl border border-slate-800/60">
+              <table class="w-full text-xs text-left border-collapse">
+                <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-800 text-[11px] uppercase tracking-wider">
+                  <tr>
+                    <th class="px-4 py-3">วันที่ / เวลา</th>
+                    <th class="px-4 py-3">ลูกค้า</th>
+                    <th class="px-4 py-3">ชื่อไฟล์</th>
+                    <th class="px-4 py-3">สถานะ</th>
+                    <th class="px-4 py-3">จำนวน</th>
+                    <th class="px-4 py-3">DUID</th>
+                    <th class="px-4 py-3">ผู้ดำเนินการ</th>
+                    <th class="px-4 py-3">รายละเอียด / หมายเหตุ</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60 text-slate-300">
+                  <tr class="hover:bg-slate-800/30 transition-colors">
+                    <td class="px-4 py-3 text-emerald-400 font-mono whitespace-nowrap">11/9/2569 14:01:18</td>
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">AIS</span></td>
+                    <td class="px-4 py-3 font-mono text-slate-300 max-w-[160px] truncate">📄 Template_Import_AIS(2).csv</td>
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400">✅ สำเร็จ</span></td>
+                    <td class="px-4 py-3 font-bold text-slate-200">3 แถว</td>
+                    <td class="px-4 py-3 text-indigo-400 font-mono text-[10px]">KTH22609110026</td>
+                    <td class="px-4 py-3 text-slate-300 text-[10px]">Boonchat Boriwut<br><span class="text-slate-500">boonchat@technow.co.th</span></td>
+                    <td class="px-4 py-3 text-slate-400 text-[10px]">✅ Import สำเร็จ 3 รายการเข้า INOUT_HW_AIS</td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/30 transition-colors">
+                    <td class="px-4 py-3 text-emerald-400 font-mono whitespace-nowrap">09/11/2026 14:01:13</td>
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">AIS</span></td>
+                    <td class="px-4 py-3 font-mono text-slate-300 max-w-[160px] truncate">📄 Template_Import_AIS(2).csv</td>
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400">✅ สำเร็จ</span></td>
+                    <td class="px-4 py-3 font-bold text-slate-200">3 แถว</td>
+                    <td class="px-4 py-3 text-indigo-400 font-mono text-[10px]">KTH22609110026</td>
+                    <td class="px-4 py-3 text-slate-300 text-[10px]">Boonchat Boriwut<br><span class="text-slate-500">boonchat@technow.co.th</span></td>
+                    <td class="px-4 py-3 text-slate-400 text-[10px]">Import สำเร็จ 3 รายการ INOUT_HW_AIS</td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/30 transition-colors">
+                    <td class="px-4 py-3 text-emerald-400 font-mono whitespace-nowrap">09/11/2026 15:02:39</td>
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">TRUE</span></td>
+                    <td class="px-4 py-3 font-mono text-slate-300 max-w-[160px] truncate">📄 Template_Import_TRUE.csv</td>
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400">✅ สำเร็จ</span></td>
+                    <td class="px-4 py-3 font-bold text-slate-200">13 แถว</td>
+                    <td class="px-4 py-3 text-indigo-400 font-mono text-[10px]">BK9199_Corpus...</td>
+                    <td class="px-4 py-3 text-slate-300 text-[10px]">พลากรทราย เมืองน้อย<br><span class="text-slate-500">bom.paisagon@gmail.com</span></td>
+                    <td class="px-4 py-3 text-slate-400 text-[10px]">Import สำเร็จ 13 รายการ INOUT_HW_TRUE</td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/30 transition-colors">
+                    <td class="px-4 py-3 text-emerald-400 font-mono whitespace-nowrap">17/09/2026 08:22:19</td>
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">TRUE</span></td>
+                    <td class="px-4 py-3 font-mono text-slate-300 max-w-[160px] truncate">📄 True_Outbound_KTH22609110005...</td>
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400">✅ สำเร็จ</span></td>
+                    <td class="px-4 py-3 font-bold text-slate-200">2 แถว</td>
+                    <td class="px-4 py-3 text-indigo-400 font-mono text-[10px]">KKN419_Flash_BAN_NEA_KS</td>
+                    <td class="px-4 py-3 text-slate-300 text-[10px]">Auttaserth Kiomthaisong<br><span class="text-slate-500">auttaserth.k@gmail.com</span></td>
+                    <td class="px-4 py-3 text-slate-400 text-[10px]">Import สำเร็จ 2 รายการ INOUT_HW_TRUE</td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/30 transition-colors bg-rose-950/20">
+                    <td class="px-4 py-3 text-rose-400 font-mono whitespace-nowrap">16/09/2026 11:56:55</td>
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">AIS</span></td>
+                    <td class="px-4 py-3 font-mono text-slate-300 max-w-[160px] truncate">📄 AIS_Import_Outbound_20260916...</td>
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-400">❌ ไม่สำเร็จ</span></td>
+                    <td class="px-4 py-3 font-bold text-rose-400">288 แถว</td>
+                    <td class="px-4 py-3 text-indigo-400 font-mono text-[10px]">MPPSI_KKN_3825...</td>
+                    <td class="px-4 py-3 text-slate-300 text-[10px]">Auttaserth Kiomthaisong<br><span class="text-slate-500">auttaserth.k@gmail.com</span></td>
+                    <td class="px-4 py-3 text-rose-400 text-[10px]">⚠ ข้อผิดพลาด: ไม่พบ Sheet INOUT_HW_AIS</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ============================================== -->
+  <!-- TRANSACTION ENTRY MODAL (GAS-Style Single-Page Form) -->
+  <!-- ===================================================== -->
+  <div id="modal-multistep" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 hidden">
+    <div id="modal-dialog-box" class="w-full max-w-lg flex flex-col rounded-2xl overflow-hidden shadow-2xl border border-slate-700/60 transition-all duration-150" style="background:rgba(11,17,32,0.97); max-height:92vh; position:relative;">
+
+      <!-- ── Modal Header (Draggable) ── -->
+      <div id="modal-drag-header" class="flex items-center justify-between px-5 py-3.5 border-b border-slate-800/80 cursor-move select-none" style="background:rgba(15,23,42,0.95);">
+        <div class="flex items-center gap-3 pointer-events-none">
+          <div class="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-sm">
+            <span id="modal-action-icon">📥</span>
+          </div>
+          <div>
+            <h2 class="text-sm font-bold text-slate-100 flex items-center gap-1.5">
+              <span id="modal-title">บันทึกรายการ IN</span>
+              <span class="text-[11px] font-normal text-slate-400"> (:: ลากย้ายได้)</span>
+            </h2>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button id="btn-modal-min" onclick="toggleModalMinimize()" title="ย่อ / ขยายหน้าต่าง" class="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold transition-colors">−</button>
+          <button onclick="closeMultiStepModal()" title="ปิดหน้าต่าง" class="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold transition-colors">✕</button>
+        </div>
+      </div>
+
+      <!-- Collapsible Body Wrap -->
+      <div id="modal-body-collapse" class="flex flex-col flex-1 overflow-hidden">
+
+      <!-- ── Transaction Type Tabs ── -->
+      <div class="flex gap-2 px-4 py-3 border-b border-slate-800/60 overflow-x-auto" style="scrollbar-width:none;">
+        <button onclick="setTxType('IN')" id="tab-IN" class="tx-tab flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-emerald-500/40 bg-emerald-500/15 text-emerald-400">
+          <span>📥</span> IN
+        </button>
+        <button onclick="setTxType('OUT')" id="tab-OUT" class="tx-tab flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-700 bg-slate-800/60 text-slate-400 hover:border-rose-500/40 hover:text-rose-400">
+          <span>📤</span> OUT
+        </button>
+        <button onclick="setTxType('DISMANTLE')" id="tab-DISMANTLE" class="tx-tab flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-700 bg-slate-800/60 text-slate-400 hover:border-purple-500/40 hover:text-purple-400">
+          <span>🔧</span> DISMANTLE
+        </button>
+        <button onclick="setTxType('STR/IN')" id="tab-STR/IN" class="tx-tab flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-700 bg-slate-800/60 text-slate-400 hover:border-blue-500/40 hover:text-blue-400">
+          <span>📦</span> STR/IN
+        </button>
+        <button onclick="setTxType('STR/OUT')" id="tab-STR/OUT" class="tx-tab flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-700 bg-slate-800/60 text-slate-400 hover:border-amber-500/40 hover:text-amber-400">
+          <span>🚚</span> STR/OUT
+        </button>
+        <button onclick="setTxType('RETURN')" id="tab-RETURN" class="tx-tab flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-700 bg-slate-800/60 text-slate-400 hover:border-pink-500/40 hover:text-pink-400">
+          <span>↩️</span> RETURN
+        </button>
+      </div>
+
+      <!-- ── Modal Body (Scrollable) ── -->
+      <div class="overflow-y-auto flex-1 px-4 py-4 space-y-4">
+
+        <!-- Customer + Region -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">ลูกค้า</label>
+            <select id="inp-customer" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all" style="background:#0f172a;">
+              <option value="AIS">AIS</option>
+              <option value="TRUE">TRUE</option>
+              <option value="NT">NT</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">REGION</label>
+            <select id="inp-region" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all" style="background:#0f172a;">
+              <option value="BKK">BKK</option>
+              <option value="ER">ER</option>
+              <option value="WR">WR</option>
+              <option value="NR">NR</option>
+              <option value="SR">SR</option>
+              <option value="NER">NER</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Bill No. -->
+        <div>
+          <label class="block text-[11px] font-semibold text-rose-400 mb-1.5 uppercase tracking-wide">BILL NO. *</label>
+          <div class="flex gap-2">
+            <input type="text" id="inp-bill" placeholder="เลขที่บิล" class="flex-1 rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all font-mono" style="background:#0f172a;">
+            <button class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-indigo-500/40 bg-indigo-600/15 text-indigo-300 hover:bg-indigo-600/25 transition-all whitespace-nowrap">
+              🔍 Scan/ค้นหา
+            </button>
+          </div>
+        </div>
+
+        <!-- Search by Bill No. -->
+        <button class="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">
+          <span class="w-2 h-2 rounded-full bg-white/60 animate-pulse"></span>
+          ค้นหาข้อมูลเพิ่มเติมจาก Bill No.
+        </button>
+
+        <!-- DUID -->
+        <div>
+          <label class="block text-[11px] font-semibold text-rose-400 mb-1.5 uppercase tracking-wide">DUID (MANDATORY) *</label>
+          <input type="text" id="inp-duid" placeholder="ค้นหาหรือกรอก DUID" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-rose-500/50 focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-500/30 transition-all font-mono" style="background:#0f172a;">
+          <span id="err-duid" class="text-[11px] text-rose-400 hidden mt-1 block">กรุณากรอก DUID หรือรหัสไซต์งาน</span>
+        </div>
+
+        <!-- Search by DUID -->
+        <button class="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2" style="background:linear-gradient(135deg,#10b981,#059669);">
+          <span class="w-2 h-2 rounded-full bg-white/60 animate-pulse"></span>
+          ค้นหาข้อมูลเพิ่มเติมจาก DUID
+        </button>
+
+        <!-- Owner Warehouse + Owner Receiver -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">คลัง OWNER <span class="text-rose-400">*</span></label>
+            <input type="text" id="inp-owner-wh" placeholder="คลังต้นทาง" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a;">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">ผู้รับ OWNER <span class="text-rose-400">*</span></label>
+            <input type="text" id="inp-owner-rcv" placeholder="ผู้รับปลายทาง" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a;">
+          </div>
+        </div>
+
+        <!-- Location Warehouse + Location Receiver -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">LOCATION WAREHOUSE</label>
+            <input type="text" id="inp-loc-wh" placeholder="Location ต้นทาง" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-300 border border-slate-700/60 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a;">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">LOCATION RECEIVER</label>
+            <input type="text" id="inp-loc-rcv" placeholder="Location ปลายทาง" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-300 border border-slate-700/60 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a;">
+          </div>
+        </div>
+
+        <!-- Photo Upload -->
+        <div class="rounded-xl border border-slate-700/60 p-3" style="background:rgba(15,23,42,0.6);">
+          <div class="text-[11px] font-semibold text-slate-400 mb-2 flex items-center gap-1.5">
+            <span>📋</span> รูปบิล <span class="text-rose-400">* (บังคับก่อน SUBMIT)</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button class="py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+              📸 ถ่ายรูปบิล
+            </button>
+            <button class="py-2.5 rounded-xl text-sm font-bold text-slate-200 border border-slate-700/80 flex items-center justify-center gap-2 hover:border-indigo-500/40 transition-all" style="background:rgba(30,41,59,0.8);">
+              🖼️ จากเครื่อง
+            </button>
+          </div>
+          <p class="text-[11px] text-amber-400 mt-2 text-center">⚠️ ยังไม่มีรูปบิล — กรุณาถ่ายรูปก่อนบันทึก</p>
+        </div>
+
+        <!-- Items Section -->
+        <div id="modal-items-container" class="rounded-xl border border-slate-700/60 overflow-hidden" style="background:rgba(15,23,42,0.6);">
+          <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-800/60">
+            <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">🧩 รายการสินค้า</span>
+            <span id="modal-item-count" class="text-[11px] font-mono text-indigo-400">1 รายการ</span>
+          </div>
+
+          <!-- Item #1 -->
+          <div id="modal-item-1" class="p-4 space-y-3 border-b border-slate-800/40">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold border border-emerald-500/40 bg-emerald-500/10 text-emerald-400">สินค้า #1</span>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="openItemSearchModal(1)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-md shadow-indigo-500/20 transition-all" style="background:linear-gradient(135deg,#8b5cf6,#6366f1);">
+                  <span>🔍</span> ค้นหา Item
+                </button>
+                <button type="button" onclick="removeModalItem(1)" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 transition-all">
+                  ลบรายการ
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ประเภท (TYPE)</label>
+                <input 
+                  type="text" 
+                  id="item-type-1"
+                  list="catalog-type-list" 
+                  placeholder="พิมพ์หรือเลือก" 
+                  class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" 
+                  style="background:#0f172a;"
+                >
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">MODEL</label>
+                <input 
+                  type="text" 
+                  id="item-model-1"
+                  list="catalog-model-list" 
+                  placeholder="พิมพ์หรือเลือก" 
+                  oninput="onModelInputChange(this, 1)"
+                  onchange="onModelInputChange(this, 1)"
+                  class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" 
+                  style="background:#0f172a;"
+                >
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM CODE</label>
+                <div class="flex gap-1.5">
+                  <input type="text" id="item-code-1" placeholder="รหัสสินค้า" class="flex-1 rounded-lg px-3 py-2 text-xs text-purple-400 font-mono border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all font-bold" style="background:#0f172a;">
+                  <button type="button" onclick="openItemSearchModal(1)" title="ค้นหารหัสและรุ่นสินค้า" class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-sm hover:bg-indigo-600/30 transition-all">🔍</button>
+                </div>
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM DESCRIPTION</label>
+                <input type="text" id="item-desc-1" placeholder="รายละเอียดสินค้า" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a;">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">SN</label>
+                <div class="flex gap-1.5">
+                  <input type="text" id="item-sn-1" placeholder="Serial Number" class="flex-1 rounded-lg px-3 py-2 text-xs text-slate-200 font-mono border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a;">
+                  <button type="button" class="flex items-center gap-1 px-2 rounded-lg text-[11px] font-bold bg-slate-700/80 border border-slate-600/60 text-slate-300 hover:bg-slate-700 transition-all whitespace-nowrap">
+                    <span>📷</span> Scan
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">จำนวน</label>
+                <div class="flex items-center gap-1.5">
+                  <input type="number" id="item-qty-1" value="1" min="1" max="999" class="w-20 rounded-lg px-3 py-2 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 text-center font-bold transition-all" style="background:#0f172a;">
+                  <button type="button" onclick="removeModalItem(1)" class="px-2.5 py-2 rounded-lg text-[11px] font-bold bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 transition-all whitespace-nowrap">ลบรายการ</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Item Button -->
+        <button onclick="addModalItem()" class="w-full py-2.5 rounded-xl text-sm font-bold text-indigo-300 border border-indigo-500/30 border-dashed bg-indigo-600/5 hover:bg-indigo-600/10 flex items-center justify-center gap-2 transition-all">
+          + เพิ่มรายการสินค้า
+        </button>
+
+      </div>
+
+      <!-- ── Modal Footer ── -->
+      <div class="flex gap-3 px-4 py-3 border-t border-slate-800/80" style="background:rgba(15,23,42,0.9);">
+        <button onclick="closeMultiStepModal()" class="flex-1 py-2.5 rounded-xl text-sm font-bold text-slate-400 border border-slate-700/60 hover:border-slate-600 hover:text-slate-300 transition-all" style="background:rgba(30,41,59,0.6);">
+          ยกเลิก
+        </button>
+        <button id="btn-modal-next" onclick="submitNewTransaction()" class="flex-2 py-2.5 px-6 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition-all" style="background:linear-gradient(135deg,#10b981,#059669); flex:2;">
+          <span id="modal-submit-icon">📥</span>
+          <span id="modal-submit-label">บันทึก IN</span>
+        </button>
+      </div>
+
+      </div> <!-- /modal-body-collapse -->
+
+    </div>
+  </div>
+
+  <!-- Datalists for TYPE and MODEL Dropdowns (Screenshot 3 & 4) -->
+  <datalist id="catalog-type-list">
+    <option value="DCDU"></option>
+    <option value="BOARD"></option>
+    <option value="RET CABLE"></option>
+    <option value="AAU"></option>
+    <option value="DPU"></option>
+    <option value="RRU"></option>
+    <option value="BBU"></option>
+    <option value="ANTENNA"></option>
+    <option value="POWER"></option>
+    <option value="CABINET"></option>
+    <option value="OPTICAL"></option>
+    <option value="JUMPER"></option>
+    <option value="AUX"></option>
+  </datalist>
+
+  <datalist id="catalog-model-list">
+    <option value="EPS100D"></option>
+    <option value="UBBPg1"></option>
+    <option value="AISG 3M"></option>
+    <option value="AAU5785"></option>
+    <option value="DPU40"></option>
+    <option value="RRU5526 /RRU18/21"></option>
+    <option value="AAU5613"></option>
+    <option value="AAU5614"></option>
+    <option value="RRU3962"></option>
+    <option value="OPM15M"></option>
+    <option value="BBU3900"></option>
+    <option value="UBBPg3"></option>
+    <option value="DCDU12B"></option>
+    <option value="DCDU16D"></option>
+    <option value="Jumper 4.3-10"></option>
+    <option value="VCT-G 2x6mm2"></option>
+  </datalist>
+
+  <!-- ============================================== -->
+  <!-- ITEM CODE / MODEL SEARCH MODAL (Screenshot 1)  -->
+  <!-- ============================================== -->
+  <div id="modal-search-item" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 hidden">
+    <div class="w-full max-w-md flex flex-col rounded-2xl overflow-hidden shadow-2xl border border-slate-700/60" style="background:#0f1523; max-height:88vh;">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-800/80" style="background:#131c31;">
+        <div class="flex items-center gap-2.5">
+          <span class="text-base">🔍</span>
+          <div>
+            <h3 class="text-sm font-bold text-slate-100">ค้นหา Item Code / Model</h3>
+            <p class="text-[11px] text-slate-400">พิมพ์ Model / Code / Description เพื่อค้นหา</p>
+          </div>
+        </div>
+        <button onclick="closeItemSearchModal()" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-xs font-bold transition-colors">✕</button>
+      </div>
+
+      <!-- Search Input -->
+      <div class="p-3 border-b border-slate-800/60" style="background:#0b1120;">
+        <div class="relative">
+          <span class="absolute inset-y-0 left-3 flex items-center text-slate-400 text-sm">🔍</span>
+          <input 
+            type="text" 
+            id="item-search-kw" 
+            placeholder="พิมพ์เพื่อค้นหา..." 
+            oninput="filterCatalogItems(this.value)"
+            class="w-full pl-9 pr-4 py-2.5 rounded-xl text-xs text-slate-200 border border-indigo-500/50 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500/40 transition-all font-mono" 
+            style="background:#131b2e;"
+            autocomplete="off"
+          />
+        </div>
+      </div>
+
+      <!-- Items List (Scrollable) -->
+      <div id="catalog-items-list" class="flex-1 overflow-y-auto divide-y divide-slate-800/60 p-2 text-xs space-y-1" style="max-height:55vh;">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Footer -->
+      <div class="p-3 border-t border-slate-800/80 flex justify-end" style="background:#131c31;">
+        <button onclick="closeItemSearchModal()" class="w-full py-2.5 rounded-xl text-xs font-bold text-slate-300 border border-slate-700/60 hover:bg-slate-800/60 transition-all" style="background:#1a233a;">
+          ยกเลิก
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Interactive JavaScript Engine -->
+  <script>
+    // Mock Transaction Dataset (Simulating 3,782 records)
+    const SAMPLE_RAW_DATA = [
+      { no: 1, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', type: 'DISMANTLE', region: 'BKK', customer: 'AIS', model: 'RRU3962', code: '02311EPK', desc: 'RRU3962, 1800MHz~2100MHz 2T4R', qty: 1, sn: '2102311EPK10H4000311', status: 'On Process', date: '30/07/2026' },
+      { no: 2, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', type: 'DISMANTLE', region: 'BKK', customer: 'AIS', model: 'OPM15M', code: '02311RCD', desc: 'OPM15M Ver.B AC Power Module', qty: 1, sn: '2102311RCD0T64000550', status: 'On Process', date: '30/07/2026' },
+      { no: 3, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', type: 'DISMANTLE', region: 'BKK', customer: 'AIS', model: 'SM SFP(9.8G) 1.4k', code: '34060713', desc: 'Optical Transceiver,SFP+,1310nm,9.8G', qty: 1, sn: 'N/A', status: 'On Process', date: '30/07/2026' },
+      { no: 4, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', type: 'OUT', region: 'BKK', customer: 'AIS', model: 'RRU5526', code: '02315QWS', desc: 'RRU5526 for Multi-mode 1800MHz~2100MHz', qty: 1, sn: '2102315QWS10S3102160', status: 'On Process', date: '30/07/2026' },
+      { no: 5, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', type: 'OUT', region: 'BKK', customer: 'AIS', model: 'DPU40-N06A3', code: '02312NGM', desc: 'DPU400-N06A3 2000W Distributed Power DC', qty: 1, sn: 'JV26540218588', status: 'On Process', date: '30/07/2026' },
+      { no: 6, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', type: 'OUT', region: 'BKK', customer: 'AIS', model: 'Jumper (4.3-4.3) 3m', code: '04130700-001', desc: 'RF Jumper,3m,4.3-10SM,COAX50-8.7/3.55', qty: 4, sn: 'N/A', status: 'On Process', date: '30/07/2026' },
+      { no: 7, duid: 'TRUE_5G_CORE_UPGRADE_EAST_RAYONG_SITE_01', bill: '2026-TUC-EXP-ER-091', type: 'IN', region: 'ER', customer: 'TRUE', model: 'BBU3900', code: '02310MND', desc: 'BBU3900 Baseband Unit Box', qty: 2, sn: '2102310MND10K2000142', status: 'Open', date: '31/07/2026' },
+      { no: 8, duid: 'TRUE_5G_CORE_UPGRADE_EAST_RAYONG_SITE_01', bill: '2026-TUC-EXP-ER-091', type: 'STR/IN', region: 'ER', customer: 'TRUE', model: 'UBBPg3', code: '03058842', desc: 'Universal Baseband Processing Unit G3', qty: 2, sn: '03058842TUC109281', status: 'Open', date: '31/07/2026' },
+      { no: 9, duid: 'NR_CHIANGMAI_MODERNIZATION_PHASE2_NODE3', bill: '2026-CM-MOD-NR-008', type: 'STR/OUT', region: 'NR', customer: 'AIS', model: 'RRU3962', code: '02311EPK', desc: 'RRU3962, 1800MHz~2100MHz 2T4R', qty: 2, sn: '2102311EPK10H4000889', status: 'Closed', date: '01/08/2026' },
+      { no: 10, duid: 'NER_KORAT_SUBSTATION_OPTICAL_RECOVERY', bill: '2026-KOR-REC-NER-44', type: 'RETURN', region: 'NER', customer: 'TRUE', model: 'SM SFP(9.8G) 1.4k', code: '34060713', desc: 'Optical Transceiver,SFP+,1310nm,9.8G', qty: 6, sn: 'N/A', status: 'Open', date: '02/08/2026' }
+    ];
+
+    let TRANSACTIONS = [];
+    const REGIONS = ['BKK', 'ER', 'WR', 'NR', 'SR', 'NER'];
+    const TYPES = ['IN', 'OUT', 'DISMANTLE', 'STR/IN', 'STR/OUT', 'RETURN'];
+    const CUSTS = ['AIS', 'TRUE'];
+    const STATUSES = ['Open', 'On Process', 'Closed', 'Pending'];
+
+    for (let i = 1; i <= 3782; i++) {
+      if (i <= SAMPLE_RAW_DATA.length) {
+        TRANSACTIONS.push({ ...SAMPLE_RAW_DATA[i - 1], no: i });
+      } else {
+        const proto = SAMPLE_RAW_DATA[(i - 1) % SAMPLE_RAW_DATA.length];
+        const rReg = REGIONS[i % REGIONS.length];
+        const rCust = CUSTS[i % CUSTS.length];
+        const rType = TYPES[i % TYPES.length];
+        const rStat = STATUSES[i % STATUSES.length];
+        TRANSACTIONS.push({
+          no: i,
+          duid: `${rCust}_SITE_${rReg}_${1000 + (i % 250)}_CELL_TOWER`,
+          bill: `2026-EXP-${rReg}-${rCust}-${100 + (i % 900)}`,
+          type: rType,
+          region: rReg,
+          customer: rCust,
+          model: proto.model,
+          code: proto.code,
+          desc: proto.desc,
+          qty: (i % 4) + 1,
+          sn: i % 3 === 0 ? `SN${rCust}${2026000 + i}` : 'N/A',
+          status: rStat,
+          date: `2${(i % 8) + 1}/08/2026`
+        });
+      }
+    }
+
+    let filteredTransactions = [...TRANSACTIONS];
+    let currentPage = 1;
+    let pageSize = 50;
+    let currentStep = 1;
+    let sortColumn = 'no';
+    let sortDirection = 'asc';
+
+    window.onload = function() {
+      applyFilters();
+      renderBOM();
+      initDraggableModal();
+      setTimeout(renderRegionChart, 300);
+    };
+
+    function switchTab(tabId) {
+      const views = ['dashboard', 'transactions', 'bom', 'search', 'import', 'import-history', 'teloneer', 'region-report'];
+      views.forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) el.classList.add('hidden');
+      });
+
+      document.querySelectorAll('.nav-item').forEach(b => {
+        b.classList.remove('bg-indigo-600/20', 'text-indigo-300', 'border-indigo-500/30', 'text-slate-200');
+        b.classList.add('text-slate-400');
+      });
+
+      const activeView = document.getElementById(`view-${tabId}`);
+      if (activeView) activeView.classList.remove('hidden');
+
+      const activeNav = document.getElementById(`nav-${tabId}`);
+      if (activeNav) {
+        activeNav.classList.remove('text-slate-400');
+        activeNav.classList.add('bg-indigo-600/20', 'text-indigo-300', 'border-indigo-500/30', 'text-slate-200');
+      }
+
+      const headings = {
+        'dashboard': '<span>Executive Inventory Dashboard</span> <span class="text-xs font-normal text-slate-400">| Q4 Realtime Performance</span>',
+        'transactions': '<span>All Transactions Master</span> <span class="text-xs font-normal text-slate-400">| Realtime Data Management</span>',
+        'bom': '<span>Bill of Materials (BOM)</span> <span class="text-xs font-normal text-slate-400">| Standardized Telecom Equipment</span>',
+        'search': '<span>ค้นหา</span> <span class="text-xs font-normal text-slate-400">| วันอาทิตย์ที่ 1 พฤศจิกายน 2569</span>',
+        'import': '<span>Import / Sync</span> <span class="text-xs font-normal text-slate-400">| วันอาทิตย์ที่ 1 พฤศจิกายน 2569</span>',
+        'import-history': '<span>ประวัติ Import</span> <span class="text-xs font-normal text-slate-400">| วันอาทิตย์ที่ 1 พฤศจิกายน 2569</span>',
+        'teloneer': '<span>Teloneer Requisition Slip</span> <span class="text-xs font-normal text-slate-400">| Official A4 Material Document</span>',
+        'region-report': '<span>Region</span> <span class="text-xs font-normal text-slate-400">| วันอาทิตย์ที่ 1 พฤศจิกายน 2569</span>'
+      };
+      document.getElementById('page-heading').innerHTML = headings[tabId] || 'SmartStock Pro v8.0';
+
+      if (tabId === 'region-report') {
+        setTimeout(renderRegionChart, 50);
+      }
+    }
+
+    function setCustomerFilter(cust) {
+      document.getElementById('filter-customer').value = cust;
+      document.getElementById('btn-cust-all').className = 'px-3 py-1 rounded text-xs font-semibold text-slate-400 hover:text-white transition-all-fast';
+      document.getElementById('btn-cust-ais').className = 'px-3 py-1 rounded text-xs font-semibold text-slate-400 hover:text-emerald-400 transition-all-fast';
+      document.getElementById('btn-cust-true').className = 'px-3 py-1 rounded text-xs font-semibold text-slate-400 hover:text-blue-400 transition-all-fast';
+
+      if (cust === 'ALL') {
+        document.getElementById('btn-cust-all').className = 'px-3 py-1 rounded text-xs font-semibold bg-indigo-600 text-white shadow-sm';
+      } else if (cust === 'AIS') {
+        document.getElementById('btn-cust-ais').className = 'px-3 py-1 rounded text-xs font-semibold bg-emerald-600 text-white shadow-sm';
+      } else if (cust === 'TRUE') {
+        document.getElementById('btn-cust-true').className = 'px-3 py-1 rounded text-xs font-semibold bg-blue-600 text-white shadow-sm';
+      }
+      applyFilters();
+      showToast(`Showing records for ${cust === 'ALL' ? 'All Networks' : cust + ' Network'}`, 'info');
+    }
+
+    function applyFilters() {
+      const q = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
+      const cust = document.getElementById('filter-customer')?.value || 'ALL';
+      const reg = document.getElementById('filter-region')?.value || 'ALL';
+      const type = document.getElementById('filter-type')?.value || 'ALL';
+
+      filteredTransactions = TRANSACTIONS.filter(item => {
+        const matchQ = !q || (
+          item.duid.toLowerCase().includes(q) ||
+          item.bill.toLowerCase().includes(q) ||
+          item.model.toLowerCase().includes(q) ||
+          item.code.toLowerCase().includes(q) ||
+          item.sn.toLowerCase().includes(q) ||
+          item.desc.toLowerCase().includes(q)
+        );
+        const matchCust = cust === 'ALL' || item.customer === cust;
+        const matchReg = reg === 'ALL' || item.region === reg;
+        const matchType = type === 'ALL' || item.type === type;
+
+        return matchQ && matchCust && matchReg && matchType;
+      });
+
+      currentPage = 1;
+      renderTable();
+    }
+
+    function handleSearch() { applyFilters(); }
+
+    function resetFilters() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('filter-customer').value = 'ALL';
+      document.getElementById('filter-region').value = 'ALL';
+      document.getElementById('filter-type').value = 'ALL';
+      setCustomerFilter('ALL');
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('table-body');
+      const total = filteredTransactions.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const startIndex = (currentPage - 1) * pageSize;
+      const endIndex = Math.min(startIndex + pageSize, total);
+      const pageData = filteredTransactions.slice(startIndex, endIndex);
+
+      document.getElementById('page-stat-label').textContent = total > 0 
+        ? `Showing ${startIndex + 1}–${endIndex} of ${total.toLocaleString()} items`
+        : `No transactions found`;
+      document.getElementById('current-page-badge').textContent = `Page ${currentPage} of ${totalPages}`;
+
+      document.getElementById('btn-first').disabled = currentPage <= 1;
+      document.getElementById('btn-prev').disabled = currentPage <= 1;
+      document.getElementById('btn-next').disabled = currentPage >= totalPages;
+      document.getElementById('btn-last').disabled = currentPage >= totalPages;
+
+      if (pageData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="14" class="p-8 text-center text-slate-500">❌ No matching records found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = pageData.map((row) => {
+        const badgeClass = {
+          'IN': 'badge-in',
+          'OUT': 'badge-out',
+          'DISMANTLE': 'badge-dis',
+          'STR/IN': 'badge-str-in',
+          'STR/OUT': 'badge-str-out',
+          'RETURN': 'badge-ret'
+        }[row.type] || 'badge-in';
+
+        const custColor = row.customer === 'AIS' ? 'text-emerald-400' : 'text-blue-400';
+        const statColor = row.status === 'Open' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' 
+          : row.status === 'Closed' ? 'text-slate-400 bg-slate-800 border-slate-700' 
+          : 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition-colors group">
+            <td class="p-3 text-center whitespace-nowrap">
+              <button onclick="editRow(${row.no})" title="Quick Edit" class="p-1 hover:text-indigo-400 text-slate-500 transition-colors">✏️</button>
+              <button onclick="deleteRow(${row.no})" title="Delete Record" class="p-1 hover:text-rose-400 text-slate-500 transition-colors">🗑️</button>
+            </td>
+            <td class="p-3 text-center text-slate-500 font-mono">${row.no}</td>
+            <td class="p-3 font-semibold text-slate-200 max-w-[180px] truncate" title="${row.duid}">${row.duid}</td>
+            <td class="p-3 text-slate-400 max-w-[140px] truncate font-mono text-[11px]" title="${row.bill}">${row.bill || '—'}</td>
+            <td class="p-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${row.type}</span></td>
+            <td class="p-3 font-medium text-slate-300">${row.region}</td>
+            <td class="p-3 font-bold ${custColor}">${row.customer}</td>
+            <td class="p-3 font-medium text-slate-200 max-w-[120px] truncate" title="${row.model}">${row.model}</td>
+            <td class="p-3 font-mono text-indigo-300 text-[11px]">${row.code}</td>
+            <td class="p-3 text-slate-400 max-w-[160px] truncate" title="${row.desc}">${row.desc}</td>
+            <td class="p-3 text-center font-bold text-slate-100">${row.qty}</td>
+            <td class="p-3 font-mono text-[11px] text-slate-400 max-w-[130px] truncate" title="${row.sn}">${row.sn}</td>
+            <td class="p-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statColor}">${row.status}</span></td>
+            <td class="p-3 text-slate-400 whitespace-nowrap text-[11px]">${row.date}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function navigatePage(direction) {
+      const totalPages = Math.ceil(filteredTransactions.length / pageSize);
+      if (direction === 'first') currentPage = 1;
+      else if (direction === 'prev' && currentPage > 1) currentPage--;
+      else if (direction === 'next' && currentPage < totalPages) currentPage++;
+      else if (direction === 'last') currentPage = totalPages;
+      renderTable();
+    }
+
+    function changePageSize(val) {
+      pageSize = parseInt(val);
+      currentPage = 1;
+      renderTable();
+    }
+
+    function sortTable(col) {
+      if (sortColumn === col) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortColumn = col;
+        sortDirection = 'asc';
+      }
+
+      filteredTransactions.sort((a, b) => {
+        let valA = a[col];
+        let valB = b[col];
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      renderTable();
+      showToast(`Sorted by ${col.toUpperCase()} (${sortDirection.toUpperCase()})`, 'info');
+    }
+
+    let currentTxType = 'IN';
+    let modalItemCount = 1;
+
+    const TAB_STYLES = {
+      'IN':        { border: 'border-emerald-500/40', bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
+      'OUT':       { border: 'border-rose-500/40',    bg: 'bg-rose-500/15',    text: 'text-rose-400'    },
+      'DISMANTLE': { border: 'border-purple-500/40',  bg: 'bg-purple-500/15',  text: 'text-purple-400'  },
+      'STR/IN':    { border: 'border-blue-500/40',    bg: 'bg-blue-500/15',    text: 'text-blue-400'    },
+      'STR/OUT':   { border: 'border-amber-500/40',   bg: 'bg-amber-500/15',   text: 'text-amber-400'   },
+      'RETURN':    { border: 'border-pink-500/40',    bg: 'bg-pink-500/15',    text: 'text-pink-400'    },
+    };
+    const TX_ICONS = { 'IN':'📥','OUT':'📤','DISMANTLE':'🔧','STR/IN':'📦','STR/OUT':'🚚','RETURN':'↩️' };
+    const TX_BTN_COLORS = {
+      'IN':        'background:linear-gradient(135deg,#10b981,#059669)',
+      'OUT':       'background:linear-gradient(135deg,#ef4444,#b91c1c)',
+      'DISMANTLE': 'background:linear-gradient(135deg,#a855f7,#7e22ce)',
+      'STR/IN':    'background:linear-gradient(135deg,#3b82f6,#1d4ed8)',
+      'STR/OUT':   'background:linear-gradient(135deg,#f59e0b,#d97706)',
+      'RETURN':    'background:linear-gradient(135deg,#ec4899,#be185d)',
+    };
+
+    function setTxType(type) {
+      currentTxType = type;
+      // Update all tabs
+      ['IN','OUT','DISMANTLE','STR/IN','STR/OUT','RETURN'].forEach(t => {
+        const btn = document.getElementById('tab-' + t);
+        if (!btn) return;
+        btn.className = 'tx-tab flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ';
+        if (t === type) {
+          const s = TAB_STYLES[t];
+          btn.className += s.border + ' ' + s.bg + ' ' + s.text;
+        } else {
+          btn.className += 'border-slate-700 bg-slate-800/60 text-slate-400';
+        }
+      });
+      // Update submit button
+      const icon = TX_ICONS[type] || '📦';
+      document.getElementById('modal-submit-icon').textContent = icon;
+      document.getElementById('modal-submit-label').textContent = 'บันทึก ' + type;
+      const submitBtn = document.getElementById('btn-modal-next');
+      if (submitBtn) submitBtn.style = TX_BTN_COLORS[type] + '; flex:2;';
+      // Update modal title
+      document.getElementById('modal-title').textContent = 'บันทึกรายการ ' + type;
+      document.getElementById('modal-action-icon').textContent = icon;
+    }
+
+    // ── MASTER BOM CATALOG for Item Search & Dropdowns (Screenshot 1, 3, 4) ──
+    const MASTER_BOM_CATALOG = [
+      { code: '1075406', model: 'EPS100D', type: 'DCDU', desc: 'System Power,EPS100D-N01D1, Front Cabling, Input -48Vdc' },
+      { code: '3059888', model: 'UBBPg1', type: 'BOARD', desc: 'Universal Baseband Processing Unit g1' },
+      { code: '04070193', model: 'AISG 3M', type: 'RET CABLE', desc: 'RET CABLE AISG 3M' },
+      { code: '02315TSQ', model: 'AAU5785', type: 'AAU', desc: 'AAU5785,WD5MZTEZ7TBK,700M/900M(TX:758-803MHz RX:703-748MHz) 16T16R 480W' },
+      { code: '02312NGM-001', model: 'DPU40', type: 'DPU', desc: 'DPU40D-N06A1 2000W Distributed Power DC Unit' },
+      { code: '02315GWS', model: 'RRU5526 /RRU18/21', type: 'RRU', desc: 'RRU5526 Multi-mode 1800+2100MHz (4T4R*2)' },
+      { code: '02312CHP', model: 'AAU5613', type: 'AAU', desc: 'AAU5613 TX3400-3600MHz/RX3400-3600MHz 64T64R 200W' },
+      { code: '02312JKX', model: 'AAU5614', type: 'AAU', desc: 'AAU5614 2600M 64T64R 240W 24.8i eCPRI' },
+      { code: '02311EPK', model: 'RRU3962', type: 'RRU', desc: 'RRU3962, 1800MHz~2100MHz 2T4R Remote Radio Unit' },
+      { code: '02311RCD', model: 'OPM15M', type: 'POWER', desc: 'OPM15M Ver.B AC Power Module' },
+      { code: '02310MND', model: 'BBU3900', type: 'BBU', desc: 'BBU3900 Baseband Subrack Frame Unit' },
+      { code: '03058842', model: 'UBBPg3', type: 'BOARD', desc: 'Universal Baseband Board G3 Processing' },
+      { code: '02120731', model: 'DCDU12B', type: 'DCDU', desc: 'DC Power Distribution Unit DCDU12B' },
+      { code: '02122720', model: 'DCDU16D', type: 'DCDU', desc: 'DC Power Distribution Unit DCDU16D' },
+      { code: '04130700-001', model: 'Jumper 4.3-10', type: 'JUMPER', desc: 'RF Jumper 3m 4.3-10 SM Coaxial 1/2"' },
+      { code: '25032397', model: 'VCT-G 2x6mm2', type: 'POWER', desc: 'Power Cable VCT-G 2x6 mm² Blue/Brown Shielded' }
+    ];
+
+    let activeTargetItemRow = 1;
+
+    function openItemSearchModal(rowIdx = 1) {
+      activeTargetItemRow = rowIdx;
+      document.getElementById('item-search-kw').value = '';
+      filterCatalogItems('');
+      document.getElementById('modal-search-item').classList.remove('hidden');
+      setTimeout(() => {
+        document.getElementById('item-search-kw').focus();
+      }, 60);
+    }
+
+    function closeItemSearchModal() {
+      document.getElementById('modal-search-item').classList.add('hidden');
+    }
+
+    function filterCatalogItems(kw = '') {
+      const q = kw.trim().toLowerCase();
+      const listEl = document.getElementById('catalog-items-list');
+      if (!listEl) return;
+      const matches = MASTER_BOM_CATALOG.filter(it => 
+        !q || it.code.toLowerCase().includes(q) || it.model.toLowerCase().includes(q) || it.desc.toLowerCase().includes(q) || (it.type && it.type.toLowerCase().includes(q))
+      );
+      if (matches.length === 0) {
+        listEl.innerHTML = `<div class="p-6 text-center text-slate-500">❌ ไม่พบรายการที่ตรงกับ "${kw}"</div>`;
+        return;
+      }
+      listEl.innerHTML = matches.map(it => `
+        <div onclick="selectCatalogItem('${it.code}')" class="p-3 rounded-xl hover:bg-indigo-600/15 cursor-pointer transition-colors border border-transparent hover:border-indigo-500/30 group">
+          <div class="font-bold font-mono text-purple-400 text-sm group-hover:text-purple-300">${it.code}</div>
+          <div class="font-semibold text-slate-100 text-xs mt-0.5">${it.model}</div>
+          <div class="text-[11px] text-slate-400 truncate mt-0.5">${it.desc}</div>
+        </div>
+      `).join('');
+    }
+
+    function selectCatalogItem(code) {
+      const item = MASTER_BOM_CATALOG.find(it => it.code === code);
+      if (!item) return;
+      const rowIdx = activeTargetItemRow;
+      const typeEl = document.getElementById('item-type-' + rowIdx);
+      const modelEl = document.getElementById('item-model-' + rowIdx);
+      const codeEl = document.getElementById('item-code-' + rowIdx);
+      const descEl = document.getElementById('item-desc-' + rowIdx);
+
+      if (typeEl) typeEl.value = item.type || '';
+      if (modelEl) modelEl.value = item.model || '';
+      if (codeEl) codeEl.value = item.code || '';
+      if (descEl) descEl.value = item.desc || '';
+
+      closeItemSearchModal();
+      showToast(`เลือก ${item.model} (${item.code}) เรียบร้อยแล้ว`, 'success');
+    }
+
+    function onModelInputChange(input, rowIdx) {
+      const val = input.value.trim().toLowerCase();
+      if (!val) return;
+      const found = MASTER_BOM_CATALOG.find(it => it.model.toLowerCase() === val || it.code.toLowerCase() === val);
+      if (found) {
+        const typeEl = document.getElementById('item-type-' + rowIdx);
+        const codeEl = document.getElementById('item-code-' + rowIdx);
+        const descEl = document.getElementById('item-desc-' + rowIdx);
+        if (typeEl) typeEl.value = found.type || '';
+        if (codeEl) codeEl.value = found.code || '';
+        if (descEl) descEl.value = found.desc || '';
+        showToast(`เลือก ${found.model} อัตโนมัติ`, 'info');
+      }
+    }
+
+    function addModalItem() {
+      modalItemCount++;
+      const idx = modalItemCount;
+      const container = document.getElementById('modal-items-container');
+      const countEl = document.getElementById('modal-item-count');
+      if (countEl) countEl.textContent = modalItemCount + ' รายการ';
+      const div = document.createElement('div');
+      div.id = 'modal-item-' + idx;
+      div.className = 'p-4 space-y-3 border-b border-slate-800/40';
+      div.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold border border-indigo-500/40 bg-indigo-500/10 text-indigo-400">สินค้า #${idx}</span>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="openItemSearchModal(${idx})" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-md shadow-indigo-500/20 transition-all" style="background:linear-gradient(135deg,#8b5cf6,#6366f1);">
+              <span>🔍</span> ค้นหา Item
+            </button>
+            <button type="button" onclick="removeModalItem(${idx})" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 transition-all">ลบรายการ</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ประเภท (TYPE)</label>
+            <input type="text" id="item-type-${idx}" list="catalog-type-list" placeholder="พิมพ์หรือเลือก" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" style="background:#0f172a;">
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">MODEL</label>
+            <input type="text" id="item-model-${idx}" list="catalog-model-list" placeholder="พิมพ์หรือเลือก" oninput="onModelInputChange(this, ${idx})" onchange="onModelInputChange(this, ${idx})" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" style="background:#0f172a;">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM CODE</label>
+            <div class="flex gap-1.5">
+              <input type="text" id="item-code-${idx}" placeholder="รหัสสินค้า" class="flex-1 rounded-lg px-3 py-2 text-xs text-purple-400 font-mono border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all font-bold" style="background:#0f172a;">
+              <button type="button" onclick="openItemSearchModal(${idx})" title="ค้นหารหัสและรุ่นสินค้า" class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-sm hover:bg-indigo-600/30 transition-all">🔍</button>
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM DESCRIPTION</label>
+            <input type="text" id="item-desc-${idx}" placeholder="รายละเอียดสินค้า" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a;">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">SN</label>
+            <input type="text" id="item-sn-${idx}" placeholder="Serial Number" class="w-full rounded-lg px-3 py-2 text-xs font-mono border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a; color:#e2e8f0;">
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">จำนวน</label>
+            <input type="number" id="item-qty-${idx}" value="1" min="1" class="w-full rounded-lg px-3 py-2 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 text-center font-bold transition-all" style="background:#0f172a;">
+          </div>
+        </div>`;
+      container.appendChild(div);
+    }
+
+    function removeModalItem(idx) {
+      const el = document.getElementById('modal-item-' + idx);
+      if (el) el.remove();
+      modalItemCount = Math.max(1, modalItemCount - 1);
+      const countEl = document.getElementById('modal-item-count');
+      if (countEl) countEl.textContent = modalItemCount + ' รายการ';
+    }
+
+    function openMultiStepModal(defaultType = 'IN') {
+      currentTxType = defaultType;
+      modalItemCount = 1;
+      document.getElementById('inp-duid').value = '';
+      document.getElementById('inp-bill').value = '';
+      document.getElementById('inp-sn').value = '';
+      document.getElementById('err-duid').classList.add('hidden');
+      document.getElementById('inp-customer').value = 'AIS';
+      document.getElementById('inp-region').value = 'ER';
+      setTxType(defaultType);
+      document.getElementById('modal-item-count').textContent = '1 รายการ';
+      resetModalPosition();
+      if (isModalMinimized) toggleModalMinimize();
+      document.getElementById('modal-multistep').classList.remove('hidden');
+    }
+
+    function closeMultiStepModal() {
+      document.getElementById('modal-multistep').classList.add('hidden');
+    }
+
+    // ── Draggable Modal Logic (move ขึ้น move ลง และ ย้ายได้) ──
+    let isDraggingModal = false;
+    let modalStartX = 0, modalStartY = 0;
+    let modalCurrentX = 0, modalCurrentY = 0;
+    let isModalMinimized = false;
+
+    function initDraggableModal() {
+      const header = document.getElementById('modal-drag-header');
+      const box = document.getElementById('modal-dialog-box');
+      if (!header || !box) return;
+
+      header.addEventListener('mousedown', function(e) {
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+        isDraggingModal = true;
+        modalStartX = e.clientX - modalCurrentX;
+        modalStartY = e.clientY - modalCurrentY;
+        header.style.cursor = 'grabbing';
+      });
+
+      window.addEventListener('mousemove', function(e) {
+        if (!isDraggingModal) return;
+        modalCurrentX = e.clientX - modalStartX;
+        modalCurrentY = e.clientY - modalStartY;
+        box.style.transform = `translate(${modalCurrentX}px, ${modalCurrentY}px)`;
+      });
+
+      window.addEventListener('mouseup', function() {
+        if (!isDraggingModal) return;
+        isDraggingModal = false;
+        if (header) header.style.cursor = 'move';
+      });
+
+      // Touch events for mobile/tablet
+      header.addEventListener('touchstart', function(e) {
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+        const touch = e.touches[0];
+        isDraggingModal = true;
+        modalStartX = touch.clientX - modalCurrentX;
+        modalStartY = touch.clientY - modalCurrentY;
+      }, { passive: true });
+
+      window.addEventListener('touchmove', function(e) {
+        if (!isDraggingModal) return;
+        const touch = e.touches[0];
+        modalCurrentX = touch.clientX - modalStartX;
+        modalCurrentY = touch.clientY - modalStartY;
+        box.style.transform = `translate(${modalCurrentX}px, ${modalCurrentY}px)`;
+      }, { passive: true });
+
+      window.addEventListener('touchend', function() {
+        isDraggingModal = false;
+      });
+    }
+
+    function toggleModalMinimize() {
+      const body = document.getElementById('modal-body-collapse');
+      const minBtn = document.getElementById('btn-modal-min');
+      const box = document.getElementById('modal-dialog-box');
+      if (!body) return;
+      isModalMinimized = !isModalMinimized;
+      if (isModalMinimized) {
+        body.classList.add('hidden');
+        if (minBtn) minBtn.textContent = '□';
+        if (minBtn) minBtn.title = 'ขยายหน้าต่าง';
+        if (box) box.style.maxHeight = 'auto';
+        showToast('หน้าต่างถูกย่อลง คลิก □ เพื่อขยาย', 'info');
+      } else {
+        body.classList.remove('hidden');
+        if (minBtn) minBtn.textContent = '−';
+        if (minBtn) minBtn.title = 'ย่อหน้าต่าง';
+        if (box) box.style.maxHeight = '92vh';
+      }
+    }
+
+    function resetModalPosition() {
+      const box = document.getElementById('modal-dialog-box');
+      modalCurrentX = 0;
+      modalCurrentY = 0;
+      if (box) box.style.transform = 'translate(0px, 0px)';
+    }
+
+    // ── Region Bar Chart Renderer (Chart.js) ──
+    let regionChartInstance = null;
+    function renderRegionChart() {
+      const ctx = document.getElementById('regionBarChart');
+      if (!ctx) return;
+      if (regionChartInstance) {
+        regionChartInstance.destroy();
+      }
+      regionChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['ER', 'SR', 'BKK', 'NER'],
+          datasets: [{
+            label: 'จำนวนอุปกรณ์ (Units)',
+            data: [7251, 320, 1245, 980],
+            backgroundColor: [
+              '#10b981', // ER emerald
+              '#3b82f6', // SR blue
+              '#eab308', // BKK yellow
+              '#f97316'  // NER orange
+            ],
+            borderRadius: 8,
+            borderSkipped: false,
+            barPercentage: 0.55
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#f1f5f9',
+              bodyColor: '#94a3b8',
+              borderColor: '#334155',
+              borderWidth: 1,
+              padding: 10,
+              displayColors: false,
+              callbacks: {
+                label: function(context) {
+                  return ` ยอดรวม: ${context.parsed.y.toLocaleString()} รายการ`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(51, 65, 85, 0.2)' },
+              ticks: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', weight: 'bold', size: 12 } }
+            },
+            y: {
+              min: 0,
+              max: 8000,
+              ticks: {
+                stepSize: 1000,
+                color: '#64748b',
+                font: { family: 'JetBrains Mono', size: 11 },
+                callback: function(value) { return value.toLocaleString(); }
+              },
+              grid: { color: 'rgba(51, 65, 85, 0.25)' }
+            }
+          }
+        }
+      });
+    }
+
+    function handleImportCSV(input, customer) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      showToast(`📥 กำลังอ่านไฟล์ ${file.name} (${customer})...`, 'info');
+      setTimeout(() => {
+        showToast(`✅ นำเข้าข้อมูล ${customer} สำเร็จ (${file.name})`, 'success');
+        const log = document.getElementById('import-mini-log');
+        if (log) {
+          log.innerHTML = `
+            <div class="glass-card p-3 rounded-xl border border-emerald-500/30 flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2">
+                <span>✅</span>
+                <div>
+                  <span class="font-bold text-slate-200">${file.name}</span>
+                  <span class="text-slate-500">· ${customer}</span>
+                </div>
+              </div>
+              <span class="text-emerald-400 font-mono font-bold">สำเร็จ (Live)</span>
+            </div>
+          ` + log.innerHTML;
+        }
+      }, 1200);
+    }
+
+    function syncBOMDetails(model) {
+      const codes = {
+        'RRU3962': '02311EPK',
+        'RRU5526': '02315QWS',
+        'OPM15M': '02311RCD',
+        'DPU40-N06A3': '02312NGM',
+        'SM SFP(9.8G) 1.4k': '34060713',
+        'Jumper 4.3-10': '04130700-001',
+        'VCT-G 2x6mm2': '25032397'
+      };
+      document.getElementById('inp-code').value = codes[model] || '00000000';
+    }
+
+    function submitNewTransaction() {
+      const duidVal = (document.getElementById('inp-duid').value || '').trim();
+      if (!duidVal) {
+        document.getElementById('err-duid').classList.remove('hidden');
+        document.getElementById('inp-duid').focus();
+        showToast('กรุณากรอก DUID ก่อนบันทึก', 'error');
+        return;
+      }
+      document.getElementById('err-duid').classList.add('hidden');
+      const newRecord = {
+        no: TRANSACTIONS.length + 1,
+        duid: duidVal,
+        bill: (document.getElementById('inp-bill').value || '').trim() || '—',
+        type: currentTxType,
+        region: document.getElementById('inp-region').value,
+        customer: document.getElementById('inp-customer').value,
+        model: (document.getElementById('item-model-1')?.value || document.getElementById('inp-model')?.value || 'RRU3962').trim(),
+        code: (document.getElementById('item-code-1')?.value || document.getElementById('inp-code')?.value || '02311EPK').trim(),
+        desc: (document.getElementById('item-desc-1')?.value || document.getElementById('inp-desc')?.value || 'Certified Hardware Component').trim(),
+        qty: parseInt(document.getElementById('item-qty-1')?.value || document.getElementById('inp-qty')?.value || 1) || 1,
+        sn: (document.getElementById('item-sn-1')?.value || document.getElementById('inp-sn')?.value || '').trim() || 'N/A',
+        status: 'On Process',
+        date: new Date().toLocaleDateString('en-GB')
+      };
+      TRANSACTIONS.unshift(newRecord);
+      closeMultiStepModal();
+      applyFilters();
+      switchTab('transactions');
+      showToast(`✅ บันทึกสำเร็จ! ${currentTxType} — ${newRecord.duid}`, 'success');
+    }
+
+    function deleteRow(no) {
+      if (confirm(`คุณต้องการลบรายการหมายเลข #${no} ออกจากระบบใช่หรือไม่?`)) {
+        TRANSACTIONS = TRANSACTIONS.filter(t => t.no !== no);
+        applyFilters();
+        showToast(`Record #${no} has been deleted.`, 'error');
+      }
+    }
+
+    function editRow(no) {
+      const item = TRANSACTIONS.find(t => t.no === no);
+      if (!item) return;
+      openMultiStepModal(item.type);
+      document.getElementById('inp-duid').value = item.duid;
+      document.getElementById('inp-bill').value = item.bill;
+      document.getElementById('inp-customer').value = item.customer;
+      document.getElementById('inp-region').value = item.region;
+      if (document.getElementById('item-model-1')) document.getElementById('item-model-1').value = item.model;
+      if (document.getElementById('item-type-1')) document.getElementById('item-type-1').value = item.type;
+      if (document.getElementById('item-code-1')) document.getElementById('item-code-1').value = item.code;
+      if (document.getElementById('item-desc-1')) document.getElementById('item-desc-1').value = item.desc;
+      if (document.getElementById('item-qty-1')) document.getElementById('item-qty-1').value = item.qty;
+      if (document.getElementById('item-sn-1')) document.getElementById('item-sn-1').value = item.sn;
+      showToast(`✏️ แก้ไขรายการ #${no} — ${item.duid}`, 'info');
+    }
+
+    function exportCSV() {
+      let csv = '\uFEFF';
+      csv += 'No,DUID,Bill No,Type,Region,Customer,Model,Item Code,Description,Qty,Serial No,Status,Date\n';
+      filteredTransactions.slice(0, 1000).forEach(r => {
+        csv += `"${r.no}","${r.duid}","${r.bill}","${r.type}","${r.region}","${r.customer}","${r.model}","${r.code}","${r.desc}",${r.qty},"${r.sn}","${r.status}","${r.date}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `smartstock_export_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Exported filtered data to CSV successfully!', 'success');
+    }
+
+    function performDeepSearch() {
+      const q = (document.getElementById('deep-search-q').value || '').trim().toLowerCase();
+      const resEl = document.getElementById('deep-search-result');
+      if (!q) {
+        resEl.innerHTML = '<p class="text-xs text-rose-400 text-center py-4">กรุณากรอกคำค้นหา เช่น DUID หรือ Bill No.</p>';
+        return;
+      }
+      const matches = TRANSACTIONS.filter(t => 
+        t.duid.toLowerCase().includes(q) || 
+        t.bill.toLowerCase().includes(q) ||
+        t.model.toLowerCase().includes(q) ||
+        t.code.toLowerCase().includes(q) ||
+        t.sn.toLowerCase().includes(q)
+      );
+      if (!matches.length) {
+        resEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">❌ ไม่พบรายการที่ตรงกับ "${q}"</p>`;
+        return;
+      }
+      resEl.innerHTML = `
+        <div class="flex items-center justify-between mb-3 text-xs">
+          <span class="text-emerald-400 font-bold">🎯 พบทั้งหมด ${matches.length.toLocaleString()} รายการ</span>
+          <span class="text-slate-500">แสดงผล 8 รายการแรก</span>
+        </div>
+      ` + matches.slice(0, 8).map(m => `
+        <div class="glass-card p-4 rounded-xl border border-slate-800 hover:border-indigo-500/40 transition-all flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-100 text-sm">${m.duid}</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${m.customer === 'AIS' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'}">${m.customer}</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/15 text-indigo-400">${m.type}</span>
+            </div>
+            <div class="text-slate-400 font-mono text-[11px]">
+              Bill: <span class="text-slate-300 font-bold">${m.bill}</span> | Region: <span class="text-slate-300">${m.region}</span> | Model: <span class="text-indigo-300 font-bold">${m.model}</span> (SN: ${m.sn})
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="editRow(${m.no})" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 flex items-center gap-1 transition-all">
+              ✏️ แก้ไข
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderBOM(filterCust = 'ALL') {
+      const bomItems = [
+        { model: 'RRU3962', code: '02311EPK', cust: 'AIS', type: 'Radio', desc: 'RRU3962 1800MHz~2100MHz 2T4R High Power', stock: 142 },
+        { model: 'RRU5526', code: '02315QWS', cust: 'AIS', type: 'Radio', desc: 'RRU5526 Multi-mode 1800+2100MHz (4T4R*2)', stock: 88 },
+        { model: 'OPM15M', code: '02311RCD', cust: 'AIS', type: 'Power', desc: 'Ver.B AC Power Supply Module', stock: 215 },
+        { model: 'BBU3900', code: '02310MND', cust: 'TRUE', type: 'Baseband', desc: 'BBU3900 Subrack Frame Unit', stock: 65 },
+        { model: 'UBBPg3', code: '03058842', cust: 'TRUE', type: 'Baseband', desc: 'Universal Baseband Board G3 Processing', stock: 120 },
+        { model: 'DPU40-N06A3', code: '02312NGM', cust: 'AIS', type: 'Power', desc: '2000W Distributed DC Power Unit', stock: 74 }
+      ];
+
+      const grid = document.getElementById('bom-catalog-grid');
+      const filtered = filterCust === 'ALL' ? bomItems : bomItems.filter(b => b.cust === filterCust);
+
+      grid.innerHTML = filtered.map(b => `
+        <div class="glass-card p-4 rounded-xl border border-slate-800 hover:border-indigo-500/40 transition-all-fast">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <span class="text-xs font-bold font-mono text-indigo-400">${b.code}</span>
+              <h4 class="font-bold text-sm text-slate-100">${b.model}</h4>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${b.cust === 'AIS' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'}">${b.cust}</span>
+          </div>
+          <p class="text-xs text-slate-400 mb-3 line-clamp-2">${b.desc}</p>
+          <div class="flex justify-between items-center text-xs pt-2 border-t border-slate-800/80">
+            <span class="text-slate-500">${b.type} Category</span>
+            <span class="font-bold text-slate-200">${b.stock} Available</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterBOM(cust) {
+      renderBOM(cust);
+      showToast(`Showing BOM catalog for ${cust}`, 'info');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      
+      const colors = {
+        'success': 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200',
+        'error': 'bg-rose-950/90 border-rose-500/50 text-rose-200',
+        'info': 'bg-indigo-950/90 border-indigo-500/50 text-indigo-200'
+      }[type];
+
+      const icons = {
+        'success': '✅',
+        'error': '🚨',
+        'info': '✨'
+      }[type];
+
+      toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border ${colors} shadow-2xl backdrop-blur-md text-xs font-medium transform transition-all duration-300 translate-y-2 opacity-0`;
+      toast.innerHTML = `<span>${icons}</span> <span>${message}</span>`;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+  </script>
+</body>
+</html>

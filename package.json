@@ -1,0 +1,23 @@
+{
+  "name": "3.inventory",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@google/clasp": "^3.3.0",
+    "vercel": "^54.3.0"
+  },
+  "dependencies": {
+    "@line/bot-sdk": "^11.0.0",
+    "axios": "^1.16.1",
+    "express": "^4.19.2",
+    "serverless-http": "^4.0.0"
+  }
+}
