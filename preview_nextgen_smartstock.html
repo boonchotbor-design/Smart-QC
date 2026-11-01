@@ -220,7 +220,7 @@
           <!-- Section 0: ฐานข้อมูล (MASTER DATA) - Screenshot 1 -->
           <div class="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500" data-i18n="sec_master_data">ฐานข้อมูล (MASTER DATA)</div>
           
-          <button onclick="openBomPage('AIS', this)" id="nav-bom-ais" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all text-left">
+          <button onclick="openBomPage('AIS', this)" id="nav-bom-ais" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-emerald-400 hover:bg-slate-800/40 transition-all text-left">
             <div class="flex items-center gap-2.5">
               <span class="text-sm">🟩</span>
               <span data-i18n="nav_bom_ais">BOM AIS</span>
@@ -718,60 +718,66 @@
         <!-- ============================================== -->
         <!-- TAB 3: MASTER DATA BOM (AIS / TRUE) - Screenshot 1 -->
         <!-- ============================================== -->
-        <div id="view-bom" class="space-y-4">
-          <div class="glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
-            
-            <!-- Header Row with Customer Badge & Action Buttons -->
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
-              <div class="flex items-center gap-2.5">
-                <span class="text-xl">📋</span>
-                <h2 id="bom-main-title" class="text-base font-bold text-slate-100 flex items-center gap-2">
-                  <span data-i18n="title_manage_bom">จัดการ BOM</span>
-                  <span id="bom-badge-cus" class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">AIS</span>
-                </h2>
-              </div>
-              <div class="flex items-center gap-2">
-                <button id="btn-fetch-bom" onclick="fetchBOMFromSheet()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 border border-slate-700 bg-slate-800/80 hover:bg-slate-700 transition-all">
-                  <span>📥</span> <span data-i18n="btn_fetch_bom">โหลดข้อมูล (Fetch)</span>
-                </button>
-                <button id="btn-sync-bom" onclick="syncBOMToSheet()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-all shadow-md shadow-blue-600/20">
-                  <span>🔄</span> <span data-i18n="btn_sync_bom">Sync To Sheet</span>
-                </button>
-                <button onclick="openAddBomModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-md shadow-emerald-600/20">
-                  <span>➕</span> <span data-i18n="btn_add_bom">เพิ่มรายการ (Add New)</span>
-                </button>
-              </div>
-            </div>
+        <div id="view-bom" class="space-y-4 hidden">
+          <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
 
-            <!-- Search + Pagination Row (Screenshot 1) -->
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <div class="relative flex-1 min-w-[240px] max-w-md">
-                <span class="absolute inset-y-0 left-3 flex items-center text-slate-400 text-xs">🔍</span>
-                <input 
-                  type="text" 
-                  id="bom-search-input"
-                  oninput="handleBomSearch(this.value)"
-                  placeholder="ค้นหา Type / Model / Code..."
-                  data-i18n-ph="bom_search_ph"
-                  class="w-full pl-9 pr-4 py-2 rounded-xl text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all"
-                  style="background:#0f172a;"
-                />
-              </div>
+            <!-- ===== STICKY BOM HEADER (Title + Search + Pagination) ===== -->
+            <div class="sticky top-0 z-20 bg-[#0b1120]/95 backdrop-blur-md border-b border-slate-800 px-5 pt-5 pb-3 space-y-3">
 
-              <div class="flex items-center gap-3">
-                <span id="bom-stats-text" class="text-xs text-slate-400 font-mono">แสดง 1-50 จาก 574 รายการ</span>
-                <div class="flex items-center gap-1.5">
-                  <button id="bom-btn-prev" onclick="bomPrevPage()" class="w-8 h-8 rounded-lg border border-slate-700 bg-slate-800/60 hover:bg-slate-700 text-slate-300 text-xs flex items-center justify-center transition-all">◀</button>
-                  <span id="bom-page-indicator" class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-800 text-indigo-300 border border-slate-700">หน้า 1/12</span>
-                  <button id="bom-btn-next" onclick="bomNextPage()" class="w-8 h-8 rounded-lg border border-slate-700 bg-slate-800/60 hover:bg-slate-700 text-slate-300 text-xs flex items-center justify-center transition-all">▶</button>
+              <!-- Header Row with Customer Badge & Action Buttons -->
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5">
+                  <span class="text-xl">📋</span>
+                  <h2 id="bom-main-title" class="text-base font-bold text-slate-100 flex items-center gap-2">
+                    <span data-i18n="title_manage_bom">จัดการ BOM</span>
+                    <span id="bom-badge-cus" class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">AIS</span>
+                  </h2>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button id="btn-fetch-bom" onclick="fetchBOMFromSheet()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 border border-slate-700 bg-slate-800/80 hover:bg-slate-700 transition-all">
+                    <span>📥</span> <span data-i18n="btn_fetch_bom">โหลดข้อมูล (Fetch)</span>
+                  </button>
+                  <button id="btn-sync-bom" onclick="syncBOMToSheet()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-all shadow-md shadow-blue-600/20">
+                    <span>🔄</span> <span data-i18n="btn_sync_bom">Sync To Sheet</span>
+                  </button>
+                  <button onclick="openAddBomModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-md shadow-emerald-600/20">
+                    <span>➕</span> <span data-i18n="btn_add_bom">เพิ่มรายการ (Add New)</span>
+                  </button>
                 </div>
               </div>
-            </div>
 
-            <!-- Table Container (Screenshot 1) -->
-            <div class="overflow-x-auto rounded-xl border border-slate-800">
-              <table class="w-full text-left text-xs">
-                <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-800 uppercase text-[11px] font-semibold">
+              <!-- Search + Pagination Row -->
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="relative flex-1 min-w-[240px] max-w-md">
+                  <span class="absolute inset-y-0 left-3 flex items-center text-slate-400 text-xs">🔍</span>
+                  <input 
+                    type="text" 
+                    id="bom-search-input"
+                    oninput="handleBomSearch(this.value)"
+                    placeholder="ค้นหา Type / Model / Code..."
+                    data-i18n-ph="bom_search_ph"
+                    class="w-full pl-9 pr-4 py-2 rounded-xl text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all"
+                    style="background:#0f172a;"
+                  />
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <span id="bom-stats-text" class="text-xs text-slate-400 font-mono">แสดง 1-50 จาก 574 รายการ</span>
+                  <div class="flex items-center gap-1.5">
+                    <button id="bom-btn-prev" onclick="bomPrevPage()" class="w-8 h-8 rounded-lg border border-slate-700 bg-slate-800/60 hover:bg-slate-700 text-slate-300 text-xs flex items-center justify-center transition-all">◀</button>
+                    <span id="bom-page-indicator" class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-800 text-indigo-300 border border-slate-700">หน้า 1/12</span>
+                    <button id="bom-btn-next" onclick="bomNextPage()" class="w-8 h-8 rounded-lg border border-slate-700 bg-slate-800/60 hover:bg-slate-700 text-slate-300 text-xs flex items-center justify-center transition-all">▶</button>
+                  </div>
+                </div>
+              </div>
+            </div><!-- end sticky header -->
+
+            <div class="p-5 space-y-4">
+
+            <!-- Table Container with Sticky Column Header & Vertical Scroll -->
+            <div class="max-h-[620px] overflow-y-auto overflow-x-auto rounded-xl border border-slate-800 relative">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead class="sticky top-0 bg-[#0d1527] z-10 border-b border-slate-800 uppercase text-[11px] font-semibold text-slate-400 tracking-wider">
                   <tr>
                     <th class="py-3 px-3 text-center w-12">NO</th>
                     <th class="py-3 px-3 w-36" data-i18n="th_type">ประเภท (TYPE)</th>
@@ -797,8 +803,9 @@
               </div>
             </div>
 
-          </div>
-        </div>
+          </div><!-- end p-5 content -->
+          </div><!-- end glass-card -->
+        </div><!-- end view-bom -->
 
         <!-- ============================================== -->
         <!-- TAB 4: PRINT ใบเบิก (TELONEER FORM)            -->
@@ -1590,6 +1597,16 @@
 
   <!-- Interactive JavaScript Engine -->
   <script>
+    function escapeHtml(s) {
+      if (s == null) return '';
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     // Mock Transaction Dataset (Simulating 3,782 records)
     const SAMPLE_RAW_DATA = [
       { no: 1, duid: 'TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK', bill: '2026 Capacity Expansion NW Modernization_EXP_BKK', type: 'DISMANTLE', region: 'BKK', customer: 'AIS', model: 'RRU3962', code: '02311EPK', desc: 'RRU3962, 1800MHz~2100MHz 2T4R', qty: 1, sn: '2102311EPK10H4000311', status: 'On Process', date: '30/07/2026' },
@@ -1645,8 +1662,10 @@
     let sortDirection = 'asc';
 
     window.onload = function() {
+      switchTab('transactions');
       applyFilters();
-      renderBOM();
+      bomFilterAndRender();
+      updateTxDatalists();
       initDraggableModal();
       
       // Initialize Theme & Language on launch
@@ -1668,13 +1687,32 @@
         b.classList.add('text-slate-400');
       });
 
+      // Reset BOM nav items
+      const navAis = document.getElementById('nav-bom-ais');
+      const navTrue = document.getElementById('nav-bom-true');
+      if (navAis) {
+        navAis.className = 'nav-item w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-emerald-400 hover:bg-slate-800/40 transition-all text-left';
+      }
+      if (navTrue) {
+        navTrue.className = 'nav-item w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-blue-400 hover:bg-slate-800/40 transition-all text-left';
+      }
+
       const activeView = document.getElementById(`view-${tabId}`);
       if (activeView) activeView.classList.remove('hidden');
 
-      const activeNav = document.getElementById(`nav-${tabId}`);
-      if (activeNav) {
-        activeNav.classList.remove('text-slate-400');
-        activeNav.classList.add('bg-indigo-600/20', 'text-indigo-300', 'border-indigo-500/30', 'text-slate-200');
+      if (tabId === 'bom') {
+        const cus = (typeof curBomCustomer !== 'undefined' ? curBomCustomer : 'AIS');
+        if (cus === 'AIS' && navAis) {
+          navAis.className = 'nav-item w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all text-left';
+        } else if (cus === 'TRUE' && navTrue) {
+          navTrue.className = 'nav-item w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition-all text-left';
+        }
+      } else {
+        const activeNav = document.getElementById(`nav-${tabId}`);
+        if (activeNav) {
+          activeNav.classList.remove('text-slate-400');
+          activeNav.classList.add('bg-indigo-600/20', 'text-indigo-300', 'border-indigo-500/30', 'text-slate-200');
+        }
       }
 
       const tabMeta = {
@@ -1695,6 +1733,7 @@
       const subEl = document.getElementById('page-subtitle-text');
       if (subEl) subEl.textContent = (typeof currentLang !== 'undefined' && currentLang === 'en') ? 'Sunday, 1 November 2026' : 'วันที่วันอาทิตย์ที่ 1 พฤศจิกายน 2569';
 
+      if (tabId === 'bom') bomFilterAndRender();
       if (tabId === 'region-report') {
         setTimeout(renderRegionChart, 50);
       }
@@ -6932,29 +6971,10 @@ let BOM_TRUE = [
       curBomCustomer = cus;
       bomPage = 0;
 
-      // Update badge in sidebar
-      const navAis = document.getElementById('nav-bom-ais');
-      const navTrue = document.getElementById('nav-bom-true');
-      if (cus === 'AIS') {
-        if (navAis) {
-          navAis.className = 'nav-item w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all text-left';
-        }
-        if (navTrue) {
-          navTrue.className = 'nav-item w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-blue-400 hover:bg-slate-800/40 transition-all text-left';
-        }
-      } else {
-        if (navTrue) {
-          navTrue.className = 'nav-item w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition-all text-left';
-        }
-        if (navAis) {
-          navAis.className = 'nav-item w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-emerald-400 hover:bg-slate-800/40 transition-all text-left';
-        }
-      }
-
-      // Switch to BOM view
+      // Switch to BOM view (automatically highlights active BOM nav)
       switchTab('bom');
 
-      // Update main title
+      // Update main title badge
       const cusBadge = document.getElementById('bom-badge-cus');
       if (cusBadge) {
         cusBadge.textContent = cus;
