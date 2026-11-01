@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "name": "teloneer-dashboard",
+  "framework": "vite",
+  "public": true,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

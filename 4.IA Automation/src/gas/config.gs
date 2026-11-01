@@ -1,0 +1,16 @@
+// src/gas/config.gs
+
+const CONFIG = {
+  SHEET_NAME: "Products",
+  GEMINI_API_KEY: "YOUR_GEMINI_API_KEY",
+  LINE_ACCESS_TOKEN: "YOUR_LINE_CHANNEL_ACCESS_TOKEN",
+  FB_PAGE_ACCESS_TOKEN: "YOUR_FB_PAGE_ACCESS_TOKEN",
+  FB_PAGE_ID: "YOUR_FB_PAGE_ID",
+  
+  // Status Constants
+  STATUS_PENDING_AI: "Pending AI",
+  STATUS_WAITING_APPROVAL: "Waiting Approval",
+  STATUS_APPROVED: "Approved",
+  STATUS_REJECTED: "Rejected",
+  STATUS_POSTED: "Posted"
+};

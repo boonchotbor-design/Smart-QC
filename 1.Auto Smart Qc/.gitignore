@@ -1,0 +1,8 @@
+.clasp.json
+node_modules/
+*.log
+Code_V*.txt
+*.docx
+export.txt
+frontend/dist/
+frontend/node_modules/

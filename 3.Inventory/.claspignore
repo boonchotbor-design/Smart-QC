@@ -1,0 +1,12 @@
+**/**
+!code.gs
+!app.html
+!app.js
+!*.gs
+!*.html
+node_modules/**
+package.json
+package-lock.json
+GEMINI.md
+Inventory.docx
+~$ventory.docx
