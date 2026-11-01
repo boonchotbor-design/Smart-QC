@@ -1378,33 +1378,43 @@
           </div>
         </div>
 
-        <!-- วันที่ + INT No -->
+        <!-- วันที่ + INT No (Auto-filled) -->
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">📅 วันที่บันทึก</label>
-            <input type="date" id="inp-tx-date" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a; color-scheme:dark;">
+            <div id="disp-tx-date" class="w-full rounded-xl px-3 py-2.5 text-sm text-emerald-300 border border-slate-700/40 font-mono flex items-center gap-1.5" style="background:rgba(15,23,42,0.5); min-height:40px;">
+              <span class="text-slate-500 text-xs">🔒</span>
+              <span id="disp-tx-date-val">—</span>
+            </div>
+            <input type="hidden" id="inp-tx-date">
           </div>
           <div>
             <label class="block text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">INT NO</label>
-            <input type="text" id="inp-int-no" placeholder="เลข Internal" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all font-mono" style="background:#0f172a;">
+            <div id="disp-int-no" class="w-full rounded-xl px-3 py-2.5 text-sm text-indigo-300 border border-slate-700/40 font-mono flex items-center gap-1.5" style="background:rgba(15,23,42,0.5); min-height:40px;">
+              <span class="text-slate-500 text-xs">⚡</span>
+              <span id="disp-int-no-val">—</span>
+            </div>
+            <input type="hidden" id="inp-int-no">
           </div>
         </div>
 
-        <!-- ผู้บันทึก (User) + สถานะ -->
+        <!-- ผู้บันทึก (User) + สถานะ (Auto-filled) -->
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">👤 ผู้บันทึก (USER)</label>
-            <input type="text" id="inp-user-name" placeholder="ชื่อผู้บันทึก" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a;">
+            <div id="disp-user-name" class="w-full rounded-xl px-3 py-2.5 text-sm text-amber-300 border border-slate-700/40 flex items-center gap-1.5" style="background:rgba(15,23,42,0.5); min-height:40px;">
+              <span class="text-slate-500 text-xs">🔒</span>
+              <span id="disp-user-name-val">—</span>
+            </div>
+            <input type="hidden" id="inp-user-name">
           </div>
           <div>
             <label class="block text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">STATUS</label>
-            <select id="inp-tx-status" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a;">
-              <option value="On Process">On Process</option>
-              <option value="Open">Open</option>
-              <option value="Closed">Closed</option>
-              <option value="Pending">Pending</option>
-              <option value="Returned">Returned</option>
-            </select>
+            <div id="disp-tx-status" class="w-full rounded-xl px-3 py-2.5 text-sm font-bold border border-slate-700/40 flex items-center gap-1.5" style="background:rgba(15,23,42,0.5); min-height:40px;">
+              <span id="disp-tx-status-dot" class="w-2 h-2 rounded-full bg-slate-500 flex-shrink-0"></span>
+              <span id="disp-tx-status-val">On Process</span>
+            </div>
+            <input type="hidden" id="inp-tx-status" value="On Process">
           </div>
         </div>
 
@@ -1450,9 +1460,6 @@
             <div class="flex items-center justify-between">
               <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold border border-emerald-500/40 bg-emerald-500/10 text-emerald-400">สินค้า #1</span>
               <div class="flex items-center gap-2">
-                <button type="button" onclick="openItemSearchModal(1)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-md shadow-indigo-500/20 transition-all" style="background:linear-gradient(135deg,#8b5cf6,#6366f1);">
-                  <span>🔍</span> ค้นหา Item
-                </button>
                 <button type="button" onclick="removeModalItem(1)" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 transition-all">
                   ลบรายการ
                 </button>
@@ -1507,7 +1514,6 @@
                 <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM CODE</label>
                 <div class="flex gap-1.5">
                   <input type="text" id="item-code-1" placeholder="รหัสสินค้า" oninput="onCodeInputChange(this, 1)" onchange="onCodeInputChange(this, 1)" class="flex-1 rounded-lg px-3 py-2 text-xs text-purple-400 font-mono border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all font-bold" style="background:#0f172a;">
-                  <button type="button" onclick="openItemSearchModal(1)" title="ค้นหารหัสและรุ่นสินค้า" class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-sm hover:bg-indigo-600/30 transition-all">🔍</button>
                 </div>
               </div>
               <div>
@@ -1991,6 +1997,73 @@
       'RETURN':    'background:linear-gradient(135deg,#ec4899,#be185d)',
     };
 
+    // ── STATUS auto-rules per TX type ──
+    const TX_AUTO_STATUS = {
+      'IN':        { value: 'Open',       color: '#22c55e', dot: '#22c55e' },
+      'OUT':       { value: 'On Process', color: '#f59e0b', dot: '#f59e0b' },
+      'DISMANTLE': { value: 'On Process', color: '#a855f7', dot: '#a855f7' },
+      'STR/IN':    { value: 'Open',       color: '#3b82f6', dot: '#3b82f6' },
+      'STR/OUT':   { value: 'On Process', color: '#f59e0b', dot: '#f59e0b' },
+      'RETURN':    { value: 'Returned',   color: '#ec4899', dot: '#ec4899' },
+    };
+
+    // ── Get current user from localStorage or fallback ──
+    function getActiveUser() {
+      try {
+        return localStorage.getItem('smartstock_user') ||
+               localStorage.getItem('smartstock_login') ||
+               'admin';
+      } catch(e) { return 'admin'; }
+    }
+
+    // ── Auto-generate INT NO: INT-YYYYMMDD-XXXX ──
+    function generateIntNo() {
+      const now = new Date();
+      const ymd = now.getFullYear().toString() +
+                  String(now.getMonth()+1).padStart(2,'0') +
+                  String(now.getDate()).padStart(2,'0');
+      const seq = String(Math.floor(Math.random()*9000)+1000);
+      return 'INT-' + ymd + '-' + seq;
+    }
+
+    // ── Update auto-filled display fields ──
+    function updateAutoFields(type) {
+      // Date
+      const today = new Date();
+      const dd   = String(today.getDate()).padStart(2,'0');
+      const mm   = String(today.getMonth()+1).padStart(2,'0');
+      const yyyy = today.getFullYear();
+      const dateStr = dd + '/' + mm + '/' + yyyy;
+      const isoDate = yyyy + '-' + mm + '-' + dd;
+      const dateDisp = document.getElementById('disp-tx-date-val');
+      if (dateDisp) dateDisp.textContent = dateStr;
+      const dateInp = document.getElementById('inp-tx-date');
+      if (dateInp) dateInp.value = isoDate;
+
+      // INT NO
+      const intNo = generateIntNo();
+      const intDisp = document.getElementById('disp-int-no-val');
+      if (intDisp) intDisp.textContent = intNo;
+      const intInp = document.getElementById('inp-int-no');
+      if (intInp) intInp.value = intNo;
+
+      // USER
+      const user = getActiveUser();
+      const userDisp = document.getElementById('disp-user-name-val');
+      if (userDisp) userDisp.textContent = user;
+      const userInp = document.getElementById('inp-user-name');
+      if (userInp) userInp.value = user;
+
+      // STATUS auto by type
+      const autoSt = TX_AUTO_STATUS[type] || { value: 'On Process', color: '#94a3b8', dot: '#94a3b8' };
+      const stDisp = document.getElementById('disp-tx-status-val');
+      if (stDisp) { stDisp.textContent = autoSt.value; stDisp.style.color = autoSt.color; }
+      const stDot = document.getElementById('disp-tx-status-dot');
+      if (stDot) stDot.style.background = autoSt.dot;
+      const stInp = document.getElementById('inp-tx-status');
+      if (stInp) stInp.value = autoSt.value;
+    }
+
     function setTxType(type) {
       currentTxType = type;
       // Update all tabs
@@ -2018,6 +2091,8 @@
       if (modalTitle) modalTitle.textContent = 'บันทึกรายการ ' + type;
       const actionIcon = document.getElementById('modal-action-icon');
       if (actionIcon) actionIcon.textContent = icon;
+      // Auto-update status display when type tab changes
+      updateAutoFields(type);
     }
 
     
@@ -7555,9 +7630,6 @@ let BOM_TRUE = [
         <div class="flex items-center justify-between">
           <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold border border-indigo-500/40 bg-indigo-500/10 text-indigo-400">สินค้า #${idx}</span>
           <div class="flex items-center gap-2">
-            <button type="button" onclick="openItemSearchModal(${idx})" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-md shadow-indigo-500/20 transition-all" style="background:linear-gradient(135deg,#8b5cf6,#6366f1);">
-              <span>🔍</span> ค้นหา Item
-            </button>
             <button type="button" onclick="removeModalItem(${idx})" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 transition-all">ลบรายการ</button>
           </div>
         </div>
@@ -7584,25 +7656,22 @@ let BOM_TRUE = [
             <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">MODEL</label>
             <input type="text" id="item-model-${idx}" list="catalog-model-list" placeholder="พิมพ์หรือเลือก" oninput="onModelInputChange(this, ${idx})" onchange="onModelInputChange(this, ${idx})" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" style="background:#0f172a;">
           </div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM CODE</label>
-            <div class="flex gap-1.5">
-              <input type="text" id="item-code-${idx}" placeholder="รหัสสินค้า" class="flex-1 rounded-lg px-3 py-2 text-xs text-purple-400 font-mono border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all font-bold" style="background:#0f172a;">
-              <button type="button" onclick="openItemSearchModal(${idx})" title="ค้นหารหัสและรุ่นสินค้า" class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-sm hover:bg-indigo-600/30 transition-all">🔍</button>
-            </div>
+            <input type="text" id="item-code-${idx}" placeholder="รหัสสินค้า" oninput="onCodeInputChange(this, ${idx})" onchange="onCodeInputChange(this, ${idx})" class="w-full rounded-lg px-3 py-2 text-xs text-purple-400 font-mono border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all font-bold" style="background:#0f172a;">
           </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM DESCRIPTION</label>
             <input type="text" id="item-desc-${idx}" placeholder="รายละเอียดสินค้า" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a;">
           </div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">SN</label>
             <input type="text" id="item-sn-${idx}" placeholder="Serial Number" class="w-full rounded-lg px-3 py-2 text-xs font-mono border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a; color:#e2e8f0;">
           </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">จำนวน</label>
             <input type="number" id="item-qty-${idx}" value="1" min="1" class="w-full rounded-lg px-3 py-2 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 text-center font-bold transition-all" style="background:#0f172a;">
@@ -7657,17 +7726,7 @@ let BOM_TRUE = [
         setVal('inp-loc-rcv', '');
         setVal('inp-customer', 'AIS');
         setVal('inp-region', 'ER');
-        setVal('inp-int-no', '');
-        setVal('inp-user-name', '');
-        setVal('inp-tx-status', 'On Process');
-        // Set today's date as default
-        try {
-          const today = new Date();
-          const yyyy = today.getFullYear();
-          const mm = String(today.getMonth()+1).padStart(2,'0');
-          const dd = String(today.getDate()).padStart(2,'0');
-          setVal('inp-tx-date', `${yyyy}-${mm}-${dd}`);
-        } catch(e) {}
+        // Auto-fill: date, INT NO, user, status via updateAutoFields() called inside setTxType()
         // Reset IType on item-1
         const itypeEl = document.getElementById('item-itype-1');
         if (itypeEl) itypeEl.value = 'Equipment';
