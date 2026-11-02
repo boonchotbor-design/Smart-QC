@@ -971,14 +971,46 @@
         <!-- ============================================== -->
         <div id="view-teloneer" class="space-y-4 hidden">
           <div class="glass-card rounded-2xl p-5 border border-slate-800">
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 no-print">
               <div>
                 <h3 class="font-semibold text-slate-100 text-sm">🖨️ Teloneer Official Requisition Form (A4 Review)</h3>
                 <p class="text-xs text-slate-400">แบบฟอร์มใบเบิก/ส่งมอบอุปกรณ์โทรคมนาคมมาตรฐาน A4</p>
               </div>
-              <button onclick="printTeloneerSlip()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-2">
+              <button onclick="printTeloneerSlip()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg flex items-center justify-center gap-2">
                 <span>🖨️</span> พิมพ์เอกสาร (Print A4)
               </button>
+            </div>
+
+            <!-- Search Panel (DUID / Bill No) -->
+            <div class="no-print mb-6 p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+              <div class="relative flex-1">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-sm">🔍</span>
+                <input 
+                  type="text" 
+                  id="teloneer-search-input"
+                  list="teloneer-duid-list"
+                  oninput="onTeloneerSearchInput()"
+                  onkeydown="if(event.key==='Enter') searchTeloneerForm()"
+                  placeholder="ค้นหา DUID หรือ Bill No..."
+                  class="w-full pl-9 pr-9 py-2 bg-slate-950 text-xs sm:text-sm text-slate-100 placeholder-slate-500 rounded-xl border border-slate-700/80 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                />
+                <button type="button" onclick="clearTeloneerSearch()" id="teloneer-clear-btn" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 text-sm hidden" title="ล้างคำค้นหา">✕</button>
+                <datalist id="teloneer-duid-list"></datalist>
+              </div>
+              <div class="flex items-center gap-2">
+                <button 
+                  onclick="searchTeloneerForm()" 
+                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+                  <span>🔍</span> ค้นหา
+                </button>
+                <button 
+                  onclick="resetTeloneerForm()" 
+                  class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium border border-slate-700 transition-all cursor-pointer"
+                  title="รีเซ็ตค่าเริ่มต้น">
+                  🔄 รีเซ็ต
+                </button>
+              </div>
+              <div id="teloneer-search-stats" class="text-xs text-slate-400 flex items-center gap-1.5 shrink-0 pl-1"></div>
             </div>
 
             <!-- A4 Document Box (Print Only Sheet) -->
@@ -994,10 +1026,10 @@
               </div>
 
               <div class="grid grid-cols-2 gap-4 py-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                <div><strong>DUID:</strong> TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK</div>
-                <div><strong>Bill No:</strong> 2026 Capacity Expansion NW Modernization_EXP_BKK</div>
-                <div><strong>Network:</strong> AIS (Advanced Info Service)</div>
-                <div><strong>Region:</strong> BKK Metro (Bangkok Area)</div>
+                <div><strong>DUID:</strong> <span id="tel-duid-display">TECBA_2026 Capacity Expansion MW Modernization_EXP_BKK</span></div>
+                <div><strong>Bill No:</strong> <span id="tel-bill-display">2026 Capacity Expansion NW Modernization_EXP_BKK</span></div>
+                <div><strong>Network:</strong> <span id="tel-network-display">AIS (Advanced Info Service)</span></div>
+                <div><strong>Region:</strong> <span id="tel-region-display">BKK Metro (Bangkok Area)</span></div>
               </div>
 
               <div class="overflow-x-auto mt-4">
@@ -1015,7 +1047,7 @@
                       <th style="padding:6px 8px; border:1px solid #27272a; white-space:nowrap;">SN</th>
                     </tr>
                   </thead>
-                  <tbody style="color:#111; font-size:10.5px;">
+                  <tbody id="teloneer-table-body" style="color:#111; font-size:10.5px;">
                     <tr style="border-bottom:1px solid #ccc;">
                       <td style="padding:4px 6px; border:1px solid #ccc; text-align:center; font-weight:600;">1</td>
                       <td style="padding:4px 8px; border:1px solid #ccc; font-family:monospace;">KTH22608060078</td>
@@ -1166,21 +1198,21 @@
               <!-- Signature Block matching original user form -->
               <div style="border:1px solid #000; margin-top:24px; font-sans;">
                 <div style="padding:10px 12px; border-bottom:1px solid #000; min-height:48px; font-size:11px; color:#000;">
-                  <strong>หมายเหตุ</strong>
+                  <strong>หมายเหตุ</strong> <span id="tel-note-display"></span>
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; text-align:center; font-size:11px; color:#000;">
                   <!-- Col 1: ผู้ส่งมอบ / ผู้เบิก -->
                   <div style="padding:20px 8px 14px; border-right:1px solid #000;">
                     <div style="margin-top:22px; border-bottom:1px solid #000; width:75%; margin-left:auto; margin-right:auto;"></div>
                     <div style="margin-top:6px; font-weight:bold; font-size:11px;">ผู้ส่งมอบ / ผู้เบิก</div>
-                    <div style="margin-top:3px; color:#444; font-size:10px;">(HW Delivery)</div>
+                    <div id="tel-owner-w-display" style="margin-top:3px; color:#444; font-size:10px;">(HW Delivery)</div>
                     <div style="margin-top:14px; font-size:11px; white-space:nowrap; overflow:hidden;">วันที่ <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:14px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:14px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:52px; height:14px; vertical-align:bottom; margin:0 2px;"></span></div>
                   </div>
                   <!-- Col 2: ผู้รับมอบ -->
                   <div style="padding:20px 8px 14px; border-right:1px solid #000;">
                     <div style="margin-top:22px; border-bottom:1px solid #000; width:75%; margin-left:auto; margin-right:auto;"></div>
                     <div style="margin-top:6px; font-weight:bold; font-size:11px;">ผู้รับมอบ</div>
-                    <div style="margin-top:3px; color:#444; font-size:10px;">(TLN_Anat)</div>
+                    <div id="tel-owner-r-display" style="margin-top:3px; color:#444; font-size:10px;">(TLN_Anat)</div>
                     <div style="margin-top:14px; font-size:11px; white-space:nowrap; overflow:hidden;">วันที่ <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:14px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:14px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:52px; height:14px; vertical-align:bottom; margin:0 2px;"></span></div>
                   </div>
                   <!-- Col 3: ผู้อนุมัติ / หัวหน้างาน -->
@@ -2100,6 +2132,12 @@
       if (tabId === 'region-report') {
         setTimeout(renderRegionChart, 50);
       }
+      if (tabId === 'teloneer') {
+        updateTeloneerDatalist();
+        if (!currentTeloneerRows || !currentTeloneerRows.length) {
+          initDefaultTeloneerForm();
+        }
+      }
     }
 
     function setCustomerFilter(cust) {
@@ -2151,6 +2189,7 @@
       currentPage = 1;
       renderTable();
       updateNavBadge();
+      if (typeof updateTeloneerDatalist === 'function') updateTeloneerDatalist();
     }
 
     // Debounced search — prevents sluggish UI with 10k+ records
@@ -9064,6 +9103,151 @@ let BOM_TRUE = [
       }, 3500);
     }
   
+    // ════ TELONEER FORM DYNAMIC SEARCH & RENDER ════
+    let currentTeloneerRows = [];
+
+    function updateTeloneerDatalist() {
+      const dl = document.getElementById('teloneer-duid-list');
+      if (!dl) return;
+      const data = (typeof TRANSACTIONS !== 'undefined' && TRANSACTIONS.length) ? TRANSACTIONS : (typeof SAMPLE_RAW_DATA !== 'undefined' ? SAMPLE_RAW_DATA : []);
+      if (!data.length) return;
+      const uniqueKeys = new Set();
+      data.forEach(t => {
+        if (t.duid && t.duid.trim()) uniqueKeys.add(t.duid.trim());
+        if (t.bill && t.bill.trim()) uniqueKeys.add(t.bill.trim());
+      });
+      dl.innerHTML = Array.from(uniqueKeys).slice(0, 100).map(k => `<option value="${k}"></option>`).join('');
+    }
+
+    function onTeloneerSearchInput() {
+      const inp = document.getElementById('teloneer-search-input');
+      const btn = document.getElementById('teloneer-clear-btn');
+      if (btn && inp) {
+        btn.classList.toggle('hidden', !inp.value.trim());
+      }
+    }
+
+    function clearTeloneerSearch() {
+      const inp = document.getElementById('teloneer-search-input');
+      if (inp) inp.value = '';
+      onTeloneerSearchInput();
+      resetTeloneerForm();
+    }
+
+    function resetTeloneerForm() {
+      const inp = document.getElementById('teloneer-search-input');
+      if (inp) inp.value = '';
+      onTeloneerSearchInput();
+      initDefaultTeloneerForm();
+    }
+
+    function initDefaultTeloneerForm() {
+      const data = (typeof TRANSACTIONS !== 'undefined' && TRANSACTIONS.length) ? TRANSACTIONS : (typeof SAMPLE_RAW_DATA !== 'undefined' ? SAMPLE_RAW_DATA : []);
+      if (!data.length) return;
+      const firstDuid = data[0].duid || '';
+      let defaultRows = data.filter(t => t.duid === firstDuid);
+      if (!defaultRows.length) defaultRows = data.slice(0, 13);
+      const inp = document.getElementById('teloneer-search-input');
+      if (inp && firstDuid) inp.value = firstDuid;
+      onTeloneerSearchInput();
+      renderTeloneerA4(defaultRows, firstDuid);
+    }
+
+    function searchTeloneerForm() {
+      const inp = document.getElementById('teloneer-search-input');
+      const q = (inp ? inp.value : '').trim().toLowerCase();
+      const statsEl = document.getElementById('teloneer-search-stats');
+      const data = (typeof TRANSACTIONS !== 'undefined' && TRANSACTIONS.length) ? TRANSACTIONS : (typeof SAMPLE_RAW_DATA !== 'undefined' ? SAMPLE_RAW_DATA : []);
+      
+      if (!q) {
+        if (typeof showToast === 'function') showToast('กรุณากรอก DUID หรือ Bill No เพื่อค้นหา', 'info');
+        initDefaultTeloneerForm();
+        return;
+      }
+
+      // Filter: Exact match first, then partial
+      let res = data.filter(t => (t.duid || '').toLowerCase() === q || (t.bill || '').toLowerCase() === q);
+      if (!res.length) {
+        res = data.filter(t => (t.duid || '').toLowerCase().includes(q) || (t.bill || '').toLowerCase().includes(q));
+      }
+
+      if (!res.length) {
+        if (typeof showToast === 'function') showToast('❌ ไม่พบข้อมูลสำหรับ: ' + q, 'error');
+        if (statsEl) {
+          statsEl.innerHTML = '<span class="text-rose-400 font-semibold text-xs">❌ ไม่พบข้อมูล</span>';
+        }
+        renderTeloneerEmpty(q);
+        return;
+      }
+
+      if (typeof showToast === 'function') showToast(`✅ พบข้อมูล ${res.length} รายการ`, 'success');
+      renderTeloneerA4(res, q);
+    }
+
+    function renderTeloneerEmpty(query) {
+      const tbody = document.getElementById('teloneer-table-body');
+      if (tbody) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="9" style="text-align:center; padding:36px 16px; color:#ef4444; font-size:12px; font-weight:600;">
+              ⚠️ ไม่พบข้อมูลสำหรับ "${query}" ในระบบ<br>
+              <span style="color:#64748b; font-size:11px; font-weight:normal; margin-top:4px; display:inline-block;">
+                กรุณาตรวจสอบความถูกต้องของ DUID หรือ Bill No แล้วลองค้นหาใหม่อีกครั้ง
+              </span>
+            </td>
+          </tr>
+        `;
+      }
+      const duidEl = document.getElementById('tel-duid-display');
+      const billEl = document.getElementById('tel-bill-display');
+      if (duidEl) duidEl.textContent = query || '-';
+      if (billEl) billEl.textContent = '-';
+    }
+
+    function renderTeloneerA4(rows, query) {
+      currentTeloneerRows = rows;
+      const statsEl = document.getElementById('teloneer-search-stats');
+      if (statsEl) {
+        statsEl.innerHTML = `<span class="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold font-mono">พบ ${rows.length} รายการ</span>`;
+      }
+
+      const r0 = rows[0] || {};
+      const duidEl = document.getElementById('tel-duid-display');
+      const billEl = document.getElementById('tel-bill-display');
+      const netEl = document.getElementById('tel-network-display');
+      const regEl = document.getElementById('tel-region-display');
+      const noteEl = document.getElementById('tel-note-display');
+      const ownerWEl = document.getElementById('tel-owner-w-display');
+      const ownerREl = document.getElementById('tel-owner-r-display');
+
+      if (duidEl) duidEl.textContent = r0.duid || '-';
+      if (billEl) billEl.textContent = r0.bill || '-';
+      if (netEl) netEl.textContent = r0.customer ? (r0.customer === 'AIS' ? 'AIS (Advanced Info Service)' : r0.customer === 'TRUE' ? 'TRUE (True Move H)' : r0.customer) : 'AIS (Advanced Info Service)';
+      if (regEl) regEl.textContent = r0.region ? `${r0.region} Area` : '-';
+      if (noteEl) noteEl.textContent = r0.desc || '';
+      if (ownerWEl) ownerWEl.textContent = `(${r0.ownerWarehouse || r0.ownerW || 'HW Delivery'})`;
+      if (ownerREl) ownerREl.textContent = `(${r0.ownerReceiver || r0.ownerR || 'TLN_Anat'})`;
+
+      const tbody = document.getElementById('teloneer-table-body');
+      if (!tbody) return;
+
+      tbody.innerHTML = rows.map((t, idx) => {
+        return `
+          <tr style="border-bottom:1px solid #ccc;">
+            <td style="padding:4px 6px; border:1px solid #ccc; text-align:center; font-weight:600;">${idx + 1}</td>
+            <td style="padding:4px 8px; border:1px solid #ccc; font-family:monospace;">${t.bill || '-'}</td>
+            <td style="padding:4px 8px; border:1px solid #ccc;">${t.itype || t.type || '-'}</td>
+            <td style="padding:4px 8px; border:1px solid #ccc;">${t.model || '-'}</td>
+            <td style="padding:4px 8px; border:1px solid #ccc; font-family:monospace; color:#0055cc; font-weight:bold;">${t.code || '-'}</td>
+            <td style="padding:4px 8px; border:1px solid #ccc; font-size:10px;">${t.desc || '-'}</td>
+            <td style="padding:4px 6px; border:1px solid #ccc; text-align:center; font-weight:bold;">${t.type || 'OUT'}</td>
+            <td style="padding:4px 6px; border:1px solid #ccc; text-align:center; font-weight:bold;">${t.qty || 1}</td>
+            <td style="padding:4px 8px; border:1px solid #ccc; font-family:monospace; font-size:10px;">${t.sn || '-'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
     // ════ PRINT TELONEER REQUISITION SLIP ════
     function printTeloneerSlip() {
       // Ensure the teloneer view is visible before printing
