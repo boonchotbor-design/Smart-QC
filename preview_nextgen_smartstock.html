@@ -1740,7 +1740,10 @@
                 >
               </div>
               <div>
-                <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM TYPE (IType)</label>
+                <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide flex items-center justify-between">
+                  <span>ITEM TYPE (IType)</span>
+                  <span class="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">AUTO</span>
+                </label>
                 <select id="item-itype-1" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" style="background:#0f172a;">
                   <option value="Equipment">Equipment</option>
                   <option value="Spare Part">Spare Part</option>
@@ -2374,27 +2377,42 @@
     function inferITypeFromType(typeStr) {
       if (!typeStr) return 'Equipment';
       const t = String(typeStr).trim().toUpperCase();
-      if (/^(RRU|BBU|AAU|DCDU|DPU|ANTENNA|BATTERY|RECTIFIER|SUBRACK|CABINET|OPM|POWER|UPS|RADIO|MICROWAVE|MW)/.test(t)) {
-        return 'Equipment';
-      }
-      if (/^(CABLE|JUMPER|FIBER|RET CABLE|POWER CABLE|DC CABLE|LAN|OPTICAL|FEEDER)/.test(t)) {
-        return 'Cable';
-      }
-      if (/^(SFP|BOARD|UBBP|CARD|FAN|MODULE|FUSE|BREAKER|CONNECTOR|FILTER)/.test(t)) {
-        return 'Spare Part';
-      }
-      if (/^(BRACKET|CLAMP|TAPE|TIE|ACCESSORY|BOLT|NUT|HARDWARE|GROUND)/.test(t)) {
+
+      // 1. Material (Brackets, Clamps, Mounts, Accessories, Hardware, Screws, Stands, Hangers, Boxes, Labels, Trays)
+      if (/(BRACKET|CLAMP|MOUNT|KIT|STAND|HANGER|BAR|SCREW|TIE|ACCESSOR|HARDWARE|SHEETMETAL|POLE|WATERPROOF|LABLE|LABEL|TRAY|BOX|MATERIAL|MATERAIL|ADAPTER|CONNECTOR)/.test(t)) {
         return 'Material';
       }
-      if (/^(TOOL|TESTER|METER|CRIMP|KEY)/.test(t)) {
+
+      // 2. Cable (All telecom cables, jumpers, optical, CPRI, AISG, patch cord, feeder, wire, line)
+      if (/(CABLE|JUMPER|FIBER|CPRI|AISG|PATCH CORD|CORD|FEEDER|WIRE|LINE)/.test(t)) {
+        return 'Cable';
+      }
+
+      // 3. Spare Part (Boards, SFPs, Modules, Fans, Filters, Breakers, Sensors, Combiners, Splitters, RETs, Downtilts, Attenuators)
+      if (/(BOARD|BOAD|UBBP|SFP|MODULE|CARD|FAN|FILTER|BREAKER|FUSE|SENSOR|TEMPERATURE|COMBINER|SPLITTER|TRIPLEXER|DIPLEXER|ATTENUATOR|TMA|RCU|RET|DOWNTILT|UEIU|RHUB|OCB)/.test(t)) {
+        return 'Spare Part';
+      }
+
+      // 4. Tool
+      if (/(TOOL|TESTER|METER|CRIMP|KEY|MEASURE)/.test(t)) {
         return 'Tool';
       }
-      if (/^(CONSUMABLE|SEALANT|PAINT|CLEANER)/.test(t)) {
+
+      // 5. Consumable
+      if (/(CONSUMABLE|SEALANT|PAINT|TAPE|CLEANER|GREASE)/.test(t)) {
         return 'Consumable';
       }
+
+      // 6. Direct match with standard option names
       const validOptions = ['Equipment', 'Spare Part', 'Material', 'Tool', 'Consumable', 'Cable', 'Other'];
       const directMatch = validOptions.find(o => o.toUpperCase() === t);
       if (directMatch) return directMatch;
+
+      // 7. Equipment (Active Nodes, RRU, BBU, AAU, DBS, DCDU, DPU, Antenna, Battery, Rectifier, Cabinet, Power, Router, Switch, Solar, GPS, etc.)
+      if (/(RRU|BBU|AAU|DBS|DBU|DCDU|DPU|ANTENNA|BATTERY|RECTIFIER|SUBRACK|CABINET|CABINATE|OPM|POWER|UPS|RADIO|MICROWAVE|MW|ROUTER|ATN|PTN|ODF|MDB|PDU|SWITCH|GPS|SOLAR|PV|OPTIX|DCPDB|EPS|SITE)/.test(t)) {
+        return 'Equipment';
+      }
+
       return 'Equipment';
     }
 
@@ -2441,7 +2459,16 @@
       // Auto-set ITEM TYPE (IType)
       const itypeEl = document.getElementById('item-itype-' + rowIdx);
       if (itypeEl) {
-        itypeEl.value = inferITypeFromType(val);
+        const autoIType = inferITypeFromType(val);
+        itypeEl.value = autoIType;
+
+        // Visual flash confirmation: pulse border & glow
+        itypeEl.classList.remove('border-slate-700/80');
+        itypeEl.classList.add('border-emerald-400', 'bg-emerald-950/40', 'ring-1', 'ring-emerald-400');
+        setTimeout(() => {
+          itypeEl.classList.remove('border-emerald-400', 'bg-emerald-950/40', 'ring-1', 'ring-emerald-400');
+          itypeEl.classList.add('border-slate-700/80');
+        }, 800);
       }
 
       // Update model datalist based on selected type (Fast & Instant)
@@ -2459,13 +2486,12 @@
       );
       if (found) {
         const typeEl = document.getElementById('item-type-' + rowIdx);
-        const itypeEl = document.getElementById('item-itype-' + rowIdx);
         const codeEl = document.getElementById('item-code-' + rowIdx);
         const descEl = document.getElementById('item-desc-' + rowIdx);
         
         if (typeEl && found.type) {
           typeEl.value = found.type;
-          if (itypeEl) itypeEl.value = inferITypeFromType(found.type);
+          onTypeInputChange(typeEl, rowIdx);
         }
         if (codeEl && found.code) codeEl.value = found.code;
         if (descEl && found.desc) descEl.value = found.desc;
@@ -2480,12 +2506,11 @@
       const found = bom.find(it => it.code && it.code.toLowerCase() === val);
       if (found) {
         const typeEl = document.getElementById('item-type-' + rowIdx);
-        const itypeEl = document.getElementById('item-itype-' + rowIdx);
         const modelEl = document.getElementById('item-model-' + rowIdx);
         const descEl = document.getElementById('item-desc-' + rowIdx);
         if (typeEl && found.type) {
           typeEl.value = found.type;
-          if (itypeEl) itypeEl.value = inferITypeFromType(found.type);
+          onTypeInputChange(typeEl, rowIdx);
         }
         if (modelEl && found.model) modelEl.value = found.model;
         if (descEl && found.desc) descEl.value = found.desc;
@@ -7899,7 +7924,10 @@ let BOM_TRUE = [
       const codeEl = document.getElementById('item-code-' + rowIdx);
       const descEl = document.getElementById('item-desc-' + rowIdx);
 
-      if (typeEl) typeEl.value = item.type || '';
+      if (typeEl) {
+        typeEl.value = item.type || '';
+        onTypeInputChange(typeEl, rowIdx);
+      }
       if (modelEl) modelEl.value = item.model || '';
       if (codeEl) codeEl.value = item.code || '';
       if (descEl) descEl.value = item.desc || '';
@@ -7933,7 +7961,10 @@ let BOM_TRUE = [
             <input type="text" id="item-type-${idx}" list="catalog-type-list" placeholder="พิมพ์หรือเลือก" oninput="onTypeInputChange(this, ${idx})" onchange="onTypeInputChange(this, ${idx})" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" style="background:#0f172a;">
           </div>
           <div>
-            <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM TYPE (IType)</label>
+            <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide flex items-center justify-between">
+              <span>ITEM TYPE (IType)</span>
+              <span class="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">AUTO</span>
+            </label>
             <select id="item-itype-${idx}" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" style="background:#0f172a;">
               <option value="Equipment">Equipment</option>
               <option value="Spare Part">Spare Part</option>
@@ -8094,7 +8125,7 @@ let BOM_TRUE = [
 
       // Fill Item #1
       setElVal('item-type-1', first.type || '');
-      setElVal('item-itype-1', first.itype || 'Equipment');
+      setElVal('item-itype-1', first.itype || inferITypeFromType(first.type) || 'Equipment');
       setElVal('item-model-1', first.model || '');
       setElVal('item-code-1', first.code || '');
       setElVal('item-desc-1', first.desc || '');
@@ -8108,7 +8139,7 @@ let BOM_TRUE = [
           const rowIdx = modalItemCount;
           const item = found[i];
           setElVal('item-type-' + rowIdx, item.type || '');
-          setElVal('item-itype-' + rowIdx, item.itype || 'Equipment');
+          setElVal('item-itype-' + rowIdx, item.itype || inferITypeFromType(item.type) || 'Equipment');
           setElVal('item-model-' + rowIdx, item.model || '');
           setElVal('item-code-' + rowIdx, item.code || '');
           setElVal('item-desc-' + rowIdx, item.desc || '');
