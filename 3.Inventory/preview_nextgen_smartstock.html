@@ -173,8 +173,8 @@
        ══════════════════════════════════════════════════════════════════ */
     @media print {
       @page {
-        size: auto;
-        margin: 6mm 8mm;
+        size: A4 portrait;
+        margin: 0mm 5mm 2mm 5mm !important;
       }
 
       /* บังคับพื้นหลังขาว ตัวหนังสือดำ ไม่ให้มี dark mode ติดมา */
@@ -207,7 +207,7 @@
         width: 100% !important;
         max-width: 100% !important;
         margin: 0 !important;
-        padding: 4mm 6mm !important;
+        padding: 0 2mm 0 2mm !important;
         box-shadow: none !important;
         border: none !important;
         border-radius: 0 !important;
@@ -216,12 +216,42 @@
         box-sizing: border-box !important;
       }
 
+      /* ดันฟอร์มขึ้นชิดด้านบนและบีบระยะห่างแนวตั้งให้พอดี 1 หน้า A4 */
+      #teloneer-print-sheet.space-y-4 > :not([hidden]) ~ :not([hidden]),
+      #teloneer-print-sheet.space-y-3 > :not([hidden]) ~ :not([hidden]) {
+        margin-top: 2px !important;
+      }
+
+      #teloneer-print-sheet .border-b-2 {
+        padding-bottom: 2px !important;
+        margin-bottom: 1px !important;
+      }
+
+      #teloneer-print-sheet h2 {
+        font-size: 15px !important;
+        line-height: 1.1 !important;
+        margin: 0 !important;
+      }
+
+      #teloneer-print-sheet .grid {
+        padding: 3px 6px !important;
+        gap: 2px 8px !important;
+        font-size: 9.5px !important;
+        margin-top: 2px !important;
+      }
+
+      #teloneer-print-sheet .overflow-x-auto {
+        margin-top: 2px !important;
+      }
+
       /* ปรับให้ขยายเต็มความกว้างตามการตั้งค่าหน้ากระดาษ (Portrait หรือ Landscape) */
       #teloneer-print-sheet table {
         width: 100% !important;
         border-collapse: collapse !important;
         page-break-inside: auto !important;
         table-layout: auto !important;
+        font-size: 9.5px !important;
+        margin-top: 2px !important;
       }
 
       #teloneer-print-sheet thead {
@@ -239,6 +269,8 @@
         background-color: #18181b !important;
         color: #ffffff !important;
         border: 1px solid #000000 !important;
+        padding: 2.5px 4px !important;
+        font-size: 9.5px !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
@@ -251,6 +283,9 @@
       #teloneer-print-sheet td {
         border: 1px solid #333333 !important;
         color: #000000 !important;
+        padding: 2px 4px !important;
+        font-size: 9px !important;
+        line-height: 1.2 !important;
       }
 
       #teloneer-print-sheet .text-blue-code {
@@ -260,13 +295,32 @@
         print-color-adjust: exact !important;
       }
 
+      #teloneer-print-sheet #teloneer-sig-block {
+        margin-top: 6px !important;
+        page-break-inside: avoid !important;
+      }
+
+      #teloneer-print-sheet #teloneer-sig-block > div:first-child {
+        padding: 3px 6px !important;
+        min-height: 24px !important;
+        font-size: 9.5px !important;
+      }
+
+      #teloneer-print-sheet #teloneer-sig-block > div:last-child > div {
+        padding: 6px 4px 5px !important;
+      }
+
+      #teloneer-print-sheet #teloneer-sig-block .sig-underline {
+        margin-top: 14px !important;
+      }
+
       /* การปรับแต่งเพิ่มเติมเมื่อเลือกแนวนอน (Landscape) */
       @media (orientation: landscape) {
         #teloneer-print-sheet {
-          padding: 2mm 5mm !important;
+          padding: 1mm 4mm !important;
         }
         #teloneer-print-sheet table {
-          font-size: 11px !important;
+          font-size: 10px !important;
         }
       }
 
@@ -1014,7 +1068,7 @@
             </div>
 
             <!-- A4 Document Box (Print Only Sheet) -->
-            <div id="teloneer-print-sheet" class="bg-white text-slate-900 p-8 rounded-xl max-w-4xl mx-auto shadow-2xl text-xs space-y-4 font-sans">
+            <div id="teloneer-print-sheet" class="bg-white text-slate-900 p-5 sm:p-7 rounded-xl max-w-4xl mx-auto shadow-2xl text-xs space-y-3 font-sans">
               <div class="border-b-2 border-slate-900 pb-3 flex justify-between items-center">
                 <div>
                   <h2 class="text-lg font-black text-slate-900 tracking-tight">TELONEER CO., LTD.</h2>
@@ -1196,28 +1250,28 @@
               </div>
 
               <!-- Signature Block matching original user form -->
-              <div style="border:1px solid #000; margin-top:24px; font-sans;">
+              <div id="teloneer-sig-block" style="border:1px solid #000; margin-top:16px; font-sans;">
                 <div style="padding:10px 12px; border-bottom:1px solid #000; min-height:48px; font-size:11px; color:#000;">
                   <strong>หมายเหตุ</strong> <span id="tel-note-display"></span>
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; text-align:center; font-size:11px; color:#000;">
                   <!-- Col 1: ผู้ส่งมอบ / ผู้เบิก -->
                   <div style="padding:20px 8px 14px; border-right:1px solid #000;">
-                    <div style="margin-top:22px; border-bottom:1px solid #000; width:75%; margin-left:auto; margin-right:auto;"></div>
+                    <div class="sig-underline" style="margin-top:22px; border-bottom:1px solid #000; width:75%; margin-left:auto; margin-right:auto;"></div>
                     <div style="margin-top:6px; font-weight:bold; font-size:11px;">ผู้ส่งมอบ / ผู้เบิก</div>
                     <div id="tel-owner-w-display" style="margin-top:3px; color:#444; font-size:10px;">(HW Delivery)</div>
                     <div style="margin-top:14px; font-size:11px; white-space:nowrap; overflow:hidden;">วันที่ <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:14px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:14px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:52px; height:14px; vertical-align:bottom; margin:0 2px;"></span></div>
                   </div>
                   <!-- Col 2: ผู้รับมอบ -->
                   <div style="padding:20px 8px 14px; border-right:1px solid #000;">
-                    <div style="margin-top:22px; border-bottom:1px solid #000; width:75%; margin-left:auto; margin-right:auto;"></div>
+                    <div class="sig-underline" style="margin-top:22px; border-bottom:1px solid #000; width:75%; margin-left:auto; margin-right:auto;"></div>
                     <div style="margin-top:6px; font-weight:bold; font-size:11px;">ผู้รับมอบ</div>
                     <div id="tel-owner-r-display" style="margin-top:3px; color:#444; font-size:10px;">(TLN_Anat)</div>
                     <div style="margin-top:14px; font-size:11px; white-space:nowrap; overflow:hidden;">วันที่ <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:14px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:14px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:52px; height:14px; vertical-align:bottom; margin:0 2px;"></span></div>
                   </div>
                   <!-- Col 3: ผู้อนุมัติ / หัวหน้างาน -->
                   <div style="padding:20px 8px 14px;">
-                    <div style="margin-top:22px; border-bottom:1px solid #000; width:75%; margin-left:auto; margin-right:auto;"></div>
+                    <div class="sig-underline" style="margin-top:22px; border-bottom:1px solid #000; width:75%; margin-left:auto; margin-right:auto;"></div>
                     <div style="margin-top:6px; font-weight:bold; font-size:11px;">ผู้อนุมัติ / หัวหน้างาน</div>
                     <div style="margin-top:3px; color:#444; font-size:10px;">&nbsp;</div>
                     <div style="margin-top:14px; font-size:11px; white-space:nowrap; overflow:hidden;">วันที่ <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:14px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:38px; height:14px; vertical-align:bottom; margin:0 2px;"></span> / <span style="display:inline-block; border-bottom:1px solid #000; width:52px; height:14px; vertical-align:bottom; margin:0 2px;"></span></div>
