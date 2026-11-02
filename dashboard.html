@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📦 Smart Inventory Dashboard V.7.5.8</title>
+<title>📦 Smart Inventory Dashboard V.7.5.9</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -478,7 +478,7 @@ tbody td{padding:10px 12px;font-size:11.5px;vertical-align:middle;white-space:no
     <div style="flex:1;min-width:0">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <h2>SmartStock</h2>
-        <span style="font-size:9.5px;font-weight:800;background:rgba(0,194,138,0.15);color:var(--primary);padding:2px 6px;border-radius:6px;border:1px solid rgba(0,194,138,0.3)">V.7.5.8</span>
+        <span style="font-size:9.5px;font-weight:800;background:rgba(0,194,138,0.15);color:var(--primary);padding:2px 6px;border-radius:6px;border:1px solid rgba(0,194,138,0.3)">V.7.5.9</span>
       </div>
       <p>Telecom Inventory Platform</p>
     </div>
@@ -512,7 +512,7 @@ tbody td{padding:10px 12px;font-size:11.5px;vertical-align:middle;white-space:no
     <a class="ni" onclick="pg('print',this)"><span class="ni-ic">🖨️</span>Print ใบเบิก (Teloneer)</a>
     <a class="ni" onclick="pg('history',this); loadHistoryPage();"><span class="ni-ic">📜</span>ประวัติ Import</a>
   </nav>
-  <div class="sb-foot"><span class="ldot"></span>Smart Inventory V.7.5.8</div>
+  <div class="sb-foot"><span class="ldot"></span>Smart Inventory V.7.5.9</div>
 </nav>
 
 <div id="main">
@@ -1014,7 +1014,7 @@ tbody td{padding:10px 12px;font-size:11.5px;vertical-align:middle;white-space:no
         <button onclick="document.getElementById('importFileInput').click()" style="width:100%; padding:10px; margin-bottom:8px; background:var(--card2); border:1px solid var(--border); border-radius:10px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:12px; color:var(--text); transition:all .2s;" onmouseover="this.style.background='rgba(0,194,138,.1)';this.style.borderColor='var(--primary)'" onmouseout="this.style.background='var(--card2)';this.style.borderColor='var(--border)'">📂 เลือกไฟล์ CSV</button>
         <div id="importPreviewBox" style="display:none;">
           <div style="margin-bottom:10px; background:var(--card); padding:10px; border-radius:8px; border:1px dashed var(--primary);">
-            <label style="font-size:12px; font-weight:700; color:var(--text); display:block; margin-bottom:5px;">📸 แนบรูปหลักฐานการ Import <span style="color:red">*</span></label>
+            <label style="font-size:12px; font-weight:700; color:var(--text); display:block; margin-bottom:5px;">📸 แนบรูปหลักฐานการ Import <span style="font-size:10px; color:var(--muted); font-weight:400;">(ถ้ามี)</span></label>
             <input type="file" id="importEvidencePhoto" accept="image/*" style="font-size:11px; color:var(--muted); width:100%;">
           </div>
           <div style="font-size:12px; font-weight:700; margin-bottom:6px; color:var(--blue);">📊 Preview: <span id="importRowCount">0</span> รายการ</div>
@@ -7379,33 +7379,57 @@ function parseCSV(text) {
 
 function mapCSVHeaders(headerRow) {
   const norm = headerRow.map(h => String(h || '').trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
-  function findCol(keywords, defaultIndex) {
-    for (const kw of keywords) {
-      const idx = norm.findIndex(h => h === kw || h.includes(kw));
+  function findIndex(exactList, aliasList) {
+    for (const kw of exactList) {
+      const idx = norm.indexOf(kw);
       if (idx !== -1) return idx;
     }
-    return defaultIndex;
+    if (aliasList) {
+      for (const kw of aliasList) {
+        const idx = norm.findIndex(h => h.includes(kw));
+        if (idx !== -1) return idx;
+      }
+    }
+    return -1;
   }
+
+  const inOutIdx = findIndex(['inout', 'transtype', 'in/out'], ['inout']);
+  const itemTypeIdx = findIndex(['itemtype', 'itype', 'category', 'หมวดหมู่'], ['itemtype', 'itype']);
+  const typeIdx = norm.indexOf('type');
+
+  let finalTransTypeIdx = inOutIdx;
+  let finalItemTypeIdx = itemTypeIdx;
+  if (typeIdx !== -1) {
+    if (inOutIdx === -1) {
+      finalTransTypeIdx = typeIdx;
+    } else if (itemTypeIdx === -1) {
+      finalItemTypeIdx = typeIdx;
+    }
+  }
+
   return {
-    no: findCol(['no', 'runningno', 'ลำดับ'], 0),
-    duid: findCol(['duid'], 1),
-    region: findCol(['region', 'reg', 'ภาค'], 2),
-    type: findCol(['type', 'inout', 'transtype', 'ประเภท'], 3),
-    itype: findCol(['itype', 'itemtype', 'หมวดหมู่', 'category'], 4),
-    date: findCol(['date', 'datetime', 'วันที่'], 5),
-    bill: findCol(['billno', 'bill', 'pickinglist', 'won', 'เลขที่บิล'], 6),
-    model: findCol(['model', 'รุ่น'], 7),
-    code: findCol(['itemcode', 'code', 'partnumber', 'รหัสสินค้า'], 8),
-    desc: findCol(['itemdescription', 'description', 'desc', 'รายละเอียด'], 9),
-    qty: findCol(['qty', 'quantity', 'sumofreqqty', 'จำนวน'], 10),
-    sn: findCol(['sn', 'serial', 'serialno'], 11),
-    ownerW: findCol(['ownerwarehouse', 'ownerw', 'ผู้ส่ง'], 12),
-    ownerR: findCol(['ownerreceiver', 'ownerr', 'ผู้รับ'], 13),
-    locW: findCol(['locationwarehouse', 'locw', 'คลังต้นทาง'], 14),
-    locR: findCol(['locationreceiver', 'locr', 'คลังปลายทาง'], 15),
-    status: findCol(['status', 'สถานะ'], 16),
-    intNo: findCol(['intno', 'internalno'], 17),
-    userNm: findCol(['user', 'username', 'useremail', 'ผู้บันทึก'], 18)
+    no: findIndex(['no', 'runningno', 'ลำดับ', 'seq'], null),
+    customer: findIndex(['customer', 'ลูกข่าย'], null),
+    duid: findIndex(['duid', 'jobid'], ['duid']),
+    region: findIndex(['region', 'reg', 'ภาค', 'area'], ['reg']),
+    type: finalTransTypeIdx,
+    transType: finalTransTypeIdx,
+    itype: finalItemTypeIdx,
+    itemType: finalItemTypeIdx,
+    date: findIndex(['date', 'datetime', 'วันที่'], ['date']),
+    bill: findIndex(['billno', 'bill', 'pickinglist', 'won', 'เลขที่บิล'], ['bill']),
+    model: findIndex(['model', 'รุ่น'], ['model']),
+    code: findIndex(['itemcode', 'code', 'partnumber', 'รหัสสินค้า'], ['code']),
+    desc: findIndex(['itemdescription', 'description', 'desc', 'รายละเอียด'], ['desc']),
+    qty: findIndex(['qty', 'quantity', 'sumofreqqty', 'จำนวน'], ['qty']),
+    sn: findIndex(['sn', 'serial', 'serialno'], ['serial', 'sn']),
+    ownerW: findIndex(['ownerwarehouse', 'ownerw', 'ผู้ส่ง'], ['ownerw']),
+    ownerR: findIndex(['ownerreceiver', 'ownerr', 'ผู้รับ'], ['ownerr']),
+    locW: findIndex(['locationwarehouse', 'locw', 'คลังต้นทาง'], ['locw']),
+    locR: findIndex(['locationreceiver', 'locr', 'คลังปลายทาง'], ['locr']),
+    status: findIndex(['status', 'สถานะ'], ['status']),
+    intNo: findIndex(['intno', 'internalno'], ['intno']),
+    userNm: findIndex(['user', 'username', 'useremail', 'ผู้บันทึก'], ['user'])
   };
 }
 
@@ -7925,11 +7949,84 @@ function showImportBar(text){document.getElementById('importBarText').textConten
 function showProg(show,text='',pct=0){const w=document.getElementById('progWrap');if(!show){w.style.display='none';return}w.style.display='block';document.getElementById('progText').textContent=text;document.getElementById('progFill').style.width=pct+'%';}
 function showToast(msg,type='info'){const icons={ok:'✅',warn:'⚠️',err:'❌',info:'ℹ️'},c=document.getElementById('toasts'),t=document.createElement('div');t.className='toast';t.innerHTML=`<span class="t-ic">${icons[type]||'ℹ️'}</span><span class="t-msg">${msg}</span>`;c.appendChild(t);setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300)},4000);}
 
-// ════ TEMPLATE DOWNLOAD ════
-function downloadTemplate(cus){
-  const bom="\\uFEFF",hdr="No,DUID,Region,TYPE,IType,Date,Bill No.,Model,Item Code,Item Description,Qty,SN,Owner Warehouse,Owner Receiver,Location Warehouse,Location Receiver,Status,INT No,User\n1,TEST-DUID-001,ER,IN,Switch,08/08/2026,B-001,Cisco C9300-48P,SW-C9300-48P,Switch Layer3,1,SN123,WH-1,RCV-1,L-1,L-2,Pending,INT-001,Admin";
-  const blob=new Blob([bom+hdr],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');
-  a.href=url;a.download=`Template_Import_${cus}.csv`;a.click();URL.revokeObjectURL(url);
+// ════ TEMPLATE DOWNLOAD & CSV HELPER V.7.5.9 ════
+function downloadCSVFile(content, fileName, serverCustomer) {
+  try {
+    const csvWithBom = (typeof content === 'string' && content.charCodeAt(0) === 0xFEFF) ? content : ('\uFEFF' + content);
+    const blob = new Blob([csvWithBom], { type: 'text/csv;charset=utf-8;' });
+    if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+      window.navigator.msSaveOrOpenBlob(blob, fileName);
+      return true;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.setAttribute('download', fileName);
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() {
+      if (a.parentNode) document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 2500);
+    return true;
+  } catch (err) {
+    console.warn('Blob download fallback:', err);
+    try {
+      const csvWithBom = (typeof content === 'string' && content.charCodeAt(0) === 0xFEFF) ? content : ('\uFEFF' + content);
+      const uri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvWithBom);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = uri;
+      a.setAttribute('download', fileName);
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function() { if (a.parentNode) document.body.removeChild(a); }, 2500);
+      return true;
+    } catch (err2) {
+      console.error('Data URI download failed:', err2);
+      if (serverCustomer) {
+        const gasUrl = (document.getElementById('apiUrlInput')?.value || '').trim();
+        if (gasUrl) {
+          window.open(gasUrl + (gasUrl.includes('?') ? '&' : '?') + 'export=template&customer=' + encodeURIComponent(serverCustomer), '_blank');
+        }
+      }
+      return false;
+    }
+  }
+}
+
+function generateTemplateCSV(cus) {
+  const c = (cus || 'AIS').toUpperCase();
+  const d = new Date();
+  const dateStr = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+  const headers = [
+    'No', 'DUID', 'Region', 'IN/OUT', 'Item Type', 'Date', 'Bill No.',
+    'Model', 'Item Code', 'Description', 'Qty', 'SN',
+    'Owner Warehouse', 'Owner Receiver', 'Location Warehouse', 'Location Receiver',
+    'Status', 'INT No'
+  ];
+  let sample = [];
+  if (c === 'TRUE') {
+    sample = ['1', 'TEST-DUID-TRUE', 'BKK', 'OUT', 'RRU', dateStr, 'BILL-TRUE-001', 'RRU3962', '023115PK', 'MPE Site Materials', '1', 'SN-TRUE-456', 'WH-TRUE', 'RCV-BKK', 'TRUE Central WH', 'Site B', 'Pending', 'INT-002'];
+  } else if (c === 'NT') {
+    sample = ['1', 'TEST-DUID-NT', 'C', 'IN', 'Antenna', dateStr, 'BILL-NT-001', 'ANT-4G', 'ANT-001', 'Antenna 4G', '1', 'SN-NT-789', 'WH-NT', 'RCV-C', 'NT Warehouse', 'Site C', 'Pending', 'INT-003'];
+  } else {
+    sample = ['1', 'TEST-DUID-AIS', 'ER', 'IN', 'Switch', dateStr, 'BILL-AIS-001', 'Cisco C9300-48P', 'SW-C9300-48P', 'Switch Layer 3', '1', 'SN-AIS-123', 'WH-BKK', 'RCV-ER', 'Main Warehouse', 'Site A', 'Pending', 'INT-001'];
+  }
+  return '\uFEFF' + [headers.join(','), sample.join(',')].join('\n');
+}
+
+function downloadTemplate(cus) {
+  const targetCus = (!cus || cus === 'ALL') ? 'AIS' : cus.toUpperCase();
+  const csvContent = generateTemplateCSV(targetCus);
+  downloadCSVFile(csvContent, 'Template_Import_' + targetCus + '.csv', targetCus);
+  showToast('📥 กำลังดาวน์โหลด Template (' + targetCus + ')...', 'ok');
+}, 1000);
+  if (typeof showToast === 'function') {
+    showToast(`📥 ดาวน์โหลด Template (${cus}) เรียบร้อยแล้ว`, 'ok');
+  }
 }
 
 // ════ PRINT CENTER (Teloneer Form) ════
@@ -8738,7 +8835,21 @@ function previewImport(input) {
       var region = getCol(['REGION','AREA']) || lastRegion || 'ER';
       if (region) lastRegion = region;
 
-      var transType = getCol(['IN/OUT','INOUT','TRANSTYPE','TYPE']) || lastType || 'IN';
+      var transType = getCol(['IN/OUT','INOUT','TRANSTYPE']) || getCol(['TYPE']) || lastType || 'IN';
+      var itemType = getCol(['ITEM TYPE','ITEMTYPE','ITYPE','CATEGORY','หมวดหมู่']) || '';
+      if (!itemType && headerRow.indexOf('IN/OUT') > -1 && headerRow.indexOf('TYPE') > -1) {
+        itemType = getCol(['TYPE']);
+      }
+      transType = String(transType || '').trim().toUpperCase();
+      itemType = String(itemType || '').trim();
+      if (transType && transType !== 'IN' && transType !== 'OUT' && !itemType) {
+        itemType = transType;
+        transType = 'IN';
+      } else if (itemType && (itemType === 'IN' || itemType === 'OUT') && (!transType || transType === 'IN')) {
+        transType = itemType;
+        itemType = '';
+      }
+      if (transType !== 'IN' && transType !== 'OUT') transType = 'IN';
       if (transType) lastType = transType;
 
       var bill = getCol(['BILL NO.','BILL NO','BILL']) || lastBill || duid;
@@ -8831,27 +8942,24 @@ function setImportMode(mode) {
 function confirmImport() {
   if (importRows.length === 0) { showToast('ไม่มีข้อมูล','warn'); return; }
   const photoInput = document.getElementById('importEvidencePhoto');
-  if (!photoInput || photoInput.files.length === 0) {
-    showToast('⚠️ กรุณาแนบรูปหลักฐานการ Import ก่อนกดยืนยัน', 'warn');
-    return;
-  }
+  const hasPhoto = photoInput && photoInput.files && photoInput.files.length > 0;
   
   const modeLabel = _importMode === 'update' ? 'Update (Upsert)' : 'Insert';
-  if (!confirm('ยืนยัน ' + modeLabel + ' ' + importRows.length + ' รายการ?')) return;
+  let targetCus = (ieCurrentCustomer || 'AIS').toUpperCase();
+  if (targetCus === 'ALL' || !targetCus) targetCus = 'AIS';
+
+  if (!confirm('ยืนยัน ' + modeLabel + ' ' + importRows.length + ' รายการ เข้า ' + targetCus + '?')) return;
   closeImportExport();
   showProg(true, 'กำลัง ' + modeLabel + ' ข้อมูล...', 50);
-  
-  const file = photoInput.files[0];
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const base64 = e.target.result;
-    var userEmail = safeGetItem('inv_user_email') || 'Unknown (Web)';
-    var userName  = safeGetItem('inv_user_name')  || 'Web User';
-    
+
+  var userEmail = safeGetItem('inv_user_email') || 'Unknown (Web)';
+  var userName  = safeGetItem('inv_user_name')  || 'Web User';
+
+  function executeImport(photoBase64) {
     if (typeof google !== 'undefined' && google.script) {
       google.script.run.withSuccessHandler(function(res) {
+        showProg(false);
         if (res.success) {
-          showProg(false);
           var msg = res.message;
           if (res.updated !== undefined) {
             msg = '✅ Update ' + res.updated + ' รายการ | เพิ่มใหม่ ' + res.inserted + ' รายการ';
@@ -8860,15 +8968,14 @@ function confirmImport() {
           syncFromGAS();
           logImportAndShowResult(importRows);
           
-          // Upload evidence photo
-          const dummyHeader = { region: 'IMPORT', duid: 'CSV_' + new Date().getTime() };
-          google.script.run.uploadPhotoOnly(dummyHeader, base64, 1, userEmail, userName);
-          
+          if (photoBase64) {
+            const dummyHeader = { region: 'IMPORT', duid: 'CSV_' + new Date().getTime() };
+            google.script.run.uploadPhotoOnly(dummyHeader, photoBase64, 1, userEmail, userName);
+          }
         } else {
-          showProg(false);
           showToast(res.message, 'err');
         }
-      })[_importMode === 'update' ? 'saveImportDataUpdate' : 'saveImportData'](importRows, ieCurrentCustomer, userEmail, userName, _importFileName);
+      })[_importMode === 'update' ? 'saveImportDataUpdate' : 'saveImportData'](importRows, targetCus, userEmail, userName, _importFileName);
     } else {
       const gasUrl = (document.getElementById('apiUrlInput')?.value || '').trim();
       if (gasUrl) {
@@ -8877,7 +8984,7 @@ function confirmImport() {
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({
             action: _importMode === 'update' ? 'saveImportUpdate' : 'import',
-            customer: ieCurrentCustomer,
+            customer: targetCus,
             rows: importRows,
             fileName: _importFileName,
             userEmail: userEmail,
@@ -8902,7 +9009,7 @@ function confirmImport() {
           no: TX.length + i + 1,
           duid: r.duid, region: r.region, type: r.transType, itype: r.itemType, date: r.date,
           bill: r.bill, model: r.model, code: r.code, desc: r.desc, qty: r.qty, sn: r.sn,
-          status: 'Pending', customer: ieCurrentCustomer
+          status: 'Pending', customer: targetCus
         }));
         setTimeout(() => {
           TX = [...parsed, ...TX];
@@ -8913,19 +9020,23 @@ function confirmImport() {
         }, 500);
       }
     }
-  };
-  reader.readAsDataURL(file);
+  }
+
+  if (hasPhoto) {
+    const file = photoInput.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      executeImport(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    executeImport(null);
+  }
 }
 
 function downloadImportTemplate() {
-  const headers = ['DUID','REGION','IN/OUT','TYPE','DATE','BILL NO.','MODEL','ITEM CODE','DESCRIPTION','QTY','SERIAL'];
-  const example = ['DUID-001','ER','OUT','HW', today(), 'BILL-001','RRU3962','023115PK','MPE Site Materials','1','N/A'];
-  const csv = [headers.join(','), example.join(',')].join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = 'Template_Import_' + (ieCurrentCustomer || 'AIS') + '.csv'; a.click();
-  URL.revokeObjectURL(url);
+  const cus = (!ieCurrentCustomer || ieCurrentCustomer === 'ALL') ? 'AIS' : ieCurrentCustomer.toUpperCase();
+  downloadTemplate(cus);
 }
 
 function doExport() {

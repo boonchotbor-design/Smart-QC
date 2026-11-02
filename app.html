@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>SmartStock Pro — Inventory Smart App V.7.5.8</title>
+  <title>SmartStock Pro — Inventory Smart App V.7.5.9</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -313,7 +313,7 @@
         </div>
       </div>
       <hr class="login-divider">
-      <div class="login-footer">🔒 SmartStock Pro V.7.5.8 | ระบบความปลอดภัยยืนยัน OTP ทาง Email</div>
+      <div class="login-footer">🔒 SmartStock Pro V.7.5.9 | ระบบความปลอดภัยยืนยัน OTP ทาง Email</div>
     </div>
   </div>
 
@@ -363,7 +363,7 @@
     <!-- Header -->
     <div class="header-banner shadow d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div>
-        <h5 class="fw-bold mb-0">📦 SmartStock Pro V.7.5.8</h5>
+        <h5 class="fw-bold mb-0">📦 SmartStock Pro V.7.5.9</h5>
         <div class="user-badge mt-1" id="userBadge">👤 กำลังตรวจสอบผู้ใช้...</div>
       </div>
       <div class="d-flex gap-1 flex-wrap">
@@ -1786,16 +1786,26 @@
 
     // ― Download Template CSV
     function downloadImportTemplate() {
-      var headers = ['DUID','REGION','IN/OUT','TYPE','DATE','BILL NO.','MODEL','ITEM CODE','DESCRIPTION','QTY','SERIAL'];
+      var cus = (!ieCurrentCustomer || ieCurrentCustomer === 'ALL') ? 'AIS' : ieCurrentCustomer.toUpperCase();
       var d = new Date();
       var todayStr = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
-      var example = ['DUID-001','ER','OUT','HW', todayStr,'BILL-001','RRU3962','023115PK','MPE Site Materials','1','N/A'];
-      var csv = [headers.join(','), example.join(',')].join('\n');
-      var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-      var url  = URL.createObjectURL(blob);
-      var a    = document.createElement('a');
-      a.href = url; a.download = 'Template_Import_' + ieCurrentCustomer + '.csv'; a.click();
-      URL.revokeObjectURL(url);
+      var headers = [
+        'No', 'DUID', 'Region', 'IN/OUT', 'Item Type', 'Date', 'Bill No.',
+        'Model', 'Item Code', 'Description', 'Qty', 'SN',
+        'Owner Warehouse', 'Owner Receiver', 'Location Warehouse', 'Location Receiver',
+        'Status', 'INT No'
+      ];
+      var sample = ['1', 'TEST-DUID-' + cus, 'ER', 'IN', 'Switch', todayStr, 'BILL-' + cus + '-001', 'Cisco C9300-48P', 'SW-C9300-48P', 'Switch Layer 3', '1', 'SN-' + cus + '-123', 'WH-BKK', 'RCV-ER', 'Main Warehouse', 'Site A', 'Pending', 'INT-001'];
+      var csv = '\uFEFF' + [headers.join(','), sample.join(',')].join('\n');
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'Template_Import_' + cus + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function() { if (a.parentNode) a.parentNode.removeChild(a); URL.revokeObjectURL(url); }, 1000);
     }
 
     // ― Parse CSV line (handles quoted fields)
@@ -1846,8 +1856,23 @@
           if (duid) lastDuid = duid;
           var region = getCol(['REGION','AREA']) || lastRegion || 'ER';
           if (region) lastRegion = region;
-          var transType = getCol(['IN/OUT','INOUT','TRANSTYPE','TYPE']) || lastType || 'IN';
+          var transType = getCol(['IN/OUT','INOUT','TRANSTYPE']) || getCol(['TYPE']) || lastType || 'IN';
+          var itemType = getCol(['ITEM TYPE','ITEMTYPE','ITYPE','CATEGORY','หมวดหมู่']) || '';
+          if (!itemType && headerRow.indexOf('IN/OUT') > -1 && headerRow.indexOf('TYPE') > -1) {
+            itemType = getCol(['TYPE']);
+          }
+          transType = String(transType || '').trim().toUpperCase();
+          itemType = String(itemType || '').trim();
+          if (transType && transType !== 'IN' && transType !== 'OUT' && !itemType) {
+            itemType = transType;
+            transType = 'IN';
+          } else if (itemType && (itemType === 'IN' || itemType === 'OUT') && (!transType || transType === 'IN')) {
+            transType = itemType;
+            itemType = '';
+          }
+          if (transType !== 'IN' && transType !== 'OUT') transType = 'IN';
           if (transType) lastType = transType;
+
           var bill = getCol(['BILL NO.','BILL NO','BILL']) || lastBill || duid;
           if (bill) lastBill = bill;
           var ownerW = getCol(['OWNER WAREHOUSE','OWNER W','OWNERW','WH OWNER']) || lastOwnerW;

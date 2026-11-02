@@ -1235,16 +1235,16 @@
 
             <!-- Download Templates -->
             <div class="flex gap-2 flex-wrap">
-              <button onclick="showToast('⬇️ กำลังดาวน์โหลด Template AIS...', 'info')"
-                class="px-3 py-2 rounded-xl text-xs font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 transition-all">
+              <button onclick="downloadTemplate('AIS')"
+                class="px-3 py-2 rounded-xl text-xs font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer">
                 📋 Download Template (AIS)
               </button>
-              <button onclick="showToast('⬇️ กำลังดาวน์โหลด Template TRUE...', 'info')"
-                class="px-3 py-2 rounded-xl text-xs font-semibold border border-blue-500/30 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 transition-all">
+              <button onclick="downloadTemplate('TRUE')"
+                class="px-3 py-2 rounded-xl text-xs font-semibold border border-blue-500/30 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 transition-all flex items-center gap-1.5 cursor-pointer">
                 📋 Download Template (TRUE)
               </button>
-              <button onclick="showToast('⬇️ กำลังดาวน์โหลด Template NT...', 'info')"
-                class="px-3 py-2 rounded-xl text-xs font-semibold border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 transition-all">
+              <button onclick="downloadTemplate('NT')"
+                class="px-3 py-2 rounded-xl text-xs font-semibold border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 transition-all flex items-center gap-1.5 cursor-pointer">
                 📋 Download Template (NT)
               </button>
             </div>
@@ -1276,11 +1276,11 @@
                 <input type="file" id="csv-nt" accept=".csv" class="hidden" onchange="handleImportCSV(this,'NT')">
               </div>
               <!-- Mock Data -->
-              <div onclick="showToast('🗑 ล้างข้อมูล Mock Data...', 'error')"
+              <div onclick="clearImportedData()"
                 class="glass-card rounded-xl border border-rose-500/20 p-4 text-center cursor-pointer hover:border-rose-500/50 transition-all group">
                 <div class="text-2xl mb-2">🗑</div>
                 <div class="text-xs font-bold text-rose-400">ล้างข้อมูล</div>
-                <div class="text-[10px] text-slate-500 mt-1">ล้างไฟล์ Mock Data</div>
+                <div class="text-[10px] text-slate-500 mt-1">รีเซ็ตข้อมูลตั้งต้น</div>
               </div>
             </div>
           </div>
@@ -8400,28 +8400,268 @@ let BOM_TRUE = [
       });
     }
 
-    function handleImportCSV(input, customer) {
+    // ══════════════════════════════════════════════════════════════════
+    // CSV TEMPLATE DOWNLOAD & CSV IMPORT ENGINE
+    // ══════════════════════════════════════════════════════════════════
+    function downloadTemplate(cus = 'AIS') {
+      cus = String(cus || 'AIS').toUpperCase();
+      const bom = "\uFEFF";
+      const hdr = "No,DUID,Region,TYPE,IType,Date,Bill No.,Model,Item Code,Item Description,Qty,SN,Owner Warehouse,Owner Receiver,Location Warehouse,Location Receiver,Status,INT No,User";
+      
+      let sampleRow = "";
+      if (cus === "TRUE") {
+        sampleRow = '1,TRUE_BKK_SITE_88942_MOD,BKK,IN,RRU,08/08/2026,TRUE_ROLLOUT_WH_2026_09,RRU3962,02311EPK,"RRU3962 1800-2100MHz 2T4R",1,2102311EPK10HA000111,WH TLN BKK,Site TRUE_88942,WH TLN BKK,Site TRUE_88942,Pending,INT-TRUE-001,Admin';
+      } else if (cus === "NT") {
+        sampleRow = '1,NT_CENTRAL_SITE_001_EXP,CR,IN,ANTENNA,08/08/2026,NT_EXP_BILL_2026_01,HXPM8X22WW1718065T2C,HXPM8X22WW1718065T2C,"Base Station Antenna 6P",1,110059255000071,WH TLN CR,Site NT_001,WH TLN CR,Site NT_001,Pending,INT-NT-001,Admin';
+      } else {
+        sampleRow = '1,TECBA_2026 Capacity Expansion NW Modernization_EXP_BKK,BKK,IN,RRU,08/08/2026,2026 Capacity Expansion NW Modernization_EXP_BKK,RRU3962,02311EPK,"RRU3962, 1800MHz~2100MHz 2T4R",1,2102311EPK10HA000111,WH TLN BKK,Site TECBA,WH TLN BKK,Site TECBA,Pending,INT-AIS-001,Admin';
+      }
+
+      const csvContent = bom + hdr + "\n" + sampleRow + "\n";
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `Template_Import_${cus}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        if (a.parentNode) a.parentNode.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
+      showToast(`📥 ดาวน์โหลด Template (${cus}) เรียบร้อยแล้ว`, 'success');
+    }
+
+    function parseCSV(text) {
+      const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      const lines = clean.split('\n');
+      const rows = [];
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const cols = [];
+        let cur = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const c = line[i];
+          if (c === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+              cur += '"';
+              i++;
+            } else {
+              inQuotes = !inQuotes;
+            }
+          } else if (c === ',' && !inQuotes) {
+            cols.push(cur.trim());
+            cur = '';
+          } else {
+            cur += c;
+          }
+        }
+        cols.push(cur.trim());
+        rows.push(cols.map(c => c.replace(/^"|"$/g, '').trim()));
+      }
+      return rows;
+    }
+
+    function mapCSVHeaders(headerRow) {
+      const norm = headerRow.map(h => String(h || '').trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+      function findCol(keywords, defaultIndex) {
+        for (const kw of keywords) {
+          const idx = norm.findIndex(h => h === kw || h.includes(kw));
+          if (idx !== -1) return idx;
+        }
+        return defaultIndex;
+      }
+      return {
+        no: findCol(['no', 'runningno', 'ลำดับ'], 0),
+        duid: findCol(['duid'], 1),
+        region: findCol(['region', 'reg', 'ภาค'], 2),
+        type: findCol(['type', 'inout', 'transtype', 'ประเภท'], 3),
+        itype: findCol(['itype', 'itemtype', 'หมวดหมู่', 'category'], 4),
+        date: findCol(['date', 'datetime', 'วันที่'], 5),
+        bill: findCol(['billno', 'bill', 'pickinglist', 'won', 'เลขที่บิล'], 6),
+        model: findCol(['model', 'รุ่น'], 7),
+        code: findCol(['itemcode', 'code', 'partnumber', 'รหัสสินค้า'], 8),
+        desc: findCol(['itemdescription', 'description', 'desc', 'รายละเอียด'], 9),
+        qty: findCol(['qty', 'quantity', 'sumofreqqty', 'จำนวน'], 10),
+        sn: findCol(['sn', 'serial', 'serialno'], 11),
+        ownerW: findCol(['ownerwarehouse', 'ownerw', 'ผู้ส่ง'], 12),
+        ownerR: findCol(['ownerreceiver', 'ownerr', 'ผู้รับ'], 13),
+        locW: findCol(['locationwarehouse', 'locw', 'คลังต้นทาง'], 14),
+        locR: findCol(['locationreceiver', 'locr', 'คลังปลายทาง'], 15),
+        status: findCol(['status', 'สถานะ'], 16),
+        intNo: findCol(['intno', 'internalno'], 17),
+        userNm: findCol(['user', 'username', 'useremail', 'ผู้บันทึก'], 18)
+      };
+    }
+
+    async function handleImportCSV(input, customer) {
       if (!input.files || !input.files[0]) return;
       const file = input.files[0];
-      showToast(`📥 กำลังอ่านไฟล์ ${file.name} (${customer})...`, 'info');
-      setTimeout(() => {
-        showToast(`✅ นำเข้าข้อมูล ${customer} สำเร็จ (${file.name})`, 'success');
-        const log = document.getElementById('import-mini-log');
-        if (log) {
-          log.innerHTML = `
-            <div class="glass-card p-3 rounded-xl border border-emerald-500/30 flex items-center justify-between text-xs">
+      const cus = customer || 'AIS';
+      const fileName = file.name;
+      const uName = 'admin';
+      const uEmail = 'admin@teloneer.com';
+
+      showToast(`📥 กำลังอ่านไฟล์ ${fileName} (${cus})...`, 'info');
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+          const rows = parseCSV(e.target.result);
+          if (rows.length < 2) {
+            showToast('❌ ไฟล์ CSV ว่างเปล่าหรือรูปแบบไม่ถูกต้อง', 'error');
+            input.value = '';
+            return;
+          }
+
+          const idx = mapCSVHeaders(rows[0]);
+          const parsed = [];
+          let lastDuid = '', lastRegion = '', lastType = 'IN', lastDate = '', lastBill = '';
+          let lastOwnerW = '', lastOwnerR = '', lastLocW = '', lastLocR = '', lastUser = '';
+
+          for (let i = 1; i < rows.length; i++) {
+            const r = rows[i];
+            const duid = (r[idx.duid] || lastDuid || '').trim();
+            const code = (r[idx.code] || '').trim();
+            const desc = (r[idx.desc] || '').trim();
+            const model = (r[idx.model] || '').trim();
+            if (!duid && !code && !desc && !model) continue;
+            if (r[idx.duid]) lastDuid = duid;
+
+            const region = (r[idx.region] || lastRegion || 'ER').trim().toUpperCase();
+            if (r[idx.region]) lastRegion = region;
+
+            const type = (r[idx.type] || lastType || 'IN').trim().toUpperCase();
+            if (r[idx.type]) lastType = type;
+
+            const bill = (r[idx.bill] || lastBill || duid).trim();
+            if (r[idx.bill]) lastBill = bill;
+
+            const date = (r[idx.date] || lastDate || new Date().toLocaleDateString('en-GB')).trim();
+            if (r[idx.date]) lastDate = date;
+
+            const ownerW = (r[idx.ownerW] || lastOwnerW || '').trim();
+            if (r[idx.ownerW]) lastOwnerW = ownerW;
+
+            const ownerR = (r[idx.ownerR] || lastOwnerR || '').trim();
+            if (r[idx.ownerR]) lastOwnerR = ownerR;
+
+            const locW = (r[idx.locW] || lastLocW || '').trim();
+            if (r[idx.locW]) lastLocW = locW;
+
+            const locR = (r[idx.locR] || lastLocR || '').trim();
+            if (r[idx.locR]) lastLocR = locR;
+
+            const userNm = (r[idx.userNm] || lastUser || uName).trim();
+            if (r[idx.userNm]) lastUser = userNm;
+
+            const rawItype = (r[idx.itype] || '').trim();
+            const detectedItype = rawItype || inferITypeFromType(r[idx.type] || model);
+
+            parsed.push({
+              no: TRANSACTIONS.length + parsed.length + 1,
+              duid: duid,
+              region: region,
+              type: type,
+              transType: type,
+              itype: detectedItype,
+              itemType: detectedItype,
+              date: date,
+              bill: bill,
+              billNo: bill,
+              model: model,
+              code: code,
+              desc: desc,
+              qty: Number(r[idx.qty]) || 1,
+              sn: (r[idx.sn] || 'N/A').trim(),
+              ownerWarehouse: ownerW,
+              ownerW: ownerW,
+              ownerReceiver: ownerR,
+              ownerR: ownerR,
+              locationWarehouse: locW,
+              locW: locW,
+              locationReceiver: locR,
+              locR: locR,
+              status: (r[idx.status] || 'Pending').trim(),
+              intNo: (r[idx.intNo] || `INT-${Date.now()}-${parsed.length + 1}`).trim(),
+              user: userNm,
+              customer: cus
+            });
+          }
+
+          if (parsed.length === 0) {
+            showToast('❌ ไม่พบรายการสินค้าในไฟล์ CSV', 'error');
+            input.value = '';
+            return;
+          }
+
+          // Prepend parsed rows to TRANSACTIONS
+          TRANSACTIONS.unshift(...parsed);
+          applyFilters();
+
+          const duidSummary = Array.from(new Set(parsed.map(p => p.duid).filter(Boolean))).slice(0, 5).join(', ');
+          const timeStr = new Date().toLocaleTimeString('th-TH');
+
+          // Log in UI
+          const log = document.getElementById('import-mini-log');
+          if (log) {
+            const emptyHint = log.querySelector('p');
+            if (emptyHint) emptyHint.remove();
+            const entryDiv = document.createElement('div');
+            entryDiv.className = 'glass-card p-3 rounded-xl border border-emerald-500/30 flex items-center justify-between text-xs';
+            entryDiv.innerHTML = `
               <div class="flex items-center gap-2">
-                <span>✅</span>
+                <span class="text-base">✅</span>
                 <div>
-                  <span class="font-bold text-slate-200">${file.name}</span>
-                  <span class="text-slate-500">· ${customer}</span>
+                  <div class="font-bold text-slate-200">${escapeHtml(fileName)}</div>
+                  <div class="text-[11px] text-slate-400">${cus} · ${parsed.length} รายการ · <span class="font-mono text-indigo-400">${escapeHtml(duidSummary)}</span></div>
                 </div>
               </div>
-              <span class="text-emerald-400 font-mono font-bold">สำเร็จ (Live)</span>
-            </div>
-          ` + log.innerHTML;
+              <div class="text-right">
+                <span class="text-emerald-400 font-mono font-bold block">สำเร็จ (${parsed.length} แถว)</span>
+                <span class="text-[10px] text-slate-500">${timeStr}</span>
+              </div>
+            `;
+            log.prepend(entryDiv);
+          }
+
+          showToast(`✅ นำเข้าข้อมูล ${cus} สำเร็จ (${parsed.length} รายการ)`, 'success');
+
+          // GAS or API Sync if available
+          if (typeof google !== 'undefined' && google.script && google.script.run) {
+            google.script.run
+              .withSuccessHandler(function(res) {
+                if (res && res.success) {
+                  showToast(`☁️ บันทึกลง Google Sheets (${cus}) สำเร็จ`, 'success');
+                } else {
+                  showToast(`⚠️ บันทึก Sheet: ${res ? res.message : 'Error'}`, 'warning');
+                }
+              })
+              .withFailureHandler(function(err) {
+                console.warn('GAS Save failed:', err);
+              })
+              .saveImportData(parsed, cus, uEmail, uName, fileName);
+          }
+
+          input.value = '';
+        } catch (err) {
+          console.error('handleImportCSV error:', err);
+          showToast(`❌ เกิดข้อผิดพลาดในการประมวลผล: ${err.message}`, 'error');
+          input.value = '';
         }
-      }, 1200);
+      };
+      reader.readAsText(file, 'utf-8');
+    }
+
+    function clearImportedData() {
+      if (confirm('คุณต้องการรีเซ็ตข้อมูล Mock Data กลับสู่ค่าตั้งต้นใช่หรือไม่?')) {
+        showToast('🗑 กำลังรีเซ็ตข้อมูล...', 'info');
+        setTimeout(() => {
+          window.location.reload();
+        }, 600);
+      }
     }
 
     function syncBOMDetails(model, idx = 1) {

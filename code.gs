@@ -1,5 +1,5 @@
 /*
- * Inventory Smart System - V.7.5.8
+ * Inventory Smart System - V.7.5.9
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
@@ -25,6 +25,9 @@
  *          Integrated 8 Executive KPI Cards (Total Records, Active DUIDs, IN, OUT, DISMANTLE, Store Transfers, Returns, Pending Items);
  *          Added time-range filtering (7 Days, 30 Days, 90 Days) to Inventory Movement chart;
  *          Added Action Required alert system for missing Serial Numbers & open balance tracking while preserving 100% existing backend and workflow logic.
+ * V.7.5.9: Fixed CSV Template Download (resolved blob revoke & DOM attachment bug, added UTF-8 BOM, dual local & GAS download),
+ *          unified CSV header mapping (supports 11-col, 18-col, 20-col without column collisions),
+ *          optional import photo attachment, and auto-sanitization for IN/OUT vs Item Type in saveImportData.
  */
 
 var SPREADSHEET_ID      = '1afmWjTNetqHNT69k-jzB3mAdTsFaRdodlJ1hJaJfpSQ';
@@ -48,6 +51,15 @@ function doGet(e) {
     var history = getImportHistory();
     return ContentService.createTextOutput(JSON.stringify({ success: true, history: history }))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (e.parameter.export === "template" || e.parameter.action === "downloadTemplate" || e.parameter.action === "getTemplate") {
+    var customer = (e.parameter.customer || "AIS").toString().trim().toUpperCase();
+    if (customer === "ALL" || !customer) customer = "AIS";
+    var csv = getTemplateCSV(customer);
+    return ContentService.createTextOutput(csv)
+      .setMimeType(ContentService.MimeType.CSV)
+      .downloadAsFile("Template_Import_" + customer + ".csv");
   }
 
   if (e.parameter.action === "getBOM" || e.parameter.export === "bom") {
@@ -74,13 +86,13 @@ function doGet(e) {
 
   if (e.parameter.page === "dashboard") {
     return HtmlService.createTemplateFromFile('dashboard').evaluate()
-      .setTitle('Inventory Dashboard V.7.5.8')
+      .setTitle('Inventory Dashboard V.7.5.9')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-    .setTitle('Inventory Smart App V.7.5.8')
+    .setTitle('Inventory Smart App V.7.5.9')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -1934,7 +1946,9 @@ function saveImportData(rows, customer, userEmail, userName, fileName) {
     }
 
     var ss        = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheetName = "INOUT_HW_" + (customer || "AIS").toString().trim().toUpperCase();
+    var cleanCus   = (customer || "AIS").toString().trim().toUpperCase();
+    if (cleanCus === "ALL" || !cleanCus) cleanCus = "AIS";
+    var sheetName  = "INOUT_HW_" + cleanCus;
     var sheet     = getOrCreateInOutSheet(ss, sheetName);
     if (!sheet) {
       var errMsg = "ไม่พบ Sheet: " + sheetName;
@@ -1999,8 +2013,17 @@ function saveImportData(rows, customer, userEmail, userName, fileName) {
       newRow[0]  = newNo;
       newRow[1]  = cleanDuid;
       newRow[2]  = reg;
-      newRow[3]  = String(row.transType || row.type || "IN").trim().toUpperCase(); // IN/OUT
-      newRow[4]  = String(row.itemType  || row.itype || "").trim();               // TYPE
+      var rawTrans = String(row.transType || row.type || "").trim().toUpperCase();
+            var rawItem  = String(row.itemType  || row.itype || "").trim();
+            if (rawTrans && rawTrans !== "IN" && rawTrans !== "OUT" && !rawItem) {
+              rawItem = rawTrans;
+              rawTrans = "IN";
+            } else if (rawItem && (rawItem === "IN" || rawItem === "OUT") && (!rawTrans || rawTrans === "IN")) {
+              rawTrans = rawItem;
+              rawItem = "";
+            }
+            newRow[3]  = (rawTrans === "OUT") ? "OUT" : "IN";
+            newRow[4]  = rawItem;               // TYPE
       newRow[5]  = formatToDDMMYYYY(row.date) || dateStr;
       newRow[6]  = cleanBill;
       newRow[7]  = String(row.model     || "").trim();
@@ -2698,4 +2721,39 @@ function verifyOtpAndResetPassword(email, otp, newPasswordHash) {
   } catch(e) {
     return { success: false, message: "❌ เกิดข้อผิดพลาดในการตรวจสอบ OTP: " + e.toString() };
   }
+}
+
+// ─────────────────────────────────────────────
+// TEMPLATE CSV GENERATOR — V.7.5.9
+// ─────────────────────────────────────────────
+function getTemplateCSV(customer) {
+  var cus = (customer || "AIS").toString().trim().toUpperCase();
+  if (cus === "ALL" || !cus) cus = "AIS";
+  var bom = "\uFEFF";
+  var headers = [
+    "No", "DUID", "Region", "IN/OUT", "Item Type", "Date", "Bill No.",
+    "Model", "Item Code", "Description", "Qty", "SN",
+    "Owner Warehouse", "Owner Receiver", "Location Warehouse", "Location Receiver",
+    "Status", "INT No"
+  ];
+  var dateStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
+  var sampleMap = {
+    "AIS": [
+      "1", "TEST-DUID-AIS", "ER", "IN", "Switch", dateStr,
+      "BILL-AIS-001", "Cisco C9300-48P", "SW-C9300-48P", "Switch Layer 3", "1", "SN-AIS-123",
+      "WH-BKK", "RCV-ER", "Main Warehouse", "Site A", "Pending", "INT-001"
+    ],
+    "TRUE": [
+      "1", "TEST-DUID-TRUE", "BKK", "OUT", "RRU", dateStr,
+      "BILL-TRUE-001", "RRU3962", "023115PK", "MPE Site Materials", "1", "SN-TRUE-456",
+      "WH-TRUE", "RCV-BKK", "TRUE Central WH", "Site B", "Pending", "INT-002"
+    ],
+    "NT": [
+      "1", "TEST-DUID-NT", "C", "IN", "Antenna", dateStr,
+      "BILL-NT-001", "ANT-4G", "ANT-001", "Antenna 4G", "1", "SN-NT-789",
+      "WH-NT", "RCV-C", "NT Warehouse", "Site C", "Pending", "INT-003"
+    ]
+  };
+  var sample = sampleMap[cus] || sampleMap["AIS"];
+  return bom + [headers.join(","), sample.join(",")].join("\n");
 }
