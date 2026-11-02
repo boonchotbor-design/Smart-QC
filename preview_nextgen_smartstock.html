@@ -173,7 +173,7 @@
        ══════════════════════════════════════════════════════════════════ */
     @media print {
       @page {
-        size: A4 portrait;
+        size: auto;
         margin: 6mm 8mm;
       }
 
@@ -216,11 +216,12 @@
         box-sizing: border-box !important;
       }
 
-      /* บังคับให้หัวตารางพิมพ์แถบสีดำและตัวหนังสือสีตามที่กำหนด */
+      /* ปรับให้ขยายเต็มความกว้างตามการตั้งค่าหน้ากระดาษ (Portrait หรือ Landscape) */
       #teloneer-print-sheet table {
         width: 100% !important;
         border-collapse: collapse !important;
         page-break-inside: auto !important;
+        table-layout: auto !important;
       }
 
       #teloneer-print-sheet thead {
@@ -257,6 +258,16 @@
         font-weight: bold !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+      }
+
+      /* การปรับแต่งเพิ่มเติมเมื่อเลือกแนวนอน (Landscape) */
+      @media (orientation: landscape) {
+        #teloneer-print-sheet {
+          padding: 2mm 5mm !important;
+        }
+        #teloneer-print-sheet table {
+          font-size: 11px !important;
+        }
       }
 
       /* ซ่อนปุ่ม ลิงก์ และ navbar ทั้งหมดเวลาพิมพ์ */
