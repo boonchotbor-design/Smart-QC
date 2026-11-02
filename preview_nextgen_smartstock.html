@@ -1595,9 +1595,9 @@
           <div class="col-span-2">
             <label class="block text-[11px] font-semibold text-rose-400 mb-1.5 uppercase tracking-wide">BILL NO. *</label>
             <div class="flex gap-2">
-              <input type="text" id="inp-bill" placeholder="เลขที่บิล" class="flex-1 rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all font-mono" style="background:#0f172a;">
-              <button class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-indigo-500/40 bg-indigo-600/15 text-indigo-300 hover:bg-indigo-600/25 transition-all whitespace-nowrap">
-                🔍 Scan
+              <input type="text" id="inp-bill" onkeydown="if(event.key==='Enter'){event.preventDefault();searchModalByBill();}" placeholder="เลขที่บิล" class="flex-1 rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all font-mono" style="background:#0f172a;">
+              <button type="button" onclick="searchModalByBill()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-indigo-500/40 bg-indigo-600/15 text-indigo-300 hover:bg-indigo-600/25 transition-all whitespace-nowrap active:scale-95">
+                🔍 ค้นหา
               </button>
             </div>
           </div>
@@ -1606,17 +1606,17 @@
         <!-- Row 2: DUID (full width) + search buttons side-by-side -->
         <div>
           <label class="block text-[11px] font-semibold text-rose-400 mb-1.5 uppercase tracking-wide">DUID (MANDATORY) *</label>
-          <input type="text" id="inp-duid" placeholder="ค้นหาหรือกรอก DUID" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-rose-500/50 focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-500/30 transition-all font-mono" style="background:#0f172a;">
+          <input type="text" id="inp-duid" onkeydown="if(event.key==='Enter'){event.preventDefault();searchModalByDuid();}" placeholder="ค้นหาหรือกรอก DUID" class="w-full rounded-xl px-3 py-2.5 text-sm text-slate-200 border border-rose-500/50 focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-500/30 transition-all font-mono" style="background:#0f172a;">
           <span id="err-duid" class="text-[11px] text-rose-400 hidden mt-1 block">กรุณากรอก DUID หรือรหัสไซต์งาน</span>
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <button class="py-2 rounded-xl text-xs font-bold text-white transition-all flex items-center justify-center gap-1.5" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">
+          <button type="button" onclick="searchModalByBill()" class="py-2.5 rounded-xl text-xs font-bold text-white transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 hover:brightness-110 active:scale-95" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">
             <span class="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse"></span>
-            ค้นหาจาก Bill No.
+            🔍 ค้นหาจาก Bill No.
           </button>
-          <button class="py-2 rounded-xl text-xs font-bold text-white transition-all flex items-center justify-center gap-1.5" style="background:linear-gradient(135deg,#10b981,#059669);">
+          <button type="button" onclick="searchModalByDuid()" class="py-2.5 rounded-xl text-xs font-bold text-white transition-all flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 hover:brightness-110 active:scale-95" style="background:linear-gradient(135deg,#10b981,#059669);">
             <span class="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse"></span>
-            ค้นหาจาก DUID
+            🔍 ค้นหาจาก DUID
           </button>
         </div>
 
@@ -8012,6 +8012,154 @@ let BOM_TRUE = [
         console.error('openMultiStepModal error:', err);
         const modalEl = document.getElementById('modal-multistep');
         if (modalEl) modalEl.classList.remove('hidden');
+      }
+    }
+
+    
+    // ══════════════════════════════════════════════════════════════════
+    // AUTO-FILL MODAL FROM DUID / BILL NO. SEARCH
+    // ══════════════════════════════════════════════════════════════════
+    function autoFillModalFromMatches(found, searchKey) {
+      if (!found || !found.length) return;
+      const first = found[0];
+
+      const setElVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val !== undefined && val !== null && String(val).trim() !== '' && val !== '—') {
+          el.value = val;
+          el.style.borderColor = '#10b981';
+          setTimeout(() => { el.style.borderColor = ''; }, 1200);
+        }
+      };
+
+      if (first.duid) setElVal('inp-duid', first.duid);
+      if (first.bill) setElVal('inp-bill', first.bill);
+      if (first.customer) {
+        setElVal('inp-customer', first.customer);
+        if (typeof onTxCustomerChange === 'function') onTxCustomerChange(first.customer);
+      }
+      if (first.region) setElVal('inp-region', first.region);
+      if (first.ownerWarehouse || first.ownerW) setElVal('inp-owner-wh', first.ownerWarehouse || first.ownerW);
+      if (first.ownerReceiver || first.ownerR) setElVal('inp-owner-rcv', first.ownerReceiver || first.ownerR);
+      if (first.locationWarehouse || first.locW) setElVal('inp-loc-wh', first.locationWarehouse || first.locW);
+      if (first.locationReceiver || first.locR) setElVal('inp-loc-rcv', first.locationReceiver || first.locR);
+
+      // Auto-fill Item rows (reset to item 1 first)
+      const container = document.getElementById('modal-items-container');
+      if (container) {
+        const extraItems = container.querySelectorAll('[id^="modal-item-"]:not(#modal-item-1)');
+        extraItems.forEach(el => el.remove());
+      }
+      modalItemCount = 1;
+
+      // Fill Item #1
+      setElVal('item-type-1', first.type || '');
+      setElVal('item-itype-1', first.itype || 'Equipment');
+      setElVal('item-model-1', first.model || '');
+      setElVal('item-code-1', first.code || '');
+      setElVal('item-desc-1', first.desc || '');
+      setElVal('item-qty-1', first.qty || 1);
+      setElVal('item-sn-1', first.sn && first.sn !== 'N/A' ? first.sn : '');
+
+      // Multi-item auto expansion if multiple rows share the same DUID/Bill
+      if (found.length > 1) {
+        for (let i = 1; i < found.length; i++) {
+          addModalItem();
+          const rowIdx = modalItemCount;
+          const item = found[i];
+          setElVal('item-type-' + rowIdx, item.type || '');
+          setElVal('item-itype-' + rowIdx, item.itype || 'Equipment');
+          setElVal('item-model-' + rowIdx, item.model || '');
+          setElVal('item-code-' + rowIdx, item.code || '');
+          setElVal('item-desc-' + rowIdx, item.desc || '');
+          setElVal('item-qty-' + rowIdx, item.qty || 1);
+          setElVal('item-sn-' + rowIdx, item.sn && item.sn !== 'N/A' ? item.sn : '');
+        }
+      }
+
+      const countEl = document.getElementById('modal-item-count');
+      if (countEl) countEl.textContent = modalItemCount + ' รายการ';
+
+      const errEl = document.getElementById('err-duid');
+      if (errEl) errEl.classList.add('hidden');
+
+      showToast(`✅ พบข้อมูล "${first.duid}" (${found.length} รายการ) — ดึงข้อมูลสำเร็จ`, 'success');
+    }
+
+    function searchModalByDuid() {
+      const duidInput = document.getElementById('inp-duid');
+      const duid = (duidInput ? duidInput.value : '').trim();
+      if (!duid) {
+        showToast('⚠️ กรุณากรอกรหัส DUID เพื่อค้นหา', 'error');
+        if (duidInput) duidInput.focus();
+        return;
+      }
+
+      const q = duid.toLowerCase();
+      // Search in TRANSACTIONS (Exact match first, then partial)
+      let found = TRANSACTIONS.filter(t => (t.duid || '').toLowerCase() === q);
+      if (!found.length) {
+        found = TRANSACTIONS.filter(t => (t.duid || '').toLowerCase().includes(q));
+      }
+
+      if (found.length > 0) {
+        autoFillModalFromMatches(found, duid);
+      } else {
+        // Fallback: Smart Suffix & Operator Detection from DUID text
+        const upper = duid.toUpperCase();
+        let detected = [];
+        
+        // Detect Region: BKK, ER, WR, NR, SR, NER
+        const regions = ['BKK', 'NER', 'ER', 'WR', 'NR', 'SR'];
+        for (const r of regions) {
+          if (upper.includes('_' + r) || upper.includes(r + '_') || upper.endsWith(r)) {
+            const regEl = document.getElementById('inp-region');
+            if (regEl) { regEl.value = r; detected.push('Region: ' + r); }
+            break;
+          }
+        }
+
+        // Detect Operator: AIS, TRUE, NT
+        const custs = ['AIS', 'TRUE', 'NT'];
+        for (const c of custs) {
+          if (upper.includes(c)) {
+            const cusEl = document.getElementById('inp-customer');
+            if (cusEl) {
+              cusEl.value = c;
+              if (typeof onTxCustomerChange === 'function') onTxCustomerChange(c);
+              detected.push('ลูกค้า: ' + c);
+            }
+            break;
+          }
+        }
+
+        if (detected.length > 0) {
+          showToast(`ℹ️ ตรวจพบ ${detected.join(' | ')} จากรหัส DUID อัตโนมัติ — สามารถกรอกข้อมูลต่อได้เลย`, 'info');
+        } else {
+          showToast(`⚠️ ไม่พบประวัติสำหรับ DUID "${duid}" — สามารถบันทึกเป็นไซต์งานใหม่ได้ทันที`, 'info');
+        }
+      }
+    }
+
+    function searchModalByBill() {
+      const billInput = document.getElementById('inp-bill');
+      const bill = (billInput ? billInput.value : '').trim();
+      if (!bill) {
+        showToast('⚠️ กรุณากรอกเลขที่ Bill No. เพื่อค้นหา', 'error');
+        if (billInput) billInput.focus();
+        return;
+      }
+
+      const q = bill.toLowerCase();
+      let found = TRANSACTIONS.filter(t => (t.bill || '').toLowerCase() === q);
+      if (!found.length) {
+        found = TRANSACTIONS.filter(t => (t.bill || '').toLowerCase().includes(q));
+      }
+
+      if (found.length > 0) {
+        autoFillModalFromMatches(found, bill);
+      } else {
+        showToast(`⚠️ ไม่พบประวัติสำหรับ Bill No. "${bill}" — สามารถกรอกข้อมูลใหม่ได้ทันที`, 'info');
       }
     }
 
