@@ -359,7 +359,7 @@
               <span class="text-sm">📦</span>
               <span data-i18n="nav_transactions">รายการทั้งหมด</span>
             </div>
-            <span id="badge-total-tx" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">3,782</span>
+            <span id="badge-total-tx" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">—</span>
           </button>
 
           <button onclick="switchTab('import')" id="nav-import" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition-all-fast text-left">
@@ -2082,9 +2082,21 @@
 
       currentPage = 1;
       renderTable();
+      updateNavBadge();
     }
 
-    function handleSearch() { applyFilters(); }
+    // Debounced search — prevents sluggish UI with 10k+ records
+    var _searchDebounceTimer = null;
+    function handleSearch() {
+      clearTimeout(_searchDebounceTimer);
+      _searchDebounceTimer = setTimeout(applyFilters, 280);
+    }
+
+    // Update sidebar badge to real-time TRANSACTIONS count
+    function updateNavBadge() {
+      var el = document.getElementById('badge-total-tx');
+      if (el) el.textContent = TRANSACTIONS.length.toLocaleString();
+    }
 
     function resetFilters() {
       document.getElementById('search-input').value = '';
@@ -7683,6 +7695,7 @@ let BOM_TRUE = [
         TRANSACTIONS = SAMPLE_RAW_DATA.map(function(r, i) { return Object.assign({}, r, { no: i + 1 }); });
         filteredTransactions = [...TRANSACTIONS];
         applyFilters();
+        updateNavBadge();
         const liveText = document.getElementById('gas-live-text');
         if (liveText) liveText.textContent = '📦 Demo Mode: ' + TRANSACTIONS.length + ' รายการ | ' + new Date().toLocaleTimeString('th-TH');
         return;
@@ -7720,6 +7733,7 @@ let BOM_TRUE = [
           });
           filteredTransactions = [...TRANSACTIONS];
           applyFilters();
+          updateNavBadge();
           const now = new Date();
           const liveText = document.getElementById('gas-live-text');
           if (liveText) liveText.textContent = '🔗 GAS Live: ' + TRANSACTIONS.length + ' รายการ | อัปเดต: ' + now.toLocaleTimeString('th-TH');
