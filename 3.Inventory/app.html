@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>Inventory Smart App V.7.3.1</title>
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+  <title>SmartStock Pro — Inventory Smart App V.7.5.8</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -39,18 +41,18 @@
         --header-text: #ffffff;
       }
     }
-    body { font-family: 'Sarabun', sans-serif; background-color: var(--bg); padding: 10px; color: var(--text-primary); transition: background 0.3s, color 0.3s; }
+    body { font-family: 'Plus Jakarta Sans', 'Sarabun', sans-serif; background-color: var(--bg); padding: 10px; color: var(--text-primary); transition: background 0.3s, color 0.3s; -webkit-font-smoothing: antialiased; letter-spacing: -0.015em; }
     label, .small { color: var(--text-label) !important; }
     .form-control, .form-select { background-color: var(--input-bg) !important; color: var(--text-primary) !important; border-color: var(--input-border) !important; }
     .form-control::placeholder { color: var(--text-muted) !important; }
-    .header-banner { background: linear-gradient(135deg, #0d6efd, #0043a8); color: var(--header-text); padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+    .header-banner { background: linear-gradient(135deg, #4f46e5, #312e81, #0f172a); color: var(--header-text); padding: 15px 18px; border-radius: 16px; margin-bottom: 15px; border: 1px solid rgba(99,102,241,0.3); box-shadow: 0 8px 32px -4px rgba(99,102,241,0.25); }
     .header-banner * { color: var(--header-text) !important; }
-    .card-custom { border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: var(--card-bg); padding: 15px; margin-bottom: 15px; }
+    .card-custom { border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 4px 24px -4px rgba(0,0,0,0.35); background: var(--card-bg); padding: 16px; margin-bottom: 15px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
     /* ── Issue 2: Remove red/focus ring from item rows ── */
     .item-row {
       background: var(--item-row-bg);
       padding: 15px; border-radius: 12px;
-      border-left: 5px solid #0d6efd;
+      border-left: 4px solid #6366f1;
       margin-bottom: 15px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.05);
       outline: none !important;
@@ -68,9 +70,9 @@
       background: var(--card-bg);
       outline: none !important;
     }
-    .search-result-item:hover { border-color: #0d6efd; background: rgba(13,110,253,0.04); }
-    .search-result-item.selected { border-color: #0d6efd; background: rgba(13,110,253,0.08); }
-    .search-result-item input[type=checkbox] { width: 16px; height: 16px; accent-color: #0d6efd; cursor: pointer; flex-shrink: 0; }
+    .search-result-item:hover { border-color: #6366f1; background: rgba(99,102,241,0.06); }
+    .search-result-item.selected { border-color: #6366f1; background: rgba(99,102,241,0.10); }
+    .search-result-item input[type=checkbox] { width: 16px; height: 16px; accent-color: #6366f1; cursor: pointer; flex-shrink: 0; }
     /* Issue 4: Photo preview thumbnails */
     #photoPreviewWrap {
       display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
@@ -79,7 +81,7 @@
     .photo-thumb {
       position: relative; width: 72px; height: 72px;
       border-radius: 10px; overflow: hidden;
-      border: 2px solid #0d6efd;
+      border: 2px solid #6366f1;
       box-shadow: 0 2px 6px rgba(0,0,0,0.15);
       flex-shrink: 0;
     }
@@ -94,7 +96,7 @@
     #loaderSuccess { display:none; margin-top:20px; background:#fff; color:#111; border-radius:16px; padding:20px 24px; max-width:280px; width:90%; text-align:center; }
     #loaderSuccess h5 { color:#198754; font-weight:700; margin-bottom:8px; }
     #loaderSuccess p  { font-size:13px; margin-bottom:14px; }
-    #btnLoaderOK { background:linear-gradient(135deg,#198754,#0f5132); color:#fff; border:none; border-radius:10px; padding:12px 32px; font-size:16px; font-weight:700; cursor:pointer; width:100%; font-family:'Sarabun',sans-serif; }
+    #btnLoaderOK { background:linear-gradient(135deg,#198754,#0f5132); color:#fff; border:none; border-radius:10px; padding:12px 32px; font-size:16px; font-weight:700; cursor:pointer; width:100%; font-family:'Plus Jakarta Sans','Sarabun',sans-serif; }
     .btn-mandatory { background-color: #ffc107; border: none; font-weight: bold; padding: 12px; border-radius: 10px; width: 100%; color: #000; margin-bottom: 8px; }
     .user-badge { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 4px 10px; font-size: 12px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
     /* ── Login Modal ── */
@@ -117,10 +119,10 @@
       background: #f8f9ff; color: #1a1a2e; appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23666' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
       background-repeat: no-repeat; background-position: right 14px center; background-size: 18px;
-      cursor: pointer; font-family: 'Sarabun', sans-serif;
+      cursor: pointer; font-family: 'Plus Jakarta Sans', 'Sarabun', sans-serif;
       transition: border-color 0.2s, box-shadow 0.2s; outline: none;
     }
-    .login-select:focus { border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,0.15); }
+    .login-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
     .device-badge {
       display: inline-flex; align-items: center; gap: 5px;
       background: rgba(255,255,255,0.2); border-radius: 8px;
@@ -128,13 +130,13 @@
     }
     .btn-login {
       width: 100%; padding: 13px; margin-top: 14px;
-      background: linear-gradient(135deg, #0d6efd, #0043a8);
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
       color: white; border: none; border-radius: 12px;
       font-size: 16px; font-weight: 700; cursor: pointer;
       transition: transform 0.15s, box-shadow 0.15s;
-      font-family: 'Sarabun', sans-serif;
+      font-family: 'Plus Jakarta Sans', 'Sarabun', sans-serif;
     }
-    .btn-login:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(13,110,253,0.4); }
+    .btn-login:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99,102,241,0.4); }
     .btn-login:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .login-divider { border: none; border-top: 1px solid #eee; margin: 14px 0; }
     .login-footer { font-size: 11px; color: #999; text-align: center; }
@@ -142,17 +144,17 @@
     .login-tabs { display: flex; background: #f0f2f8; border-radius: 12px; padding: 4px; margin-bottom: 16px; gap: 4px; }
     .login-tab-btn {
       flex: 1; padding: 9px 6px; border: none; border-radius: 9px; font-size: 13px; font-weight: 700;
-      cursor: pointer; background: transparent; color: #666; transition: all 0.2s; font-family: 'Sarabun', sans-serif;
+      cursor: pointer; background: transparent; color: #666; transition: all 0.2s; font-family: 'Plus Jakarta Sans', 'Sarabun', sans-serif;
     }
-    .login-tab-btn.active { background: #fff; color: #0d6efd; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+    .login-tab-btn.active { background: #fff; color: #6366f1; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
     /* ── Password Input ── */
     .pw-wrap { position: relative; margin-top: 4px; }
     .login-input {
       width: 100%; padding: 12px 42px 12px 14px; font-size: 15px; box-sizing: border-box;
       border: 2px solid #e0e0e0; border-radius: 12px; background: #f8f9ff; color: #1a1a2e;
-      font-family: 'Sarabun', sans-serif; transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+      font-family: 'Plus Jakarta Sans', 'Sarabun', sans-serif; transition: border-color 0.2s, box-shadow 0.2s; outline: none;
     }
-    .login-input:focus { border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,0.15); }
+    .login-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
     .pw-toggle { position: absolute; right: 13px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 18px; user-select: none; }
     /* ── Password Strength ── */
     .pw-strength-bar { height: 4px; border-radius: 4px; margin-top: 5px; transition: all 0.3s; }
@@ -168,7 +170,7 @@
     .name-row > div { flex: 1; }
     .login-name-display {
       margin-top: 10px; padding: 10px 14px; background: #f0f4ff;
-      border-radius: 10px; font-size: 14px; color: #0043a8; font-weight: 600;
+      border-radius: 10px; font-size: 14px; color: #6366f1; font-weight: 600;
       min-height: 40px; display: flex; align-items: center; gap: 8px;
     }
     /* ── Search Select Modal ── */
@@ -188,8 +190,8 @@
     .ssm-info { padding: 10px 20px; background: rgba(13,110,253,0.06); border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-secondary); }
     .ssm-items { overflow-y: auto; flex: 1; padding: 12px 16px; }
     .ssm-actions { padding: 14px 20px; border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
-    .ssm-btn-cancel { flex: 1; padding: 12px; background: #e9ecef; color: #495057; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Sarabun', sans-serif; }
-    .ssm-btn-ok { flex: 2; padding: 12px; background: linear-gradient(135deg, #0d6efd, #0043a8); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Sarabun', sans-serif; }
+    .ssm-btn-cancel { flex: 1; padding: 12px; background: #e9ecef; color: #495057; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Plus Jakarta Sans', 'Sarabun', sans-serif; }
+    .ssm-btn-ok { flex: 2; padding: 12px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Plus Jakarta Sans', 'Sarabun', sans-serif; }
     .ssm-check-all { display: flex; align-items: center; gap: 8px; padding: 8px 4px; margin-bottom: 6px; font-size: 13px; font-weight: 700; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); cursor: pointer; }
   </style>
 </head>
@@ -242,7 +244,7 @@
         <button class="btn-login" id="btnDoLogin" onclick="doLogin()">🔑 เข้าสู่ระบบ</button>
 
         <div style="text-align:center; margin-top:10px; font-size:12px; color:#888;">
-          ยังไม่มีบัญชี? <a href="#" onclick="switchLoginTab('register'); return false;" style="color:#0d6efd; font-weight:700;">ลงทะเบียนใหม่</a>
+          ยังไม่มีบัญชี? <a href="#" onclick="switchLoginTab('register'); return false;" style="color:#6366f1; font-weight:700;">ลงทะเบียนใหม่</a>
         </div>
       </div>
 
@@ -280,7 +282,7 @@
         <button class="btn-login" id="btnDoRegister" onclick="doRegister()">📝 ลงทะเบียน &amp; เข้าสู่ระบบ</button>
 
         <div style="text-align:center; margin-top:10px; font-size:12px; color:#888;">
-          มีบัญชีแล้ว? <a href="#" onclick="switchLoginTab('login'); return false;" style="color:#0d6efd; font-weight:700;">เข้าสู่ระบบ</a>
+          มีบัญชีแล้ว? <a href="#" onclick="switchLoginTab('login'); return false;" style="color:#6366f1; font-weight:700;">เข้าสู่ระบบ</a>
         </div>
       </div>
 
@@ -293,7 +295,7 @@
         </div>
         
         <div id="otpInputGroup" style="display:none; margin-top:10px;">
-          <label class="login-label" style="margin-top:0; color:#0d6efd;">🔑 กรอกรหัส OTP 6 หลัก *</label>
+          <label class="login-label" style="margin-top:0; color:#6366f1;">🔑 กรอกรหัส OTP 6 หลัก *</label>
           <input type="text" id="resetOtp" class="login-input" style="margin-top:4px; font-size:16px; font-weight:700; text-align:center; letter-spacing:4px;" placeholder="XXXXXX" maxlength="6">
         </div>
         
@@ -307,11 +309,11 @@
         <button class="btn-login" id="btnDoReset" onclick="doReset()" style="margin-top:15px;" disabled>🔄 ยืนยันและรีเซ็ตรหัสผ่าน</button>
         
         <div style="text-align:center; margin-top:10px; font-size:12px; color:#888;">
-          จำรหัสได้แล้ว? <a href="#" onclick="switchLoginTab('login'); return false;" style="color:#0d6efd; font-weight:700;">เข้าสู่ระบบ</a>
+          จำรหัสได้แล้ว? <a href="#" onclick="switchLoginTab('login'); return false;" style="color:#6366f1; font-weight:700;">เข้าสู่ระบบ</a>
         </div>
       </div>
       <hr class="login-divider">
-      <div class="login-footer">🔒 Smart Inventory V.7.4.0 | ระบบความปลอดภัยยืนยัน OTP ทาง Email</div>
+      <div class="login-footer">🔒 SmartStock Pro V.7.5.8 | ระบบความปลอดภัยยืนยัน OTP ทาง Email</div>
     </div>
   </div>
 
@@ -326,7 +328,7 @@
 
       <!-- Tabs -->
       <div style="display:flex; background:#f0f2f8; border-radius:12px; padding:4px; margin-bottom:16px; gap:4px;">
-        <button id="ieTabImportBtn" onclick="switchIETab('import')" style="flex:1; padding:9px 6px; border:none; border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; background:#fff; color:#0d6efd; box-shadow:0 2px 8px rgba(0,0,0,0.12); font-family:'Sarabun',sans-serif;">📥 Import</button>
+        <button id="ieTabImportBtn" onclick="switchIETab('import')" style="flex:1; padding:9px 6px; border:none; border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; background:#fff; color:#6366f1; box-shadow:0 2px 8px rgba(0,0,0,0.12); font-family:'Plus Jakarta Sans','Sarabun',sans-serif;">📥 Import</button>
         <button id="ieTabExportBtn" onclick="switchIETab('export')" style="flex:1; padding:9px 6px; border:none; border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; background:transparent; color:#666; font-family:'Sarabun',sans-serif;">📤 Export</button>
       </div>
 
@@ -336,13 +338,13 @@
           <b>📋 Format CSV ที่รองรับ:</b><br>
           Header: <code style="font-size:11px; word-break:break-all;">DUID, REGION, IN/OUT, TYPE, DATE, BILL NO., MODEL, ITEM CODE, DESCRIPTION, QTY, SERIAL</code>
         </div>
-        <button onclick="downloadImportTemplate()" style="width:100%; padding:10px; margin-bottom:8px; background:linear-gradient(135deg,#0d6efd,#0043a8); color:white; border:none; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:14px;">⬇️ Download Template CSV</button>
+        <button onclick="downloadImportTemplate()" style="width:100%; padding:10px; margin-bottom:8px; background:linear-gradient(135deg,#6366f1,#4f46e5); color:white; border:none; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Plus Jakarta Sans','Sarabun',sans-serif; font-size:14px;">⬇️ Download Template CSV</button>
         <input type="file" id="importFileInput" accept=".csv,.txt" style="display:none" onchange="previewImport(this)">
         <button onclick="document.getElementById('importFileInput').click()" style="width:100%; padding:10px; margin-bottom:8px; background:#f8f9fa; border:2px dashed #adb5bd; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:14px; color:#555;">📂 เลือกไฟล์ CSV</button>
         <div id="importPreviewBox" style="display:none;">
-          <div style="font-size:13px; font-weight:700; margin-bottom:6px; color:#0043a8;">📊 Preview: <span id="importRowCount">0</span> รายการ</div>
+          <div style="font-size:13px; font-weight:700; margin-bottom:6px; color:#6366f1;">📊 Preview: <span id="importRowCount">0</span> รายการ</div>
           <div id="importPreviewTable" style="overflow-x:auto; max-height:200px; border-radius:8px; border:1px solid #dee2e6; margin-bottom:10px;"></div>
-          <button id="btnConfirmImport" onclick="confirmImport()" style="width:100%; padding:12px; background:linear-gradient(135deg,#198754,#0f5132); color:white; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif;">🚀 Confirm Import</button>
+          <button id="btnConfirmImport" onclick="confirmImport()" style="width:100%; padding:12px; background:linear-gradient(135deg,#198754,#0f5132); color:white; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Plus Jakarta Sans','Sarabun',sans-serif;">🚀 Confirm Import</button>
         </div>
       </div>
 
@@ -361,7 +363,7 @@
     <!-- Header -->
     <div class="header-banner shadow d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div>
-        <h5 class="fw-bold mb-0">📦 Smart Inventory V.7.5.6</h5>
+        <h5 class="fw-bold mb-0">📦 SmartStock Pro V.7.5.8</h5>
         <div class="user-badge mt-1" id="userBadge">👤 กำลังตรวจสอบผู้ใช้...</div>
       </div>
       <div class="d-flex gap-1 flex-wrap">
@@ -670,7 +672,7 @@
         { pct: '45%',  color: '#e67e22', label: '🟠 อ่อน',                  txtColor: '#e67e22' },
         { pct: '65%',  color: '#f1c40f', label: '🟡 ปานกลาง',               txtColor: '#b8860b' },
         { pct: '85%',  color: '#2ecc71', label: '🟢 แข็งแกร่ง',            txtColor: '#1a7f40' },
-        { pct: '100%', color: '#0d6efd', label: '💪 แข็งแกร่งมาก',         txtColor: '#0043a8' }
+        { pct: '100%', color: '#6366f1', label: '💪 แข็งแกร่งมาก',         txtColor: '#4f46e5' }
       ];
       var lv = levels[Math.min(score, 5)];
       bar.style.width      = pw.length === 0 ? '0%' : lv.pct;
@@ -1417,7 +1419,7 @@
       var checkAll = document.createElement('label');
       checkAll.className = 'ssm-check-all';
       checkAll.innerHTML =
-        '<input type="checkbox" id="ssmCheckAll" onchange="toggleAllItems(this)" style="width:16px;height:16px;accent-color:#0d6efd;cursor:pointer;">' +
+        '<input type="checkbox" id="ssmCheckAll" onchange="toggleAllItems(this)" style="width:16px;height:16px;accent-color:#6366f1;cursor:pointer;">' +
         '<span>เลือกทั้งหมด (' + items.length + ' รายการ)</span>';
       container.appendChild(checkAll);
 
@@ -1428,7 +1430,7 @@
         if (bill !== currentBill) {
           currentBill = bill;
           var grpLabel = document.createElement('div');
-          grpLabel.style.cssText = 'font-size:11px;font-weight:700;color:#0d6efd;padding:8px 4px 4px;margin-top:4px;';
+          grpLabel.style.cssText = 'font-size:11px;font-weight:700;color:#6366f1;padding:8px 4px 4px;margin-top:4px;';
           var transType = item.transType || '';
           var badgeColor = transType.toUpperCase()==='IN' ? '#198754' : transType.toUpperCase()==='OUT' ? '#dc3545' : '#0dcaf0';
           grpLabel.innerHTML = '🧾 Bill No: <strong>' + bill + '</strong>' +
@@ -1443,7 +1445,7 @@
         div.innerHTML =
           '<div style="display:flex;align-items:center;gap:10px;">' +
             '<input type="checkbox" id="' + checkId + '" data-idx="' + idx + '" class="ssm-item-check" checked ' +
-              'onchange="onItemCheckChange(this)" style="width:18px;height:18px;accent-color:#0d6efd;cursor:pointer;flex-shrink:0;">' +
+              'onchange="onItemCheckChange(this)" style="width:18px;height:18px;accent-color:#6366f1;cursor:pointer;flex-shrink:0;">' +
             '<div style="flex:1;min-width:0;">' +
               '<div style="font-size:13px;font-weight:700;color:var(--text-primary,#1a1a2e);">' + (item.model || '-') + '</div>' +
               '<div style="font-size:11px;color:var(--text-muted,#666);margin-top:2px;">' +
@@ -1654,7 +1656,7 @@
           showDenyButton: true,
           confirmButtonText: "📸 ถ่ายรูป",
           denyButtonText: "🖼️ เลือกจากแกลเลอรี",
-          confirmButtonColor: "#0d6efd",
+          confirmButtonColor: "#6366f1",
           denyButtonColor: "#6c757d",
           allowOutsideClick: true
         }).then(function(result) {
@@ -1775,10 +1777,10 @@
       var btnI = document.getElementById('ieTabImportBtn');
       var btnE = document.getElementById('ieTabExportBtn');
       btnI.style.background  = isImport  ? '#fff' : 'transparent';
-      btnI.style.color       = isImport  ? '#0d6efd' : '#666';
+      btnI.style.color       = isImport  ? '#6366f1' : '#666';
       btnI.style.boxShadow   = isImport  ? '0 2px 8px rgba(0,0,0,0.12)' : 'none';
       btnE.style.background  = !isImport ? '#fff' : 'transparent';
-      btnE.style.color       = !isImport ? '#0d6efd' : '#666';
+      btnE.style.color       = !isImport ? '#6366f1' : '#666';
       btnE.style.boxShadow   = !isImport ? '0 2px 8px rgba(0,0,0,0.12)' : 'none';
     }
 
@@ -1903,7 +1905,7 @@
         // Build preview table
         var cols6 = ['DUID','Region','IN/OUT','Model','Code','Qty'];
         var html = '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
-          '<tr style="background:#0d6efd;color:white;">' +
+          '<tr style="background:#6366f1;color:white;">' +
           cols6.map(function(h) { return '<th style="padding:4px 6px;text-align:left;">' + h + '</th>'; }).join('') + '</tr>';
         importRows.slice(0, 25).forEach(function(r, i) {
           html += '<tr style="background:' + (i%2===0?'#fff':'#f8f9fa') + ';">' +
@@ -2006,7 +2008,7 @@
         <button class="ssm-close" onclick="document.getElementById('searchSelectModal').classList.remove('show')">&times;</button>
       </div>
       <div class="ssm-info">
-        <b>ข้อมูลจาก:</b> <span id="ssmHeaderInfo" style="color:#0d6efd; font-weight:700;"></span>
+        <b>ข้อมูลจาก:</b> <span id="ssmHeaderInfo" style="color:#6366f1; font-weight:700;"></span>
       </div>
       <div id="ssmItems" class="ssm-items"></div>
       <div class="ssm-actions">

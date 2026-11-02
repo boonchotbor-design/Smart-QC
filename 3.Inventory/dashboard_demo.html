@@ -6,13 +6,15 @@
 <title>📦 Smart Inventory Dashboard V.7.5.8</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --sw:260px;
-  --font-main:'Inter','Sarabun',-apple-system,BlinkMacSystemFont,sans-serif;
+  --font-main:'Plus Jakarta Sans','Sarabun',-apple-system,BlinkMacSystemFont,sans-serif;
   --font-mono:'JetBrains Mono','Courier New',monospace;
   --primary:#00c28a;--pd:#009e6f;--dark:#0b0f17;--card:#151a26;--card2:#1c2333;
   --border:rgba(255,255,255,0.08);--border-focus:rgba(0,194,138,0.5);
@@ -371,6 +373,169 @@ tbody td{padding:10px 12px;font-size:11.5px;vertical-align:middle;white-space:no
 .photo-btn-row{display:flex;gap:8px;margin-bottom:8px;}
 .photo-btn-cam{flex:1;padding:10px;background:linear-gradient(135deg,#ff9f4d,#e07a20);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;}
 
+/* Modern Glassmorphic & Toast Enhancements (v8.0) */
+:root {
+  --sw: 260px;
+  --font-main: 'Plus Jakarta Sans', 'Sarabun', system-ui, -apple-system, sans-serif !important;
+  --font-mono: 'JetBrains Mono', monospace !important;
+  --primary: #10b981 !important;
+  --pd: #059669 !important;
+  --dark: #080c14 !important;
+  --card: rgba(15, 23, 42, 0.75) !important;
+  --card2: rgba(11, 17, 32, 0.85) !important;
+  --border: rgba(51, 65, 85, 0.45) !important;
+  --border-focus: rgba(99, 102, 241, 0.6) !important;
+  --text: #f8fafc !important;
+  --muted: #94a3b8 !important;
+  --red: #f43f5e !important;
+  --blue: #38bdf8 !important;
+  --yellow: #fbbf24 !important;
+  --purple: #c084fc !important;
+  --orange: #fb923c !important;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+  --shadow-md: 0 4px 20px -2px rgba(0, 0, 0, 0.5) !important;
+  --shadow-lg: 0 12px 36px -4px rgba(0, 0, 0, 0.7) !important;
+}
+
+body {
+  background-color: #080c14 !important;
+  color: #f8fafc !important;
+  font-family: 'Plus Jakarta Sans', 'Sarabun', system-ui, -apple-system, sans-serif !important;
+  letter-spacing: -0.015em !important;
+}
+
+#sb {
+  background: rgba(11, 17, 32, 0.88) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-right: 1px solid rgba(51, 65, 85, 0.45) !important;
+}
+
+.topbar {
+  background: rgba(11, 17, 32, 0.75) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.45) !important;
+}
+
+.kc, .cc, .tc, .ac, .mc, .imp-panel, .card {
+  background: rgba(15, 23, 42, 0.75) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(51, 65, 85, 0.45) !important;
+  border-radius: 16px !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.kc:hover, .cc:hover, .tc:hover, .ac:hover {
+  border-color: rgba(99, 102, 241, 0.45) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6) !important;
+  transform: translateY(-2px) !important;
+}
+
+.tbtn {
+  font-family: 'Plus Jakarta Sans', 'Sarabun', system-ui, -apple-system, sans-serif !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(51, 65, 85, 0.5) !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: blur(8px) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.tbtn:hover {
+  background: rgba(30, 41, 59, 0.8) !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+  color: #fff !important;
+}
+
+.tbtn.g {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3) !important;
+}
+
+.tbtn.b {
+  background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3) !important;
+}
+
+/* Badges styling matching preview_nextgen_smartstock.html */
+.ab {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+  font-weight: 700 !important;
+  border-radius: 6px !important;
+  padding: 3px 8px !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0.02em !important;
+}
+
+.ab.b-in { background: rgba(16, 185, 129, 0.15) !important; color: #34d399 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important; }
+.ab.b-out { background: rgba(239, 68, 68, 0.15) !important; color: #f87171 !important; border: 1px solid rgba(239, 68, 68, 0.3) !important; }
+.ab.b-dis { background: rgba(168, 85, 247, 0.15) !important; color: #c084fc !important; border: 1px solid rgba(168, 85, 247, 0.3) !important; }
+.ab.b-stri { background: rgba(59, 130, 246, 0.15) !important; color: #60a5fa !important; border: 1px solid rgba(59, 130, 246, 0.3) !important; }
+.ab.b-stro { background: rgba(245, 158, 11, 0.15) !important; color: #fbbf24 !important; border: 1px solid rgba(245, 158, 11, 0.3) !important; }
+.ab.b-ret { background: rgba(236, 72, 153, 0.15) !important; color: #f472b6 !important; border: 1px solid rgba(236, 72, 153, 0.3) !important; }
+
+/* Status pill styling */
+.sp {
+  border-radius: 9999px !important;
+  padding: 3px 9px !important;
+  font-weight: 600 !important;
+  font-size: 10.5px !important;
+  border: 1px solid transparent !important;
+}
+.sp.s-open { background: rgba(16, 185, 129, 0.12) !important; color: #34d399 !important; border-color: rgba(16, 185, 129, 0.25) !important; }
+.sp.s-closed { background: rgba(51, 65, 85, 0.5) !important; color: #94a3b8 !important; border-color: rgba(71, 85, 105, 0.4) !important; }
+.sp.s-proc { background: rgba(245, 158, 11, 0.12) !important; color: #fbbf24 !important; border-color: rgba(245, 158, 11, 0.25) !important; }
+
+/* Table styling */
+table thead th {
+  background: #0d1527 !important;
+  color: #94a3b8 !important;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5) !important;
+  padding: 11px 12px !important;
+}
+
+table tbody tr {
+  border-bottom: 1px solid rgba(51, 65, 85, 0.25) !important;
+  transition: background 0.15s ease !important;
+}
+
+table tbody tr:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #080c14; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+#toastContainer { position: fixed; top: 20px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.smart-toast {
+  pointer-events: auto; display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; border-radius: 12px; font-size: 12px; font-weight: 600;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+  animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: all 0.25s ease;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateY(-10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.smart-toast.info { background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(99, 102, 241, 0.4); color: #e2e8f0; }
+.smart-toast.success { background: rgba(6, 78, 59, 0.9); border: 1px solid rgba(16, 185, 129, 0.5); color: #d1fae5; }
+.smart-toast.error { background: rgba(127, 29, 29, 0.9); border: 1px solid rgba(239, 68, 68, 0.5); color: #fee2e2; }
+
+.k-prog { width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 999px; margin-top: 8px; overflow: hidden; }
+.k-prog-bar { height: 100%; border-radius: 999px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+.kc { transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important; }
+.kc:hover { transform: translateY(-2px); border-color: rgba(99, 102, 241, 0.35) !important; box-shadow: 0 8px 24px -4px rgba(0,0,0,0.4) !important; }
+.net-pill-btn { border: none; padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+.net-pill-btn.active { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(0,194,138,0.3); }
+.net-pill-btn:not(.active) { background: transparent; color: var(--muted); }
+.net-pill-btn:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.05); }
 </style>
 
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -388,10 +553,174 @@ tbody td{padding:10px 12px;font-size:11.5px;vertical-align:middle;white-space:no
       color: #000 !important;
     }
   }
+/* Modern Glassmorphic & Toast Enhancements (v8.0) */
+:root {
+  --sw: 260px;
+  --font-main: 'Plus Jakarta Sans', 'Sarabun', system-ui, -apple-system, sans-serif !important;
+  --font-mono: 'JetBrains Mono', monospace !important;
+  --primary: #10b981 !important;
+  --pd: #059669 !important;
+  --dark: #080c14 !important;
+  --card: rgba(15, 23, 42, 0.75) !important;
+  --card2: rgba(11, 17, 32, 0.85) !important;
+  --border: rgba(51, 65, 85, 0.45) !important;
+  --border-focus: rgba(99, 102, 241, 0.6) !important;
+  --text: #f8fafc !important;
+  --muted: #94a3b8 !important;
+  --red: #f43f5e !important;
+  --blue: #38bdf8 !important;
+  --yellow: #fbbf24 !important;
+  --purple: #c084fc !important;
+  --orange: #fb923c !important;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+  --shadow-md: 0 4px 20px -2px rgba(0, 0, 0, 0.5) !important;
+  --shadow-lg: 0 12px 36px -4px rgba(0, 0, 0, 0.7) !important;
+}
+
+body {
+  background-color: #080c14 !important;
+  color: #f8fafc !important;
+  font-family: 'Plus Jakarta Sans', 'Sarabun', system-ui, -apple-system, sans-serif !important;
+  letter-spacing: -0.015em !important;
+}
+
+#sb {
+  background: rgba(11, 17, 32, 0.88) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-right: 1px solid rgba(51, 65, 85, 0.45) !important;
+}
+
+.topbar {
+  background: rgba(11, 17, 32, 0.75) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.45) !important;
+}
+
+.kc, .cc, .tc, .ac, .mc, .imp-panel, .card {
+  background: rgba(15, 23, 42, 0.75) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(51, 65, 85, 0.45) !important;
+  border-radius: 16px !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.kc:hover, .cc:hover, .tc:hover, .ac:hover {
+  border-color: rgba(99, 102, 241, 0.45) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6) !important;
+  transform: translateY(-2px) !important;
+}
+
+.tbtn {
+  font-family: 'Plus Jakarta Sans', 'Sarabun', system-ui, -apple-system, sans-serif !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(51, 65, 85, 0.5) !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: blur(8px) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.tbtn:hover {
+  background: rgba(30, 41, 59, 0.8) !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+  color: #fff !important;
+}
+
+.tbtn.g {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3) !important;
+}
+
+.tbtn.b {
+  background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3) !important;
+}
+
+/* Badges styling matching preview_nextgen_smartstock.html */
+.ab {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+  font-weight: 700 !important;
+  border-radius: 6px !important;
+  padding: 3px 8px !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0.02em !important;
+}
+
+.ab.b-in { background: rgba(16, 185, 129, 0.15) !important; color: #34d399 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important; }
+.ab.b-out { background: rgba(239, 68, 68, 0.15) !important; color: #f87171 !important; border: 1px solid rgba(239, 68, 68, 0.3) !important; }
+.ab.b-dis { background: rgba(168, 85, 247, 0.15) !important; color: #c084fc !important; border: 1px solid rgba(168, 85, 247, 0.3) !important; }
+.ab.b-stri { background: rgba(59, 130, 246, 0.15) !important; color: #60a5fa !important; border: 1px solid rgba(59, 130, 246, 0.3) !important; }
+.ab.b-stro { background: rgba(245, 158, 11, 0.15) !important; color: #fbbf24 !important; border: 1px solid rgba(245, 158, 11, 0.3) !important; }
+.ab.b-ret { background: rgba(236, 72, 153, 0.15) !important; color: #f472b6 !important; border: 1px solid rgba(236, 72, 153, 0.3) !important; }
+
+/* Status pill styling */
+.sp {
+  border-radius: 9999px !important;
+  padding: 3px 9px !important;
+  font-weight: 600 !important;
+  font-size: 10.5px !important;
+  border: 1px solid transparent !important;
+}
+.sp.s-open { background: rgba(16, 185, 129, 0.12) !important; color: #34d399 !important; border-color: rgba(16, 185, 129, 0.25) !important; }
+.sp.s-closed { background: rgba(51, 65, 85, 0.5) !important; color: #94a3b8 !important; border-color: rgba(71, 85, 105, 0.4) !important; }
+.sp.s-proc { background: rgba(245, 158, 11, 0.12) !important; color: #fbbf24 !important; border-color: rgba(245, 158, 11, 0.25) !important; }
+
+/* Table styling */
+table thead th {
+  background: #0d1527 !important;
+  color: #94a3b8 !important;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5) !important;
+  padding: 11px 12px !important;
+}
+
+table tbody tr {
+  border-bottom: 1px solid rgba(51, 65, 85, 0.25) !important;
+  transition: background 0.15s ease !important;
+}
+
+table tbody tr:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #080c14; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+#toastContainer { position: fixed; top: 20px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.smart-toast {
+  pointer-events: auto; display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; border-radius: 12px; font-size: 12px; font-weight: 600;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+  animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: all 0.25s ease;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateY(-10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.smart-toast.info { background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(99, 102, 241, 0.4); color: #e2e8f0; }
+.smart-toast.success { background: rgba(6, 78, 59, 0.9); border: 1px solid rgba(16, 185, 129, 0.5); color: #d1fae5; }
+.smart-toast.error { background: rgba(127, 29, 29, 0.9); border: 1px solid rgba(239, 68, 68, 0.5); color: #fee2e2; }
+
+.k-prog { width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 999px; margin-top: 8px; overflow: hidden; }
+.k-prog-bar { height: 100%; border-radius: 999px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+.kc { transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important; }
+.kc:hover { transform: translateY(-2px); border-color: rgba(99, 102, 241, 0.35) !important; box-shadow: 0 8px 24px -4px rgba(0,0,0,0.4) !important; }
+.net-pill-btn { border: none; padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+.net-pill-btn.active { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(0,194,138,0.3); }
+.net-pill-btn:not(.active) { background: transparent; color: var(--muted); }
+.net-pill-btn:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.05); }
 </style>
 
 </head>
 <body>
+  <div id="toastContainer"></div>
 
 <!-- 🔐 LOGIN MODAL -->
 <div id="loginModal">
@@ -519,6 +848,11 @@ tbody td{padding:10px 12px;font-size:11.5px;vertical-align:middle;white-space:no
   <header class="topbar">
     <div class="tb-left"><button id="hbg" onclick="tSb()">☰</button><div><div class="pg-title" id="pgTitle">📊 Dashboard</div><div class="pg-sub" id="pgSub">กำลังโหลด...</div></div></div>
     <div class="tb-right">
+      <div class="net-pill-group no-print" style="display:inline-flex;background:var(--card2);padding:2px;border-radius:8px;border:1px solid var(--border);margin-right:6px">
+        <button id="netBtnAll" class="net-pill-btn active" onclick="setGlobalNetwork('ALL')">🌐 All</button>
+        <button id="netBtnAIS" class="net-pill-btn" onclick="setGlobalNetwork('AIS')">🟢 AIS</button>
+        <button id="netBtnTRUE" class="net-pill-btn" onclick="setGlobalNetwork('TRUE')">🔵 TRUE</button>
+      </div>
       <button class="tbtn no-print" id="lightModeBtn" onclick="toggleLightMode()" title="สลับโหมด Light/Dark" style="border-radius:50%;padding:7px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px">☀️</button>
       <button class="tbtn no-print" onclick="syncNow()">🔄 <span>Sync</span></button>
       <button class="tbtn b no-print" onclick="pg('import',document.querySelectorAll('.ni')[3])">📂 <span>Import</span></button>
@@ -674,7 +1008,8 @@ tbody td{padding:10px 12px;font-size:11.5px;vertical-align:middle;white-space:no
               <option value="RETURN">RETURN</option>
             </select>
             
-            <button class="tbtn" onclick="addTx()" style="font-size:10px;padding:6px 12px;margin-left:auto;background:var(--primary);border-color:var(--primary);">➕ Add New</button>
+            <button class="tbtn no-print" onclick="exportTransactionsCSV()" style="font-size:10px;padding:6px 12px;margin-left:auto;background:rgba(99,102,241,0.2);border-color:rgba(99,102,241,0.4);color:#a5b4fc">📥 Export CSV</button>
+            <button class="tbtn" onclick="addTx()" style="font-size:10px;padding:6px 12px;background:var(--primary);border-color:var(--primary);">➕ Add New</button>
             <button class="tbtn g no-print" onclick="openImportExport('AIS')" style="font-size:10px;padding:6px 12px;">📥 AIS</button>
             <button class="tbtn b no-print" onclick="openImportExport('TRUE')" style="font-size:10px;padding:6px 12px">📥 TRUE</button>
             <button class="tbtn no-print" onclick="openImportExport('NT')" style="font-size:10px;padding:6px 12px;background:#6f42c1;border-color:#6f42c1;color:#fff">📥 NT</button>
@@ -6204,6 +6539,88 @@ function chgTxPage(d) {
 }
 
 let editTxRealIdx = -1;
+
+// ─────────────────────────────────────────────
+// Modern Features (v8.0): Toast, Global Network & CSV Export
+// ─────────────────────────────────────────────
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  if (!c) { alert(msg); return; }
+  const icons = { info: 'ℹ️', success: '✅', error: '🚨' };
+  const t = document.createElement('div');
+  t.className = 'smart-toast ' + type;
+  t.innerHTML = '<span>' + (icons[type] || '✨') + '</span><span>' + msg + '</span>';
+  c.appendChild(t);
+  setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateY(-8px)';
+    setTimeout(() => t.remove(), 300);
+  }, 3200);
+}
+
+function setGlobalNetwork(net) {
+  ['All', 'AIS', 'TRUE'].forEach(n => {
+    const b = document.getElementById('netBtn' + n);
+    if (b) {
+      if (n.toUpperCase() === net) {
+        b.className = 'net-pill-btn active';
+        if (net === 'AIS') b.style.background = 'var(--primary)';
+        else if (net === 'TRUE') b.style.background = 'var(--blue)';
+        else b.style.background = '#6366f1';
+      } else {
+        b.className = 'net-pill-btn';
+        b.style.background = 'transparent';
+      }
+    }
+  });
+
+  const txCusEl = document.getElementById('txCus');
+  if (txCusEl) {
+    txCusEl.value = net;
+    applyF();
+  }
+  
+  // Filter Dashboard KPIs & Charts
+  const filteredData = net === 'ALL' ? TX : TX.filter(t => t.customer === net);
+  refreshDash(filteredData);
+  showToast('กรองข้อมูลเครือข่าย: ' + (net === 'ALL' ? 'ทั้งหมด (AIS + TRUE)' : net), 'info');
+}
+
+function exportTransactionsCSV() {
+  const data = (typeof txFiltered !== 'undefined' && txFiltered.length > 0) ? txFiltered : TX;
+  if (!data || !data.length) {
+    showToast('ไม่มีข้อมูลสำหรับ Export', 'error');
+    return;
+  }
+  let csv = '\uFEFF'; // UTF-8 BOM
+  csv += 'No,DUID,Bill No,Type,Region,Customer,Model,Item Code,Description,Qty,Serial No,Status,Date\n';
+  data.forEach((r, i) => {
+    const no = r.no || (i + 1);
+    const duid = '"' + (r.duid || '').replace(/"/g, '""') + '"';
+    const bill = '"' + (r.bill || '').replace(/"/g, '""') + '"';
+    const type = '"' + (r.type || '') + '"';
+    const reg = '"' + (r.region || '') + '"';
+    const cus = '"' + (r.customer || '') + '"';
+    const model = '"' + (r.model || '').replace(/"/g, '""') + '"';
+    const code = '"' + (r.code || '') + '"';
+    const desc = '"' + (r.desc || '').replace(/"/g, '""') + '"';
+    const qty = r.qty || 0;
+    const sn = '"' + (r.sn || '').replace(/"/g, '""') + '"';
+    const stat = '"' + (r.status || '') + '"';
+    const dt = '"' + (r.date || '') + '"';
+    csv += [no, duid, bill, type, reg, cus, model, code, desc, qty, sn, stat, dt].join(',') + '\n';
+  });
+  
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'SmartStock_Transactions_' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showToast('Export ข้อมูลจำนวน ' + data.length.toLocaleString() + ' รายการ สำเร็จแล้ว!', 'success');
+}
 
 function renderTable() {
   const el = document.getElementById('txCount');
