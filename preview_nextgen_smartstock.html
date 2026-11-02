@@ -305,22 +305,22 @@
           </div>
         </div>
 
-        <!-- User Profile Pill (Screenshot 1) -->
+        <!-- User Profile Pill (Dynamic User V.7.5.9) -->
         <div class="px-4 py-3 border-b border-slate-800/60 bg-slate-900/40 mx-3 my-3 rounded-xl border flex items-center justify-between">
           <div class="flex items-center gap-2.5">
             <div class="relative">
-              <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold text-xs flex items-center justify-center">
+              <div id="sb-user-avatar" class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold text-xs flex items-center justify-center">
                 BB
               </div>
-              <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-950"></span>
+              <span id="sb-user-status-dot" class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-950"></span>
             </div>
             <div>
-              <p class="text-xs font-semibold text-slate-200 leading-tight">Boonchot Borhwut</p>
-              <p class="text-[10px] text-emerald-400 font-mono">● Live</p>
+              <p id="sb-user-name" class="text-xs font-semibold text-slate-200 leading-tight">Boonchot Borhwut</p>
+              <p id="sb-user-status-text" class="text-[10px] text-emerald-400 font-mono">● Live</p>
             </div>
           </div>
-          <button onclick="showToast('Logged out', 'info')" class="px-2 py-1 rounded-lg text-[10px] font-bold bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 transition-all">
-            Logout
+          <button id="sb-logout-btn" onclick="logoutUser()" title="ออกจากระบบ" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/30 active:scale-95 transition-all cursor-pointer">
+            🚪 Logout
           </button>
         </div>
 
@@ -9129,9 +9129,12 @@ let BOM_TRUE = [
     </div>
     <div id="loginTabContent">
       <div id="loginAlert" style="display:none;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;background:#7f1d1d;color:#fca5a5;border:1px solid #dc2626;"></div>
-      <input id="loginEmail" type="email" placeholder="Email" autocomplete="email" style="width:100%;padding:12px 16px;background:#1e293b;border:1.5px solid #334155;border-radius:12px;color:#f1f5f9;font-size:14px;box-sizing:border-box;margin-bottom:12px;outline:none;font-family:'Sarabun',sans-serif;">
+      <input id="loginEmail" type="email" placeholder="Email" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('loginPassword').focus()" style="width:100%;padding:12px 16px;background:#1e293b;border:1.5px solid #334155;border-radius:12px;color:#f1f5f9;font-size:14px;box-sizing:border-box;margin-bottom:12px;outline:none;font-family:'Sarabun',sans-serif;">
       <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="width:100%;padding:12px 16px;background:#1e293b;border:1.5px solid #334155;border-radius:12px;color:#f1f5f9;font-size:14px;box-sizing:border-box;margin-bottom:16px;outline:none;font-family:'Sarabun',sans-serif;">
       <button id="btnDoLogin" onclick="doLogin()" style="width:100%;padding:13px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">🔑 เข้าสู่ระบบ</button>
+      <div style="margin-top:14px;text-align:center;">
+        <button type="button" onclick="quickDemoLogin()" style="background:none;border:none;color:#818cf8;font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;">⚡ เข้าสู่ระบบทดสอบด่วน (Admin Demo)</button>
+      </div>
     </div>
     <div id="registerTabContent" style="display:none;">
       <div id="registerAlert" style="display:none;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;background:#7f1d1d;color:#fca5a5;border:1px solid #dc2626;"></div>
@@ -9158,8 +9161,61 @@ function safeRemoveItem(k){ try{localStorage.removeItem(k);}catch(e){} }
 function getLocalUsers(){ if(_usersCache) return _usersCache; try{return JSON.parse(safeGetItem('inv_users')||'{}');}catch(e){return{};} }
 function saveLocalUsers(u){ _usersCache=u; safeSetItem('inv_users',JSON.stringify(u)); if(_isGAS){try{google.script.run.saveUsersDB(JSON.stringify(u));}catch(e){}} }
 
-function showLoginModal(tab){ document.getElementById('loginModal').style.display='flex'; switchLoginTab(tab||'login'); }
-function hideLoginModal(){ document.getElementById('loginModal').style.display='none'; }
+function updateSidebarUser(name, email) {
+  const nameEl = document.getElementById('sb-user-name');
+  const avatarEl = document.getElementById('sb-user-avatar');
+  const dotEl = document.getElementById('sb-user-status-dot');
+  const textEl = document.getElementById('sb-user-status-text');
+  const isOnline = !!(name && name !== 'ยังไม่เข้าสู่ระบบ' && name !== 'Guest');
+  const displayName = name || email || 'Guest';
+
+  if (nameEl) nameEl.textContent = displayName;
+  if (avatarEl) {
+    if (!isOnline) {
+      avatarEl.textContent = '??';
+      avatarEl.className = 'w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center';
+    } else {
+      const parts = displayName.trim().split(/\s+/);
+      let initials = '';
+      if (parts.length >= 2) {
+        initials = (parts[0][0] || '') + (parts[1][0] || '');
+      } else {
+        initials = displayName.slice(0, 2);
+      }
+      avatarEl.textContent = initials.toUpperCase() || 'US';
+      avatarEl.className = 'w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold text-xs flex items-center justify-center';
+    }
+  }
+  if (dotEl) {
+    dotEl.className = isOnline
+      ? 'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-950'
+      : 'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-slate-600 rounded-full border-2 border-slate-950';
+  }
+  if (textEl) {
+    textEl.textContent = isOnline ? '● Live' : '○ Offline';
+    textEl.className = isOnline ? 'text-[10px] text-emerald-400 font-mono' : 'text-[10px] text-slate-500 font-mono';
+  }
+}
+
+function showLoginModal(tab){
+  const m = document.getElementById('loginModal');
+  if (m) m.style.display = 'flex';
+  clearLoginAlert('loginAlert');
+  clearLoginAlert('registerAlert');
+  switchLoginTab(tab || 'login');
+  setTimeout(() => {
+    const inp = document.getElementById('loginEmail');
+    if (inp && !inp.value) inp.focus();
+    else {
+      const pass = document.getElementById('loginPassword');
+      if (pass) pass.focus();
+    }
+  }, 80);
+}
+function hideLoginModal(){
+  const m = document.getElementById('loginModal');
+  if (m) m.style.display = 'none';
+}
 
 function switchLoginTab(tab){
   document.getElementById('loginTabContent').style.display = tab==='login' ? 'block' : 'none';
@@ -9177,6 +9233,12 @@ async function sha256(message) {
   const msgBuffer = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
   return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function quickDemoLogin() {
+  document.getElementById('loginEmail').value = 'admin@teloneer.com';
+  document.getElementById('loginPassword').value = 'admin123';
+  doLogin();
 }
 
 async function doLogin(){
@@ -9197,6 +9259,7 @@ async function doLogin(){
         if(!users[email]){users[email]={name:name,hash:hashed};saveLocalUsers(users);}
         currentUserEmail=email; currentUserName=name;
         safeSetItem('inv_user_email',email); safeSetItem('inv_user_name',name);
+        updateSidebarUser(currentUserName, currentUserEmail);
         hideLoginModal();
         showToast('✅ เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ '+name,'success');
         initAfterLogin();
@@ -9206,9 +9269,17 @@ async function doLogin(){
     google.script.run
       .withSuccessHandler(function(res){
         btn.disabled=false; btn.textContent='🔑 เข้าสู่ระบบ';
-        if(!res||!res.success){showLoginAlert('loginAlert',(res&&res.message)||'❌ เกิดข้อผิดพลาด');document.getElementById('loginPassword').value='';return;}
+        if(!res||!res.success){
+          showLoginAlert('loginAlert',(res&&res.message)||'❌ เกิดข้อผิดพลาด');
+          document.getElementById('loginPassword').value='';
+          if(res && res.message && res.message.indexOf('ลงทะเบียน') > -1) {
+            setTimeout(() => switchLoginTab('register'), 1600);
+          }
+          return;
+        }
         currentUserEmail=email; currentUserName=res.name||email;
         safeSetItem('inv_user_email',email); safeSetItem('inv_user_name',res.name||email);
+        updateSidebarUser(currentUserName, currentUserEmail);
         hideLoginModal();
         showToast('✅ ยินดีต้อนรับ '+(res.name||email),'success');
         initAfterLogin();
@@ -9233,7 +9304,7 @@ async function doRegister(){
   const pwc=document.getElementById('regPasswordConfirm').value||'';
   if(!fn){showLoginAlert('registerAlert','⚠️ กรุณากรอกชื่อ');return;}
   if(!ln){showLoginAlert('registerAlert','⚠️ กรุณากรอกนามสกุล');return;}
-  if(!email||!/^[^s@]+@[^s@]+.[^s@]+$/.test(email)){showLoginAlert('registerAlert','⚠️ Email ไม่ถูกต้อง');return;}
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showLoginAlert('registerAlert','⚠️ Email ไม่ถูกต้อง');return;}
   if(pw.length<6){showLoginAlert('registerAlert','⚠️ Password ต้องมีอย่างน้อย 6 ตัวอักษร');return;}
   if(pw!==pwc){showLoginAlert('registerAlert','❌ Password ไม่ตรงกัน');return;}
   const btn=document.getElementById('btnDoRegister'); btn.disabled=true; btn.textContent='⏳ กำลังบันทึก...';
@@ -9246,6 +9317,7 @@ async function doRegister(){
         const users=getLocalUsers(); users[email]={name:fullName,hash:hashed}; saveLocalUsers(users);
         currentUserEmail=email; currentUserName=fullName;
         safeSetItem('inv_user_email',email); safeSetItem('inv_user_name',fullName);
+        updateSidebarUser(currentUserName, currentUserEmail);
         hideLoginModal(); showToast('✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ '+fullName,'success');
         initAfterLogin();
       }, 300);
@@ -9257,6 +9329,7 @@ async function doRegister(){
         if(!res||!res.success){showLoginAlert('registerAlert',(res&&res.message)||'❌ เกิดข้อผิดพลาด');return;}
         currentUserEmail=email; currentUserName=fullName;
         safeSetItem('inv_user_email',email); safeSetItem('inv_user_name',fullName);
+        updateSidebarUser(currentUserName, currentUserEmail);
         hideLoginModal(); showToast('✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ '+fullName,'success');
         initAfterLogin();
       })
@@ -9272,10 +9345,18 @@ async function doRegister(){
 }
 
 function logoutUser(){
-  if(!confirm('ออกจากระบบ ('+currentUserName+') ?')) return;
-  safeRemoveItem('inv_user_email'); safeRemoveItem('inv_user_name');
-  currentUserEmail=''; currentUserName='';
+  const who = currentUserName || currentUserEmail || 'ผู้ใช้งาน';
+  if(!confirm('ยืนยันออกจากระบบ (' + who + ') ใช่หรือไม่?')) return;
+  safeRemoveItem('inv_user_email');
+  safeRemoveItem('inv_user_name');
+  currentUserEmail = '';
+  currentUserName = '';
+  updateSidebarUser('ยังไม่เข้าสู่ระบบ', '');
+  const passInp = document.getElementById('loginPassword');
+  if (passInp) passInp.value = '';
+  clearLoginAlert('loginAlert');
   showLoginModal('login');
+  showToast('🔒 ออกจากระบบเรียบร้อยแล้ว', 'info');
 }
 
 function initAfterLogin(){
@@ -9292,9 +9373,11 @@ function initSmartStock(){
   if (savedEmail && savedName) {
     currentUserEmail = savedEmail;
     currentUserName  = savedName;
+    updateSidebarUser(currentUserName, currentUserEmail);
     hideLoginModal();
     initAfterLogin();
   } else {
+    updateSidebarUser('ยังไม่เข้าสู่ระบบ', '');
     showLoginModal('login');
   }
 }
