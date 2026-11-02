@@ -1051,7 +1051,20 @@
                 <button type="button" onclick="clearTeloneerSearch()" id="teloneer-clear-btn" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 text-sm hidden" title="ล้างคำค้นหา">✕</button>
                 <datalist id="teloneer-duid-list"></datalist>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <select 
+                  id="teloneer-type-select" 
+                  onchange="onTeloneerTypeChange()" 
+                  class="px-3 py-2 bg-slate-950 text-xs sm:text-sm text-slate-200 rounded-xl border border-slate-700/80 focus:outline-none focus:border-indigo-500 font-semibold cursor-pointer transition-all"
+                  title="เลือกหัวข้อประเภทรายการที่ต้องการพิมพ์">
+                  <option value="ALL">ทุกประเภท (ALL)</option>
+                  <option value="IN">IN</option>
+                  <option value="OUT">OUT</option>
+                  <option value="DISMANTLE">DISMANTLE</option>
+                  <option value="STR/IN">STR/IN</option>
+                  <option value="STR/OUT">STR/OUT</option>
+                  <option value="RETURN">RETURN</option>
+                </select>
                 <button 
                   onclick="searchTeloneerForm()" 
                   class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow flex items-center justify-center gap-1.5 transition-all cursor-pointer">
@@ -9158,6 +9171,7 @@ let BOM_TRUE = [
     }
   
     // ════ TELONEER FORM DYNAMIC SEARCH & RENDER ════
+    let currentTeloneerRawRows = [];
     let currentTeloneerRows = [];
 
     function updateTeloneerDatalist() {
@@ -9191,6 +9205,8 @@ let BOM_TRUE = [
     function resetTeloneerForm() {
       const inp = document.getElementById('teloneer-search-input');
       if (inp) inp.value = '';
+      const typeSel = document.getElementById('teloneer-type-select');
+      if (typeSel) typeSel.value = 'ALL';
       onTeloneerSearchInput();
       initDefaultTeloneerForm();
     }
@@ -9201,16 +9217,27 @@ let BOM_TRUE = [
       const firstDuid = data[0].duid || '';
       let defaultRows = data.filter(t => t.duid === firstDuid);
       if (!defaultRows.length) defaultRows = data.slice(0, 13);
+      currentTeloneerRawRows = defaultRows;
       const inp = document.getElementById('teloneer-search-input');
       if (inp && firstDuid) inp.value = firstDuid;
       onTeloneerSearchInput();
-      renderTeloneerA4(defaultRows, firstDuid);
+
+      const typeSel = document.getElementById('teloneer-type-select');
+      const selType = typeSel ? typeSel.value : 'ALL';
+      let rowsToDisplay = defaultRows;
+      if (selType !== 'ALL') {
+        const filtered = defaultRows.filter(t => (t.type || '').toUpperCase() === selType.toUpperCase());
+        if (filtered.length) rowsToDisplay = filtered;
+      }
+      renderTeloneerA4(rowsToDisplay, firstDuid, selType);
     }
 
     function searchTeloneerForm() {
       const inp = document.getElementById('teloneer-search-input');
       const q = (inp ? inp.value : '').trim().toLowerCase();
       const statsEl = document.getElementById('teloneer-search-stats');
+      const typeSel = document.getElementById('teloneer-type-select');
+      const selType = typeSel ? typeSel.value : 'ALL';
       const data = (typeof TRANSACTIONS !== 'undefined' && TRANSACTIONS.length) ? TRANSACTIONS : (typeof SAMPLE_RAW_DATA !== 'undefined' ? SAMPLE_RAW_DATA : []);
       
       if (!q) {
@@ -9226,6 +9253,7 @@ let BOM_TRUE = [
       }
 
       if (!res.length) {
+        currentTeloneerRawRows = [];
         if (typeof showToast === 'function') showToast('❌ ไม่พบข้อมูลสำหรับ: ' + q, 'error');
         if (statsEl) {
           statsEl.innerHTML = '<span class="text-rose-400 font-semibold text-xs">❌ ไม่พบข้อมูล</span>';
@@ -9234,8 +9262,86 @@ let BOM_TRUE = [
         return;
       }
 
-      if (typeof showToast === 'function') showToast(`✅ พบข้อมูล ${res.length} รายการ`, 'success');
-      renderTeloneerA4(res, q);
+      currentTeloneerRawRows = res;
+      let rowsToDisplay = res;
+      if (selType !== 'ALL') {
+        rowsToDisplay = res.filter(t => (t.type || '').toUpperCase() === selType.toUpperCase());
+      }
+
+      if (!rowsToDisplay.length) {
+        if (typeof showToast === 'function') showToast(`⚠️ ไซต์นี้มี ${res.length} รายการ แต่ไม่มีประเภท ${selType}`, 'warn');
+        if (statsEl) {
+          statsEl.innerHTML = `<span class="text-amber-400 font-semibold text-xs">⚠️ ไม่มีรายการ ${selType} (มีประเภทอื่น ${res.length} รายการ)</span>`;
+        }
+        const tbody = document.getElementById('teloneer-table-body');
+        if (tbody) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="9" style="text-align:center; padding:32px 16px; color:#f59e0b; font-size:12px; font-weight:600;">
+                ⚠️ ไม่พบรายการประเภท "${selType}" สำหรับไซต์นี้<br>
+                <span style="color:#64748b; font-size:11px; font-weight:normal; margin-top:4px; display:inline-block;">
+                  พบรายการประเภทอื่นทั้งหมด ${res.length} รายการ (ลองเลือกหัวข้อประเภทอื่นในเมนูด้านบน)
+                </span>
+              </td>
+            </tr>
+          `;
+        }
+        const duidEl = document.getElementById('tel-duid-display');
+        const billEl = document.getElementById('tel-bill-display');
+        if (duidEl) duidEl.textContent = res[0].duid || q;
+        if (billEl) billEl.textContent = res[0].bill || '-';
+        return;
+      }
+
+      if (typeof showToast === 'function') {
+        const typeNote = (selType === 'ALL') ? '' : ` [${selType}]`;
+        showToast(`✅ พบข้อมูล ${rowsToDisplay.length} รายการ${typeNote}`, 'success');
+      }
+      renderTeloneerA4(rowsToDisplay, q, selType);
+    }
+
+    function onTeloneerTypeChange() {
+      const typeSel = document.getElementById('teloneer-type-select');
+      const selType = typeSel ? typeSel.value : 'ALL';
+      const inp = document.getElementById('teloneer-search-input');
+      const q = (inp ? inp.value : '').trim();
+
+      if (!currentTeloneerRawRows || !currentTeloneerRawRows.length) {
+        searchTeloneerForm();
+        return;
+      }
+
+      let rowsToDisplay = currentTeloneerRawRows;
+      if (selType !== 'ALL') {
+        rowsToDisplay = currentTeloneerRawRows.filter(t => (t.type || '').toUpperCase() === selType.toUpperCase());
+      }
+
+      if (!rowsToDisplay.length) {
+        const statsEl = document.getElementById('teloneer-search-stats');
+        if (statsEl) {
+          statsEl.innerHTML = `<span class="text-amber-400 font-semibold text-xs">⚠️ ไม่มีรายการ ${selType} (มีประเภทอื่น ${currentTeloneerRawRows.length} รายการ)</span>`;
+        }
+        const tbody = document.getElementById('teloneer-table-body');
+        if (tbody) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="9" style="text-align:center; padding:32px 16px; color:#f59e0b; font-size:12px; font-weight:600;">
+                ⚠️ ไม่พบรายการประเภท "${selType}" สำหรับไซต์นี้<br>
+                <span style="color:#64748b; font-size:11px; font-weight:normal; margin-top:4px; display:inline-block;">
+                  พบรายการประเภทอื่นทั้งหมด ${currentTeloneerRawRows.length} รายการ (ลองเลือกหัวข้อประเภทอื่นในเมนูด้านบน)
+                </span>
+              </td>
+            </tr>
+          `;
+        }
+        return;
+      }
+
+      if (typeof showToast === 'function') {
+        const typeNote = (selType === 'ALL') ? 'ทุกประเภท' : selType;
+        showToast(`แสดงรายการ: ${typeNote} (${rowsToDisplay.length} รายการ)`, 'info');
+      }
+      renderTeloneerA4(rowsToDisplay, q, selType);
     }
 
     function renderTeloneerEmpty(query) {
@@ -9258,11 +9364,13 @@ let BOM_TRUE = [
       if (billEl) billEl.textContent = '-';
     }
 
-    function renderTeloneerA4(rows, query) {
+    function renderTeloneerA4(rows, query, selType) {
       currentTeloneerRows = rows;
       const statsEl = document.getElementById('teloneer-search-stats');
+      const activeType = selType || document.getElementById('teloneer-type-select')?.value || 'ALL';
+      const typeBadge = (activeType === 'ALL') ? '' : ` • <span class="text-indigo-400 font-bold">${activeType}</span>`;
       if (statsEl) {
-        statsEl.innerHTML = `<span class="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold font-mono">พบ ${rows.length} รายการ</span>`;
+        statsEl.innerHTML = `<span class="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold font-mono">พบ ${rows.length} รายการ${typeBadge}</span>`;
       }
 
       const r0 = rows[0] || {};
