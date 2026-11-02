@@ -623,16 +623,41 @@
           <!-- Filter & Control Toolbar -->
           <div class="glass-card rounded-2xl p-4 flex flex-wrap gap-3 items-center justify-between border border-slate-800">
             
-            <!-- Search Input -->
-            <div class="relative flex-1 min-w-[260px]">
-              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-sm">🔍</span>
-              <input 
-                type="text" 
-                id="search-input"
-                oninput="handleSearch()"
-                placeholder="Search DUID, Bill No, Model, Code, S/N..."
-                class="w-full pl-9 pr-4 py-2 bg-slate-900/90 text-sm text-slate-100 placeholder-slate-500 rounded-xl border border-slate-700/80 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              />
+            <!-- Search Input with Search & Reset Buttons Right Next to it -->
+            <div class="flex items-center gap-2 flex-1 min-w-[320px]">
+              <div class="relative flex-1">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-sm">🔍</span>
+                <input 
+                  type="text" 
+                  id="search-input"
+                  oninput="handleSearch()"
+                  onkeydown="if(event.key==='Enter') applyFilters()"
+                  placeholder="Search DUID, Bill No, Model, Code, S/N..."
+                  class="w-full pl-9 pr-8 py-2 bg-slate-900/90 text-sm text-slate-100 placeholder-slate-500 rounded-xl border border-slate-700/80 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                />
+                <!-- Clear 'X' inside input when has text -->
+                <button 
+                  id="search-clear-x" 
+                  onclick="clearSearchInput()" 
+                  class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 text-sm hidden cursor-pointer" 
+                  title="เคลียร์ข้อความ">✕</button>
+              </div>
+
+              <!-- ปุ่ม ค้นหา -->
+              <button 
+                onclick="applyFilters()" 
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap"
+                title="กดเพื่อค้นหา">
+                <span>🔍</span> <span>ค้นหา</span>
+              </button>
+
+              <!-- ปุ่ม Reset / เคลียร์ -->
+              <button 
+                onclick="resetFilters()" 
+                class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap"
+                title="รีเซ็ตและเคลียร์ตัวกรองทั้งหมด">
+                <span>🔄</span> <span>รีเซ็ต</span>
+              </button>
             </div>
 
             <!-- Dropdown Filters -->
@@ -667,13 +692,8 @@
                 <option value="RETURN">RETURN</option>
               </select>
 
-              <!-- Reset Button -->
-              <button onclick="resetFilters()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium border border-slate-700 transition-all-fast">
-                Reset
-              </button>
-
               <!-- Export CSV Button -->
-              <button onclick="exportCSV()" class="px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-xl text-xs font-semibold border border-indigo-500/30 flex items-center gap-1.5 transition-all-fast">
+              <button onclick="exportCSV()" class="px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-xl text-xs font-semibold border border-indigo-500/30 flex items-center gap-1.5 transition-all-fast cursor-pointer">
                 <span>📥</span> Export CSV
               </button>
             </div>
@@ -2229,8 +2249,28 @@
     // Debounced search — prevents sluggish UI with 10k+ records
     var _searchDebounceTimer = null;
     function handleSearch() {
+      const inp = document.getElementById('search-input');
+      const xBtn = document.getElementById('search-clear-x');
+      if (xBtn) {
+        if (inp && inp.value.trim().length > 0) {
+          xBtn.classList.remove('hidden');
+        } else {
+          xBtn.classList.add('hidden');
+        }
+      }
       clearTimeout(_searchDebounceTimer);
       _searchDebounceTimer = setTimeout(applyFilters, 280);
+    }
+
+    function clearSearchInput() {
+      const inp = document.getElementById('search-input');
+      if (inp) {
+        inp.value = '';
+        inp.focus();
+      }
+      const xBtn = document.getElementById('search-clear-x');
+      if (xBtn) xBtn.classList.add('hidden');
+      applyFilters();
     }
 
     // Update sidebar badge to real-time TRANSACTIONS count
@@ -2240,11 +2280,20 @@
     }
 
     function resetFilters() {
-      document.getElementById('search-input').value = '';
-      document.getElementById('filter-customer').value = 'ALL';
-      document.getElementById('filter-region').value = 'ALL';
-      document.getElementById('filter-type').value = 'ALL';
+      const inp = document.getElementById('search-input');
+      if (inp) inp.value = '';
+      const xBtn = document.getElementById('search-clear-x');
+      if (xBtn) xBtn.classList.add('hidden');
+      const cust = document.getElementById('filter-customer');
+      if (cust) cust.value = 'ALL';
+      const reg = document.getElementById('filter-region');
+      if (reg) reg.value = 'ALL';
+      const ty = document.getElementById('filter-type');
+      if (ty) ty.value = 'ALL';
       setCustomerFilter('ALL');
+      if (typeof showToast === 'function') {
+        showToast('🔄 รีเซ็ตตัวกรองและเคลียร์ข้อความค้นหาแล้ว', 'info');
+      }
     }
 
     function renderTable() {
