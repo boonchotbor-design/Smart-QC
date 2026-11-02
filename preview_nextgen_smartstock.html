@@ -1945,40 +1945,7 @@
     const USERS = ['boonchot.b', 'somchai.p', 'teerasak.k', 'wittaya.n', 'admin@teloneer.com'];
     const ITYPES = ['RRU', 'BBU', 'BOAD', 'SFP', 'Power', 'Cable', 'Antenna', 'Accessory'];
 
-    for (let i = 1; i <= 3782; i++) {
-      if (i <= SAMPLE_RAW_DATA.length) {
-        TRANSACTIONS.push({ ...SAMPLE_RAW_DATA[i - 1], no: i });
-      } else {
-        const proto = SAMPLE_RAW_DATA[(i - 1) % SAMPLE_RAW_DATA.length];
-        const rReg = REGIONS[i % REGIONS.length];
-        const rCust = CUSTS[i % CUSTS.length];
-        const rType = TYPES[i % TYPES.length];
-        const rStat = STATUSES[i % STATUSES.length];
-        const rItype = ITYPES[i % ITYPES.length];
-        TRANSACTIONS.push({
-          no: i,
-          duid: `${rCust}_SITE_${rReg}_${1000 + (i % 250)}_CELL_TOWER`,
-          region: rReg,
-          type: rType,
-          itype: proto.itype || rItype,
-          date: `2${(i % 8) + 1}/08/2026`,
-          bill: `2026-EXP-${rReg}-${rCust}-${100 + (i % 900)}`,
-          model: proto.model,
-          code: proto.code,
-          desc: proto.desc,
-          qty: (i % 4) + 1,
-          sn: i % 3 === 0 ? `SN${rCust}${2026000 + i}` : 'N/A',
-          ownerWarehouse: WH_LIST[i % WH_LIST.length],
-          ownerReceiver: RC_LIST[i % RC_LIST.length],
-          locationWarehouse: LOC_WH[i % LOC_WH.length],
-          locationReceiver: `Site ${rReg}-${1000 + (i % 250)}`,
-          status: rStat,
-          intNo: `INT-2026-${1000 + (i % 9000)}`,
-          user: USERS[i % USERS.length],
-          customer: rCust
-        });
-      }
-    }
+    // TRANSACTIONS populated from GAS sync or SAMPLE_RAW_DATA fallback
 
     let filteredTransactions = [...TRANSACTIONS];
     let currentPage = 1;
@@ -1989,7 +1956,6 @@
 
     window.onload = function() {
       switchTab('transactions');
-      applyFilters();
       bomFilterAndRender();
       updateTxDatalists();
       initDraggableModal();
@@ -1999,6 +1965,9 @@
       setAppLanguage(currentLang);
 
       setTimeout(renderRegionChart, 300);
+
+      // ── GAS Auth + Data init
+      initSmartStock();
     };
 
     function switchTab(tabId) {
@@ -7701,15 +7670,82 @@ let BOM_TRUE = [
       }, 700);
     }
 
+    // ── GAS Environment Detection
+    function checkIsGAS() {
+      try { return typeof google !== 'undefined' && typeof google.script !== 'undefined' && typeof google.script.run !== 'undefined' && !!google.script.run; } catch(e) { return false; }
+    }
+    var _isGAS = false;
+
+    // ── Real GAS Sync (replaces mock syncLiveGAS)
     function syncLiveGAS() {
-      showToast('🔄 กำลังเชื่อมต่อข้อมูลสดกับ Google Apps Script...', 'info');
-      setTimeout(() => {
-        showToast('✅ ดึงข้อมูล Realtime สำเร็จ (10,321 รายการ)', 'success');
-        const now = new Date();
-        const timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+      if (!_isGAS) {
+        // Fallback demo: load from SAMPLE_RAW_DATA
+        TRANSACTIONS = SAMPLE_RAW_DATA.map(function(r, i) { return Object.assign({}, r, { no: i + 1 }); });
+        filteredTransactions = [...TRANSACTIONS];
+        applyFilters();
         const liveText = document.getElementById('gas-live-text');
-        if (liveText) liveText.textContent = '🔗 GAS Live: 10321 รายการ | อัปเดต: ' + timeStr;
-      }, 800);
+        if (liveText) liveText.textContent = '📦 Demo Mode: ' + TRANSACTIONS.length + ' รายการ | ' + new Date().toLocaleTimeString('th-TH');
+        return;
+      }
+      showToast('🔄 กำลังดึงข้อมูลจาก Google Apps Script...', 'info');
+      google.script.run
+        .withSuccessHandler(function(data) {
+          if (!data || !data.success) {
+            showToast('❌ โหลดข้อมูลจาก GAS ไม่สำเร็จ: ' + (data && data.message || 'No data'), 'error');
+            return;
+          }
+          TRANSACTIONS = (data.recent || []).map(function(r, i) {
+            return {
+              no: i + 1,
+              duid: r.duid || '',
+              region: r.region || '',
+              type: r.type || r.transType || '',
+              itype: r.itype || r.itemType || '',
+              date: r.date || '',
+              bill: r.bill || '',
+              model: r.model || '',
+              code: r.code || '',
+              desc: r.desc || '',
+              qty: r.qty || 1,
+              sn: r.sn || 'N/A',
+              ownerWarehouse: r.ownerW || r.ownerWarehouse || '',
+              ownerReceiver: r.ownerR || r.ownerReceiver || '',
+              locationWarehouse: r.locW || r.locationWarehouse || '',
+              locationReceiver: r.locR || r.locationReceiver || '',
+              status: r.status || 'Open',
+              intNo: r.intNo || '',
+              user: r.userNm || r.userEm || r.user || '',
+              customer: r.customer || 'AIS'
+            };
+          });
+          filteredTransactions = [...TRANSACTIONS];
+          applyFilters();
+          const now = new Date();
+          const liveText = document.getElementById('gas-live-text');
+          if (liveText) liveText.textContent = '🔗 GAS Live: ' + TRANSACTIONS.length + ' รายการ | อัปเดต: ' + now.toLocaleTimeString('th-TH');
+          showToast('✅ ดึงข้อมูลสำเร็จ ' + TRANSACTIONS.length + ' รายการ', 'success');
+        })
+        .withFailureHandler(function(err) {
+          showToast('❌ เชื่อมต่อ GAS ไม่สำเร็จ: ' + (err && err.message || err), 'error');
+          // Fallback to demo
+          TRANSACTIONS = SAMPLE_RAW_DATA.map(function(r, i) { return Object.assign({}, r, { no: i + 1 }); });
+          filteredTransactions = [...TRANSACTIONS];
+          applyFilters();
+        })
+        .getDashboardData();
+    }
+
+    // ── Auto-sync BOM from GAS
+    function syncBOMFromGAS() {
+      if (!_isGAS) return;
+      google.script.run
+        .withSuccessHandler(function(data) { if (data && data.length) { BOM_AIS = data; if (curBomCustomer === 'AIS') bomFilterAndRender(); } })
+        .withFailureHandler(function(e) { console.warn('BOM AIS sync error:', e && e.message); })
+        .getBOMData('AIS');
+      google.script.run
+        .withSuccessHandler(function(data) { if (data && data.length) { BOM_TRUE = data; if (curBomCustomer === 'TRUE') bomFilterAndRender(); } })
+        .withFailureHandler(function(e) { console.warn('BOM TRUE sync error:', e && e.message); })
+        .getBOMData('TRUE');
     }
 
     // ── THEME ENGINE (Light & Dark) - Screenshot 3 ──
@@ -8733,6 +8769,27 @@ let BOM_TRUE = [
       applyFilters();
       switchTab('transactions');
       showToast(`✅ บันทึกสำเร็จ! ${currentTxType} — ${newRecord.duid}`, 'success');
+
+      // ── Save to GAS if available
+      if (_isGAS) {
+        const _h = {
+          duid: newRecord.duid, bill: newRecord.bill, type: newRecord.type, region: newRecord.region,
+          customer: newRecord.customer, ownerWarehouse: newRecord.ownerWarehouse, ownerReceiver: newRecord.ownerReceiver,
+          locationWarehouse: newRecord.locationWarehouse, locationReceiver: newRecord.locationReceiver,
+          date: newRecord.date, status: newRecord.status || 'Pending', intNo: newRecord.intNo || ''
+        };
+        const _items = [{
+          type: newRecord.itype || '', model: newRecord.model || '', code: newRecord.code || '',
+          desc: newRecord.desc || '', sn: newRecord.sn || '', qty: newRecord.qty || 1
+        }];
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.success) { showToast('✅ บันทึกลง Google Sheet สำเร็จ', 'success'); setTimeout(syncLiveGAS, 1500); }
+            else showToast('⚠️ GAS: ' + (res && res.message || 'ไม่สำเร็จ'), 'error');
+          })
+          .withFailureHandler(function(e) { showToast('❌ GAS Error: ' + (e && e.message || e), 'error'); })
+          .saveMainData(_h, _items, safeGetItem('inv_user_email') || '', safeGetItem('inv_user_name') || '');
+      }
     }
 
     function deleteRow(no) {
@@ -9042,6 +9099,192 @@ let BOM_TRUE = [
 
     </div>
   </div>
+
+
+<!-- ════ LOGIN MODAL (GAS Auth V.7.5.9) ════ -->
+<div id="loginModal" style="display:none;position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.88);backdrop-filter:blur(12px);align-items:center;justify-content:center;">
+  <div style="background:#0f172a;border:1px solid #1e293b;border-radius:24px;width:100%;max-width:420px;padding:32px 28px;box-shadow:0 32px 80px rgba(0,0,0,0.8);margin:16px;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:40px;margin-bottom:8px;">📦</div>
+      <div style="font-weight:800;font-size:20px;color:#f8fafc;font-family:'Plus Jakarta Sans',sans-serif;">SmartStock NextGen</div>
+      <div style="font-size:13px;color:#64748b;margin-top:4px;">Inventory Smart System V.7.5.9</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:20px;">
+      <button id="tabLoginBtn" onclick="switchLoginTab('login')" style="flex:1;padding:10px;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:13px;background:#6366f1;color:white;font-family:'Plus Jakarta Sans',sans-serif;">🔑 เข้าสู่ระบบ</button>
+      <button id="tabRegBtn" onclick="switchLoginTab('register')" style="flex:1;padding:10px;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:13px;background:#1e293b;color:#94a3b8;font-family:'Plus Jakarta Sans',sans-serif;">📝 ลงทะเบียน</button>
+    </div>
+    <div id="loginTabContent">
+      <div id="loginAlert" style="display:none;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;background:#7f1d1d;color:#fca5a5;border:1px solid #dc2626;"></div>
+      <input id="loginEmail" type="email" placeholder="Email" autocomplete="email" style="width:100%;padding:12px 16px;background:#1e293b;border:1.5px solid #334155;border-radius:12px;color:#f1f5f9;font-size:14px;box-sizing:border-box;margin-bottom:12px;outline:none;font-family:'Sarabun',sans-serif;">
+      <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="width:100%;padding:12px 16px;background:#1e293b;border:1.5px solid #334155;border-radius:12px;color:#f1f5f9;font-size:14px;box-sizing:border-box;margin-bottom:16px;outline:none;font-family:'Sarabun',sans-serif;">
+      <button id="btnDoLogin" onclick="doLogin()" style="width:100%;padding:13px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">🔑 เข้าสู่ระบบ</button>
+    </div>
+    <div id="registerTabContent" style="display:none;">
+      <div id="registerAlert" style="display:none;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;background:#7f1d1d;color:#fca5a5;border:1px solid #dc2626;"></div>
+      <input id="regFirstName" type="text" placeholder="ชื่อ" style="width:100%;padding:12px 16px;background:#1e293b;border:1.5px solid #334155;border-radius:12px;color:#f1f5f9;font-size:14px;box-sizing:border-box;margin-bottom:10px;outline:none;font-family:'Sarabun',sans-serif;">
+      <input id="regLastName" type="text" placeholder="นามสกุล" style="width:100%;padding:12px 16px;background:#1e293b;border:1.5px solid #334155;border-radius:12px;color:#f1f5f9;font-size:14px;box-sizing:border-box;margin-bottom:10px;outline:none;font-family:'Sarabun',sans-serif;">
+      <input id="regEmail" type="email" placeholder="Email" style="width:100%;padding:12px 16px;background:#1e293b;border:1.5px solid #334155;border-radius:12px;color:#f1f5f9;font-size:14px;box-sizing:border-box;margin-bottom:10px;outline:none;font-family:'Sarabun',sans-serif;">
+      <input id="regPassword" type="password" placeholder="Password (min 6 ตัว)" style="width:100%;padding:12px 16px;background:#1e293b;border:1.5px solid #334155;border-radius:12px;color:#f1f5f9;font-size:14px;box-sizing:border-box;margin-bottom:10px;outline:none;font-family:'Sarabun',sans-serif;">
+      <input id="regPasswordConfirm" type="password" placeholder="ยืนยัน Password" style="width:100%;padding:12px 16px;background:#1e293b;border:1.5px solid #334155;border-radius:12px;color:#f1f5f9;font-size:14px;box-sizing:border-box;margin-bottom:16px;outline:none;font-family:'Sarabun',sans-serif;">
+      <button id="btnDoRegister" onclick="doRegister()" style="width:100%;padding:13px;background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">📝 ลงทะเบียน & เข้าสู่ระบบ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════ AUTH SYSTEM V.7.5.9 ════
+var currentUserEmail = '';
+var currentUserName = '';
+var _usersCache = null;
+
+function safeGetItem(k){ try{return localStorage.getItem(k);}catch(e){return null;} }
+function safeSetItem(k,v){ try{localStorage.setItem(k,v);}catch(e){} }
+function safeRemoveItem(k){ try{localStorage.removeItem(k);}catch(e){} }
+
+function getLocalUsers(){ if(_usersCache) return _usersCache; try{return JSON.parse(safeGetItem('inv_users')||'{}');}catch(e){return{};} }
+function saveLocalUsers(u){ _usersCache=u; safeSetItem('inv_users',JSON.stringify(u)); if(_isGAS){try{google.script.run.saveUsersDB(JSON.stringify(u));}catch(e){}} }
+
+function showLoginModal(tab){ document.getElementById('loginModal').style.display='flex'; switchLoginTab(tab||'login'); }
+function hideLoginModal(){ document.getElementById('loginModal').style.display='none'; }
+
+function switchLoginTab(tab){
+  document.getElementById('loginTabContent').style.display = tab==='login' ? 'block' : 'none';
+  document.getElementById('registerTabContent').style.display = tab==='register' ? 'block' : 'none';
+  document.getElementById('tabLoginBtn').style.background = tab==='login' ? '#6366f1' : '#1e293b';
+  document.getElementById('tabLoginBtn').style.color = tab==='login' ? 'white' : '#94a3b8';
+  document.getElementById('tabRegBtn').style.background = tab==='register' ? '#6366f1' : '#1e293b';
+  document.getElementById('tabRegBtn').style.color = tab==='register' ? 'white' : '#94a3b8';
+}
+
+function showLoginAlert(id, msg){ var el=document.getElementById(id); if(el){el.textContent=msg;el.style.display='block';} }
+function clearLoginAlert(id){ var el=document.getElementById(id); if(el)el.style.display='none'; }
+
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function doLogin(){
+  clearLoginAlert('loginAlert');
+  const email=(document.getElementById('loginEmail').value||'').trim().toLowerCase();
+  const pw=(document.getElementById('loginPassword').value||'');
+  if(!email){showLoginAlert('loginAlert','⚠️ กรุณากรอก Email');return;}
+  if(!pw){showLoginAlert('loginAlert','⚠️ กรุณากรอก Password');return;}
+  const btn=document.getElementById('btnDoLogin'); btn.disabled=true; btn.textContent='⏳ กำลังตรวจสอบ...';
+  try {
+    const hashed = await sha256(pw);
+    if(!_isGAS){
+      setTimeout(function(){
+        btn.disabled=false; btn.textContent='🔑 เข้าสู่ระบบ';
+        const users=getLocalUsers();
+        if(users&&users[email]&&users[email].hash&&users[email].hash!==hashed){showLoginAlert('loginAlert','❌ รหัสผ่านไม่ถูกต้อง');document.getElementById('loginPassword').value='';return;}
+        let name=(users&&users[email]&&users[email].name)?users[email].name:email.split('@')[0];
+        if(!users[email]){users[email]={name:name,hash:hashed};saveLocalUsers(users);}
+        currentUserEmail=email; currentUserName=name;
+        safeSetItem('inv_user_email',email); safeSetItem('inv_user_name',name);
+        hideLoginModal();
+        showToast('✅ เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ '+name,'success');
+        initAfterLogin();
+      }, 300);
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(res){
+        btn.disabled=false; btn.textContent='🔑 เข้าสู่ระบบ';
+        if(!res||!res.success){showLoginAlert('loginAlert',(res&&res.message)||'❌ เกิดข้อผิดพลาด');document.getElementById('loginPassword').value='';return;}
+        currentUserEmail=email; currentUserName=res.name||email;
+        safeSetItem('inv_user_email',email); safeSetItem('inv_user_name',res.name||email);
+        hideLoginModal();
+        showToast('✅ ยินดีต้อนรับ '+(res.name||email),'success');
+        initAfterLogin();
+      })
+      .withFailureHandler(function(err){
+        btn.disabled=false; btn.textContent='🔑 เข้าสู่ระบบ';
+        showLoginAlert('loginAlert','❌ Server Error: '+(err&&err.message||err));
+      })
+      .loginUserOnServer(email,hashed);
+  } catch(err) {
+    btn.disabled=false; btn.textContent='🔑 เข้าสู่ระบบ';
+    showLoginAlert('loginAlert','❌ '+err.message);
+  }
+}
+
+async function doRegister(){
+  clearLoginAlert('registerAlert');
+  const fn=(document.getElementById('regFirstName').value||'').trim();
+  const ln=(document.getElementById('regLastName').value||'').trim();
+  const email=(document.getElementById('regEmail').value||'').trim().toLowerCase();
+  const pw=document.getElementById('regPassword').value||'';
+  const pwc=document.getElementById('regPasswordConfirm').value||'';
+  if(!fn){showLoginAlert('registerAlert','⚠️ กรุณากรอกชื่อ');return;}
+  if(!ln){showLoginAlert('registerAlert','⚠️ กรุณากรอกนามสกุล');return;}
+  if(!email||!/^[^s@]+@[^s@]+.[^s@]+$/.test(email)){showLoginAlert('registerAlert','⚠️ Email ไม่ถูกต้อง');return;}
+  if(pw.length<6){showLoginAlert('registerAlert','⚠️ Password ต้องมีอย่างน้อย 6 ตัวอักษร');return;}
+  if(pw!==pwc){showLoginAlert('registerAlert','❌ Password ไม่ตรงกัน');return;}
+  const btn=document.getElementById('btnDoRegister'); btn.disabled=true; btn.textContent='⏳ กำลังบันทึก...';
+  try {
+    const hashed=await sha256(pw);
+    const fullName=fn+' '+ln;
+    if(!_isGAS){
+      setTimeout(function(){
+        btn.disabled=false; btn.textContent='📝 ลงทะเบียน & เข้าสู่ระบบ';
+        const users=getLocalUsers(); users[email]={name:fullName,hash:hashed}; saveLocalUsers(users);
+        currentUserEmail=email; currentUserName=fullName;
+        safeSetItem('inv_user_email',email); safeSetItem('inv_user_name',fullName);
+        hideLoginModal(); showToast('✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ '+fullName,'success');
+        initAfterLogin();
+      }, 300);
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(res){
+        btn.disabled=false; btn.textContent='📝 ลงทะเบียน & เข้าสู่ระบบ';
+        if(!res||!res.success){showLoginAlert('registerAlert',(res&&res.message)||'❌ เกิดข้อผิดพลาด');return;}
+        currentUserEmail=email; currentUserName=fullName;
+        safeSetItem('inv_user_email',email); safeSetItem('inv_user_name',fullName);
+        hideLoginModal(); showToast('✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับ '+fullName,'success');
+        initAfterLogin();
+      })
+      .withFailureHandler(function(err){
+        btn.disabled=false; btn.textContent='📝 ลงทะเบียน & เข้าสู่ระบบ';
+        showLoginAlert('registerAlert','❌ Server Error: '+(err&&err.message||err));
+      })
+      .registerUserOnServer(email,fullName,hashed);
+  } catch(err){
+    btn.disabled=false; btn.textContent='📝 ลงทะเบียน & เข้าสู่ระบบ';
+    showLoginAlert('registerAlert','❌ '+err.message);
+  }
+}
+
+function logoutUser(){
+  if(!confirm('ออกจากระบบ ('+currentUserName+') ?')) return;
+  safeRemoveItem('inv_user_email'); safeRemoveItem('inv_user_name');
+  currentUserEmail=''; currentUserName='';
+  showLoginModal('login');
+}
+
+function initAfterLogin(){
+  _isGAS = checkIsGAS();
+  syncLiveGAS();
+  syncBOMFromGAS();
+  setInterval(syncLiveGAS, 5 * 60 * 1000);
+}
+
+function initSmartStock(){
+  _isGAS = checkIsGAS();
+  const savedEmail = safeGetItem('inv_user_email');
+  const savedName  = safeGetItem('inv_user_name');
+  if (savedEmail && savedName) {
+    currentUserEmail = savedEmail;
+    currentUserName  = savedName;
+    hideLoginModal();
+    initAfterLogin();
+  } else {
+    showLoginModal('login');
+  }
+}
+</script>
 
 </body>
 </html>
