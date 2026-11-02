@@ -2370,42 +2370,85 @@
       showToast('🔄 สลับฐานข้อมูล BOM เป็น ' + cus + ' (' + getActiveBOM().length + ' รายการ)', 'info');
     }
 
-    function updateTxDatalists() {
+    // ── Helper: Auto-infer ITEM TYPE (IType) from ประเภท (TYPE) ──
+    function inferITypeFromType(typeStr) {
+      if (!typeStr) return 'Equipment';
+      const t = String(typeStr).trim().toUpperCase();
+      if (/^(RRU|BBU|AAU|DCDU|DPU|ANTENNA|BATTERY|RECTIFIER|SUBRACK|CABINET|OPM|POWER|UPS|RADIO|MICROWAVE|MW)/.test(t)) {
+        return 'Equipment';
+      }
+      if (/^(CABLE|JUMPER|FIBER|RET CABLE|POWER CABLE|DC CABLE|LAN|OPTICAL|FEEDER)/.test(t)) {
+        return 'Cable';
+      }
+      if (/^(SFP|BOARD|UBBP|CARD|FAN|MODULE|FUSE|BREAKER|CONNECTOR|FILTER)/.test(t)) {
+        return 'Spare Part';
+      }
+      if (/^(BRACKET|CLAMP|TAPE|TIE|ACCESSORY|BOLT|NUT|HARDWARE|GROUND)/.test(t)) {
+        return 'Material';
+      }
+      if (/^(TOOL|TESTER|METER|CRIMP|KEY)/.test(t)) {
+        return 'Tool';
+      }
+      if (/^(CONSUMABLE|SEALANT|PAINT|CLEANER)/.test(t)) {
+        return 'Consumable';
+      }
+      const validOptions = ['Equipment', 'Spare Part', 'Material', 'Tool', 'Consumable', 'Cable', 'Other'];
+      const directMatch = validOptions.find(o => o.toUpperCase() === t);
+      if (directMatch) return directMatch;
+      return 'Equipment';
+    }
+
+    function updateTxDatalists(filterType = '') {
       const bom = getActiveBOM();
       if (!bom || !bom.length) return;
 
-      // Column A: Unique Types
+      // 1. Column A: Unique Types (sorted)
       const uniqueTypes = [...new Set(bom.map(x => (x.type || '').trim()).filter(Boolean))].sort();
       const typeDl = document.getElementById('catalog-type-list');
       if (typeDl) {
         typeDl.innerHTML = uniqueTypes.map(t => '<option value="' + escapeHtml(t) + '"></option>').join('');
       }
 
-      // Column B: Models with Description
+      // 2. Column B: Unique Models (Deduped & Capped at 120 items to prevent lag/freeze)
+      let candidateBom = bom;
+      if (filterType) {
+        const ft = filterType.trim().toLowerCase();
+        candidateBom = bom.filter(x => (x.type || '').toLowerCase().includes(ft));
+        if (!candidateBom.length) candidateBom = bom;
+      }
+
+      const uniqueModelsMap = new Map();
+      for (const m of candidateBom) {
+        const modelName = (m.model || '').trim();
+        if (modelName && !uniqueModelsMap.has(modelName.toLowerCase())) {
+          uniqueModelsMap.set(modelName.toLowerCase(), m);
+          if (uniqueModelsMap.size >= 120) break; // Keep lightweight & responsive!
+        }
+      }
+
       const modelDl = document.getElementById('catalog-model-list');
       if (modelDl) {
-        modelDl.innerHTML = bom.map(m => 
+        modelDl.innerHTML = Array.from(uniqueModelsMap.values()).map(m => 
           '<option value="' + escapeHtml(m.model || '') + '">' + escapeHtml((m.type ? '[' + m.type + '] ' : '') + (m.desc || m.code || '')) + '</option>'
         ).join('');
       }
     }
 
+    // เมื่อเลือก ประเภท (TYPE) -> Auto-set IType และ กรอง Model ให้ตรงหมวดหมู่ทันที
     function onTypeInputChange(input, rowIdx) {
-      const val = (input.value || '').trim().toLowerCase();
-      if (!val) {
-        updateTxDatalists();
-        return;
+      const val = (input.value || '').trim();
+      
+      // Auto-set ITEM TYPE (IType)
+      const itypeEl = document.getElementById('item-itype-' + rowIdx);
+      if (itypeEl) {
+        itypeEl.value = inferITypeFromType(val);
       }
-      const bom = getActiveBOM();
-      const filtered = bom.filter(x => (x.type || '').toLowerCase().includes(val));
-      const modelDl = document.getElementById('catalog-model-list');
-      if (modelDl && filtered.length) {
-        modelDl.innerHTML = filtered.map(m => 
-          '<option value="' + escapeHtml(m.model || '') + '">' + escapeHtml(m.desc || m.code || '') + '</option>'
-        ).join('');
-      }
+
+      // Update model datalist based on selected type (Fast & Instant)
+      updateTxDatalists(val);
     }
 
+    // เมื่อพิมพ์หรือเลือก MODEL -> Auto-fill Code, Description, Type, IType
     function onModelInputChange(input, rowIdx) {
       const val = (input.value || '').trim().toLowerCase();
       if (!val) return;
@@ -2416,12 +2459,17 @@
       );
       if (found) {
         const typeEl = document.getElementById('item-type-' + rowIdx);
+        const itypeEl = document.getElementById('item-itype-' + rowIdx);
         const codeEl = document.getElementById('item-code-' + rowIdx);
         const descEl = document.getElementById('item-desc-' + rowIdx);
-        if (typeEl && found.type) typeEl.value = found.type; // Col A
-        if (codeEl && found.code) codeEl.value = found.code; // Col C
-        if (descEl && found.desc) descEl.value = found.desc; // Col D
-        showToast('✅ เลือก ' + found.model + ' (' + found.code + ') อัตโนมัติ', 'info');
+        
+        if (typeEl && found.type) {
+          typeEl.value = found.type;
+          if (itypeEl) itypeEl.value = inferITypeFromType(found.type);
+        }
+        if (codeEl && found.code) codeEl.value = found.code;
+        if (descEl && found.desc) descEl.value = found.desc;
+        showToast('✅ เลือก ' + found.model + ' (' + (found.code || '') + ') อัตโนมัติ', 'info');
       }
     }
 
@@ -2432,11 +2480,15 @@
       const found = bom.find(it => it.code && it.code.toLowerCase() === val);
       if (found) {
         const typeEl = document.getElementById('item-type-' + rowIdx);
+        const itypeEl = document.getElementById('item-itype-' + rowIdx);
         const modelEl = document.getElementById('item-model-' + rowIdx);
         const descEl = document.getElementById('item-desc-' + rowIdx);
-        if (typeEl && found.type) typeEl.value = found.type;   // Col A
-        if (modelEl && found.model) modelEl.value = found.model; // Col B
-        if (descEl && found.desc) descEl.value = found.desc;   // Col D
+        if (typeEl && found.type) {
+          typeEl.value = found.type;
+          if (itypeEl) itypeEl.value = inferITypeFromType(found.type);
+        }
+        if (modelEl && found.model) modelEl.value = found.model;
+        if (descEl && found.desc) descEl.value = found.desc;
         showToast('✅ พบรหัสสินค้า: ' + found.model, 'info');
       }
     }
@@ -7856,20 +7908,7 @@ let BOM_TRUE = [
       showToast(`เลือก ${item.model} (${item.code}) เรียบร้อยแล้ว`, 'success');
     }
 
-    function onModelInputChange(input, rowIdx) {
-      const val = input.value.trim().toLowerCase();
-      if (!val) return;
-      const found = MASTER_BOM_CATALOG.find(it => it.model.toLowerCase() === val || it.code.toLowerCase() === val);
-      if (found) {
-        const typeEl = document.getElementById('item-type-' + rowIdx);
-        const codeEl = document.getElementById('item-code-' + rowIdx);
-        const descEl = document.getElementById('item-desc-' + rowIdx);
-        if (typeEl) typeEl.value = found.type || '';
-        if (codeEl) codeEl.value = found.code || '';
-        if (descEl) descEl.value = found.desc || '';
-        showToast(`เลือก ${found.model} อัตโนมัติ`, 'info');
-      }
-    }
+// [Removed duplicate onModelInputChange]
 
     function addModalItem() {
       modalItemCount++;
@@ -7887,10 +7926,11 @@ let BOM_TRUE = [
             <button type="button" onclick="removeModalItem(${idx})" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 transition-all">ลบรายการ</button>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <!-- Row A: TYPE + IType + MODEL (3-col) -->
+        <div class="grid grid-cols-3 gap-3">
           <div>
             <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ประเภท (TYPE)</label>
-            <input type="text" id="item-type-${idx}" list="catalog-type-list" placeholder="พิมพ์หรือเลือก" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" style="background:#0f172a;">
+            <input type="text" id="item-type-${idx}" list="catalog-type-list" placeholder="พิมพ์หรือเลือก" oninput="onTypeInputChange(this, ${idx})" onchange="onTypeInputChange(this, ${idx})" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" style="background:#0f172a;">
           </div>
           <div>
             <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM TYPE (IType)</label>
@@ -7904,31 +7944,31 @@ let BOM_TRUE = [
               <option value="Other">Other</option>
             </select>
           </div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">MODEL</label>
             <input type="text" id="item-model-${idx}" list="catalog-model-list" placeholder="พิมพ์หรือเลือก" oninput="onModelInputChange(this, ${idx})" onchange="onModelInputChange(this, ${idx})" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500 transition-all" style="background:#0f172a;">
           </div>
+        </div>
+        <!-- Row B: ITEM CODE + ITEM DESCRIPTION (2-col) -->
+        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM CODE</label>
             <input type="text" id="item-code-${idx}" placeholder="รหัสสินค้า" oninput="onCodeInputChange(this, ${idx})" onchange="onCodeInputChange(this, ${idx})" class="w-full rounded-lg px-3 py-2 text-xs text-purple-400 font-mono border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all font-bold" style="background:#0f172a;">
           </div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">ITEM DESCRIPTION</label>
             <input type="text" id="item-desc-${idx}" placeholder="รายละเอียดสินค้า" class="w-full rounded-lg px-3 py-2 text-xs text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a;">
           </div>
-          <div>
-            <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">SN</label>
+        </div>
+        <!-- Row C: SN + Qty (3-col) -->
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-2">
+            <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">SN (Serial Number)</label>
             <input type="text" id="item-sn-${idx}" placeholder="Serial Number" class="w-full rounded-lg px-3 py-2 text-xs font-mono border border-slate-700/80 focus:outline-none focus:border-indigo-500 transition-all" style="background:#0f172a; color:#e2e8f0;">
           </div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">จำนวน</label>
-            <input type="number" id="item-qty-${idx}" value="1" min="1" class="w-full rounded-lg px-3 py-2 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 text-center font-bold transition-all" style="background:#0f172a;">
+            <label class="block text-[11px] text-slate-500 mb-1 uppercase tracking-wide">จำนวน (QTY)</label>
+            <input type="number" id="item-qty-${idx}" value="1" min="1" max="999" class="w-full rounded-lg px-3 py-2 text-sm text-slate-200 border border-slate-700/80 focus:outline-none focus:border-indigo-500 text-center font-bold transition-all" style="background:#0f172a;">
           </div>
         </div>`;
       container.appendChild(div);
