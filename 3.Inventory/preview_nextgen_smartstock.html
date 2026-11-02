@@ -173,8 +173,8 @@
        ══════════════════════════════════════════════════════════════════ */
     @media print {
       @page {
-        size: A4 portrait;
-        margin: 0mm 5mm 2mm 5mm !important;
+        size: auto;
+        margin: 0mm 5mm 2mm 5mm;
       }
 
       /* บังคับพื้นหลังขาว ตัวหนังสือดำ ไม่ให้มี dark mode ติดมา */
@@ -1064,6 +1064,16 @@
                   <option value="STR/IN">STR/IN</option>
                   <option value="STR/OUT">STR/OUT</option>
                   <option value="RETURN">RETURN</option>
+                </select>
+                <!-- Dropdown เลือก Layout (Portrait / Landscape) -->
+                <select 
+                  id="teloneer-layout-select" 
+                  onchange="onTeloneerLayoutChange()" 
+                  class="px-3 py-2 bg-slate-950 text-xs sm:text-sm text-slate-200 rounded-xl border border-slate-700/80 focus:outline-none focus:border-indigo-500 font-semibold cursor-pointer transition-all"
+                  title="เลือกทิศทางหน้ากระดาษ (Layout)">
+                  <option value="portrait" selected>📄 แนวตั้ง (Portrait)</option>
+                  <option value="landscape">📜 แนวนอน (Landscape)</option>
+                  <option value="auto">⚙️ อัตโนมัติ (Auto / Browser)</option>
                 </select>
                 <button 
                   onclick="searchTeloneerForm()" 
@@ -2203,6 +2213,9 @@
         updateTeloneerDatalist();
         if (!currentTeloneerRows || !currentTeloneerRows.length) {
           initDefaultTeloneerForm();
+        }
+        if (typeof onTeloneerLayoutChange === 'function') {
+          onTeloneerLayoutChange();
         }
       }
     }
@@ -9411,7 +9424,102 @@ let BOM_TRUE = [
     }
 
     // ════ PRINT TELONEER REQUISITION SLIP ════
+    function onTeloneerLayoutChange() {
+      const layoutSel = document.getElementById('teloneer-layout-select');
+      const layout = layoutSel ? layoutSel.value : 'portrait';
+      let styleEl = document.getElementById('teloneer-dynamic-page-style');
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = 'teloneer-dynamic-page-style';
+        document.head.appendChild(styleEl);
+      }
+
+      const sheet = document.getElementById('teloneer-print-sheet');
+
+      if (layout === 'landscape') {
+        styleEl.innerHTML = `
+          @media print {
+            @page {
+              size: A4 landscape !important;
+              margin: 3mm 6mm 3mm 6mm !important;
+            }
+            #teloneer-print-sheet {
+              width: 100% !important;
+              max-width: 100% !important;
+              padding: 2mm 5mm !important;
+            }
+            #teloneer-print-sheet table {
+              font-size: 10.5px !important;
+            }
+            #teloneer-print-sheet th {
+              padding: 4px 6px !important;
+              font-size: 10.5px !important;
+            }
+            #teloneer-print-sheet td {
+              padding: 3.5px 6px !important;
+              font-size: 10px !important;
+              line-height: 1.35 !important;
+            }
+          }
+        `;
+        if (sheet) {
+          sheet.classList.remove('max-w-4xl');
+          sheet.classList.add('max-w-6xl');
+        }
+        if (typeof showToast === 'function') showToast('สลับทิศทางหน้ากระดาษ: 📜 แนวนอน (Landscape)', 'info');
+      } else if (layout === 'portrait') {
+        styleEl.innerHTML = `
+          @media print {
+            @page {
+              size: A4 portrait !important;
+              margin: 0mm 5mm 2mm 5mm !important;
+            }
+            #teloneer-print-sheet {
+              width: 100% !important;
+              max-width: 100% !important;
+              padding: 0 2mm 0 2mm !important;
+            }
+            #teloneer-print-sheet table {
+              font-size: 9.5px !important;
+            }
+            #teloneer-print-sheet th {
+              padding: 2.5px 4px !important;
+              font-size: 9.5px !important;
+            }
+            #teloneer-print-sheet td {
+              padding: 2px 4px !important;
+              font-size: 9px !important;
+              line-height: 1.2 !important;
+            }
+          }
+        `;
+        if (sheet) {
+          sheet.classList.remove('max-w-6xl');
+          sheet.classList.add('max-w-4xl');
+        }
+        if (typeof showToast === 'function') showToast('สลับทิศทางหน้ากระดาษ: 📄 แนวตั้ง (Portrait)', 'info');
+      } else {
+        // Auto: allow browser to choose layout in browser print dialog
+        styleEl.innerHTML = `
+          @media print {
+            @page {
+              size: auto !important;
+              margin: 0mm 5mm 2mm 5mm !important;
+            }
+          }
+        `;
+        if (sheet) {
+          sheet.classList.remove('max-w-6xl');
+          sheet.classList.add('max-w-4xl');
+        }
+        if (typeof showToast === 'function') showToast('เลือกทิศทางในหน้าต่างพิมพ์ของเบราว์เซอร์ (Auto)', 'info');
+      }
+    }
+
     function printTeloneerSlip() {
+      if (typeof onTeloneerLayoutChange === 'function') {
+        onTeloneerLayoutChange();
+      }
       // Ensure the teloneer view is visible before printing
       const telView = document.getElementById('view-teloneer');
       if (telView && telView.classList.contains('hidden')) {
@@ -9419,7 +9527,7 @@ let BOM_TRUE = [
       }
       setTimeout(() => {
         window.print();
-      }, 100);
+      }, 120);
     }
 
   </script>
