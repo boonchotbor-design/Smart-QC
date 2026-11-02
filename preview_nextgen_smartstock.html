@@ -166,6 +166,105 @@
       background-color: #f1f5f9 !important;
     }
 
+
+    /* ══════════════════════════════════════════════════════════════════
+       PRINT STYLES: พิมพ์เฉพาะเอกสารใบเบิก A4 (Requisition Slip) เท่านั้น
+       ซ่อน UI ทั้งหมดของเว็บแอป (Sidebar, Header, Glass Panels, Buttons)
+       ══════════════════════════════════════════════════════════════════ */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 6mm 8mm;
+      }
+
+      /* บังคับพื้นหลังขาว ตัวหนังสือดำ ไม่ให้มี dark mode ติดมา */
+      html, body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        font-family: 'Plus Jakarta Sans', 'Sarabun', system-ui, sans-serif !important;
+      }
+
+      /* ซ่อนองค์ประกอบอื่นๆ ทั้งหมดของ Web App */
+      body * {
+        visibility: hidden !important;
+      }
+
+      /* แสดงเฉพาะตัวเอกสาร A4 Requisition Form และเนื้อหาภายใน */
+      #teloneer-print-sheet,
+      #teloneer-print-sheet * {
+        visibility: visible !important;
+      }
+
+      #teloneer-print-sheet {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 4mm 6mm !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        box-sizing: border-box !important;
+      }
+
+      /* บังคับให้หัวตารางพิมพ์แถบสีดำและตัวหนังสือสีตามที่กำหนด */
+      #teloneer-print-sheet table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        page-break-inside: auto !important;
+      }
+
+      #teloneer-print-sheet thead {
+        display: table-header-group !important;
+      }
+
+      #teloneer-print-sheet thead tr {
+        background-color: #18181b !important;
+        color: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      #teloneer-print-sheet thead th {
+        background-color: #18181b !important;
+        color: #ffffff !important;
+        border: 1px solid #000000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      #teloneer-print-sheet tr {
+        page-break-inside: avoid !important;
+        page-break-after: auto !important;
+      }
+
+      #teloneer-print-sheet td {
+        border: 1px solid #333333 !important;
+        color: #000000 !important;
+      }
+
+      #teloneer-print-sheet .text-blue-code {
+        color: #0055cc !important;
+        font-weight: bold !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      /* ซ่อนปุ่ม ลิงก์ และ navbar ทั้งหมดเวลาพิมพ์ */
+      aside, header, #toast-container, .no-print, button, .btn {
+        display: none !important;
+      }
+    }
+
   </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
@@ -823,13 +922,13 @@
                 <h3 class="font-semibold text-slate-100 text-sm">🖨️ Teloneer Official Requisition Form (A4 Review)</h3>
                 <p class="text-xs text-slate-400">แบบฟอร์มใบเบิก/ส่งมอบอุปกรณ์โทรคมนาคมมาตรฐาน A4</p>
               </div>
-              <button onclick="window.print()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-2">
+              <button onclick="printTeloneerSlip()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-2">
                 <span>🖨️</span> พิมพ์เอกสาร (Print A4)
               </button>
             </div>
 
-            <!-- A4 Document Box -->
-            <div class="bg-white text-slate-900 p-8 rounded-xl max-w-4xl mx-auto shadow-2xl text-xs space-y-4 font-sans">
+            <!-- A4 Document Box (Print Only Sheet) -->
+            <div id="teloneer-print-sheet" class="bg-white text-slate-900 p-8 rounded-xl max-w-4xl mx-auto shadow-2xl text-xs space-y-4 font-sans">
               <div class="border-b-2 border-slate-900 pb-3 flex justify-between items-center">
                 <div>
                   <h2 class="text-lg font-black text-slate-900 tracking-tight">TELONEER CO., LTD.</h2>
@@ -8352,6 +8451,19 @@ let BOM_TRUE = [
         setTimeout(() => toast.remove(), 300);
       }, 3500);
     }
+  
+    // ════ PRINT TELONEER REQUISITION SLIP ════
+    function printTeloneerSlip() {
+      // Ensure the teloneer view is visible before printing
+      const telView = document.getElementById('view-teloneer');
+      if (telView && telView.classList.contains('hidden')) {
+        switchTab('teloneer');
+      }
+      setTimeout(() => {
+        window.print();
+      }, 100);
+    }
+
   </script>
 
   <!-- Add New BOM Item Modal -->
