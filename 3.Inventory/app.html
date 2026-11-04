@@ -11,6 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     /* ── CSS Variables for Light/Dark Mode ── */
     :root {
@@ -338,9 +339,11 @@
           <b>📋 Format CSV ที่รองรับ:</b><br>
           Header: <code style="font-size:11px; word-break:break-all;">DUID, REGION, IN/OUT, TYPE, DATE, BILL NO., MODEL, ITEM CODE, DESCRIPTION, QTY, SERIAL</code>
         </div>
-        <button onclick="downloadImportTemplate()" style="width:100%; padding:10px; margin-bottom:8px; background:linear-gradient(135deg,#6366f1,#4f46e5); color:white; border:none; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Plus Jakarta Sans','Sarabun',sans-serif; font-size:14px;">⬇️ Download Template CSV</button>
-        <input type="file" id="importFileInput" accept=".csv,.txt" style="display:none" onchange="previewImport(this)">
-        <button onclick="document.getElementById('importFileInput').click()" style="width:100%; padding:10px; margin-bottom:8px; background:#f8f9fa; border:2px dashed #adb5bd; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:14px; color:#555;">📂 เลือกไฟล์ CSV</button>
+        <label for="templateFormat" style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;">รูปแบบ Template</label>
+        <select id="templateFormat" style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #d7dce5;border-radius:8px;"><option value="csv">CSV (.csv)</option><option value="xlsx">Excel (.xlsx)</option><option value="xlsb">Excel Binary (.xlsb)</option></select>
+        <button onclick="downloadImportTemplate()" style="width:100%; padding:10px; margin-bottom:8px; background:linear-gradient(135deg,#6366f1,#4f46e5); color:white; border:none; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Plus Jakarta Sans','Sarabun',sans-serif; font-size:14px;">⬇️ Download Template</button>
+        <input type="file" id="importFileInput" accept=".csv,.txt,.xlsx,.xlsb" style="display:none" onchange="previewImport(this)">
+        <button onclick="document.getElementById('importFileInput').click()" style="width:100%; padding:10px; margin-bottom:8px; background:#f8f9fa; border:2px dashed #adb5bd; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:14px; color:#555;">📂 เลือก CSV / XLSX / XLSB</button>
         <div id="importPreviewBox" style="display:none;">
           <div style="font-size:13px; font-weight:700; margin-bottom:6px; color:#6366f1;">📊 Preview: <span id="importRowCount">0</span> รายการ</div>
           <div id="importPreviewTable" style="overflow-x:auto; max-height:200px; border-radius:8px; border:1px solid #dee2e6; margin-bottom:10px;"></div>
@@ -351,10 +354,12 @@
       <!-- Export Tab -->
       <div id="ieTabExport" style="display:none;">
         <div style="background:#f0fff4; border-radius:10px; padding:14px; margin-bottom:14px; font-size:13px; line-height:1.6;">
-          ส่งออกข้อมูลทั้งหมดจาก Sheet <b id="exportSheetLabel">INOUT_HW_AIS</b> เป็น CSV<br>
+          ส่งออกข้อมูลทั้งหมดจาก Sheet <b id="exportSheetLabel">INOUT_HW_AIS</b><br>
           <span style="color:#666; font-size:12px;">รวมคอลัมน์ทั้งหมด (NO, DUID, REGION, IN/OUT, TYPE, DATE, BILL NO., MODEL, ITEM CODE ...)</span>
         </div>
-        <button onclick="doExport()" style="width:100%; padding:13px; background:linear-gradient(135deg,#198754,#0f5132); color:white; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif;">📤 Export เป็น CSV</button>
+        <label for="exportFormat" style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;">รูปแบบไฟล์</label>
+        <select id="exportFormat" style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #d7dce5;border-radius:8px;"><option value="csv">CSV (.csv)</option><option value="xlsx">Excel (.xlsx)</option><option value="xlsb">Excel Binary (.xlsb)</option></select>
+        <button onclick="doExport()" style="width:100%; padding:13px; background:linear-gradient(135deg,#198754,#0f5132); color:white; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif;">📤 Export</button>
       </div>
     </div>
   </div>
@@ -1771,6 +1776,19 @@
     // ─────────────────────────────────────────────
     var ieCurrentCustomer = 'AIS';
     var importRows = [];
+    var _appImportRequestId = '';
+    var _appImportFileIdentity = '';
+    var _appImportInFlight = false;
+
+    function makeImportRequestId(identity) {
+      var a = 2166136261, b = 5381;
+      for (var i = 0; i < identity.length; i++) {
+        var c = identity.charCodeAt(i);
+        a = Math.imul(a ^ c, 16777619);
+        b = Math.imul(b, 33) ^ c;
+      }
+      return 'import-' + (a >>> 0).toString(16) + (b >>> 0).toString(16);
+    }
 
     function openImportExport(customer) {
       ieCurrentCustomer = customer || 'ALL';
@@ -1815,49 +1833,87 @@
       var d = new Date();
       var todayStr = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
       var example = ['DUID-001','ER','OUT','HW', todayStr,'BILL-001','RRU3962','023115PK','MPE Site Materials','1','N/A'];
-      var csv = [headers.join(','), example.join(',')].join('\n');
-      var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-      var url  = URL.createObjectURL(blob);
-      var a    = document.createElement('a');
-      a.href = url; a.download = 'Template_Import_' + ieCurrentCustomer + '.csv'; a.click();
-      URL.revokeObjectURL(url);
+      var format = document.getElementById('templateFormat').value || 'csv';
+      downloadSpreadsheetFile([headers, example], 'Template_Import_' + ieCurrentCustomer, format);
     }
 
-    // ― Parse CSV line (handles quoted fields)
-    function parseCsvLine(line) {
-      var result = [], current = '', inQuotes = false;
-      for (var i = 0; i < line.length; i++) {
-        var c = line[i];
-        if (c === '"') {
-          if (inQuotes && line[i+1] === '"') { current += '"'; i++; }
-          else inQuotes = !inQuotes;
-        } else if (c === ',' && !inQuotes) { result.push(current); current = ''; }
-        else current += c;
+    function downloadSpreadsheetFile(rows, baseName, format) {
+      if (format === 'csv') {
+        var csv = '\uFEFF' + rows.map(function(row) { return row.map(function(v) {
+          var s = String(v == null ? '' : v).replace(/"/g, '""');
+          return /[",\r\n]/.test(s) ? '"' + s + '"' : s;
+        }).join(','); }).join('\r\n');
+        var csvUrl = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+        var csvLink = document.createElement('a'); csvLink.href = csvUrl; csvLink.download = baseName + '.csv'; csvLink.click();
+        setTimeout(function() { URL.revokeObjectURL(csvUrl); }, 1000);
+        return true;
       }
-      result.push(current);
-      return result;
+      if (!window.XLSX) { Swal.fire({icon:'error',title:'โหลด Excel Engine ไม่สำเร็จ',text:'เชื่อมต่ออินเทอร์เน็ตแล้วลองอีกครั้ง หรือเลือก CSV'}); return false; }
+      try {
+        var workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), 'Inventory');
+        XLSX.writeFile(workbook, baseName + '.' + format, { bookType: format, compression: true });
+        return true;
+      } catch (err) { Swal.fire({icon:'error',title:'สร้างไฟล์ไม่สำเร็จ',text:err.message || String(err)}); return false; }
+    }
+
+    function parseCsvText(text) {
+      text = String(text || '').replace(/^\uFEFF/, '');
+      var rows = [], row = [], cell = '', quoted = false;
+      for (var i = 0; i < text.length; i++) {
+        var ch = text[i];
+        if (ch === '"') {
+          if (quoted && text[i + 1] === '"') { cell += '"'; i++; }
+          else quoted = !quoted;
+        } else if (ch === ',' && !quoted) { row.push(cell.trim()); cell = ''; }
+        else if ((ch === '\n' || ch === '\r') && !quoted) {
+          if (ch === '\r' && text[i + 1] === '\n') i++;
+          row.push(cell.trim()); cell = '';
+          if (row.some(function(v) { return v !== ''; })) rows.push(row);
+          row = [];
+        } else cell += ch;
+      }
+      row.push(cell.trim());
+      if (row.some(function(v) { return v !== ''; })) rows.push(row);
+      return rows;
     }
 
     // ― Preview Import file
     function previewImport(input) {
       if (!input.files || input.files.length === 0) return;
+      var importFile = input.files[0];
+      var importExt = (importFile.name.split('.').pop() || '').toLowerCase();
+      var fileIdentity = [importFile.name, importFile.size, importFile.lastModified, ieCurrentCustomer, currentUserEmail].join('|');
+      if (fileIdentity !== _appImportFileIdentity) {
+        _appImportFileIdentity = fileIdentity;
+        _appImportRequestId = makeImportRequestId(fileIdentity);
+      }
       var reader = new FileReader();
       reader.onload = function(e) {
-        var text = e.target.result;
-        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // remove BOM
-        var lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
-        if (lines.length < 2) {
+        var matrix;
+        try {
+          if (importExt === 'xlsx' || importExt === 'xlsb') {
+            if (!window.XLSX) throw new Error('โหลด Excel Engine ไม่สำเร็จ กรุณาเชื่อมต่ออินเทอร์เน็ต');
+            var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', raw: false });
+            var firstSheet = wb.Sheets[wb.SheetNames[0]];
+            matrix = firstSheet ? XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', raw: false }) : [];
+          } else matrix = parseCsvText(e.target.result);
+        } catch (readErr) {
+          Swal.fire({icon:'error',title:'อ่านไฟล์ไม่สำเร็จ',text:readErr.message || String(readErr)});
+          return;
+        }
+        if (matrix.length < 2) {
           Swal.fire({icon:'warning', title:'ไฟล์ว่างเปล่า', text:'กรุณาตรวจสอบ format ของไฟล์'});
           return;
         }
-        _appImportFileName = input.files[0] ? input.files[0].name : 'CSV Upload';
-        var headerRow = parseCsvLine(lines[0]).map(function(h) { return h.trim().toUpperCase(); });
+        _appImportFileName = importFile.name;
+        var headerRow = matrix[0].map(function(h) { return String(h || '').trim().toUpperCase(); });
         importRows = [];
         var lastDuid = '', lastRegion = '', lastType = 'IN', lastBill = '';
         var lastOwnerW = '', lastOwnerR = '', lastLocW = '', lastLocR = '';
 
-        for (var i = 1; i < lines.length; i++) {
-          var cols = parseCsvLine(lines[i]);
+        for (var i = 1; i < matrix.length; i++) {
+          var cols = matrix[i].map(function(v) { return String(v == null ? '' : v).trim(); });
           if (cols.length < 2) continue;
           function getCol(aliases) {
             for (var a = 0; a < aliases.length; a++) {
@@ -1943,14 +1999,18 @@
         document.getElementById('importPreviewTable').innerHTML = html;
         document.getElementById('importPreviewBox').style.display = 'block';
       };
-      reader.readAsText(input.files[0], 'UTF-8');
+      reader.onerror = function() { Swal.fire({icon:'error',title:'อ่านไฟล์ไม่สำเร็จ',text:'ระบบเปิดไฟล์นี้ไม่ได้'}); };
+      if (importExt === 'xlsx' || importExt === 'xlsb') reader.readAsArrayBuffer(importFile);
+      else reader.readAsText(importFile, 'UTF-8');
     }
 
     var _appImportFileName = 'CSV Upload';
 
     // ― Confirm Import
     function confirmImport() {
+      if (_appImportInFlight) return;
       if (importRows.length === 0) { Swal.fire({icon:'warning', title:'ไม่มีข้อมูล'}); return; }
+      if (!currentUserEmail) { showLoginModal('login'); return; }
       Swal.fire({
         icon: 'question',
         title: 'ยืนยัน Import?',
@@ -1960,6 +2020,9 @@
         cancelButtonText:  '\u274c ยกเลิก'
       }).then(function(result) {
         if (!result.isConfirmed) return;
+        _appImportInFlight = true;
+        var importButton = document.getElementById('btnConfirmImport');
+        if (importButton) importButton.disabled = true;
         closeImportExport();
         updateProgress(null, 'กำลัง Import ข้อมูล...');
         google.script.run
@@ -1967,15 +2030,20 @@
             document.getElementById('loader').style.display = 'none';
             if (res.success) {
               Swal.fire({icon:'success', title:'Import สำเร็จ!', text: res.message});
+              document.getElementById('importFileInput').value = '';
             } else {
               Swal.fire({icon:'error', title:'Import ผิดพลาด', text: res.message});
             }
+            _appImportInFlight = false;
+            if (importButton) importButton.disabled = false;
           })
           .withFailureHandler(function(err) {
             document.getElementById('loader').style.display = 'none';
             Swal.fire({icon:'error', title:'Error', text: err.message});
+            _appImportInFlight = false;
+            if (importButton) importButton.disabled = false;
           })
-          .saveImportData(importRows, ieCurrentCustomer, currentUserEmail, currentUserName, _appImportFileName);
+          .saveImportData(importRows, ieCurrentCustomer, currentUserEmail, currentUserName, _appImportFileName, _appImportRequestId);
       });
     }
 
@@ -1988,25 +2056,15 @@
           document.getElementById('loader').style.display = 'none';
           if (!res.success) { Swal.fire({icon:'error', title:'Export ผิดพลาด', text: res.message}); return; }
           // Build CSV with BOM
-          var csvRows = [res.headers.join(',')];
+          var rows = [res.headers];
           res.rows.forEach(function(row) {
-            csvRows.push(row.map(function(v) {
-              var s = String(v).replace(/"/g, '""');
-              return (s.indexOf(',') > -1 || s.indexOf('"') > -1 || s.indexOf('\n') > -1) ? '"' + s + '"' : s;
-            }).join(','));
+            rows.push(row);
           });
-          var csv  = '\uFEFF' + csvRows.join('\n');
-          var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-          var url  = URL.createObjectURL(blob);
-          var a    = document.createElement('a');
-          a.href   = url;
           var d    = new Date();
           var dateSlug = String(d.getDate()).padStart(2,'0') + String(d.getMonth()+1).padStart(2,'0') + d.getFullYear();
           var fileSlug = (ieCurrentCustomer === 'ALL' || !ieCurrentCustomer) ? 'ALL_INCL_NT' : ieCurrentCustomer;
-          a.download = 'Export_INOUT_' + fileSlug + '_' + dateSlug + '.csv';
-          a.click();
-          URL.revokeObjectURL(url);
-          Toast.fire({icon:'success', title:'Export สำเร็จ! (' + res.rows.length + ' รายการ)'});
+          if (downloadSpreadsheetFile(rows, 'Export_INOUT_' + fileSlug + '_' + dateSlug, document.getElementById('exportFormat').value || 'csv'))
+            Toast.fire({icon:'success', title:'Export สำเร็จ! (' + res.rows.length + ' รายการ)'});
         })
         .withFailureHandler(function(err) {
           document.getElementById('loader').style.display = 'none';

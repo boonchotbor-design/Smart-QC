@@ -6,6 +6,7 @@
   <title>SmartStock Pro — Telecom Asset & Inventory Cloud</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -693,8 +694,11 @@
               </select>
 
               <!-- Export CSV Button -->
+              <select id="tx-export-format" class="bg-slate-900/90 text-xs text-slate-200 border border-slate-700/80 rounded-xl px-2 py-2" aria-label="Export format">
+                <option value="csv">CSV</option><option value="xlsx">XLSX</option><option value="xlsb">XLSB</option>
+              </select>
               <button onclick="exportCSV()" class="px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-xl text-xs font-semibold border border-indigo-500/30 flex items-center gap-1.5 transition-all-fast cursor-pointer">
-                <span>📥</span> Export CSV
+                <span>📥</span> Export
               </button>
             </div>
           </div>
@@ -1369,6 +1373,8 @@
 
             <!-- Download Templates -->
             <div class="flex gap-2 flex-wrap">
+              <label class="text-xs text-slate-400 self-center" for="template-format">Template format</label>
+              <select id="template-format" class="bg-slate-900 text-xs text-slate-200 border border-slate-700 rounded-xl px-2 py-2"><option value="csv">CSV</option><option value="xlsx">XLSX</option><option value="xlsb">XLSB</option></select>
               <button onclick="downloadTemplate('AIS')"
                 class="px-3 py-2 rounded-xl text-xs font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer">
                 📋 Download Template (AIS)
@@ -1389,25 +1395,25 @@
               <div onclick="document.getElementById('csv-ais').click()"
                 class="glass-card rounded-xl border border-emerald-500/20 p-4 text-center cursor-pointer hover:border-emerald-500/50 transition-all group">
                 <div class="text-2xl mb-2">🟩</div>
-                <div class="text-xs font-bold text-slate-200 group-hover:text-emerald-400 transition-colors">Import CSV — AIS</div>
+                <div class="text-xs font-bold text-slate-200 group-hover:text-emerald-400 transition-colors">Import CSV/XLSX/XLSB — AIS</div>
                 <div class="text-[10px] text-slate-500 mt-1">Sheet:INOUT_HW_AIS</div>
-                <input type="file" id="csv-ais" accept=".csv" class="hidden" onchange="handleImportCSV(this,'AIS')">
+                <input type="file" id="csv-ais" accept=".csv,.xlsx,.xlsb" class="hidden" onchange="handleImportCSV(this,'AIS')">
               </div>
               <!-- Import TRUE -->
               <div onclick="document.getElementById('csv-true').click()"
                 class="glass-card rounded-xl border border-blue-500/20 p-4 text-center cursor-pointer hover:border-blue-500/50 transition-all group">
                 <div class="text-2xl mb-2">🟦</div>
-                <div class="text-xs font-bold text-slate-200 group-hover:text-blue-400 transition-colors">Import CSV — TRUE</div>
+                <div class="text-xs font-bold text-slate-200 group-hover:text-blue-400 transition-colors">Import CSV/XLSX/XLSB — TRUE</div>
                 <div class="text-[10px] text-slate-500 mt-1">Sheet:INOUT_HW_TRUE</div>
-                <input type="file" id="csv-true" accept=".csv" class="hidden" onchange="handleImportCSV(this,'TRUE')">
+                <input type="file" id="csv-true" accept=".csv,.xlsx,.xlsb" class="hidden" onchange="handleImportCSV(this,'TRUE')">
               </div>
               <!-- Import NT -->
               <div onclick="document.getElementById('csv-nt').click()"
                 class="glass-card rounded-xl border border-purple-500/20 p-4 text-center cursor-pointer hover:border-purple-500/50 transition-all group">
                 <div class="text-2xl mb-2">🟣</div>
-                <div class="text-xs font-bold text-slate-200 group-hover:text-purple-400 transition-colors">Import CSV — NT</div>
+                <div class="text-xs font-bold text-slate-200 group-hover:text-purple-400 transition-colors">Import CSV/XLSX/XLSB — NT</div>
                 <div class="text-[10px] text-slate-500 mt-1">Sheet:INOUT_HW_NT</div>
-                <input type="file" id="csv-nt" accept=".csv" class="hidden" onchange="handleImportCSV(this,'NT')">
+                <input type="file" id="csv-nt" accept=".csv,.xlsx,.xlsb" class="hidden" onchange="handleImportCSV(this,'NT')">
               </div>
               <!-- Mock Data -->
               <div onclick="clearImportedData()"
@@ -1921,6 +1927,14 @@
           + เพิ่มรายการสินค้า
         </button>
 
+      </div>
+
+      <div id="save-progress-panel" class="hidden mx-4 mb-2 rounded-xl border border-slate-700/70 px-3 py-2.5" style="background:rgba(15,23,42,.96);" role="status" aria-live="polite">
+        <div class="mb-2 flex items-center justify-between gap-3 text-[11px]">
+          <div class="min-w-0"><span id="save-progress-type" class="mr-2 rounded-full border border-indigo-400/30 bg-indigo-500/10 px-2 py-0.5 font-bold text-indigo-300">IN</span><span id="save-progress-message" class="text-slate-300">กำลังเตรียมบันทึก</span></div>
+          <strong id="save-progress-percent" class="shrink-0 font-mono text-emerald-300">1%</strong>
+        </div>
+        <div class="h-2 overflow-hidden rounded-full bg-slate-800"><div id="save-progress-bar" class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-300 transition-all duration-300" style="width:1%"></div></div>
       </div>
 
       <!-- ── Modal Footer ── -->
@@ -9074,67 +9088,86 @@ let BOM_TRUE = [
     // ══════════════════════════════════════════════════════════════════
     // CSV TEMPLATE DOWNLOAD & CSV IMPORT ENGINE
     // ══════════════════════════════════════════════════════════════════
+    let importInFlight = false;
+    let activeImportRequestId = '';
+    let activeImportIdentity = '';
+    function stableImportRequestId(identity) {
+      let a = 2166136261, b = 5381;
+      for (let i = 0; i < identity.length; i++) {
+        const c = identity.charCodeAt(i);
+        a = Math.imul(a ^ c, 16777619);
+        b = Math.imul(b, 33) ^ c;
+      }
+      return 'import-' + (a >>> 0).toString(16) + (b >>> 0).toString(16);
+    }
+
+    function downloadTableFile(rows, baseName, format) {
+      if (format === 'csv') {
+        const quote = value => {
+          const text = String(value == null ? '' : value).replace(/"/g, '""');
+          return /[",\r\n]/.test(text) ? '"' + text + '"' : text;
+        };
+        const content = '\uFEFF' + rows.map(row => row.map(quote).join(',')).join('\r\n');
+        const url = URL.createObjectURL(new Blob([content], { type: 'text/csv;charset=utf-8;' }));
+        const link = document.createElement('a'); link.href = url; link.download = baseName + '.csv'; link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        return true;
+      }
+      if (!window.XLSX) { showToast('Excel Engine โหลดไม่ได้ กรุณาเชื่อมต่ออินเทอร์เน็ต หรือเลือก CSV', 'error'); return false; }
+      try {
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), 'Inventory');
+        XLSX.writeFile(workbook, baseName + '.' + format, { bookType: format, compression: true });
+        return true;
+      } catch (err) { showToast('สร้างไฟล์ไม่สำเร็จ: ' + (err.message || err), 'error'); return false; }
+    }
+
+    async function readInventoryFile(file) {
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      if (ext === 'xlsx' || ext === 'xlsb') {
+        if (!window.XLSX) throw new Error('Excel Engine โหลดไม่ได้ กรุณาเชื่อมต่ออินเทอร์เน็ต');
+        const workbook = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', raw: false });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        return sheet ? XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false }) : [];
+      }
+      return parseCSV(await file.text());
+    }
+
     function downloadTemplate(cus = 'AIS') {
       cus = String(cus || 'AIS').toUpperCase();
-      const bom = "\uFEFF";
-      const hdr = "No,DUID,Region,TYPE,IType,Date,Bill No.,Model,Item Code,Item Description,Qty,SN,Owner Warehouse,Owner Receiver,Location Warehouse,Location Receiver,Status,INT No,User";
-      
-      let sampleRow = "";
-      if (cus === "TRUE") {
-        sampleRow = '1,TRUE_BKK_SITE_88942_MOD,BKK,IN,RRU,08/08/2026,TRUE_ROLLOUT_WH_2026_09,RRU3962,02311EPK,"RRU3962 1800-2100MHz 2T4R",1,2102311EPK10HA000111,WH TLN BKK,Site TRUE_88942,WH TLN BKK,Site TRUE_88942,Pending,INT-TRUE-001,Admin';
-      } else if (cus === "NT") {
-        sampleRow = '1,NT_CENTRAL_SITE_001_EXP,CR,IN,ANTENNA,08/08/2026,NT_EXP_BILL_2026_01,HXPM8X22WW1718065T2C,HXPM8X22WW1718065T2C,"Base Station Antenna 6P",1,110059255000071,WH TLN CR,Site NT_001,WH TLN CR,Site NT_001,Pending,INT-NT-001,Admin';
+      const headers = ['No','DUID','Region','TYPE','IType','Date','Bill No.','Model','Item Code','Item Description','Qty','SN','Owner Warehouse','Owner Receiver','Location Warehouse','Location Receiver','Status','INT No','User'];
+      let sampleRow;
+      if (cus === 'TRUE') {
+        sampleRow = [1,'TRUE_BKK_SITE_88942_MOD','BKK','IN','RRU','08/08/2026','TRUE_ROLLOUT_WH_2026_09','RRU3962','02311EPK','RRU3962 1800-2100MHz 2T4R',1,'2102311EPK10HA000111','WH TLN BKK','Site TRUE_88942','WH TLN BKK','Site TRUE_88942','Pending','INT-TRUE-001',''];
+      } else if (cus === 'NT') {
+        sampleRow = [1,'NT_CENTRAL_SITE_001_EXP','CR','IN','ANTENNA','08/08/2026','NT_EXP_BILL_2026_01','HXPM8X22WW1718065T2C','HXPM8X22WW1718065T2C','Base Station Antenna 6P',1,'110059255000071','WH TLN CR','Site NT_001','WH TLN CR','Site NT_001','Pending','INT-NT-001',''];
       } else {
-        sampleRow = '1,TECBA_2026 Capacity Expansion NW Modernization_EXP_BKK,BKK,IN,RRU,08/08/2026,2026 Capacity Expansion NW Modernization_EXP_BKK,RRU3962,02311EPK,"RRU3962, 1800MHz~2100MHz 2T4R",1,2102311EPK10HA000111,WH TLN BKK,Site TECBA,WH TLN BKK,Site TECBA,Pending,INT-AIS-001,Admin';
+        sampleRow = [1,'TECBA_2026 Capacity Expansion NW Modernization_EXP_BKK','BKK','IN','RRU','08/08/2026','2026 Capacity Expansion NW Modernization_EXP_BKK','RRU3962','02311EPK','RRU3962, 1800MHz~2100MHz 2T4R',1,'2102311EPK10HA000111','WH TLN BKK','Site TECBA','WH TLN BKK','Site TECBA','Pending','INT-AIS-001',''];
       }
-
-      const csvContent = bom + hdr + "\n" + sampleRow + "\n";
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `Template_Import_${cus}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        if (a.parentNode) a.parentNode.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 1000);
-      showToast(`📥 ดาวน์โหลด Template (${cus}) เรียบร้อยแล้ว`, 'success');
+      if (downloadTableFile([headers, sampleRow], 'Template_Import_' + cus, document.getElementById('template-format').value || 'csv'))
+        showToast('📥 ดาวน์โหลด Template (' + cus + ') เรียบร้อยแล้ว', 'success');
     }
 
     function parseCSV(text) {
-      const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-      const lines = clean.split('\n');
+      const clean = String(text || '').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
       const rows = [];
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        const cols = [];
-        let cur = '';
-        let inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-          const c = line[i];
-          if (c === '"') {
-            if (inQuotes && line[i + 1] === '"') {
-              cur += '"';
-              i++;
-            } else {
-              inQuotes = !inQuotes;
-            }
-          } else if (c === ',' && !inQuotes) {
-            cols.push(cur.trim());
-            cur = '';
-          } else {
-            cur += c;
-          }
-        }
-        cols.push(cur.trim());
-        rows.push(cols.map(c => c.replace(/^"|"$/g, '').trim()));
+      let row = [], cell = '', quoted = false;
+      for (let i = 0; i < clean.length; i++) {
+        const c = clean[i];
+        if (c === '"') {
+          if (quoted && clean[i + 1] === '"') { cell += '"'; i++; }
+          else quoted = !quoted;
+        } else if (c === ',' && !quoted) { row.push(cell.trim()); cell = ''; }
+        else if (c === '\n' && !quoted) {
+          row.push(cell.trim()); cell = '';
+          if (row.some(value => value !== '')) rows.push(row);
+          row = [];
+        } else cell += c;
       }
+      row.push(cell.trim());
+      if (row.some(value => value !== '')) rows.push(row);
       return rows;
     }
-
     function mapCSVHeaders(headerRow) {
       const norm = headerRow.map(h => String(h || '').trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
       function findCol(keywords, defaultIndex) {
@@ -9144,12 +9177,14 @@ let BOM_TRUE = [
         }
         return defaultIndex;
       }
+      const movementType = findCol(['inout', 'transtype', 'transactiontype', 'movementtype'], -1);
+      const plainType = norm.indexOf('type');
       return {
         no: findCol(['no', 'runningno', 'ลำดับ'], 0),
         duid: findCol(['duid'], 1),
         region: findCol(['region', 'reg', 'ภาค'], 2),
-        type: findCol(['type', 'inout', 'transtype', 'ประเภท'], 3),
-        itype: findCol(['itype', 'itemtype', 'หมวดหมู่', 'category'], 4),
+        type: movementType >= 0 ? movementType : (plainType >= 0 ? plainType : 3),
+        itype: findCol(['itype', 'itemtype', 'หมวดหมู่', 'category'], movementType >= 0 && plainType >= 0 ? plainType : 4),
         date: findCol(['date', 'datetime', 'วันที่'], 5),
         bill: findCol(['billno', 'bill', 'pickinglist', 'won', 'เลขที่บิล'], 6),
         model: findCol(['model', 'รุ่น'], 7),
@@ -9168,164 +9203,101 @@ let BOM_TRUE = [
     }
 
     async function handleImportCSV(input, customer) {
-      if (!input.files || !input.files[0]) return;
+      if (importInFlight || !input.files || !input.files[0]) return;
       const file = input.files[0];
-      const cus = customer || 'AIS';
+      const cus = String(customer || 'AIS').toUpperCase();
       const fileName = file.name;
-      const uName = 'admin';
-      const uEmail = 'admin@teloneer.com';
+      const userEmail = safeGetItem('inv_user_email') || currentUserEmail || '';
+      const userName = safeGetItem('inv_user_name') || currentUserName || userEmail;
+      if (_isGAS && !userEmail) { showToast('กรุณา login ก่อนนำเข้าข้อมูล', 'error'); return; }
 
+      const identity = [cus, file.name, file.size, file.lastModified].join('|');
+      const requestIdentity = identity + '|' + userEmail;
+      if (requestIdentity !== activeImportIdentity || !activeImportRequestId) {
+        activeImportIdentity = requestIdentity;
+        activeImportRequestId = stableImportRequestId(requestIdentity);
+      }
+      importInFlight = true;
       showToast(`📥 กำลังอ่านไฟล์ ${fileName} (${cus})...`, 'info');
+      try {
+        const rows = await readInventoryFile(file);
+        if (rows.length < 2) throw new Error('ไฟล์ว่างเปล่าหรือไม่มีแถวข้อมูล');
+        const idx = mapCSVHeaders(rows[0]);
+        const parsed = [];
+        let lastDuid = '', lastRegion = '', lastType = 'IN', lastDate = '', lastBill = '';
+        let lastOwnerW = '', lastOwnerR = '', lastLocW = '', lastLocR = '', lastUser = '';
+        const get = (row, column) => String(row[column] == null ? '' : row[column]).trim();
 
-      const reader = new FileReader();
-      reader.onload = async function(e) {
-        try {
-          const rows = parseCSV(e.target.result);
-          if (rows.length < 2) {
-            showToast('❌ ไฟล์ CSV ว่างเปล่าหรือรูปแบบไม่ถูกต้อง', 'error');
-            input.value = '';
-            return;
-          }
-
-          const idx = mapCSVHeaders(rows[0]);
-          const parsed = [];
-          let lastDuid = '', lastRegion = '', lastType = 'IN', lastDate = '', lastBill = '';
-          let lastOwnerW = '', lastOwnerR = '', lastLocW = '', lastLocR = '', lastUser = '';
-
-          for (let i = 1; i < rows.length; i++) {
-            const r = rows[i];
-            const duid = (r[idx.duid] || lastDuid || '').trim();
-            const code = (r[idx.code] || '').trim();
-            const desc = (r[idx.desc] || '').trim();
-            const model = (r[idx.model] || '').trim();
-            if (!duid && !code && !desc && !model) continue;
-            if (r[idx.duid]) lastDuid = duid;
-
-            const region = (r[idx.region] || lastRegion || 'ER').trim().toUpperCase();
-            if (r[idx.region]) lastRegion = region;
-
-            const type = (r[idx.type] || lastType || 'IN').trim().toUpperCase();
-            if (r[idx.type]) lastType = type;
-
-            const bill = (r[idx.bill] || lastBill || duid).trim();
-            if (r[idx.bill]) lastBill = bill;
-
-            const date = (r[idx.date] || lastDate || new Date().toLocaleDateString('en-GB')).trim();
-            if (r[idx.date]) lastDate = date;
-
-            const ownerW = (r[idx.ownerW] || lastOwnerW || '').trim();
-            if (r[idx.ownerW]) lastOwnerW = ownerW;
-
-            const ownerR = (r[idx.ownerR] || lastOwnerR || '').trim();
-            if (r[idx.ownerR]) lastOwnerR = ownerR;
-
-            const locW = (r[idx.locW] || lastLocW || '').trim();
-            if (r[idx.locW]) lastLocW = locW;
-
-            const locR = (r[idx.locR] || lastLocR || '').trim();
-            if (r[idx.locR]) lastLocR = locR;
-
-            const userNm = (r[idx.userNm] || lastUser || uName).trim();
-            if (r[idx.userNm]) lastUser = userNm;
-
-            const rawItype = (r[idx.itype] || '').trim();
-            const detectedItype = rawItype || inferITypeFromType(r[idx.type] || model);
-
-            parsed.push({
-              no: TRANSACTIONS.length + parsed.length + 1,
-              duid: duid,
-              region: region,
-              type: type,
-              transType: type,
-              itype: detectedItype,
-              itemType: detectedItype,
-              date: date,
-              bill: bill,
-              billNo: bill,
-              model: model,
-              code: code,
-              desc: desc,
-              qty: Number(r[idx.qty]) || 1,
-              sn: (r[idx.sn] || 'N/A').trim(),
-              ownerWarehouse: ownerW,
-              ownerW: ownerW,
-              ownerReceiver: ownerR,
-              ownerR: ownerR,
-              locationWarehouse: locW,
-              locW: locW,
-              locationReceiver: locR,
-              locR: locR,
-              status: (r[idx.status] || 'Pending').trim(),
-              intNo: (r[idx.intNo] || `INT-${Date.now()}-${parsed.length + 1}`).trim(),
-              user: userNm,
-              customer: cus
-            });
-          }
-
-          if (parsed.length === 0) {
-            showToast('❌ ไม่พบรายการสินค้าในไฟล์ CSV', 'error');
-            input.value = '';
-            return;
-          }
-
-          // Prepend parsed rows to TRANSACTIONS
-          TRANSACTIONS.unshift(...parsed);
-          applyFilters();
-
-          const duidSummary = Array.from(new Set(parsed.map(p => p.duid).filter(Boolean))).slice(0, 5).join(', ');
-          const timeStr = new Date().toLocaleTimeString('th-TH');
-
-          // Log in UI
-          const log = document.getElementById('import-mini-log');
-          if (log) {
-            const emptyHint = log.querySelector('p');
-            if (emptyHint) emptyHint.remove();
-            const entryDiv = document.createElement('div');
-            entryDiv.className = 'glass-card p-3 rounded-xl border border-emerald-500/30 flex items-center justify-between text-xs';
-            entryDiv.innerHTML = `
-              <div class="flex items-center gap-2">
-                <span class="text-base">✅</span>
-                <div>
-                  <div class="font-bold text-slate-200">${escapeHtml(fileName)}</div>
-                  <div class="text-[11px] text-slate-400">${cus} · ${parsed.length} รายการ · <span class="font-mono text-indigo-400">${escapeHtml(duidSummary)}</span></div>
-                </div>
-              </div>
-              <div class="text-right">
-                <span class="text-emerald-400 font-mono font-bold block">สำเร็จ (${parsed.length} แถว)</span>
-                <span class="text-[10px] text-slate-500">${timeStr}</span>
-              </div>
-            `;
-            log.prepend(entryDiv);
-          }
-
-          showToast(`✅ นำเข้าข้อมูล ${cus} สำเร็จ (${parsed.length} รายการ)`, 'success');
-
-          // GAS or API Sync if available
-          if (typeof google !== 'undefined' && google.script && google.script.run) {
-            google.script.run
-              .withSuccessHandler(function(res) {
-                if (res && res.success) {
-                  showToast(`☁️ บันทึกลง Google Sheets (${cus}) สำเร็จ`, 'success');
-                } else {
-                  showToast(`⚠️ บันทึก Sheet: ${res ? res.message : 'Error'}`, 'warning');
-                }
-              })
-              .withFailureHandler(function(err) {
-                console.warn('GAS Save failed:', err);
-              })
-              .saveImportData(parsed, cus, uEmail, uName, fileName);
-          }
-
-          input.value = '';
-        } catch (err) {
-          console.error('handleImportCSV error:', err);
-          showToast(`❌ เกิดข้อผิดพลาดในการประมวลผล: ${err.message}`, 'error');
-          input.value = '';
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          const duid = get(row, idx.duid) || lastDuid;
+          const code = get(row, idx.code), desc = get(row, idx.desc), model = get(row, idx.model);
+          if (!duid && !code && !desc && !model) continue;
+          if (get(row, idx.duid)) lastDuid = duid;
+          const region = (get(row, idx.region) || lastRegion || 'ER').toUpperCase();
+          if (get(row, idx.region)) lastRegion = region;
+          const type = (get(row, idx.type) || lastType || 'IN').toUpperCase();
+          if (get(row, idx.type)) lastType = type;
+          const bill = get(row, idx.bill) || lastBill || duid;
+          if (get(row, idx.bill)) lastBill = bill;
+          const date = get(row, idx.date) || lastDate || new Date().toLocaleDateString('en-GB');
+          if (get(row, idx.date)) lastDate = date;
+          const ownerW = get(row, idx.ownerW) || lastOwnerW; if (get(row, idx.ownerW)) lastOwnerW = ownerW;
+          const ownerR = get(row, idx.ownerR) || lastOwnerR; if (get(row, idx.ownerR)) lastOwnerR = ownerR;
+          const locW = get(row, idx.locW) || lastLocW; if (get(row, idx.locW)) lastLocW = locW;
+          const locR = get(row, idx.locR) || lastLocR; if (get(row, idx.locR)) lastLocR = locR;
+          const userNm = get(row, idx.userNm) || lastUser || userName; if (get(row, idx.userNm)) lastUser = userNm;
+          const rawItype = get(row, idx.itype);
+          const detectedItype = rawItype || inferITypeFromType(type || model);
+          parsed.push({
+            no: TRANSACTIONS.length + parsed.length + 1,
+            duid, region, type, transType: type, itype: detectedItype, itemType: detectedItype,
+            date, bill, billNo: bill, model, code, desc,
+            qty: Number(get(row, idx.qty)) || 1,
+            sn: get(row, idx.sn) || 'N/A',
+            ownerWarehouse: ownerW, ownerW, ownerReceiver: ownerR, ownerR,
+            locationWarehouse: locW, locW, locationReceiver: locR, locR,
+            status: get(row, idx.status) || 'Pending',
+            intNo: get(row, idx.intNo) || `INT-${Date.now()}-${parsed.length + 1}`,
+            user: userNm || userName, customer: cus
+          });
         }
-      };
-      reader.readAsText(file, 'utf-8');
-    }
+        if (!parsed.length) throw new Error('ไม่พบแถวสินค้าที่มี DUID ในไฟล์');
 
+        if (_isGAS) {
+          const result = await new Promise((resolve, reject) => {
+            google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)
+              .saveImportData(parsed, cus, userEmail, userName, fileName, activeImportRequestId);
+          });
+          if (!result || !result.success) throw new Error((result && result.message) || 'บันทึกลง Google Sheets ไม่สำเร็จ');
+          if (result.duplicate) {
+            showToast('ℹ️ ' + (result.message || 'ไฟล์นี้ถูกนำเข้าแล้ว ไม่มีการเพิ่มรายการซ้ำ'), 'info');
+            input.value = '';
+            return;
+          }
+        }
+
+        TRANSACTIONS.unshift(...parsed);
+        applyFilters();
+        const duidSummary = Array.from(new Set(parsed.map(item => item.duid).filter(Boolean))).slice(0, 5).join(', ');
+        const timeStr = new Date().toLocaleTimeString('th-TH');
+        const log = document.getElementById('import-mini-log');
+        if (log) {
+          const hint = log.querySelector('p'); if (hint) hint.remove();
+          const entry = document.createElement('div');
+          entry.className = 'glass-card p-3 rounded-xl border border-emerald-500/30 flex items-center justify-between text-xs';
+          entry.innerHTML = `<div class="flex items-center gap-2"><span class="text-base">✅</span><div><div class="font-bold text-slate-200">${escapeHtml(fileName)}</div><div class="text-[11px] text-slate-400">${cus} · ${parsed.length} รายการ · <span class="font-mono text-indigo-400">${escapeHtml(duidSummary)}</span></div></div></div><div class="text-right"><span class="text-emerald-400 font-mono font-bold block">สำเร็จ (${parsed.length} แถว)</span><span class="text-[10px] text-slate-500">${timeStr}</span></div>`;
+          log.prepend(entry);
+        }
+        showToast(_isGAS ? `✅ Import ${cus} ลง Google Sheets สำเร็จ (${parsed.length} รายการ)` : `Demo Mode: นำเข้าเฉพาะในหน้านี้ (${parsed.length} รายการ)`, _isGAS ? 'success' : 'info');
+        input.value = '';
+      } catch (err) {
+        console.error('handleImportCSV error:', err);
+        showToast(`❌ Import ไม่สำเร็จ: ${err.message || err} — ลองส่งไฟล์เดิมซ้ำได้โดยไม่เพิ่มแถวซ้ำ`, 'error');
+      } finally {
+        importInFlight = false;
+      }
+    }
     function clearImportedData() {
       if (confirm('คุณต้องการรีเซ็ตข้อมูล Mock Data กลับสู่ค่าตั้งต้นใช่หรือไม่?')) {
         showToast('🗑 กำลังรีเซ็ตข้อมูล...', 'info');
@@ -9348,6 +9320,22 @@ let BOM_TRUE = [
       const codeVal = codes[model] || '00000000';
       const target = document.getElementById('item-code-' + idx) || document.getElementById('inp-code');
       if (target) target.value = codeVal;
+    }
+
+    let currentSaveProgress = 0;
+    function updateSaveProgress(percent, message, txType, failed) {
+      const panel = document.getElementById('save-progress-panel');
+      const bar = document.getElementById('save-progress-bar');
+      const pct = Math.max(1, Math.min(100, Math.round(percent)));
+      currentSaveProgress = pct;
+      if (panel) panel.classList.remove('hidden');
+      const typeEl = document.getElementById('save-progress-type');
+      const messageEl = document.getElementById('save-progress-message');
+      const percentEl = document.getElementById('save-progress-percent');
+      if (typeEl) typeEl.textContent = txType || currentTxType || 'IN';
+      if (messageEl) messageEl.textContent = message || 'กำลังบันทึก';
+      if (percentEl) { percentEl.textContent = pct + (failed ? '% · ไม่สำเร็จ' : '%'); percentEl.className = 'shrink-0 font-mono ' + (failed ? 'text-rose-300' : pct === 100 ? 'text-emerald-300' : 'text-emerald-300'); }
+      if (bar) { bar.style.width = pct + '%'; bar.className = 'h-full rounded-full transition-all duration-300 ' + (failed ? 'bg-rose-500' : 'bg-gradient-to-r from-emerald-500 to-teal-300'); }
     }
 
     async function submitNewTransaction() {
@@ -9422,19 +9410,25 @@ let BOM_TRUE = [
       modalSubmitInFlight = true;
       if (btn) { btn.disabled = true; btn.style.opacity = '0.65'; }
       try {
+        updateSaveProgress(1, 'กำลังตรวจสอบข้อมูล', firstRecord.type);
+        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 60)));
+        updateSaveProgress(10, 'ตรวจสอบข้อมูลเรียบร้อย · กำลังบันทึกรายการ', firstRecord.type);
         if (_isGAS) {
           const callGAS = (method, args) => new Promise((resolve, reject) => {
             google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[method](...args);
           });
+          updateSaveProgress(25, 'กำลังบันทึกข้อมูลหลักลงระบบ', firstRecord.type);
           const saved = await callGAS('saveMainData', [_h, _items, _h.userEmail, _h.userName]);
           if (!saved || !saved.success) throw new Error((saved && saved.message) || 'บันทึกข้อมูลหลักไม่สำเร็จ');
           const uploadHeader = saved.header || _h;
+          updateSaveProgress(55, 'บันทึกรายการสำเร็จ · กำลังอัปโหลดรูป', firstRecord.type);
           for (let i = 0; i < modalPhotoArray.length; i++) {
-            showToast(`⏳ กำลังบันทึกรูป ${i + 1}/${modalPhotoArray.length}`, 'info');
+            updateSaveProgress(55 + Math.round((i / modalPhotoArray.length) * 35), `กำลังอัปโหลดรูป ${i + 1}/${modalPhotoArray.length}`, firstRecord.type);
             const uploaded = await callGAS('uploadPhotoOnly', [uploadHeader, modalPhotoArray[i], i + 1, _h.userEmail, _h.userName]);
             if (!uploaded || !uploaded.success) throw new Error(`อัปโหลดรูปที่ ${i + 1} ไม่สำเร็จ: ${(uploaded && uploaded.error) || 'โปรดลองบันทึกอีกครั้ง'}`);
+            updateSaveProgress(55 + Math.round(((i + 1) / modalPhotoArray.length) * 35), `อัปโหลดรูปแล้ว ${i + 1}/${modalPhotoArray.length}`, firstRecord.type);
           }
-        }
+        } else updateSaveProgress(55, 'กำลังยืนยันรายการใน Demo Mode', firstRecord.type);
         const photoCount = modalPhotoArray.length;
         const records = _items.map((item, index) => Object.assign({}, firstRecord, {
           no: TRANSACTIONS.length + index + 1, itype: item.type, model: item.model, code: item.code,
@@ -9442,12 +9436,16 @@ let BOM_TRUE = [
         }));
         TRANSACTIONS.unshift(...records);
         if (!_isGAS) TRANSACTIONS = calculateTransactionStatuses(TRANSACTIONS);
+        updateSaveProgress(95, 'บันทึกเรียบร้อย · กำลังอัปเดตหน้ารายการ', firstRecord.type);
+        updateSaveProgress(100, 'Success · บันทึกครบทุกขั้นตอน', firstRecord.type);
+        await new Promise(resolve => setTimeout(resolve, 650));
         closeMultiStepModal(true);
         applyFilters();
         switchTab('transactions');
         showToast(`✅ บันทึกสำเร็จ (${records.length} รายการ, ${photoCount} รูป) — ${firstRecord.duid}`, 'success');
         if (_isGAS) setTimeout(syncLiveGAS, 1500);
       } catch (err) {
+        updateSaveProgress(currentSaveProgress || 1, 'บันทึกไม่สำเร็จ · ' + String(err && err.message || err).slice(0, 110), firstRecord.type, true);
         showToast('❌ ' + (err && err.message || err) + ' — แก้ไขแล้วลองบันทึกซ้ำได้ ระบบจะไม่เพิ่มรายการซ้ำ', 'error');
       } finally {
         modalSubmitInFlight = false;
@@ -9489,47 +9487,16 @@ let BOM_TRUE = [
     }
 
     function exportCSV() {
-      let csv = '\uFEFF';
-      // Complete 19 columns in exact requested order:
-      // No, DUID, Region, TYPE, IType, Date, Bill No., Model, Item Code, Item Description, Qty, SN, Owner Warehouse, Owner Receiver, Location Warehouse, Location Receiver, Status, INT No, User
-      csv += 'No,DUID,Region,TYPE,IType,Date,Bill No.,Model,Item Code,Item Description,Qty,SN,Owner Warehouse,Owner Receiver,Location Warehouse,Location Receiver,Status,INT No,User\n';
-
-      const clean = (val) => `"${String(val !== undefined && val !== null ? val : '').replace(/"/g, '""')}"`;
       const listToExport = filteredTransactions.length > 0 ? filteredTransactions : TRANSACTIONS;
-
-      listToExport.forEach(r => {
-        csv += [
-          r.no,
-          clean(r.duid),
-          clean(r.region),
-          clean(r.type),
-          clean(r.itype || 'Equipment'),
-          clean(r.date),
-          clean(r.bill),
-          clean(r.model),
-          clean(r.code),
-          clean(r.desc),
-          r.qty || 1,
-          clean(r.sn),
-          clean(r.ownerWarehouse),
-          clean(r.ownerReceiver),
-          clean(r.locationWarehouse),
-          clean(r.locationReceiver),
-          clean(r.status),
-          clean(r.intNo),
-          clean(r.user)
-        ].join(',') + '\n';
-      });
-
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `smartstock_export_all_columns_${new Date().toISOString().slice(0,10)}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      showToast(`Exported all ${listToExport.length.toLocaleString()} rows (all columns) to CSV successfully!`, 'success');
+      const rows = [['No','DUID','Region','TYPE','IType','Date','Bill No.','Model','Item Code','Item Description','Qty','SN','Owner Warehouse','Owner Receiver','Location Warehouse','Location Receiver','Status','INT No','User']];
+      listToExport.forEach(r => rows.push([
+        r.no, r.duid, r.region, r.type, r.itype || 'Equipment', r.date, r.bill, r.model, r.code, r.desc,
+        r.qty || 1, r.sn, r.ownerWarehouse, r.ownerReceiver, r.locationWarehouse, r.locationReceiver,
+        r.status, r.intNo, r.user
+      ]));
+      const format = document.getElementById('tx-export-format')?.value || 'csv';
+      if (downloadTableFile(rows, `smartstock_export_all_columns_${new Date().toISOString().slice(0,10)}`, format))
+        showToast(`ส่งออก ${listToExport.length.toLocaleString()} แถว เป็น ${format.toUpperCase()} แล้ว`, 'success');
     }
 
     function performDeepSearch() {

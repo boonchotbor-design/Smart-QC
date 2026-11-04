@@ -117,7 +117,7 @@ function doPost(e) {
 
     if (data.action === "import" || data.action === "saveImport") {
       logToSheet("IMPORT_DATA", "Customer: " + data.customer + " | Rows: " + (data.rows ? data.rows.length : 0) + " | User: " + userEmail);
-      var result = saveImportData(data.rows, data.customer, userEmail, userName, data.fileName);
+      var result = saveImportData(data.rows, data.customer, userEmail, userName, data.fileName, data.requestId);
       logToSheet("IMPORT_RESULT", "Success: " + result.success + (result.message ? ", Msg: " + result.message : ""));
       return jsonOut(result);
     }
@@ -1966,10 +1966,43 @@ function sendImportNotifications(rows, customer, userEmail, userName, fileName, 
 // รับ array of row objects จาก client, บันทึกลง sheet
 // ─────────────────────────────────────────────
 
-function saveImportData(rows, customer, userEmail, userName, fileName) {
+function saveImportData(rows, customer, userEmail, userName, fileName, requestId) {
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000);
+    var importReceiptKey = "";
+    if (requestId) {
+      var reqHash = Utilities.base64EncodeWebSafe(
+        Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(requestId))
+      ).replace(/=+$/, "");
+      importReceiptKey = "INV_IMPORT_" + reqHash;
+      var importProps = PropertiesService.getScriptProperties();
+      var savedReceipt = importProps.getProperty(importReceiptKey);
+      if (savedReceipt) {
+        try {
+          var receipt = JSON.parse(savedReceipt);
+          if (receipt.expiresAt > Date.now()) return {
+            success: true,
+            count: receipt.result.count,
+            duplicate: true,
+            message: "ไฟล์นี้ถูก Import แล้ว ระบบไม่เพิ่มรายการซ้ำ"
+          };
+        } catch (receiptErr) {}
+        importProps.deleteProperty(importReceiptKey);
+      }
+      var allImportProps = importProps.getProperties();
+      var activeImportReceipts = [];
+      Object.keys(allImportProps).forEach(function(key) {
+        if (key.indexOf("INV_IMPORT_") !== 0) return;
+        try {
+          var item = JSON.parse(allImportProps[key]);
+          if (item.expiresAt <= Date.now()) importProps.deleteProperty(key);
+          else activeImportReceipts.push({ key: key, expiresAt: item.expiresAt });
+        } catch (e) { importProps.deleteProperty(key); }
+      });
+      activeImportReceipts.sort(function(a, b) { return a.expiresAt - b.expiresAt; });
+      while (activeImportReceipts.length >= 300) importProps.deleteProperty(activeImportReceipts.shift().key);
+    }
     if (!rows || rows.length === 0) {
       logImportEntry({
         customer: customer || "AIS",
@@ -2084,6 +2117,18 @@ function saveImportData(rows, customer, userEmail, userName, fileName) {
 
     SpreadsheetApp.flush();
 
+    var importResult = {
+      success: true,
+      count: allRows.length,
+      message: "✅ Import สำเร็จ " + allRows.length + " รายการ เข้า " + sheetName
+    };
+    if (importReceiptKey) {
+      PropertiesService.getScriptProperties().setProperty(importReceiptKey, JSON.stringify({
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+        result: importResult
+      }));
+    }
+
     // อัปเดต Status ของ DUID ที่ถูก Import
     Object.keys(duidSet).forEach(function(duid) {
       updateDuidStatus(duid, (customer || "AIS").toUpperCase());
@@ -2112,11 +2157,7 @@ function saveImportData(rows, customer, userEmail, userName, fileName) {
     // ── แจ้งเตือน LINE + Telegram ตาม DUID และรายการจริง ──
     sendImportNotifications(rows, customer, userEmail, userName, fileName, false);
 
-    return {
-      success: true,
-      count:   allRows.length,
-      message: "✅ Import สำเร็จ " + allRows.length + " รายการ เข้า " + sheetName
-    };
+    return importResult;
 
   } catch (e) {
     logToSheet("IMPORT_ERROR", e.toString());
