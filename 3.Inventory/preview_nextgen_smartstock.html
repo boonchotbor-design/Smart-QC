@@ -402,7 +402,7 @@
           <button onclick="toggleMobileSidebar(false)" class="md:hidden text-slate-400 hover:text-white p-2 text-lg rounded-lg hover:bg-slate-800/80 cursor-pointer" title="ปิดเมนู (Close)">✕</button>
         </div>
 
-        <!-- User Profile Pill (Dynamic User V.7.5.9) -->
+        <!-- User Profile Pill (Dynamic User V.7.6.0) -->
         <div class="px-4 py-3 border-b border-slate-800/60 bg-slate-900/40 mx-3 my-3 rounded-xl border flex items-center justify-between">
           <div class="flex items-center gap-2.5">
             <div class="relative">
@@ -2886,6 +2886,9 @@
     // 3. รูปบิล* (บังคับก่อน SUBMIT) - CAMERA & GALLERY UPLOAD
     // ══════════════════════════════════════════════════════════════════
     let modalPhotoArray = [];
+    let modalSubmitInFlight = false;
+    let modalSubmissionId = null;
+    let modalSubmissionSignature = '';
 
     function triggerBillCamera() {
       const cam = document.getElementById('bill-cam-input');
@@ -2900,6 +2903,7 @@
     async function handleBillPhotoUpload(input) {
       if (!input.files || !input.files.length) return;
       const files = Array.from(input.files);
+      let failedFiles = 0;
       showToast('⏳ กำลังประมวลผลรูปภาพ...', 'info');
 
       for (let f of files) {
@@ -2908,17 +2912,18 @@
           modalPhotoArray.push(compressed);
         } catch (e) {
           console.error('Image compression error:', e);
+          failedFiles++;
         }
       }
 
       renderPhotoThumbnails();
       updateBillPhotoStatus();
       input.value = '';
-      showToast('📸 อัปโหลดรูปบิลสำเร็จ (' + modalPhotoArray.length + ' รูป)', 'success');
+      showToast(failedFiles ? `⚠️ เพิ่มรูปได้ ${files.length - failedFiles}/${files.length} รูป; ตรวจสอบไฟล์ที่อ่านไม่ได้` : '📸 เตรียมรูปบิลสำเร็จ (' + modalPhotoArray.length + ' รูป)', failedFiles ? 'error' : 'success');
     }
 
     function compressModalImage(file) {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = (e) => {
@@ -2939,7 +2944,9 @@
             ctx.drawImage(img, 0, 0, w, h);
             resolve(canvas.toDataURL('image/jpeg', 0.8));
           };
+          img.onerror = () => reject(new Error('อ่านไฟล์รูปไม่สำเร็จ: ' + file.name));
         };
+        reader.onerror = () => reject(new Error('เปิดไฟล์รูปไม่สำเร็จ: ' + file.name));
       });
     }
 
@@ -8273,6 +8280,8 @@ let BOM_TRUE = [
         const itypeEl = document.getElementById('item-itype-1');
         if (itypeEl) itypeEl.value = 'Equipment';
         modalPhotoArray = [];
+        modalSubmissionId = null;
+        modalSubmissionSignature = '';
         renderPhotoThumbnails();
         updateBillPhotoStatus();
         updateTxDatalists();
@@ -8451,13 +8460,13 @@ let BOM_TRUE = [
       }
     }
 
-    function closeMultiStepModal() {
+    function closeMultiStepModal(skipConfirm) {
       try {
         const duid = (document.getElementById('inp-duid')?.value || '').trim();
         const bill = (document.getElementById('inp-bill')?.value || '').trim();
         const sn = (document.getElementById('item-sn-1')?.value || document.getElementById('inp-sn')?.value || '').trim();
         const model = (document.getElementById('item-model-1')?.value || document.getElementById('inp-model')?.value || '').trim();
-        if (duid || bill || sn || model) {
+        if (!skipConfirm && (duid || bill || sn || model)) {
           if (!confirm('คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการปิดหน้าต่างนี้ใช่หรือไม่?')) {
             return;
           }
@@ -9310,7 +9319,8 @@ let BOM_TRUE = [
       if (target) target.value = codeVal;
     }
 
-    function submitNewTransaction() {
+    async function submitNewTransaction() {
+      if (modalSubmitInFlight) return;
       // Enforce Photo requirement (ข้อ 3: รูปบิล บังคับก่อน SUBMIT)
       if (!modalPhotoArray || modalPhotoArray.length === 0) {
         showToast('⚠️ กรุณาถ่ายรูปบิลหรือแนบไฟล์รูปภาพก่อนบันทึก (บังคับก่อน SUBMIT)', 'error');
@@ -9330,19 +9340,14 @@ let BOM_TRUE = [
         return;
       }
       document.getElementById('err-duid').classList.add('hidden');
-      const newRecord = {
+      const firstRecord = {
         no: TRANSACTIONS.length + 1,
         duid: duidVal,
         bill: (document.getElementById('inp-bill').value || '').trim() || '—',
         type: currentTxType,
         region: document.getElementById('inp-region').value,
         customer: document.getElementById('inp-customer').value,
-        itype: (document.getElementById('item-itype-1')?.value || 'Equipment').trim(),
-        model: (document.getElementById('item-model-1')?.value || document.getElementById('inp-model')?.value || 'RRU3962').trim(),
-        code: (document.getElementById('item-code-1')?.value || document.getElementById('inp-code')?.value || '02311EPK').trim(),
-        desc: (document.getElementById('item-desc-1')?.value || document.getElementById('inp-desc')?.value || 'Certified Hardware Component').trim(),
-        qty: parseInt(document.getElementById('item-qty-1')?.value || document.getElementById('inp-qty')?.value || 1) || 1,
-        sn: (document.getElementById('item-sn-1')?.value || document.getElementById('inp-sn')?.value || '').trim() || 'N/A',
+        itype: '', model: '', code: '', desc: '', qty: 1, sn: '',
         ownerWarehouse: (document.getElementById('inp-owner-wh')?.value || '').trim(),
         ownerReceiver: (document.getElementById('inp-owner-rcv')?.value || '').trim(),
         locationWarehouse: (document.getElementById('inp-loc-wh')?.value || '').trim(),
@@ -9359,31 +9364,62 @@ let BOM_TRUE = [
           return new Date().toLocaleDateString('en-GB');
         })()
       };
-      TRANSACTIONS.unshift(newRecord);
-      closeMultiStepModal();
-      applyFilters();
-      switchTab('transactions');
-      showToast(`✅ บันทึกสำเร็จ! ${currentTxType} — ${newRecord.duid}`, 'success');
+      const _items = Array.from(document.querySelectorAll('#modal-items-container [id^="modal-item-"]')).map((row, index) => {
+        const idx = row.id.replace('modal-item-', '');
+        const read = (prefix) => (document.getElementById(prefix + idx)?.value || '').trim();
+        return { type: read('item-itype-'), model: read('item-model-') || (index === 0 ? firstRecord.model : ''),
+          code: read('item-code-'), desc: read('item-desc-'), sn: read('item-sn-'), qty: Number(read('item-qty-')) || 1,
+          txType: read('item-type-') || currentTxType };
+      }).filter(item => item.model);
+      if (!_items.length) { showToast('กรุณาเพิ่มรุ่นสินค้าอย่างน้อย 1 รายการ', 'error'); return; }
+      const photoSignature = modalPhotoArray.join('|');
+      const signature = JSON.stringify([firstRecord.duid, firstRecord.bill, firstRecord.type, firstRecord.region,
+        firstRecord.customer, _items, photoSignature]);
+      if (!modalSubmissionId || modalSubmissionSignature !== signature) {
+        modalSubmissionId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('tx-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+        modalSubmissionSignature = signature;
+      }
 
-      // ── Save to GAS if available
-      if (_isGAS) {
-        const _h = {
-          duid: newRecord.duid, bill: newRecord.bill, type: newRecord.type, region: newRecord.region,
-          customer: newRecord.customer, ownerWarehouse: newRecord.ownerWarehouse, ownerReceiver: newRecord.ownerReceiver,
-          locationWarehouse: newRecord.locationWarehouse, locationReceiver: newRecord.locationReceiver,
-          date: newRecord.date, status: newRecord.status || 'Pending', intNo: newRecord.intNo || ''
-        };
-        const _items = [{
-          type: newRecord.itype || '', model: newRecord.model || '', code: newRecord.code || '',
-          desc: newRecord.desc || '', sn: newRecord.sn || '', qty: newRecord.qty || 1
-        }];
-        google.script.run
-          .withSuccessHandler(function(res) {
-            if (res && res.success) { showToast('✅ บันทึกลง Google Sheet สำเร็จ', 'success'); setTimeout(syncLiveGAS, 1500); }
-            else showToast('⚠️ GAS: ' + (res && res.message || 'ไม่สำเร็จ'), 'error');
-          })
-          .withFailureHandler(function(e) { showToast('❌ GAS Error: ' + (e && e.message || e), 'error'); })
-          .saveMainData(_h, _items, safeGetItem('inv_user_email') || '', safeGetItem('inv_user_name') || '');
+      const _h = {
+        requestId: modalSubmissionId, duid: firstRecord.duid, billNo: firstRecord.bill, type: firstRecord.type,
+        region: firstRecord.region, customer: firstRecord.customer, ownerWarehouse: firstRecord.ownerWarehouse,
+        ownerReceiver: firstRecord.ownerReceiver, locationWarehouse: firstRecord.locationWarehouse,
+        locationReceiver: firstRecord.locationReceiver, date: firstRecord.date, status: firstRecord.status || 'Pending',
+        intNo: firstRecord.intNo || '', userName: safeGetItem('inv_user_name') || '', userEmail: safeGetItem('inv_user_email') || ''
+      };
+      const btn = document.getElementById('btn-modal-next');
+      modalSubmitInFlight = true;
+      if (btn) { btn.disabled = true; btn.style.opacity = '0.65'; }
+      try {
+        if (_isGAS) {
+          const callGAS = (method, args) => new Promise((resolve, reject) => {
+            google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[method](...args);
+          });
+          const saved = await callGAS('saveMainData', [_h, _items, _h.userEmail, _h.userName]);
+          if (!saved || !saved.success) throw new Error((saved && saved.message) || 'บันทึกข้อมูลหลักไม่สำเร็จ');
+          const uploadHeader = saved.header || _h;
+          for (let i = 0; i < modalPhotoArray.length; i++) {
+            showToast(`⏳ กำลังบันทึกรูป ${i + 1}/${modalPhotoArray.length}`, 'info');
+            const uploaded = await callGAS('uploadPhotoOnly', [uploadHeader, modalPhotoArray[i], i + 1, _h.userEmail, _h.userName]);
+            if (!uploaded || !uploaded.success) throw new Error(`อัปโหลดรูปที่ ${i + 1} ไม่สำเร็จ: ${(uploaded && uploaded.error) || 'โปรดลองบันทึกอีกครั้ง'}`);
+          }
+        }
+        const photoCount = modalPhotoArray.length;
+        const records = _items.map((item, index) => Object.assign({}, firstRecord, {
+          no: TRANSACTIONS.length + index + 1, itype: item.type, model: item.model, code: item.code,
+          desc: item.desc, qty: item.qty, sn: item.sn || 'N/A', intNo: index ? `INT-${Date.now()}-${index}` : firstRecord.intNo
+        }));
+        TRANSACTIONS.unshift(...records);
+        closeMultiStepModal(true);
+        applyFilters();
+        switchTab('transactions');
+        showToast(`✅ บันทึกสำเร็จ (${records.length} รายการ, ${photoCount} รูป) — ${firstRecord.duid}`, 'success');
+        if (_isGAS) setTimeout(syncLiveGAS, 1500);
+      } catch (err) {
+        showToast('❌ ' + (err && err.message || err) + ' — แก้ไขแล้วลองบันทึกซ้ำได้ ระบบจะไม่เพิ่มรายการซ้ำ', 'error');
+      } finally {
+        modalSubmitInFlight = false;
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
       }
     }
 
@@ -10035,13 +10071,13 @@ let BOM_TRUE = [
   </div>
 
 
-<!-- ════ LOGIN MODAL (GAS Auth V.7.5.9) ════ -->
+<!-- ════ LOGIN MODAL (GAS Auth V.7.6.0) ════ -->
 <div id="loginModal" style="display:none;position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.88);backdrop-filter:blur(12px);align-items:center;justify-content:center;">
   <div style="background:#0f172a;border:1px solid #1e293b;border-radius:24px;width:100%;max-width:420px;padding:32px 28px;box-shadow:0 32px 80px rgba(0,0,0,0.8);margin:16px;">
     <div style="text-align:center;margin-bottom:24px;">
       <div style="font-size:40px;margin-bottom:8px;">📦</div>
       <div style="font-weight:800;font-size:20px;color:#f8fafc;font-family:'Plus Jakarta Sans',sans-serif;">SmartStock NextGen</div>
-      <div style="font-size:13px;color:#64748b;margin-top:4px;">Inventory Smart System V.7.5.9</div>
+      <div style="font-size:13px;color:#64748b;margin-top:4px;">Inventory Smart System V.7.6.0</div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:20px;">
       <button id="tabLoginBtn" onclick="switchLoginTab('login')" style="flex:1;padding:10px;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:13px;background:#6366f1;color:white;font-family:'Plus Jakarta Sans',sans-serif;">🔑 เข้าสู่ระบบ</button>
@@ -10069,7 +10105,7 @@ let BOM_TRUE = [
 </div>
 
 <script>
-// ════ AUTH SYSTEM V.7.5.9 ════
+// ════ AUTH SYSTEM V.7.6.0 ════
 var currentUserEmail = '';
 var currentUserName = '';
 var _usersCache = null;

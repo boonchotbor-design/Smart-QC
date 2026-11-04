@@ -80,7 +80,7 @@ const app = express();
 // ─────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.json({
-    status: 'Alive', version: 'V.7.5.9',
+    status: 'Alive', version: 'V.7.6.0',
     bots: LINE_CONFIGS.map(b => ({ name: b.name, destId: b.destId })),
     gasUrl: GAS_WEB_APP_URL.substring(0, 60) + '...'
   });
@@ -125,7 +125,7 @@ app.get('/bots-status', async (req, res) => {
 function formatNotificationMessage(header, items) {
   const title = header.actionTitle ? `✅ ${header.actionTitle}` : '✅ บันทึกข้อมูลใหม่';
   let msg =
-    `📦 TLN-Inventory V.7.5.9\n` +
+    `📦 TLN-Inventory V.7.6.0\n` +
     `━━━━━━━━━━━━━━━\n` +
     `${title}\n` +
     `👤 โดย: ${header.userName || header.savedBy || '-'}\n` +
@@ -273,7 +273,7 @@ app.post('/webhook', lineJsonParser, multiLineMiddleware, async (req, res) => {
         : '❌ กรุณาระบุ DUID\nเช่น DUID: Ph26_CapEx_Mod';
     } else if (['สถานะ','STATUS','HELP','/START'].includes(upper)) {
       replyText =
-        `📦 ${bot.name} V.7.5.9\n━━━━━━━━━━━━━━━\n` +
+        `📦 ${bot.name} V.7.6.0\n━━━━━━━━━━━━━━━\n` +
         `🔍 ค้นหา DUID:\nพิมพ์: DUID: [รหัส]\nเช่น: DUID: Ph26_CapEx_Mod\n\n` +
         `📋 คำสั่ง:\n• DUID: [รหัส] — ค้นหาข้อมูล\n• สถานะ — เมนูนี้\n• /id — Group/User ID`;
     } else {
@@ -330,6 +330,9 @@ app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) 
 
       if (ocrRes.data.success && ocrRes.data.data?.items?.length > 0) {
         const { header, items } = ocrRes.data.data;
+        // Telegram may redeliver the same update after a timeout. Reuse its ID
+        // as the transaction key so GAS returns the saved result on retry.
+        header.requestId = `telegram-${currentChatId}-${message.message_id}`;
         const saveRes = await axios.post(GAS_WEB_APP_URL, { action: 'save', header, items }, { timeout: 60000 });
         if (saveRes.data.success) {
           const uploadRes = await axios.post(GAS_WEB_APP_URL, { action: 'upload', header, base64, index: 1 }, { timeout: 60000 }).catch(() => null);
@@ -355,7 +358,7 @@ app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) 
       const txt = message.text.trim();
       if (txt.toLowerCase() === '/start') {
         await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
-          { chat_id: currentChatId, text: '👋 TLN-Inventory V.7.5.9\n📸 ส่งรูปใบ Picking List หรือพิมพ์ DUID เพื่อค้นหา' });
+          { chat_id: currentChatId, text: '👋 TLN-Inventory V.7.6.0\n📸 ส่งรูปใบ Picking List หรือพิมพ์ DUID เพื่อค้นหา' });
         return res.status(200).send('OK');
       }
       if (txt.toLowerCase() === '/id' || txt.toLowerCase() === 'get id') {
