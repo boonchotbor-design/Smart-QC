@@ -2070,16 +2070,20 @@
     let sortColumn = 'no';
     let sortDirection = 'asc';
 
+    var _isInitializing = false;
+
     window.onload = function() {
+      _isInitializing = true;
       startLiveClock();
       switchTab('transactions');
       bomFilterAndRender();
       updateTxDatalists();
       initDraggableModal();
       
-      // Initialize Theme & Language on launch
+      // Initialize Theme & Language on launch (silent — no toast on startup)
       setAppTheme(currentTheme);
       setAppLanguage(currentLang);
+      _isInitializing = false;
 
       setTimeout(updateDashboardRealTime, 250);
       setTimeout(renderRegionChart, 300);
@@ -2195,20 +2199,20 @@
     }
 
     function setCustomerFilter(cust) {
-      document.getElementById('filter-customer').value = cust;
-      document.getElementById('btn-cust-all').className = 'px-3 py-1 rounded text-xs font-semibold text-slate-400 hover:text-white transition-all-fast';
-      document.getElementById('btn-cust-ais').className = 'px-3 py-1 rounded text-xs font-semibold text-slate-400 hover:text-emerald-400 transition-all-fast';
-      document.getElementById('btn-cust-true').className = 'px-3 py-1 rounded text-xs font-semibold text-slate-400 hover:text-blue-400 transition-all-fast';
+      const fcEl = document.getElementById('filter-customer');
+      if (fcEl) fcEl.value = cust;
+      const btnAll  = document.getElementById('btn-cust-all');
+      const btnAis  = document.getElementById('btn-cust-ais');
+      const btnTrue = document.getElementById('btn-cust-true');
+      if (btnAll)  btnAll.className  = 'px-3 py-1 rounded text-xs font-semibold text-slate-400 hover:text-white transition-all-fast';
+      if (btnAis)  btnAis.className  = 'px-3 py-1 rounded text-xs font-semibold text-slate-400 hover:text-emerald-400 transition-all-fast';
+      if (btnTrue) btnTrue.className = 'px-3 py-1 rounded text-xs font-semibold text-slate-400 hover:text-blue-400 transition-all-fast';
 
-      if (cust === 'ALL') {
-        document.getElementById('btn-cust-all').className = 'px-3 py-1 rounded text-xs font-semibold bg-indigo-600 text-white shadow-sm';
-      } else if (cust === 'AIS') {
-        document.getElementById('btn-cust-ais').className = 'px-3 py-1 rounded text-xs font-semibold bg-emerald-600 text-white shadow-sm';
-      } else if (cust === 'TRUE') {
-        document.getElementById('btn-cust-true').className = 'px-3 py-1 rounded text-xs font-semibold bg-blue-600 text-white shadow-sm';
-      }
+      if      (cust === 'ALL'  && btnAll)  btnAll.className  = 'px-3 py-1 rounded text-xs font-semibold bg-indigo-600 text-white shadow-sm';
+      else if (cust === 'AIS'  && btnAis)  btnAis.className  = 'px-3 py-1 rounded text-xs font-semibold bg-emerald-600 text-white shadow-sm';
+      else if (cust === 'TRUE' && btnTrue) btnTrue.className = 'px-3 py-1 rounded text-xs font-semibold bg-blue-600 text-white shadow-sm';
       applyFilters();
-      showToast(`Showing records for ${cust === 'ALL' ? 'All Networks' : cust + ' Network'}`, 'info');
+      showToast('Showing records for ' + (cust === 'ALL' ? 'All Networks' : cust + ' Network'), 'info');
     }
 
     function applyFilters() {
@@ -7694,14 +7698,14 @@ let BOM_TRUE = [
 
       const stats = document.getElementById('bom-stats-text');
       if (stats) {
-        stats.textContent = (currentLang === 'th' ? 'แสดง ' : 'Showing ') + 
+        stats.textContent = ((typeof currentLang !== 'undefined' && currentLang === 'en') ? 'Showing ' : 'แสดง ') + 
           (total === 0 ? 0 : (start + 1) + '-' + end) + 
           (currentLang === 'th' ? ' จาก ' : ' of ') + total + 
           (currentLang === 'th' ? ' รายการ' : ' items');
       }
 
       const pi = document.getElementById('bom-page-indicator');
-      const info = (currentLang === 'th' ? 'หน้า ' : 'Page ') + (bomPage + 1) + '/' + totalPages;
+      const info = ((typeof currentLang !== 'undefined' && currentLang === 'en') ? 'Page ' : 'หน้า ') + (bomPage + 1) + '/' + totalPages;
       if (pi) pi.textContent = info;
 
       const btmPage = document.getElementById('bom-bottom-page');
@@ -7709,7 +7713,7 @@ let BOM_TRUE = [
 
       const btmStats = document.getElementById('bom-bottom-stats');
       if (btmStats) {
-        btmStats.textContent = (currentLang === 'th' ? 'ฐานข้อมูล ' : 'Master Catalog ') + curBomCustomer + ' (' + total + ' รายการ)';
+        btmStats.textContent = ((typeof currentLang !== 'undefined' && currentLang === 'en') ? 'Master Catalog ' : 'ฐานข้อมูล ') + curBomCustomer + ' (' + total + ' รายการ)';
       }
 
       const prevBtn = document.getElementById('bom-btn-prev');
@@ -7973,7 +7977,7 @@ let BOM_TRUE = [
         if (btnDark) {
           btnDark.className = 'w-8 h-7 flex items-center justify-center rounded-lg text-xs transition-all text-slate-400 hover:text-slate-600';
         }
-        showToast('☀️ สลับเป็นโหมดสว่าง (Light Mode)', 'info');
+        if (!_isInitializing) showToast('☀️ สลับเป็นโหมดสว่าง (Light Mode)', 'info');
       } else {
         document.body.classList.remove('theme-light');
         if (btnDark) {
@@ -7982,7 +7986,7 @@ let BOM_TRUE = [
         if (btnLight) {
           btnLight.className = 'w-8 h-7 flex items-center justify-center rounded-lg text-xs transition-all text-slate-400 hover:text-slate-200';
         }
-        showToast('🌙 สลับเป็นโหมดมืด (Dark Mode)', 'info');
+        if (!_isInitializing) showToast('🌙 สลับเป็นโหมดมืด (Dark Mode)', 'info');
       }
     }
 
@@ -8069,11 +8073,11 @@ let BOM_TRUE = [
       if (lang === 'th') {
         if (btnTh) btnTh.className = 'px-2.5 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all bg-indigo-600/90 text-white shadow-sm ring-1 ring-white/20';
         if (btnEn) btnEn.className = 'px-2.5 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200';
-        showToast('🇹🇭 เปลี่ยนภาษาเป็น ภาษาไทย', 'info');
+        if (!_isInitializing) showToast('🇹🇭 เปลี่ยนภาษาเป็น ภาษาไทย', 'info');
       } else {
         if (btnEn) btnEn.className = 'px-2.5 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all bg-indigo-600/90 text-white shadow-sm ring-1 ring-white/20';
         if (btnTh) btnTh.className = 'px-2.5 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200';
-        showToast('🇬🇧 Switched language to English', 'info');
+        if (!_isInitializing) showToast('🇬🇧 Switched language to English', 'info');
       }
 
       applyTranslations(lang);
@@ -8138,46 +8142,13 @@ let BOM_TRUE = [
       document.getElementById('modal-search-item').classList.add('hidden');
     }
 
-    function filterCatalogItems(kw = '') {
-      const q = kw.trim().toLowerCase();
-      const listEl = document.getElementById('catalog-items-list');
-      if (!listEl) return;
-      const matches = MASTER_BOM_CATALOG.filter(it => 
-        !q || it.code.toLowerCase().includes(q) || it.model.toLowerCase().includes(q) || it.desc.toLowerCase().includes(q) || (it.type && it.type.toLowerCase().includes(q))
-      );
-      if (matches.length === 0) {
-        listEl.innerHTML = `<div class="p-6 text-center text-slate-500">❌ ไม่พบรายการที่ตรงกับ "${kw}"</div>`;
-        return;
-      }
-      listEl.innerHTML = matches.map(it => `
-        <div onclick="selectCatalogItem('${it.code}')" class="p-3 rounded-xl hover:bg-indigo-600/15 cursor-pointer transition-colors border border-transparent hover:border-indigo-500/30 group">
-          <div class="font-bold font-mono text-purple-400 text-sm group-hover:text-purple-300">${it.code}</div>
-          <div class="font-semibold text-slate-100 text-xs mt-0.5">${it.model}</div>
-          <div class="text-[11px] text-slate-400 truncate mt-0.5">${it.desc}</div>
-        </div>
-      `).join('');
-    }
+    // [Duplicate filterCatalogItems removed — using BOM-aware version above]
 
-    function selectCatalogItem(code) {
-      const item = MASTER_BOM_CATALOG.find(it => it.code === code);
-      if (!item) return;
-      const rowIdx = activeTargetItemRow;
-      const typeEl = document.getElementById('item-type-' + rowIdx);
-      const modelEl = document.getElementById('item-model-' + rowIdx);
-      const codeEl = document.getElementById('item-code-' + rowIdx);
-      const descEl = document.getElementById('item-desc-' + rowIdx);
 
-      if (typeEl) {
-        typeEl.value = item.type || '';
-        onTypeInputChange(typeEl, rowIdx);
-      }
-      if (modelEl) modelEl.value = item.model || '';
-      if (codeEl) codeEl.value = item.code || '';
-      if (descEl) descEl.value = item.desc || '';
 
-      closeItemSearchModal();
-      showToast(`เลือก ${item.model} (${item.code}) เรียบร้อยแล้ว`, 'success');
-    }
+    // [Duplicate selectCatalogItem removed — using BOM-aware version above]
+
+
 
 // [Removed duplicate onModelInputChange]
 
@@ -9577,17 +9548,21 @@ let BOM_TRUE = [
       const container = document.getElementById('toast-container');
       const toast = document.createElement('div');
       
-      const colors = {
+      const colorsMap = {
         'success': 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200',
-        'error': 'bg-rose-950/90 border-rose-500/50 text-rose-200',
-        'info': 'bg-indigo-950/90 border-indigo-500/50 text-indigo-200'
-      }[type];
+        'error':   'bg-rose-950/90 border-rose-500/50 text-rose-200',
+        'info':    'bg-indigo-950/90 border-indigo-500/50 text-indigo-200',
+        'warn':    'bg-amber-950/90 border-amber-500/50 text-amber-200'
+      };
+      const colors = colorsMap[type] || colorsMap['info'];
 
-      const icons = {
+      const iconsMap = {
         'success': '✅',
-        'error': '🚨',
-        'info': '✨'
-      }[type];
+        'error':   '🚨',
+        'info':    '✨',
+        'warn':    '⚠️'
+      };
+      const icons = iconsMap[type] || iconsMap['info'];
 
       toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border ${colors} shadow-2xl backdrop-blur-md text-xs font-medium transform transition-all duration-300 translate-y-2 opacity-0`;
       toast.innerHTML = `<span>${icons}</span> <span>${message}</span>`;
