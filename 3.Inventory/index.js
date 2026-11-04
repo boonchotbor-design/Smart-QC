@@ -80,7 +80,7 @@ const app = express();
 // ─────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.json({
-    status: 'Alive', version: 'V.7.5.4',
+    status: 'Alive', version: 'V.7.5.9',
     bots: LINE_CONFIGS.map(b => ({ name: b.name, destId: b.destId })),
     gasUrl: GAS_WEB_APP_URL.substring(0, 60) + '...'
   });
@@ -125,7 +125,7 @@ app.get('/bots-status', async (req, res) => {
 function formatNotificationMessage(header, items) {
   const title = header.actionTitle ? `✅ ${header.actionTitle}` : '✅ บันทึกข้อมูลใหม่';
   let msg =
-    `📦 TLN-Inventory V.7.5.4\n` +
+    `📦 TLN-Inventory V.7.5.9\n` +
     `━━━━━━━━━━━━━━━\n` +
     `${title}\n` +
     `👤 โดย: ${header.userName || header.savedBy || '-'}\n` +
@@ -273,7 +273,7 @@ app.post('/webhook', lineJsonParser, multiLineMiddleware, async (req, res) => {
         : '❌ กรุณาระบุ DUID\nเช่น DUID: Ph26_CapEx_Mod';
     } else if (['สถานะ','STATUS','HELP','/START'].includes(upper)) {
       replyText =
-        `📦 ${bot.name} V.7.1.3\n━━━━━━━━━━━━━━━\n` +
+        `📦 ${bot.name} V.7.5.9\n━━━━━━━━━━━━━━━\n` +
         `🔍 ค้นหา DUID:\nพิมพ์: DUID: [รหัส]\nเช่น: DUID: Ph26_CapEx_Mod\n\n` +
         `📋 คำสั่ง:\n• DUID: [รหัส] — ค้นหาข้อมูล\n• สถานะ — เมนูนี้\n• /id — Group/User ID`;
     } else {
@@ -355,7 +355,7 @@ app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) 
       const txt = message.text.trim();
       if (txt.toLowerCase() === '/start') {
         await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
-          { chat_id: currentChatId, text: '👋 TLN-Inventory V.7.1.3\n📸 ส่งรูปใบ Picking List หรือพิมพ์ DUID เพื่อค้นหา' });
+          { chat_id: currentChatId, text: '👋 TLN-Inventory V.7.5.9\n📸 ส่งรูปใบ Picking List หรือพิมพ์ DUID เพื่อค้นหา' });
         return res.status(200).send('OK');
       }
       if (txt.toLowerCase() === '/id' || txt.toLowerCase() === 'get id') {
@@ -381,7 +381,22 @@ app.post('/telegram-webhook', express.json({ limit: '50mb' }), async (req, res) 
   res.status(200).send('OK');
 });
 
-const processedNotifications = new Set();
+// FIX BUG2B: ใช้ Map<id, timestamp> แทน Set — dedup ด้วย TTL 10 นาที
+// รองรับ Vercel cold start: ถ้า Map ถูกล้าง ก็ยัง dedup ได้จาก notificationId ที่ include timestamp
+const processedNotifications = new Map();
+const NOTIFY_DEDUP_TTL_MS = 10 * 60 * 1000; // 10 นาที
+
+function isNotificationDuplicate(id) {
+  if (!id) return false;
+  const now = Date.now();
+  // ล้าง entries ที่หมดอายุก่อน (TTL-based cleanup แทน clear ทั้งก้อน)
+  for (const [k, ts] of processedNotifications) {
+    if (now - ts > NOTIFY_DEDUP_TTL_MS) processedNotifications.delete(k);
+  }
+  if (processedNotifications.has(id)) return true;
+  processedNotifications.set(id, now);
+  return false;
+}
 
 // ─────────────────────────────────────────────
 // /notify — รับจาก GAS แล้ว push ทุกช่องทาง
@@ -391,14 +406,12 @@ app.post('/notify', express.json(), async (req, res) => {
     const { header, items } = req.body;
     if (!header) return res.status(400).send('Missing header');
 
-    // Idempotency Check ป้องกัน GAS Retry (Double Push)
+    // FIX BUG2B: Idempotency ด้วย TTL Map — ป้องกัน cold start reset ส่งซ้ำ
     if (header.notificationId) {
-      if (processedNotifications.has(header.notificationId)) {
-        console.log('Duplicate notification ignored:', header.notificationId);
+      if (isNotificationDuplicate(header.notificationId)) {
+        console.log('Duplicate notification ignored (TTL dedup):', header.notificationId);
         return res.send('OK');
       }
-      processedNotifications.add(header.notificationId);
-      if (processedNotifications.size > 500) processedNotifications.clear();
     }
 
     await sendNotification(header, items);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>SmartStock Pro — Inventory Smart App V.7.5.8</title>
+  <title>SmartStock Pro — Inventory Smart App V.7.5.9</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -313,7 +313,7 @@
         </div>
       </div>
       <hr class="login-divider">
-      <div class="login-footer">🔒 SmartStock Pro V.7.5.8 | ระบบความปลอดภัยยืนยัน OTP ทาง Email</div>
+      <div class="login-footer">🔒 SmartStock Pro V.7.5.9 | ระบบความปลอดภัยยืนยัน OTP ทาง Email</div>
     </div>
   </div>
 
@@ -363,7 +363,7 @@
     <!-- Header -->
     <div class="header-banner shadow d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div>
-        <h5 class="fw-bold mb-0">📦 SmartStock Pro V.7.5.8</h5>
+        <h5 class="fw-bold mb-0">📦 SmartStock Pro V.7.5.9</h5>
         <div class="user-badge mt-1" id="userBadge">👤 กำลังตรวจสอบผู้ใช้...</div>
       </div>
       <div class="d-flex gap-1 flex-wrap">
@@ -690,7 +690,7 @@
     }
 
     // ─────────────────────────────────────────────
-    // 🔑 DO LOGIN — V.7.5.8 (Server-side verify with local fallback)
+    // 🔑 DO LOGIN — V.7.5.9 (Server-side verify with local fallback)
     // ─────────────────────────────────────────────
     async function doLogin() {
       clearAlert('loginAlert');
@@ -769,7 +769,7 @@
     }
 
     // ─────────────────────────────────────────────
-    // 📝 DO REGISTER — V.7.5.8 (Server-side save with local fallback)
+    // 📝 DO REGISTER — V.7.5.9 (Server-side save with local fallback)
     // ─────────────────────────────────────────────
     async function doRegister() {
       clearAlert('registerAlert');
@@ -851,7 +851,7 @@
     }
 
     // ─────────────────────────────────────────────
-    // 📨 REQUEST OTP — V.7.5.8
+    // 📨 REQUEST OTP — V.7.5.9
     // ─────────────────────────────────────────────
     function requestOtp() {
       clearAlert('resetAlert');
@@ -917,7 +917,7 @@
     }
 
     // ─────────────────────────────────────────────
-    // 🔄 DO RESET PASSWORD — V.7.5.8 (OTP verify)
+    // 🔄 DO RESET PASSWORD — V.7.5.9 (OTP verify)
     // ─────────────────────────────────────────────
     async function doReset() {
       clearAlert('resetAlert');
@@ -1257,7 +1257,7 @@
     }
 
     // ─────────────────────────────────────────────
-    // SUBMIT
+    // SUBMIT — V.7.5.9: Fix beforeunload + finally re-enable + photo error resilient
     // ─────────────────────────────────────────────
     async function submitAll() {
       var bN  = document.getElementById('billNo').value.trim();
@@ -1293,6 +1293,19 @@
       });
 
       if (items.length === 0) { Swal.fire({icon: 'warning', title: 'ไม่มีสินค้า', text: 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'}); return; }
+
+      // FIX BUG1: Disable beforeunload ก่อน submit เพื่อป้องกัน browser dialog block
+      window.onbeforeunload = null;
+
+      // แจ้งเตือนถ้ารูปมากกว่า 10 (อาจ timeout GAS 6 min)
+      if (photoArray.length > 10) {
+        var cont = await Swal.fire({
+          icon: 'warning', title: 'รูปมีจำนวนมาก',
+          text: 'มี ' + photoArray.length + ' รูป อาจใช้เวลานาน ต้องการดำเนินต่อไหม?',
+          showCancelButton: true, confirmButtonText: 'ดำเนินต่อ', cancelButtonText: 'ยกเลิก'
+        });
+        if (!cont.isConfirmed) { return; }
+      }
 
       document.getElementById('btnSubmit').disabled = true;
 
@@ -1334,8 +1347,12 @@
               .withFailureHandler(rej)
               .uploadPhotoOnly(header, photoArray[i], i + 1, currentUserEmail, currentUserName)
           );
-          if (!uploadRes.success) throw new Error(uploadRes.error);
-          lastFolderUrl = uploadRes.folderUrl;
+          // FIX BUG3b: upload รูปบางรูป error ไม่ควร block ทั้งหมด — log แล้วไปต่อ
+          if (!uploadRes.success) {
+            console.warn('Upload photo ' + (i + 1) + ' failed:', uploadRes.error);
+          } else {
+            lastFolderUrl = uploadRes.folderUrl;
+          }
         }
 
         updateProgress(95, "รอสักครู่...");
@@ -1343,8 +1360,10 @@
 
       } catch (err) {
         Swal.fire({icon: 'error', title: 'เกิดข้อผิดพลาด', text: err.message});
-        document.getElementById('btnSubmit').disabled = false;
         document.getElementById('loader').style.display = 'none';
+      } finally {
+        // FIX BUG3a: re-enable submit button เสมอ ไม่ว่า success หรือ error
+        document.getElementById('btnSubmit').disabled = false;
       }
     }
 
@@ -1555,6 +1574,8 @@
       document.getElementById('loaderSuccess').style.display  = 'block';
       // เก็บ callback
       _loaderOKCallback = function() {
+        // FIX BUG3d: clear beforeunload ก่อน reload เพื่อป้องกัน browser block
+        window.onbeforeunload = null;
         if (folderUrl) window.open(folderUrl, '_blank');
         location.reload();
       };

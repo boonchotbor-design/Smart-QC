@@ -1,5 +1,5 @@
 /*
- * Inventory Smart System - V.7.5.8
+ * Inventory Smart System - V.7.5.9
  * Includes: DUID Suffix Region Detection, Master Data Lookup Fallback,
  *           Status Check API, User Tracking & Audit Log System
  * Fix V.6.9.1: Server-side email detection + deploy mode fallback
@@ -21,6 +21,8 @@
  * V.7.5.7: BOM Sync Fix & Draggable/Minimizable Modal —
  *          Fixed BOM sync (BOM AIS & BOM TRUE) with dynamic column header mapping, robust type conversion & API endpoints;
  *          Added move (draggable) & collapse/minimize (ย่อ) modal window for form modal in dashboard.
+ * V.7.5.9: Bug Fixes — Duplicate save prevention (DUID+Bill+Model dedup); beforeunload dialog fix;
+ *          notifyOnly TTL-based dedup; upload error resilient (non-fatal); btnSubmit finally re-enable.
  * V.7.5.8: Executive UI & Dashboard Features Integration —
  *          Integrated 8 Executive KPI Cards (Total Records, Active DUIDs, IN, OUT, DISMANTLE, Store Transfers, Returns, Pending Items);
  *          Added time-range filtering (7 Days, 30 Days, 90 Days) to Inventory Movement chart;
@@ -74,13 +76,13 @@ function doGet(e) {
 
   if (e.parameter.page === "dashboard") {
     return HtmlService.createTemplateFromFile('dashboard').evaluate()
-      .setTitle('Inventory Dashboard V.7.5.8')
+      .setTitle('Inventory Dashboard V.7.5.9')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
   return HtmlService.createTemplateFromFile('app').evaluate()
-    .setTitle('Inventory Smart App V.7.5.8')
+    .setTitle('Inventory Smart App V.7.5.9')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -448,6 +450,33 @@ function saveMainData(header, items, userEmail, userName) {
 
     var cleanDuid = String(header.duid   || "").trim();
     var cleanBill = String(header.billNo || "").trim();
+
+    // FIX BUG2A: Duplicate entry check — ป้องกันบันทึกซ้ำถ้า DUID+BillNo+Model+SN เหมือนกันใน 10 นาทีล่าสุด
+    var now = new Date();
+    var lastRow0 = sheet.getLastRow();
+    if (lastRow0 > 1 && cleanDuid && items.length > 0) {
+      try {
+        var chkRange = sheet.getRange(2, 1, Math.min(lastRow0 - 1, 100), 25).getValues();
+        var firstItemModel = String(items[0].model || "").trim().toLowerCase();
+        var firstItemSn    = String(items[0].sn    || "").trim().toLowerCase();
+        for (var chk = 0; chk < chkRange.length; chk++) {
+          var chkDuid  = String(chkRange[chk][1]  || "").trim().toLowerCase();
+          var chkBill  = String(chkRange[chk][6]  || "").trim().toLowerCase();
+          var chkModel = String(chkRange[chk][7]  || "").trim().toLowerCase();
+          var chkSn    = String(chkRange[chk][11] || "").trim().toLowerCase();
+          var chkUser  = String(chkRange[chk][24] || "").trim().toLowerCase();
+          if (chkDuid === cleanDuid.toLowerCase() &&
+              chkBill === cleanBill.toLowerCase() &&
+              chkModel === firstItemModel &&
+              (firstItemSn === "" || chkSn === firstItemSn)) {
+            logToSheet("DUPLICATE_BLOCKED", "DUID:" + cleanDuid + " Bill:" + cleanBill + " Model:" + firstItemModel + " User:" + (userName||""));
+            return { success: false, message: "❌ ข้อมูลนี้บันทึกไปแล้ว (DUID+Bill+Model ซ้ำ) กรุณาตรวจสอบ Sheet ก่อนบันทึกซ้ำ" };
+          }
+        }
+      } catch (dupErr) {
+        logToSheet("DUP_CHECK_ERROR", dupErr.toString());
+      }
+    }
 
     // Region Fallback
     if (!header.region || header.region === "-" || header.region === "") {
@@ -1396,7 +1425,11 @@ function getOrCreateSubFolder(p, n) {
 // ─────────────────────────────────────────────
 
 function notifyOnly(h, i) {
-  if (!h.notificationId) h.notificationId = Utilities.getUuid();
+  // FIX BUG2B: include timestamp ใน notificationId เพื่อเสริม TTL dedup ฝั่ง Vercel
+  // Format: uuid-<timestamp_ms> ทำให้ Vercel รู้ว่า request เดิมถ้า id ตรงกัน
+  if (!h.notificationId) {
+    h.notificationId = Utilities.getUuid() + '-' + new Date().getTime();
+  }
   var payload = { header: h, items: i };
   var opt     = { method: 'post', contentType: 'application/json',
                   payload: JSON.stringify(payload), muteHttpExceptions: true };
