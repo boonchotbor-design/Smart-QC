@@ -1673,6 +1673,7 @@
           </div>
         </div>
         <div class="flex items-center gap-1.5">
+          <button onclick="saveTransactionDraft(true)" title="บันทึกร่าง" class="h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 px-2 text-[10px] font-bold text-indigo-300 hover:bg-indigo-600/40">💾 Draft</button>
           <button id="btn-modal-min" onclick="toggleModalMinimize()" title="ย่อ / ขยายหน้าต่าง" class="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold transition-colors">−</button>
           <button onclick="closeMultiStepModal()" title="ปิดหน้าต่าง" class="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold transition-colors">✕</button>
         </div>
@@ -1952,6 +1953,7 @@
 
       <!-- ── Modal Footer ── -->
       <div class="flex gap-3 px-4 py-3 border-t border-slate-800/80" style="background:rgba(15,23,42,0.9);">
+        <button onclick="saveTransactionDraft(true)" class="flex-1 py-2.5 rounded-xl text-sm font-bold text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/10 transition-all" style="background:rgba(30,41,59,0.6);">💾 Save Draft</button>
         <button onclick="closeMultiStepModal()" class="flex-1 py-2.5 rounded-xl text-sm font-bold text-slate-400 border border-slate-700/60 hover:border-slate-600 hover:text-slate-300 transition-all" style="background:rgba(30,41,59,0.6);">
           ยกเลิก
         </button>
@@ -1964,6 +1966,39 @@
       </div> <!-- /modal-body-collapse -->
 
     </div>
+  </div>
+
+  <div id="transaction-result-overlay" class="fixed inset-0 z-[70] hidden items-center justify-center bg-slate-950/95 p-4 overflow-y-auto">
+    <div class="w-full max-w-2xl rounded-2xl border border-slate-800 bg-[#0d1422] p-6 sm:p-8 shadow-2xl text-center">
+      <div class="flex items-center justify-center mb-8">
+        <div class="flex items-center gap-2 text-[10px] sm:text-xs">
+          <span class="flex items-center gap-2 text-emerald-400"><i class="w-7 h-7 rounded-full bg-emerald-500 text-white not-italic flex items-center justify-center">✓</i>ข้อมูล</span><i class="w-10 h-px bg-emerald-500"></i>
+          <span class="flex items-center gap-2 text-emerald-400"><i class="w-7 h-7 rounded-full bg-emerald-500 text-white not-italic flex items-center justify-center">✓</i>บันทึก</span><i class="w-10 h-px bg-emerald-500"></i>
+          <span class="flex items-center gap-2 text-blue-400"><i class="w-7 h-7 rounded-full bg-blue-600 text-white not-italic flex items-center justify-center">3</i>ผลลัพธ์</span>
+        </div>
+      </div>
+      <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-4xl text-emerald-400">✓</div>
+      <h2 class="text-xl font-extrabold text-emerald-400">บันทึกสำเร็จ!</h2>
+      <p id="tx-result-type" class="mt-1 text-xs text-slate-400">IN</p>
+      <div id="tx-result-summary" class="mx-auto mt-4 max-w-lg rounded-xl bg-slate-900 px-4 py-3 text-sm text-slate-300"></div>
+      <p id="tx-result-duration" class="mt-3 text-[11px] text-slate-500">บันทึกเรียบร้อย</p>
+      <div class="mx-auto mt-5 grid max-w-lg grid-cols-3 gap-2">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><b id="tx-result-created" class="block text-2xl font-bold text-blue-400">0</b><span class="text-[10px] text-slate-400">Created</span></div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><b id="tx-result-saved" class="block text-2xl font-bold text-emerald-400">0</b><span class="text-[10px] text-slate-400">Success</span></div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><b id="tx-result-errors" class="block text-2xl font-bold text-rose-400">0</b><span class="text-[10px] text-slate-400">Error</span></div>
+      </div>
+      <div id="tx-result-items" class="mx-auto mt-5 max-h-48 max-w-lg overflow-y-auto text-left"></div>
+      <div class="mt-6 flex flex-wrap justify-center gap-2">
+        <button onclick="closeTransactionResult(true)" class="rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-indigo-500">ดูรายการที่บันทึก</button>
+        <button onclick="closeTransactionResult(false)" class="rounded-xl border border-slate-700 px-4 py-2.5 text-xs font-bold text-slate-300 hover:bg-slate-800">ปิด</button>
+        <button onclick="startNextTransaction()" class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20">+ บันทึกรายการใหม่</button>
+      </div>
+    </div>
+  </div>
+  <div id="transaction-draft-chip" class="fixed bottom-4 left-4 z-[65] hidden items-center gap-2 rounded-xl border border-indigo-400/40 bg-slate-900/95 p-2 shadow-xl backdrop-blur">
+    <button onclick="resumeTransactionDraft()" class="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white">📝 ทำ Draft ต่อ <span id="transaction-draft-type"></span></button>
+    <span id="transaction-draft-info" class="max-w-40 truncate text-[10px] text-slate-400"></span>
+    <button onclick="discardTransactionDraft()" title="ลบ Draft" class="px-2 text-slate-400 hover:text-rose-400">✕</button>
   </div>
 
   <!-- Datalists for TYPE and MODEL Dropdowns (Screenshot 3 & 4) -->
@@ -8286,7 +8321,7 @@ let BOM_TRUE = [
 
     function removeModalItem(idx) {
       const container = document.getElementById('modal-items-container');
-      const items = container ? container.querySelectorAll('[id^="modal-item-"]') : [];
+      const items = container ? Array.from(container.children).filter(el => /^modal-item-\d+$/.test(el.id)) : [];
       if (items.length <= 1) {
         const el = document.getElementById('modal-item-' + idx);
         if (el) {
@@ -8303,6 +8338,82 @@ let BOM_TRUE = [
       modalItemCount = Math.max(1, modalItemCount - 1);
       const countEl = document.getElementById('modal-item-count');
       if (countEl) countEl.textContent = modalItemCount + ' รายการ';
+    }
+
+    function transactionDraftStorageKey() {
+      const owner = String((typeof currentUserEmail !== 'undefined' && currentUserEmail) || safeGetItem('inv_user_email') || 'guest').toLowerCase();
+      return 'smartstock_tx_draft_' + owner;
+    }
+    function getTransactionDraft() {
+      try { return JSON.parse(localStorage.getItem(transactionDraftStorageKey()) || 'null'); } catch (e) { return null; }
+    }
+    function updateTransactionDraftChip(draft) {
+      const chip = document.getElementById('transaction-draft-chip');
+      if (!chip) return;
+      draft = draft === undefined ? getTransactionDraft() : draft;
+      if (!draft) { chip.classList.add('hidden'); chip.classList.remove('flex'); return; }
+      const type = document.getElementById('transaction-draft-type');
+      const info = document.getElementById('transaction-draft-info');
+      if (type) type.textContent = draft.type || '';
+      if (info) info.textContent = [draft.fields && draft.fields['inp-duid'], draft.savedAt ? new Date(draft.savedAt).toLocaleString('th-TH') : ''].filter(Boolean).join(' · ');
+      chip.classList.remove('hidden'); chip.classList.add('flex');
+    }
+    function saveTransactionDraft(closeAfterSave) {
+      try {
+        const form = document.getElementById('modal-multistep');
+        const fields = {};
+        if (form) form.querySelectorAll('input[id]:not([type="file"]),select[id],textarea[id]').forEach(el => {
+          if (!el.id.startsWith('item-')) fields[el.id] = el.value;
+        });
+        const itemRows = Array.from(document.querySelectorAll('#modal-items-container > [id^="modal-item-"]')).map(row => {
+          const item = {};
+          row.querySelectorAll('input[id],select[id],textarea[id]').forEach(el => { item[el.id.replace(/-\d+$/, '')] = el.value; });
+          return item;
+        });
+        const draft = { type: currentTxType, fields, items: itemRows, photos: modalPhotoArray || [], savedAt: new Date().toISOString() };
+        localStorage.setItem(transactionDraftStorageKey(), JSON.stringify(draft));
+        updateTransactionDraftChip(draft);
+        showToast('💾 บันทึก Draft แล้ว · เปิดหน้าอื่นได้และกลับมาทำต่อได้', 'success');
+        if (closeAfterSave) closeMultiStepModal(true);
+        return true;
+      } catch (err) {
+        showToast('บันทึก Draft ไม่สำเร็จ อาจมีรูปแนบขนาดใหญ่เกินพื้นที่จัดเก็บ: ' + (err.message || err), 'error');
+        return false;
+      }
+    }
+    function resumeTransactionDraft() {
+      const draft = getTransactionDraft();
+      if (!draft) { updateTransactionDraftChip(null); return; }
+      openMultiStepModal(draft.type || 'IN');
+      const desiredItems = Math.max(1, (draft.items || []).length);
+      while (modalItemCount < desiredItems) addModalItem();
+      Object.keys(draft.fields || {}).forEach(id => { const el = document.getElementById(id); if (el) el.value = draft.fields[id]; });
+      (draft.items || []).forEach((item, index) => {
+        const suffix = index + 1;
+        Object.keys(item).forEach(prefix => { const el = document.getElementById(prefix + '-' + suffix); if (el) el.value = item[prefix]; });
+      });
+      modalPhotoArray = Array.isArray(draft.photos) ? draft.photos : [];
+      renderPhotoThumbnails(); updateBillPhotoStatus();
+      updateTransactionDraftChip(null);
+      const modal = document.getElementById('modal-multistep');
+      if (modal) modal.classList.remove('hidden');
+      showToast('📝 เปิด Draft แล้ว · ตรวจข้อมูลและทำต่อได้เลย', 'info');
+    }
+    function discardTransactionDraft() {
+      try { localStorage.removeItem(transactionDraftStorageKey()); } catch (e) {}
+      updateTransactionDraftChip(null);
+      showToast('ลบ Draft แล้ว', 'info');
+    }
+    let lastSavedTransactionType = 'IN';
+    function closeTransactionResult(showRecords) {
+      const result = document.getElementById('transaction-result-overlay');
+      if (result) { result.classList.add('hidden'); result.classList.remove('flex'); }
+      if (showRecords) switchTab('transactions');
+    }
+    function startNextTransaction() {
+      const type = lastSavedTransactionType || 'IN';
+      closeTransactionResult(false);
+      openMultiStepModal(type);
     }
 
     function openMultiStepModal(defaultType = 'IN') {
@@ -8347,7 +8458,7 @@ let BOM_TRUE = [
         // Reset extra item rows if added, keep only modal-item-1
         const container = document.getElementById('modal-items-container');
         if (container) {
-          const extraItems = container.querySelectorAll('[id^="modal-item-"]:not(#modal-item-1)');
+          const extraItems = Array.from(container.children).filter(el => /^modal-item-\d+$/.test(el.id) && el.id !== 'modal-item-1');
           extraItems.forEach(el => el.remove());
         }
 
@@ -8534,6 +8645,7 @@ let BOM_TRUE = [
       }
       const modalEl = document.getElementById('modal-multistep');
       if (modalEl) modalEl.classList.add('hidden');
+      setTransactionModalDocked(false);
     }
 
     // ── Draggable Modal Logic (move ขึ้น move ลง และ ย้ายได้) ──
@@ -8590,24 +8702,30 @@ let BOM_TRUE = [
       });
     }
 
-    function toggleModalMinimize() {
+    function setTransactionModalDocked(docked) {
+      const modal = document.getElementById('modal-multistep');
       const body = document.getElementById('modal-body-collapse');
       const minBtn = document.getElementById('btn-modal-min');
       const box = document.getElementById('modal-dialog-box');
-      if (!body) return;
-      isModalMinimized = !isModalMinimized;
-      if (isModalMinimized) {
+      if (!modal || !body || !box) return;
+      isModalMinimized = !!docked;
+      if (docked) {
         body.classList.add('hidden');
-        if (minBtn) minBtn.textContent = '□';
-        if (minBtn) minBtn.title = 'ขยายหน้าต่าง';
-        if (box) box.style.maxHeight = 'auto';
-        showToast('หน้าต่างถูกย่อลง คลิก □ เพื่อขยาย', 'info');
+        modal.style.background = 'transparent'; modal.style.backdropFilter = 'none'; modal.style.pointerEvents = 'none';
+        modal.style.alignItems = 'flex-end'; modal.style.justifyContent = 'flex-end'; modal.style.padding = '16px';
+        box.style.pointerEvents = 'auto'; box.style.width = 'min(340px, calc(100vw - 32px))'; box.style.maxHeight = 'none';
+        box.style.margin = '0'; box.style.transform = 'none'; modalCurrentX = 0; modalCurrentY = 0;
+        if (minBtn) { minBtn.textContent = '□'; minBtn.title = 'ขยายหน้าต่าง'; }
       } else {
         body.classList.remove('hidden');
-        if (minBtn) minBtn.textContent = '−';
-        if (minBtn) minBtn.title = 'ย่อหน้าต่าง';
-        if (box) box.style.maxHeight = '92vh';
+        modal.style.background = ''; modal.style.backdropFilter = ''; modal.style.pointerEvents = ''; modal.style.alignItems = ''; modal.style.justifyContent = ''; modal.style.padding = '';
+        box.style.pointerEvents = ''; box.style.width = ''; box.style.maxHeight = '92vh'; box.style.margin = ''; box.style.transform = 'translate(0px, 0px)';
+        if (minBtn) { minBtn.textContent = '−'; minBtn.title = 'ย่อเพื่อเปิดหน้าอื่น'; }
       }
+    }
+    function toggleModalMinimize() {
+      setTransactionModalDocked(!isModalMinimized);
+      if (isModalMinimized) showToast('ฟอร์มถูกย่อลงมุมจอแล้ว · เปิดเมนูอื่นเพื่อตรวจข้อมูล และคลิก □ เพื่อกลับมาทำต่อ', 'info');
     }
 
     function resetModalPosition() {
@@ -9472,6 +9590,7 @@ let BOM_TRUE = [
       };
       const btn = document.getElementById('btn-modal-next');
       modalSubmitInFlight = true;
+      const saveStartedAt = Date.now();
       if (btn) { btn.disabled = true; btn.style.opacity = '0.65'; }
       try {
         updateSaveProgress(1, 'กำลังตรวจสอบข้อมูล', firstRecord.type);
@@ -9503,10 +9622,27 @@ let BOM_TRUE = [
         updateSaveProgress(95, 'บันทึกเรียบร้อย · กำลังอัปเดตหน้ารายการ', firstRecord.type);
         updateSaveProgress(100, 'Success · บันทึกครบทุกขั้นตอน', firstRecord.type);
         await new Promise(resolve => setTimeout(resolve, 650));
+        lastSavedTransactionType = firstRecord.type;
+        try { localStorage.removeItem(transactionDraftStorageKey()); } catch (e) {}
+        updateTransactionDraftChip(null);
         closeMultiStepModal(true);
         applyFilters();
-        switchTab('transactions');
-        showToast(`✅ บันทึกสำเร็จ (${records.length} รายการ, ${photoCount} รูป) — ${firstRecord.duid}`, 'success');
+        const resultType = document.getElementById('tx-result-type');
+        const resultSummary = document.getElementById('tx-result-summary');
+        const resultDuration = document.getElementById('tx-result-duration');
+        const resultCreated = document.getElementById('tx-result-created');
+        const resultSaved = document.getElementById('tx-result-saved');
+        const resultErrors = document.getElementById('tx-result-errors');
+        const resultItems = document.getElementById('tx-result-items');
+        if (resultType) resultType.textContent = firstRecord.type;
+        if (resultSummary) resultSummary.textContent = `${firstRecord.duid} · สร้าง ${records.length} รายการสำเร็จ · แนบรูป ${photoCount} รูป`;
+        if (resultDuration) resultDuration.textContent = `เสร็จใน ${Math.max(1, Math.round((Date.now() - saveStartedAt) / 1000))} วินาที`;
+        if (resultCreated) resultCreated.textContent = records.length.toLocaleString();
+        if (resultSaved) resultSaved.textContent = records.length.toLocaleString();
+        if (resultErrors) resultErrors.textContent = '0';
+        if (resultItems) resultItems.innerHTML = records.map((record, index) => `<div class="flex gap-2 border-b border-slate-800 py-2 text-[11px]"><span class="text-emerald-400">✓</span><div><b class="text-slate-200">${escapeHtml(record.model || 'รายการ ' + (index + 1))}</b><div class="text-slate-400">✅ ${escapeHtml(record.itype || firstRecord.type)} · ${escapeHtml(String(record.qty))} ชิ้น</div><div class="text-slate-500">⏳ ${escapeHtml(record.status || 'บันทึกแล้ว')}</div></div></div>`).join('');
+        const resultOverlay = document.getElementById('transaction-result-overlay');
+        if (resultOverlay) { resultOverlay.classList.remove('hidden'); resultOverlay.classList.add('flex'); }
         if (_isGAS) setTimeout(syncLiveGAS, 1500);
       } catch (err) {
         updateSaveProgress(currentSaveProgress || 1, 'บันทึกไม่สำเร็จ · ' + String(err && err.message || err).slice(0, 110), firstRecord.type, true);
@@ -10380,6 +10516,7 @@ function logoutUser(){
 
 function initAfterLogin(){
   _isGAS = checkIsGAS();
+  updateTransactionDraftChip();
   syncLiveGAS();
   syncBOMFromGAS();
   setInterval(syncLiveGAS, 5 * 60 * 1000);
