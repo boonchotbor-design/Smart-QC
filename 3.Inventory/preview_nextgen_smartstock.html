@@ -929,6 +929,19 @@
               </div>
             </div>
           </div>
+
+          <!-- Regional reconciliation and recovery summary -->
+          <div class="glass-card rounded-2xl p-5 border border-slate-800">
+            <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+              <div>
+                <h3 class="font-semibold text-slate-100 text-sm">Regional Transaction Reconciliation</h3>
+                <p class="text-xs text-slate-400 mt-1">สรุป IN/OUT และ STR/IN/STR/OUT ที่จับคู่ปิดแล้ว พร้อมรายการค้างแยกตาม Region</p>
+              </div>
+              <div class="flex gap-3 text-[10px] text-slate-400"><span><i class="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1"></i>Closed pairs</span><span><i class="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1"></i>Pending</span></div>
+            </div>
+            <div id="regional-reconciliation" class="overflow-x-auto"></div>
+            <div class="mt-3 rounded-lg bg-slate-900/70 border border-slate-800 p-3 text-[10px] leading-relaxed text-slate-400">ปิดคู่ = ค่าที่น้อยกว่าระหว่างยอดรับเข้าและส่งออก · Pending = ส่วนต่างของสองฝั่ง · Pending % = Pending ÷ (ยอดรับเข้า + ยอดส่งออก) · DISMANTLE และ RETURN แสดงเป็นยอดกิจกรรมแยกประเภท ไม่ใช้หาผลต่าง</div>
+          </div>
         </div>
 
         <!-- ============================================== -->
@@ -8924,6 +8937,55 @@ let BOM_TRUE = [
       container.innerHTML = html;
     }
 
+    function renderRegionalReconciliation() {
+      const container = document.getElementById('regional-reconciliation');
+      if (!container) return;
+      const data = (typeof TRANSACTIONS !== 'undefined' && TRANSACTIONS.length)
+        ? TRANSACTIONS
+        : (typeof SAMPLE_RAW_DATA !== 'undefined' ? SAMPLE_RAW_DATA : []);
+      const names = {
+        ER: 'Eastern Region', BKK: 'Bangkok Metro', NER: 'North Eastern',
+        NR: 'Northern Region', SR: 'Southern Region', WR: 'Western Region', CR: 'Central Region'
+      };
+      const byRegion = {};
+      const ensure = key => byRegion[key] || (byRegion[key] = { IN: 0, OUT: 0, 'STR/IN': 0, 'STR/OUT': 0, DISMANTLE: 0, RETURN: 0 });
+      data.forEach(item => {
+        const region = (item.region || 'OTHER').trim().toUpperCase() || 'OTHER';
+        const type = (item.type || '').trim().toUpperCase();
+        const qty = Math.max(0, parseInt(item.qty, 10) || 1);
+        if (['IN', 'OUT', 'STR/IN', 'STR/OUT', 'DISMANTLE', 'RETURN'].includes(type)) ensure(region)[type] += qty;
+      });
+      const regions = Object.keys(byRegion).sort((a, b) => (names[a] || a).localeCompare(names[b] || b));
+      if (!regions.length) {
+        container.innerHTML = '<div class="text-xs text-slate-500 text-center py-5">ไม่มีข้อมูลธุรกรรมสำหรับสรุป</div>';
+        return;
+      }
+      const totals = regions.reduce((t, r) => {
+        const v = byRegion[r];
+        ['IN','OUT','STR/IN','STR/OUT','DISMANTLE','RETURN'].forEach(k => t[k] += v[k]);
+        t.inClosed += Math.min(v.IN, v.OUT); t.inPending += Math.abs(v.IN - v.OUT);
+        t.strClosed += Math.min(v['STR/IN'], v['STR/OUT']); t.strPending += Math.abs(v['STR/IN'] - v['STR/OUT']);
+        return t;
+      }, { IN: 0, OUT: 0, 'STR/IN': 0, 'STR/OUT': 0, DISMANTLE: 0, RETURN: 0, inClosed: 0, inPending: 0, strClosed: 0, strPending: 0 });
+      const fmt = n => n.toLocaleString();
+      const pairCell = (left, right) => {
+        const closed = Math.min(left, right);
+        const pending = Math.abs(left - right);
+        const pct = left + right ? pending / (left + right) * 100 : 0;
+        const side = left === right ? '' : (left > right ? 'IN +' : 'OUT +');
+        const status = pending ? `<span class="text-amber-400">${fmt(pending)} ${side}</span><div class="text-[9px] text-slate-500">${pct.toFixed(1)}% pending</div>` : '<span class="text-emerald-400">0 · 0%</span>';
+        return `<td class="px-3 py-3"><div class="font-mono font-semibold text-emerald-400">${fmt(closed)} คู่</div></td><td class="px-3 py-3">${status}</td>`;
+      };
+      let rows = regions.map(region => {
+        const v = byRegion[region];
+        return `<tr class="border-t border-slate-800"><td class="px-3 py-3"><div class="font-semibold text-slate-200">${names[region] || region + ' Region'}</div><div class="text-[9px] text-slate-500">${region}</div></td>
+          <td class="px-3 py-3 font-mono">${fmt(v.IN)} <span class="text-slate-500">/</span> ${fmt(v.OUT)}</td>${pairCell(v.IN,v.OUT)}
+          <td class="px-3 py-3 font-mono">${fmt(v['STR/IN'])} <span class="text-slate-500">/</span> ${fmt(v['STR/OUT'])}</td>${pairCell(v['STR/IN'],v['STR/OUT'])}
+          <td class="px-3 py-3 font-mono"><span class="text-purple-300">${fmt(v.DISMANTLE)}</span><span class="text-slate-600"> / </span><span class="text-pink-300">${fmt(v.RETURN)}</span></td></tr>`;
+      }).join('');
+      container.innerHTML = `<table class="w-full min-w-[920px] text-left text-[10px]"><thead><tr class="text-slate-400 uppercase tracking-wide"><th rowspan="2" class="px-3 py-2">Region</th><th colspan="3" class="px-3 py-2 text-emerald-300">IN / OUT</th><th colspan="3" class="px-3 py-2 text-blue-300">STR/IN / STR/OUT</th><th rowspan="2" class="px-3 py-2">DISMANTLE / RETURN</th></tr><tr class="text-slate-500 border-b border-slate-700"><th class="px-3 py-2">IN / OUT</th><th class="px-3 py-2">Closed</th><th class="px-3 py-2">Pending · % of pair volume</th><th class="px-3 py-2">STR/IN / OUT</th><th class="px-3 py-2">Closed</th><th class="px-3 py-2">Pending · % of pair volume</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="border-t-2 border-slate-700 bg-slate-900/60 font-semibold"><td class="px-3 py-3 text-slate-200">รวมทุก Region</td><td class="px-3 py-3 font-mono">${fmt(totals.IN)} / ${fmt(totals.OUT)}</td><td class="px-3 py-3 font-mono text-emerald-400">${fmt(totals.inClosed)} คู่</td><td class="px-3 py-3 text-amber-400">${fmt(totals.inPending)} · ${totals.IN+totals.OUT ? (totals.inPending/(totals.IN+totals.OUT)*100).toFixed(1) : '0.0'}%</td><td class="px-3 py-3 font-mono">${fmt(totals['STR/IN'])} / ${fmt(totals['STR/OUT'])}</td><td class="px-3 py-3 font-mono text-emerald-400">${fmt(totals.strClosed)} คู่</td><td class="px-3 py-3 text-amber-400">${fmt(totals.strPending)} · ${totals['STR/IN']+totals['STR/OUT'] ? (totals.strPending/(totals['STR/IN']+totals['STR/OUT'])*100).toFixed(1) : '0.0'}%</td><td class="px-3 py-3 font-mono"><span class="text-purple-300">${fmt(totals.DISMANTLE)}</span> / <span class="text-pink-300">${fmt(totals.RETURN)}</span></td></tr></tfoot></table>`;
+    }
+
     function updateDashboardRealTime() {
       const data = (typeof TRANSACTIONS !== 'undefined' && TRANSACTIONS.length) 
         ? TRANSACTIONS 
@@ -8994,6 +9056,7 @@ let BOM_TRUE = [
       // Render Charts & Breakdown
       renderVelocityChart(currentVelocityRange || 7);
       renderRegionalDistribution();
+      renderRegionalReconciliation();
       renderRegionChart();
     }
 
@@ -9225,7 +9288,7 @@ let BOM_TRUE = [
         const idx = mapCSVHeaders(rows[0]);
         const parsed = [];
         let lastDuid = '', lastRegion = '', lastType = 'IN', lastDate = '', lastBill = '';
-        let lastOwnerW = '', lastOwnerR = '', lastLocW = '', lastLocR = '', lastUser = '';
+        let lastOwnerW = '', lastOwnerR = '', lastLocW = '', lastLocR = '';
         const get = (row, column) => String(row[column] == null ? '' : row[column]).trim();
 
         for (let i = 1; i < rows.length; i++) {
@@ -9246,7 +9309,8 @@ let BOM_TRUE = [
           const ownerR = get(row, idx.ownerR) || lastOwnerR; if (get(row, idx.ownerR)) lastOwnerR = ownerR;
           const locW = get(row, idx.locW) || lastLocW; if (get(row, idx.locW)) lastLocW = locW;
           const locR = get(row, idx.locR) || lastLocR; if (get(row, idx.locR)) lastLocR = locR;
-          const userNm = get(row, idx.userNm) || lastUser || userName; if (get(row, idx.userNm)) lastUser = userNm;
+          // Recorder identity always comes from the signed-in importer, never from the template.
+          const userNm = userName;
           const rawItype = get(row, idx.itype);
           const detectedItype = rawItype || inferITypeFromType(type || model);
           parsed.push({
